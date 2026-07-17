@@ -1,0 +1,59 @@
+# Lead Growth - Enterprise Platform Git Ignore Configuration
+
+# ==========================================
+# Root & Common IDE configurations
+# ==========================================
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+.DS_Store
+Thumbs.db
+.agents/
+.gemini/
+antigravity-ide/
+
+# ==========================================
+# Backend (Java Spring Boot & Maven)
+# ==========================================
+backend/target/
+backend/release/
+backend/.mvn/
+backend/*.jar
+backend/*.war
+backend/*.zip
+backend/maven/
+backend/mvnw.cmd
+backend/mvnw
+
+# ==========================================
+# Frontend (React & Vite)
+# ==========================================
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.svelte-kit/
+frontend/.next/
+frontend/out/
+frontend/.cache/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# ==========================================
+# Environment Configuration Files
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/.env
+frontend/.env.local
+backend/.env
+backend/.env.local

@@ -1,0 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  /* Default light theme */
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --border-color: #E2E8F0;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --color-brand: #2563EB;
+  --color-brand-hover: #1D4ED8;
+  --color-brand-glow: rgba(37, 99, 235, 0.08);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+.theme-dark {
+  /* Standard dark theme */
+  --bg-primary: #0F172A;
+  --bg-secondary: #0B0F19;
+  --bg-card: rgba(30, 41, 59, 0.35);
+  --border-color: rgba(255, 255, 255, 0.06);
+  --text-main: #F1F5F9;
+  --text-muted: #94A3B8;
+  --color-brand: #3B82F6;
+  --color-brand-hover: #60A5FA;
+  --color-brand-glow: rgba(59, 130, 246, 0.12);
+  --shadow-card: 0 4px 30px rgba(0, 0, 0, 0.25);
+}
+
+.theme-midnight {
+  /* Midnight theme */
+  --bg-primary: #020617;
+  --bg-secondary: #080C14;
+  --bg-card: rgba(17, 24, 39, 0.45);
+  --border-color: rgba(99, 102, 241, 0.15);
+  --text-main: #F9FAFB;
+  --text-muted: #9CA3AF;
+  --color-brand: #6366F1;
+  --color-brand-hover: #818CF8;
+  --color-brand-glow: rgba(99, 102, 241, 0.15);
+  --shadow-card: 0 4px 30px rgba(0, 0, 0, 0.35);
+}
+
+.theme-ocean {
+  /* Ocean theme */
+  --bg-primary: #051622;
+  --bg-secondary: #09202E;
+  --bg-card: rgba(26, 47, 68, 0.4);
+  --border-color: rgba(34, 211, 238, 0.15);
+  --text-main: #E0F2FE;
+  --text-muted: #7DD3FC;
+  --color-brand: #06B6D4;
+  --color-brand-hover: #22D3EE;
+  --color-brand-glow: rgba(6, 182, 212, 0.15);
+  --shadow-card: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+.theme-purple {
+  /* Purple theme */
+  --bg-primary: #0F051D;
+  --bg-secondary: #170B26;
+  --bg-card: rgba(46, 16, 101, 0.35);
+  --border-color: rgba(168, 85, 247, 0.15);
+  --text-main: #F3E8FF;
+  --text-muted: #D8B4FE;
+  --color-brand: #A855F7;
+  --color-brand-hover: #C084FC;
+  --color-brand-glow: rgba(168, 85, 247, 0.15);
+  --shadow-card: 0 4px 30px rgba(139, 92, 246, 0.15);
+}
+
+@theme {
+  --color-theme-bg: var(--bg-primary);
+  --color-theme-bg-alt: var(--bg-secondary);
+  --color-theme-card: var(--bg-card);
+  --color-theme-border: var(--border-color);
+  --color-theme-text: var(--text-main);
+  --color-theme-text-muted: var(--text-muted);
+  --color-theme-primary: var(--color-brand);
+  --color-theme-primary-hover: var(--color-brand-hover);
+  --color-theme-glow: var(--color-brand-glow);
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-theme-bg text-theme-text transition-colors duration-300;
+  }
+}
+
+/* Glassmorphism Styles */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+}
+
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+}
+
+/* Side navigation active element indicator */
+.nav-glow {
+  box-shadow: 0 0 15px var(--color-brand-glow);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full dark:bg-slate-800;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400 dark:bg-slate-700;
+}
+
+/* Badge animations */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: .7;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
