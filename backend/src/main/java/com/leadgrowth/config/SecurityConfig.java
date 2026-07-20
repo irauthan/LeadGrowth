@@ -49,6 +49,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/invitations/verify").permitAll()
                 .requestMatchers("/ws-leads/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()

@@ -1,0 +1,223 @@
+LeadGrowth DB Tables
+mysql> use leadgrowth;
+Database changed
+mysql> show tables;
++----------------------+
+| Tables_in_leadgrowth |
++----------------------+
+| activity_logs        |
+| ad_metrics           |
+| campaigns            |
+| integrations         |
+| lead_notes           |
+| leads                |
+| notifications        |
+| reports              |
+| roles                |
+| sync_logs            |
+| tasks                |
+| user_roles           |
+| users                |
+| workspaces           |
++----------------------+
+14 rows in set (0.02 sec)
+
+mysql> desc activity_logs
+    -> ;
++--------------+--------------+------+-----+---------+----------------+
+| Field        | Type         | Null | Key | Default | Extra          |
++--------------+--------------+------+-----+---------+----------------+
+| id           | bigint       | NO   | PRI | NULL    | auto_increment |
+| action       | varchar(100) | NO   |     | NULL    |                |
+| created_at   | datetime(6)  | YES  |     | NULL    |                |
+| description  | text         | YES  |     | NULL    |                |
+| user_id      | bigint       | YES  | MUL | NULL    |                |
+| workspace_id | bigint       | NO   | MUL | NULL    |                |
++--------------+--------------+------+-----+---------+----------------+
+6 rows in set (0.02 sec)
+
+mysql> desc ad_metrics;
++--------------+---------------+------+-----+---------+----------------+
+| Field        | Type          | Null | Key | Default | Extra          |
++--------------+---------------+------+-----+---------+----------------+
+| id           | bigint        | NO   | PRI | NULL    | auto_increment |
+| clicks       | int           | YES  |     | NULL    |                |
+| conversions  | int           | YES  |     | NULL    |                |
+| date         | date          | NO   |     | NULL    |                |
+| impressions  | int           | YES  |     | NULL    |                |
+| platform     | varchar(50)   | YES  |     | NULL    |                |
+| spend        | decimal(12,2) | YES  |     | NULL    |                |
+| campaign_id  | bigint        | YES  | MUL | NULL    |                |
+| workspace_id | bigint        | NO   | MUL | NULL    |                |
++--------------+---------------+------+-----+---------+----------------+
+9 rows in set (0.01 sec)
+
+mysql> desc campaigns;
++--------------+---------------+------+-----+---------+----------------+
+| Field        | Type          | Null | Key | Default | Extra          |
++--------------+---------------+------+-----+---------+----------------+
+| id           | bigint        | NO   | PRI | NULL    | auto_increment |
+| clicks       | int           | YES  |     | NULL    |                |
+| conversions  | int           | YES  |     | NULL    |                |
+| created_at   | datetime(6)   | YES  |     | NULL    |                |
+| impressions  | int           | YES  |     | NULL    |                |
+| leads_count  | int           | YES  |     | NULL    |                |
+| name         | varchar(100)  | NO   |     | NULL    |                |
+| platform     | varchar(50)   | NO   |     | NULL    |                |
+| revenue      | decimal(12,2) | YES  |     | NULL    |                |
+| spend        | decimal(12,2) | YES  |     | NULL    |                |
+| status       | varchar(50)   | YES  |     | NULL    |                |
+| workspace_id | bigint        | NO   | MUL | NULL    |                |
++--------------+---------------+------+-----+---------+----------------+
+12 rows in set (0.00 sec)
+
+mysql> desc integrations;
++----------------+--------------+------+-----+---------+----------------+
+| Field          | Type         | Null | Key | Default | Extra          |
++----------------+--------------+------+-----+---------+----------------+
+| id             | bigint       | NO   | PRI | NULL    | auto_increment |
+| api_key        | varchar(500) | YES  |     | NULL    |                |
+| last_synced_at | datetime(6)  | YES  |     | NULL    |                |
+| platform       | varchar(50)  | NO   |     | NULL    |                |
+| status         | varchar(20)  | YES  |     | NULL    |                |
+| workspace_id   | bigint       | NO   | MUL | NULL    |                |
++----------------+--------------+------+-----+---------+----------------+
+6 rows in set (0.00 sec)
+
+mysql> desc lead_notes;
++------------+-------------+------+-----+---------+----------------+
+| Field      | Type        | Null | Key | Default | Extra          |
++------------+-------------+------+-----+---------+----------------+
+| id         | bigint      | NO   | PRI | NULL    | auto_increment |
+| created_at | datetime(6) | YES  |     | NULL    |                |
+| note       | text        | NO   |     | NULL    |                |
+| lead_id    | bigint      | NO   | MUL | NULL    |                |
+| user_id    | bigint      | NO   | MUL | NULL    |                |
++------------+-------------+------+-----+---------+----------------+
+5 rows in set (0.01 sec)
+
+mysql> desc leads;
++-----------------+--------------+------+-----+---------+----------------+
+| Field           | Type         | Null | Key | Default | Extra          |
++-----------------+--------------+------+-----+---------+----------------+
+| id              | bigint       | NO   | PRI | NULL    | auto_increment |
+| campaign_name   | varchar(100) | YES  |     | NULL    |                |
+| created_at      | datetime(6)  | YES  |     | NULL    |                |
+| email           | varchar(100) | NO   |     | NULL    |                |
+| name            | varchar(100) | NO   |     | NULL    |                |
+| phone           | varchar(20)  | YES  |     | NULL    |                |
+| source_platform | varchar(50)  | YES  |     | NULL    |                |
+| status          | varchar(50)  | YES  |     | NULL    |                |
+| assigned_to_id  | bigint       | YES  | MUL | NULL    |                |
+| campaign_id     | bigint       | YES  | MUL | NULL    |                |
+| workspace_id    | bigint       | NO   | MUL | NULL    |                |
++-----------------+--------------+------+-----+---------+----------------+
+11 rows in set (0.00 sec)
+
+mysql> desc notifications
+    -> ;
++------------+--------------+------+-----+---------+----------------+
+| Field      | Type         | Null | Key | Default | Extra          |
++------------+--------------+------+-----+---------+----------------+
+| id         | bigint       | NO   | PRI | NULL    | auto_increment |
+| created_at | datetime(6)  | YES  |     | NULL    |                |
+| is_read    | bit(1)       | YES  |     | NULL    |                |
+| message    | text         | YES  |     | NULL    |                |
+| title      | varchar(150) | NO   |     | NULL    |                |
+| user_id    | bigint       | NO   | MUL | NULL    |                |
++------------+--------------+------+-----+---------+----------------+
+6 rows in set (0.03 sec)
+
+mysql> desc reports;
++-----------------+--------------+------+-----+---------+----------------+
+| Field           | Type         | Null | Key | Default | Extra          |
++-----------------+--------------+------+-----+---------+----------------+
+| id              | bigint       | NO   | PRI | NULL    | auto_increment |
+| created_at      | datetime(6)  | YES  |     | NULL    |                |
+| file_path       | varchar(255) | YES  |     | NULL    |                |
+| type            | varchar(20)  | NO   |     | NULL    |                |
+| generated_by_id | bigint       | YES  | MUL | NULL    |                |
+| workspace_id    | bigint       | NO   | MUL | NULL    |                |
++-----------------+--------------+------+-----+---------+----------------+
+6 rows in set (0.01 sec)
+
+mysql> desc roles;
++-------+-------------+------+-----+---------+----------------+
+| Field | Type        | Null | Key | Default | Extra          |
++-------+-------------+------+-----+---------+----------------+
+| id    | bigint      | NO   | PRI | NULL    | auto_increment |
+| name  | varchar(50) | NO   | UNI | NULL    |                |
++-------+-------------+------+-----+---------+----------------+
+2 rows in set (0.00 sec)
+
+mysql> desc sync_logs;
++--------------+-------------+------+-----+---------+----------------+
+| Field        | Type        | Null | Key | Default | Extra          |
++--------------+-------------+------+-----+---------+----------------+
+| id           | bigint      | NO   | PRI | NULL    | auto_increment |
+| created_at   | datetime(6) | YES  |     | NULL    |                |
+| details      | text        | YES  |     | NULL    |                |
+| platform     | varchar(50) | YES  |     | NULL    |                |
+| status       | varchar(20) | YES  |     | NULL    |                |
+| workspace_id | bigint      | NO   | MUL | NULL    |                |
++--------------+-------------+------+-----+---------+----------------+
+6 rows in set (0.00 sec)
+
+mysql> desc tasks;
++----------------+--------------+------+-----+---------+----------------+
+| Field          | Type         | Null | Key | Default | Extra          |
++----------------+--------------+------+-----+---------+----------------+
+| id             | bigint       | NO   | PRI | NULL    | auto_increment |
+| created_at     | datetime(6)  | YES  |     | NULL    |                |
+| description    | text         | YES  |     | NULL    |                |
+| due_date       | date         | YES  |     | NULL    |                |
+| priority       | varchar(20)  | YES  |     | NULL    |                |
+| status         | varchar(20)  | YES  |     | NULL    |                |
+| title          | varchar(150) | NO   |     | NULL    |                |
+| assigned_to_id | bigint       | YES  | MUL | NULL    |                |
+| workspace_id   | bigint       | NO   | MUL | NULL    |                |
++----------------+--------------+------+-----+---------+----------------+
+9 rows in set (0.00 sec)
+
+mysql> desc user_roles;
++---------+--------+------+-----+---------+-------+
+| Field   | Type   | Null | Key | Default | Extra |
++---------+--------+------+-----+---------+-------+
+| user_id | bigint | NO   | PRI | NULL    |       |
+| role_id | bigint | NO   | PRI | NULL    |       |
++---------+--------+------+-----+---------+-------+
+2 rows in set (0.00 sec)
+
+mysql> desc users;
++---------------+--------------+------+-----+---------+----------------+
+| Field         | Type         | Null | Key | Default | Extra          |
++---------------+--------------+------+-----+---------+----------------+
+| id            | bigint       | NO   | PRI | NULL    | auto_increment |
+| bio           | text         | YES  |     | NULL    |                |
+| created_at    | datetime(6)  | YES  |     | NULL    |                |
+| designation   | varchar(100) | YES  |     | NULL    |                |
+| email         | varchar(100) | NO   | UNI | NULL    |                |
+| full_name     | varchar(100) | NO   |     | NULL    |                |
+| password      | varchar(255) | NO   |     | NULL    |                |
+| phone         | varchar(20)  | YES  |     | NULL    |                |
+| profile_image | varchar(255) | YES  |     | NULL    |                |
+| workspace_id  | bigint       | YES  | MUL | NULL    |                |
++---------------+--------------+------+-----+---------+----------------+
+10 rows in set (0.01 sec)
+
+mysql> desc workspaces;
++--------------+--------------+------+-----+---------+----------------+
+| Field        | Type         | Null | Key | Default | Extra          |
++--------------+--------------+------+-----+---------+----------------+
+| id           | bigint       | NO   | PRI | NULL    | auto_increment |
+| company_name | varchar(100) | YES  |     | NULL    |                |
+| created_at   | datetime(6)  | YES  |     | NULL    |                |
+| industry     | varchar(50)  | YES  |     | NULL    |                |
+| invite_code  | varchar(50)  | NO   | UNI | NULL    |                |
+| name         | varchar(100) | NO   |     | NULL    |                |
+| slug         | varchar(100) | NO   | UNI | NULL    |                |
+| team_size    | int          | YES  |     | NULL    |                |
+| timezone     | varchar(50)  | YES  |     | NULL    |                |
+| website      | varchar(100) | YES  |     | NULL    |                |
++--------------+--------------+------+-----+---------+----------------+
+10 rows in set (0.00 sec)

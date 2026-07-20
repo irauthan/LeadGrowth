@@ -72,4 +72,30 @@ public class LeadController {
     public ResponseEntity<List<LeadNote>> getNotes(@PathVariable Long id) {
         return ResponseEntity.ok(leadService.getNotes(id));
     }
+
+    @PostMapping("/bulk-assign")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<LeadDto>> bulkAssign(
+            @RequestParam List<Long> leadIds,
+            @RequestParam Long userId
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.bulkAssignLeads(leadIds, userId, email));
+    }
+
+    @PostMapping("/bulk-random-assign")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<LeadDto>> bulkRandomAssign(@RequestParam List<Long> leadIds) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.bulkRandomAssignLeads(leadIds, email));
+    }
+
+    @PostMapping("/bulk-status")
+    public ResponseEntity<List<LeadDto>> bulkStatus(
+            @RequestParam List<Long> leadIds,
+            @RequestParam String status
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.bulkUpdateLeadStatus(leadIds, status, email));
+    }
 }

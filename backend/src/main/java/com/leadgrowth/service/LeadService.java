@@ -16,6 +16,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -76,8 +77,10 @@ public class LeadService {
         }
 
         User assignedTo = null;
-        if (dto.getAssignedToId() != null) {
+        if (dto.getAssignedToId() != null && dto.getAssignedToId() > 0) {
             assignedTo = userRepository.findById(dto.getAssignedToId()).orElse(null);
+        } else if (dto.getAssignedToId() != null && dto.getAssignedToId() == -1) {
+            assignedTo = findEqualDistributionLeadAssignee(creator.getWorkspace().getId());
         }
 
         Lead lead = Lead.builder()
@@ -143,11 +146,70 @@ public class LeadService {
         Lead lead = leadRepository.findById(leadId)
                 .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
 
-        User assignTarget = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Target user not found"));
+        User assignTarget = userId == -1 
+                ? findEqualDistributionLeadAssignee(user.getWorkspace().getId())
+                : userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Target user not found"));
 
         lead.setAssignedTo(assignTarget);
         return convertToDto(leadRepository.save(lead));
+    }
+
+    @Transactional
+    public List<LeadDto> bulkAssignLeads(List<Long> leadIds, Long userId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        User assignTarget = userId == -1
+                ? findEqualDistributionLeadAssignee(user.getWorkspace().getId())
+                : userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Target user not found"));
+
+        List<LeadDto> updated = new ArrayList<>();
+        for (Long id : leadIds) {
+            Lead lead = leadRepository.findById(id).orElse(null);
+            if (lead != null && lead.getWorkspace().getId().equals(user.getWorkspace().getId())) {
+                lead.setAssignedTo(assignTarget);
+                updated.add(convertToDto(leadRepository.save(lead)));
+            }
+        }
+        return updated;
+    }
+
+    @Transactional
+    public List<LeadDto> bulkRandomAssignLeads(List<Long> leadIds, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<LeadDto> updated = new ArrayList<>();
+        for (Long id : leadIds) {
+            Lead lead = leadRepository.findById(id).orElse(null);
+            if (lead != null && lead.getWorkspace().getId().equals(user.getWorkspace().getId())) {
+                User assignTarget = findEqualDistributionLeadAssignee(user.getWorkspace().getId());
+                lead.setAssignedTo(assignTarget);
+                updated.add(convertToDto(leadRepository.save(lead)));
+            }
+        }
+        return updated;
+    }
+
+    @Transactional
+    public List<LeadDto> bulkUpdateLeadStatus(List<Long> leadIds, String status, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<LeadDto> updated = new ArrayList<>();
+        for (Long id : leadIds) {
+            Lead lead = leadRepository.findById(id).orElse(null);
+            if (lead != null && lead.getWorkspace().getId().equals(user.getWorkspace().getId())) {
+                lead.setStatus(status);
+                
+                if ("Converted".equalsIgnoreCase(status) && lead.getCampaign() != null) {
+                    Campaign c = lead.getCampaign();
+                    c.setConversions(c.getConversions() + 1);
+                    campaignRepository.save(c);
+                }
+                updated.add(convertToDto(leadRepository.save(lead)));
+            }
+        }
+        return updated;
     }
 
     @Transactional
@@ -183,6 +245,28 @@ public class LeadService {
         Lead lead = leadRepository.findById(leadId)
                 .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
         return convertToDto(lead);
+    }
+
+    private User findEqualDistributionLeadAssignee(Long workspaceId) {
+        List<User> members = userRepository.findByWorkspaceId(workspaceId);
+        List<User> activeMembers = members.stream()
+                .filter(u -> !"SUSPENDED".equalsIgnoreCase(u.getStatus()))
+                .collect(Collectors.toList());
+
+        if (activeMembers.isEmpty()) {
+            return null;
+        }
+
+        User bestMember = activeMembers.get(0);
+        long minCount = Long.MAX_VALUE;
+        for (User u : activeMembers) {
+            long count = leadRepository.countByAssignedToAndStatusIn(u, List.of("New", "Contacted", "Qualified"));
+            if (count < minCount) {
+                minCount = count;
+                bestMember = u;
+            }
+        }
+        return bestMember;
     }
 
     private LeadDto convertToDto(Lead lead) {

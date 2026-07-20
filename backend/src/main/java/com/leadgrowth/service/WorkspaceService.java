@@ -3,18 +3,16 @@ package com.leadgrowth.service;
 import com.leadgrowth.dto.AuthResponse;
 import com.leadgrowth.dto.CreateWorkspaceRequest;
 import com.leadgrowth.dto.JoinWorkspaceRequest;
-import com.leadgrowth.entity.Role;
-import com.leadgrowth.entity.User;
-import com.leadgrowth.entity.Workspace;
-import com.leadgrowth.repository.RoleRepository;
-import com.leadgrowth.repository.UserRepository;
-import com.leadgrowth.repository.WorkspaceRepository;
+import com.leadgrowth.dto.WorkspaceUpdateRequest;
+import com.leadgrowth.entity.*;
+import com.leadgrowth.repository.*;
 import com.leadgrowth.security.JwtService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,17 +24,47 @@ public class WorkspaceService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final JwtService jwtService;
+    private final TaskRepository taskRepository;
+    private final LeadNoteRepository leadNoteRepository;
+    private final LeadRepository leadRepository;
+    private final AdMetricsRepository adMetricsRepository;
+    private final CampaignRepository campaignRepository;
+    private final ReportRepository reportRepository;
+    private final SyncLogRepository syncLogRepository;
+    private final IntegrationRepository integrationRepository;
+    private final ActivityLogRepository activityLogRepository;
+    private final NotificationRepository notificationRepository;
 
     public WorkspaceService(
             WorkspaceRepository workspaceRepository,
             UserRepository userRepository,
             RoleRepository roleRepository,
-            JwtService jwtService
+            JwtService jwtService,
+            TaskRepository taskRepository,
+            LeadNoteRepository leadNoteRepository,
+            LeadRepository leadRepository,
+            AdMetricsRepository adMetricsRepository,
+            CampaignRepository campaignRepository,
+            ReportRepository reportRepository,
+            SyncLogRepository syncLogRepository,
+            IntegrationRepository integrationRepository,
+            ActivityLogRepository activityLogRepository,
+            NotificationRepository notificationRepository
     ) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.jwtService = jwtService;
+        this.taskRepository = taskRepository;
+        this.leadNoteRepository = leadNoteRepository;
+        this.leadRepository = leadRepository;
+        this.adMetricsRepository = adMetricsRepository;
+        this.campaignRepository = campaignRepository;
+        this.reportRepository = reportRepository;
+        this.syncLogRepository = syncLogRepository;
+        this.integrationRepository = integrationRepository;
+        this.activityLogRepository = activityLogRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional
@@ -152,6 +180,105 @@ public class WorkspaceService {
                 .workspaceSlug(workspace.getSlug())
                 .inviteCode(workspace.getInviteCode())
                 .build();
+    }
+
+    public Workspace getCurrentWorkspace(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        Workspace workspace = user.getWorkspace();
+        if (workspace == null) {
+            throw new IllegalStateException("User does not belong to a workspace");
+        }
+        return workspace;
+    }
+
+    @Transactional
+    public Workspace updateWorkspace(WorkspaceUpdateRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            throw new IllegalStateException("Only administrators can update the workspace");
+        }
+
+        Workspace workspace = user.getWorkspace();
+        if (workspace == null) {
+            throw new IllegalStateException("User does not belong to a workspace");
+        }
+
+        // Check invite code uniqueness
+        if (!workspace.getInviteCode().equalsIgnoreCase(request.getInviteCode())) {
+            if (workspaceRepository.existsByInviteCode(request.getInviteCode())) {
+                throw new IllegalArgumentException("Invite code is already in use");
+            }
+        }
+
+        // Check slug uniqueness
+        if (!workspace.getSlug().equalsIgnoreCase(request.getSlug())) {
+            if (workspaceRepository.existsBySlug(request.getSlug())) {
+                throw new IllegalArgumentException("URL slug is already in use");
+            }
+        }
+
+        workspace.setName(request.getName());
+        workspace.setCompanyName(request.getCompanyName());
+        workspace.setIndustry(request.getIndustry());
+        workspace.setTeamSize(request.getTeamSize());
+        workspace.setWebsite(request.getWebsite());
+        workspace.setTimezone(request.getTimezone());
+        workspace.setInviteCode(request.getInviteCode());
+        workspace.setSlug(request.getSlug());
+
+        return workspaceRepository.save(workspace);
+    }
+
+    @Transactional
+    public void deleteWorkspace(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            throw new IllegalStateException("Only administrators can delete the workspace");
+        }
+
+        Workspace workspace = user.getWorkspace();
+        if (workspace == null) {
+            throw new IllegalStateException("User does not belong to a workspace");
+        }
+
+        Long workspaceId = workspace.getId();
+
+        // 1. Delete all tasks in the workspace
+        taskRepository.deleteByWorkspaceId(workspaceId);
+
+        // 2. Delete all lead notes and leads in the workspace
+        leadNoteRepository.deleteByWorkspaceId(workspaceId);
+        leadRepository.deleteByWorkspaceId(workspaceId);
+
+        // 3. Delete all ad metrics and campaigns in the workspace
+        adMetricsRepository.deleteByWorkspaceId(workspaceId);
+        campaignRepository.deleteByWorkspaceId(workspaceId);
+
+        // 4. Delete reports, sync logs, integrations, activity logs in the workspace
+        reportRepository.deleteByWorkspaceId(workspaceId);
+        syncLogRepository.deleteByWorkspaceId(workspaceId);
+        integrationRepository.deleteByWorkspaceId(workspaceId);
+        activityLogRepository.deleteByWorkspaceId(workspaceId);
+
+        // 5. Update all users in the workspace: set workspace to null, clear roles, delete notifications
+        List<User> members = userRepository.findByWorkspaceId(workspaceId);
+        for (User member : members) {
+            notificationRepository.deleteByUserId(member.getId());
+            member.setWorkspace(null);
+            member.getRoles().clear();
+            userRepository.save(member);
+        }
+
+        // 6. Delete the workspace itself
+        workspaceRepository.delete(workspace);
     }
 
     private String generateInviteCode() {

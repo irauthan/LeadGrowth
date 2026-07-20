@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -23,9 +22,10 @@ import {
   Building
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useLayoutStore } from '../store/layoutStore';
 
 export default function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggleCollapsed, isMobileOpen, setMobileOpen } = useLayoutStore();
   const location = useLocation();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
@@ -57,36 +57,47 @@ export default function Sidebar() {
   };
 
   return (
-    <motion.div
-      animate={{ width: isCollapsed ? '88px' : '280px' }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="fixed bottom-4 left-4 top-4 z-40 flex flex-col rounded-3xl border border-theme-border bg-theme-card/75 shadow-2xl backdrop-blur-xl"
-    >
-      {/* Header Logo */}
-      <div className="flex h-20 items-center justify-between px-6 border-b border-theme-border/30">
-        <Link to="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-white shadow-lg nav-glow">
-            <TrendingUp size={22} className="animate-pulse-slow" />
-          </div>
-          {!isCollapsed && (
-            <motion.span 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-gradient-to-r from-theme-primary to-indigo-400 bg-clip-text text-lg font-extrabold tracking-tight text-transparent"
-            >
-              Lead Growth
-            </motion.span>
-          )}
-        </Link>
-      </div>
+    <>
+      {/* Mobile Sidebar backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      {/* Collapse Toggle */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-24 flex h-6 w-6 items-center justify-center rounded-full border border-theme-border bg-theme-bg text-theme-text/80 shadow-md transition-all hover:bg-theme-bg-alt"
+      <motion.div
+        animate={{ width: isCollapsed ? '88px' : '280px' }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className={`fixed bottom-4 top-4 z-40 flex flex-col rounded-3xl border border-theme-border bg-theme-card/75 shadow-2xl backdrop-blur-xl transition-all duration-300 ${
+          isMobileOpen ? 'left-4' : '-translate-x-full lg:translate-x-0 lg:left-4'
+        }`}
       >
-        {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-      </button>
+        {/* Header Logo */}
+        <div className="flex h-20 items-center justify-between px-6 border-b border-theme-border/30">
+          <Link to="/dashboard" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-white shadow-lg nav-glow">
+              <TrendingUp size={22} className="animate-pulse-slow" />
+            </div>
+            {!isCollapsed && (
+              <motion.span 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-gradient-to-r from-theme-primary to-indigo-400 bg-clip-text text-lg font-extrabold tracking-tight text-transparent"
+              >
+                Lead Growth
+              </motion.span>
+            )}
+          </Link>
+        </div>
+
+        {/* Collapse Toggle */}
+        <button
+          onClick={toggleCollapsed}
+          className="absolute -right-3 top-24 hidden lg:flex h-6 w-6 items-center justify-center rounded-full border border-theme-border bg-theme-bg text-theme-text/80 shadow-md transition-all hover:bg-theme-bg-alt"
+        >
+          {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
 
       {/* Workspace Selector Block */}
       <div className="px-3 pt-4 pb-2">
@@ -207,5 +218,6 @@ export default function Sidebar() {
         </button>
       </div>
     </motion.div>
+    </>
   );
 }

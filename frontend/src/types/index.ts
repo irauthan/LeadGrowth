@@ -11,6 +11,9 @@ export interface User {
   workspaceName?: string;
   workspaceSlug?: string;
   inviteCode?: string;
+  department?: string;
+  status?: 'ACTIVE' | 'SUSPENDED';
+  lastActiveAt?: string;
 }
 
 export interface Workspace {
@@ -71,9 +74,10 @@ export interface Task {
   description?: string;
   assignedToId?: number;
   assignedToName?: string;
+  assignedByName?: string;
   dueDate: string;
-  priority: 'Low' | 'Medium' | 'High';
-  status: 'Pending' | 'In_Progress' | 'Completed';
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  status: 'Pending' | 'In_Progress' | 'In Progress' | 'Completed' | 'Rejected';
   createdAt: string;
 }
 

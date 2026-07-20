@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -55,8 +56,10 @@ public class TaskService {
         }
 
         User assignedTo = null;
-        if (dto.getAssignedToId() != null) {
+        if (dto.getAssignedToId() != null && dto.getAssignedToId() > 0) {
             assignedTo = userRepository.findById(dto.getAssignedToId()).orElse(null);
+        } else if (dto.getAssignedToId() != null && dto.getAssignedToId() == -1) {
+            assignedTo = findEqualDistributionAssignee(user.getWorkspace().getId());
         }
 
         Task task = Task.builder()
@@ -64,6 +67,7 @@ public class TaskService {
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .assignedTo(assignedTo)
+                .assignedBy(user)
                 .dueDate(dto.getDueDate())
                 .priority(dto.getPriority())
                 .status("Pending")
@@ -79,7 +83,6 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
 
-        // Check ownership if ROLE_USER
         boolean isUserOnly = user.getRoles().stream()
                 .anyMatch(r -> r.getName().equals("ROLE_USER")) &&
                 user.getRoles().stream().noneMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_MANAGER"));
@@ -106,6 +109,82 @@ public class TaskService {
         taskRepository.delete(task);
     }
 
+    @Transactional
+    public List<TaskDto> bulkAssignTasks(List<Long> taskIds, Long userId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        User assignedTo = userId == -1 
+                ? findEqualDistributionAssignee(user.getWorkspace().getId())
+                : userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        List<TaskDto> updated = new ArrayList<>();
+        for (Long id : taskIds) {
+            Task task = taskRepository.findById(id).orElse(null);
+            if (task != null && task.getWorkspace().getId().equals(user.getWorkspace().getId())) {
+                task.setAssignedTo(assignedTo);
+                task.setAssignedBy(user);
+                updated.add(convertToDto(taskRepository.save(task)));
+            }
+        }
+        return updated;
+    }
+
+    @Transactional
+    public List<TaskDto> bulkRandomAssignTasks(List<Long> taskIds, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<TaskDto> updated = new ArrayList<>();
+        for (Long id : taskIds) {
+            Task task = taskRepository.findById(id).orElse(null);
+            if (task != null && task.getWorkspace().getId().equals(user.getWorkspace().getId())) {
+                User assignedTo = findEqualDistributionAssignee(user.getWorkspace().getId());
+                task.setAssignedTo(assignedTo);
+                task.setAssignedBy(user);
+                updated.add(convertToDto(taskRepository.save(task)));
+            }
+        }
+        return updated;
+    }
+
+    @Transactional
+    public List<TaskDto> bulkUpdateStatus(List<Long> taskIds, String status, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<TaskDto> updated = new ArrayList<>();
+        for (Long id : taskIds) {
+            Task task = taskRepository.findById(id).orElse(null);
+            if (task != null && task.getWorkspace().getId().equals(user.getWorkspace().getId())) {
+                task.setStatus(status);
+                updated.add(convertToDto(taskRepository.save(task)));
+            }
+        }
+        return updated;
+    }
+
+    private User findEqualDistributionAssignee(Long workspaceId) {
+        List<User> members = userRepository.findByWorkspaceId(workspaceId);
+        List<User> activeMembers = members.stream()
+                .filter(u -> !"SUSPENDED".equalsIgnoreCase(u.getStatus()))
+                .collect(Collectors.toList());
+
+        if (activeMembers.isEmpty()) {
+            return null;
+        }
+
+        User bestMember = activeMembers.get(0);
+        long minCount = Long.MAX_VALUE;
+        for (User u : activeMembers) {
+            long count = taskRepository.countByAssignedToAndStatusIn(u, List.of("Pending", "In_Progress", "In Progress"));
+            if (count < minCount) {
+                minCount = count;
+                bestMember = u;
+            }
+        }
+        return bestMember;
+    }
+
     private TaskDto convertToDto(Task task) {
         return TaskDto.builder()
                 .id(task.getId())
@@ -113,6 +192,8 @@ public class TaskService {
                 .description(task.getDescription())
                 .assignedToId(task.getAssignedTo() != null ? task.getAssignedTo().getId() : null)
                 .assignedToName(task.getAssignedTo() != null ? task.getAssignedTo().getFullName() : "Unassigned")
+                .assignedById(task.getAssignedBy() != null ? task.getAssignedBy().getId() : null)
+                .assignedByName(task.getAssignedBy() != null ? task.getAssignedBy().getFullName() : "System")
                 .dueDate(task.getDueDate())
                 .priority(task.getPriority())
                 .status(task.getStatus())

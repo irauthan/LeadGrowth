@@ -9,19 +9,23 @@ public class TaskDto {
     private String description;
     private Long assignedToId;
     private String assignedToName;
+    private Long assignedById;
+    private String assignedByName;
     private LocalDate dueDate;
-    private String priority; // Low, Medium, High
-    private String status; // Pending, In_Progress, Completed
+    private String priority; // Low, Medium, High, Urgent
+    private String status; // Pending, In_Progress, Completed, Rejected
     private LocalDateTime createdAt;
 
     public TaskDto() {}
 
-    public TaskDto(Long id, String title, String description, Long assignedToId, String assignedToName, LocalDate dueDate, String priority, String status, LocalDateTime createdAt) {
+    public TaskDto(Long id, String title, String description, Long assignedToId, String assignedToName, Long assignedById, String assignedByName, LocalDate dueDate, String priority, String status, LocalDateTime createdAt) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.assignedToId = assignedToId;
         this.assignedToName = assignedToName;
+        this.assignedById = assignedById;
+        this.assignedByName = assignedByName;
         this.dueDate = dueDate;
         this.priority = priority;
         this.status = status;
@@ -42,6 +46,12 @@ public class TaskDto {
 
     public String getAssignedToName() { return assignedToName; }
     public void setAssignedToName(String assignedToName) { this.assignedToName = assignedToName; }
+
+    public Long getAssignedById() { return assignedById; }
+    public void setAssignedById(Long assignedById) { this.assignedById = assignedById; }
+
+    public String getAssignedByName() { return assignedByName; }
+    public void setAssignedByName(String assignedByName) { this.assignedByName = assignedByName; }
 
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
@@ -66,6 +76,8 @@ public class TaskDto {
         private String description;
         private Long assignedToId;
         private String assignedToName;
+        private Long assignedById;
+        private String assignedByName;
         private LocalDate dueDate;
         private String priority;
         private String status;
@@ -78,13 +90,15 @@ public class TaskDto {
         public TaskDtoBuilder description(String description) { this.description = description; return this; }
         public TaskDtoBuilder assignedToId(Long assignedToId) { this.assignedToId = assignedToId; return this; }
         public TaskDtoBuilder assignedToName(String assignedToName) { this.assignedToName = assignedToName; return this; }
+        public TaskDtoBuilder assignedById(Long assignedById) { this.assignedById = assignedById; return this; }
+        public TaskDtoBuilder assignedByName(String assignedByName) { this.assignedByName = assignedByName; return this; }
         public TaskDtoBuilder dueDate(LocalDate dueDate) { this.dueDate = dueDate; return this; }
         public TaskDtoBuilder priority(String priority) { this.priority = priority; return this; }
         public TaskDtoBuilder status(String status) { this.status = status; return this; }
         public TaskDtoBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public TaskDto build() {
-            return new TaskDto(id, title, description, assignedToId, assignedToName, dueDate, priority, status, createdAt);
+            return new TaskDto(id, title, description, assignedToId, assignedToName, assignedById, assignedByName, dueDate, priority, status, createdAt);
         }
     }
 }

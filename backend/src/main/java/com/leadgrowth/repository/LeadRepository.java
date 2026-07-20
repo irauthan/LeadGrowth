@@ -2,6 +2,9 @@ package com.leadgrowth.repository;
 
 import com.leadgrowth.entity.Lead;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -13,4 +16,10 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     long countByWorkspaceId(Long workspaceId);
     long countByWorkspaceIdAndStatus(Long workspaceId, String status);
     List<Lead> findTop100ByWorkspaceIdOrderByCreatedAtDesc(Long workspaceId);
+    
+    long countByAssignedToAndStatusIn(com.leadgrowth.entity.User user, List<String> statuses);
+
+    @Modifying
+    @Query("DELETE FROM Lead l WHERE l.workspace.id = :workspaceId")
+    void deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

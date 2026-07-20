@@ -308,9 +308,10 @@ export default function Tasks() {
                   <select
                     value={createForm.assignedToId}
                     onChange={(e) => setCreateForm({ ...createForm, assignedToId: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-theme-text"
                   >
                     <option value="">Unassigned</option>
+                    <option value="-1">🎲 Randomly Assign</option>
                     {members.map((m) => (
                       <option key={m.id} value={m.id}>{m.fullName}</option>
                     ))}

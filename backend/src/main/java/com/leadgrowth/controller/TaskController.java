@@ -49,4 +49,30 @@ public class TaskController {
         taskService.deleteTask(id, email);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/bulk-assign")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<TaskDto>> bulkAssign(
+            @RequestParam List<Long> taskIds,
+            @RequestParam Long userId
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.bulkAssignTasks(taskIds, userId, email));
+    }
+
+    @PostMapping("/bulk-random-assign")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<TaskDto>> bulkRandomAssign(@RequestParam List<Long> taskIds) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.bulkRandomAssignTasks(taskIds, email));
+    }
+
+    @PostMapping("/bulk-status")
+    public ResponseEntity<List<TaskDto>> bulkStatus(
+            @RequestParam List<Long> taskIds,
+            @RequestParam String status
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.bulkUpdateStatus(taskIds, status, email));
+    }
 }

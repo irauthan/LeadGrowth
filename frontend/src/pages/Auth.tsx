@@ -1,15 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, Briefcase, Phone, Loader2, Sparkles, TrendingUp } from 'lucide-react';
+import { Mail, Lock, User, Briefcase, Phone, Loader2, TrendingUp, ChevronRight, ChevronLeft, HelpCircle } from 'lucide-react';
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
+
+  // Onboarding wizard steps (1: Profile, 2: Password, 3: Workspace)
+  const [signupStep, setSignupStep] = useState(1);
+  const [workspaceAction, setWorkspaceAction] = useState<'CREATE' | 'JOIN'>('CREATE');
+
+  // Password reset inline states
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetStep, setResetStep] = useState(1); // 1: Send request email, 2: Confirm token reset
+  const [forgotForm, setForgotForm] = useState({ email: '' });
+  const [resetForm, setResetForm] = useState({ token: '', newPassword: '', confirmPassword: '' });
 
   // Auth Store details
   const login = useAuthStore((state) => state.login);
@@ -17,7 +27,7 @@ export default function Auth() {
   const user = useAuthStore((state) => state.user);
 
   // Form states
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [loginForm, setLoginForm] = useState({ email: '', password: '', rememberMe: false });
   const [signupForm, setSignupForm] = useState({
     fullName: '',
     companyName: '',
@@ -25,14 +35,42 @@ export default function Auth() {
     phone: '',
     password: '',
     confirmPassword: '',
+    workspaceName: '',
+    inviteCode: ''
   });
 
-  // If already authenticated and workspace exists, send to dashboard
+  // Invite states
+  const [inviteToken, setInviteToken] = useState('');
+  const [inviteRole, setInviteRole] = useState('');
+  const [inviteWorkspaceName, setInviteWorkspaceName] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('inviteToken');
+    if (token) {
+      setInviteToken(token);
+      setActiveTab('signup');
+      verifyToken(token);
+    }
+  }, []);
+
+  const verifyToken = async (token: string) => {
+    setError('');
+    try {
+      const res = await api.get(`/api/invitations/verify?token=${token}`);
+      setInviteRole(res.data.role);
+      setInviteWorkspaceName(res.data.workspaceName);
+      setSignupForm(prev => ({ ...prev, email: res.data.email }));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'The invitation link is invalid or has expired.');
+      setInviteToken('');
+    }
+  };
+
   if (isAuthenticated && user?.workspaceId) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // If authenticated but onboarding pending, send to onboarding
   if (isAuthenticated && !user?.workspaceId) {
     return <Navigate to="/onboarding" replace />;
   }
@@ -41,12 +79,16 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccessMessage('');
 
     try {
       const response = await api.post('/api/auth/login', loginForm);
       const data = response.data;
       
-      // Save in zustand
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+
       login(data.token, {
         id: data.userId,
         email: data.email,
@@ -66,8 +108,7 @@ export default function Auth() {
         navigate('/onboarding');
       }
     } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Invalid email or password. Please try again.');
+      setError(err.response?.data?.message || 'Invalid credentials or suspended account.');
     } finally {
       setLoading(false);
     }
@@ -75,308 +116,558 @@ export default function Auth() {
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setSuccessMessage('');
 
-    if (signupForm.password !== signupForm.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
+    // If joining via invite token
+    if (inviteToken) {
+      setLoading(true);
+      try {
+        const response = await api.post('/api/auth/register-invited', {
+          fullName: signupForm.fullName,
+          email: signupForm.email,
+          phone: signupForm.phone,
+          password: signupForm.password,
+          confirmPassword: signupForm.confirmPassword,
+          token: inviteToken
+        });
+        
+        const data = response.data;
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
+
+        login(data.token, {
+          id: data.userId,
+          email: data.email,
+          fullName: data.fullName,
+          roles: data.roles,
+          workspaceId: data.workspaceId,
+          workspaceName: data.workspaceName,
+          workspaceSlug: data.workspaceSlug,
+          inviteCode: data.inviteCode,
+        });
+
+        navigate('/dashboard');
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to register via invite.');
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
+    // Step validations
+    if (signupStep === 1) {
+      if (!signupForm.fullName || !signupForm.email || !signupForm.phone) {
+        setError('Please fill in all details for Step 1');
+        return;
+      }
+      setSignupStep(2);
+      return;
+    }
+
+    if (signupStep === 2) {
+      if (!signupForm.password || !signupForm.confirmPassword) {
+        setError('Passwords are required');
+        return;
+      }
+      if (signupForm.password !== signupForm.confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+      setSignupStep(3);
+      return;
+    }
+
+    // Final registration submit
+    setLoading(true);
     try {
-      const response = await api.post('/api/auth/register', signupForm);
+      const payload = {
+        fullName: signupForm.fullName,
+        email: signupForm.email,
+        phone: signupForm.phone,
+        password: signupForm.password,
+        confirmPassword: signupForm.confirmPassword,
+        workspaceAction: workspaceAction,
+        workspaceName: workspaceAction === 'CREATE' ? signupForm.workspaceName : undefined,
+        companyName: workspaceAction === 'CREATE' ? signupForm.companyName : undefined,
+        inviteCode: workspaceAction === 'JOIN' ? signupForm.inviteCode : undefined
+      };
+
+      const response = await api.post('/api/auth/register', payload);
       const data = response.data;
-      
-      // Registration logs user in immediately
+
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+
       login(data.token, {
         id: data.userId,
         email: data.email,
         fullName: data.fullName,
-        roles: data.roles || [],
+        roles: data.roles,
+        workspaceId: data.workspaceId,
+        workspaceName: data.workspaceName,
+        workspaceSlug: data.workspaceSlug,
+        inviteCode: data.inviteCode,
       });
 
-      // Send directly to onboarding to configure workspace
-      navigate('/onboarding');
+      navigate('/dashboard');
     } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Error occurred during signup. Email may be taken.');
+      setError(err.response?.data?.message || 'Registration failed. Check details.');
+      setSignupStep(1);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      if (resetStep === 1) {
+        await api.post('/api/auth/password-reset/request', forgotForm);
+        setSuccessMessage('Password reset code generated and sent to console.');
+        setResetStep(2);
+      } else {
+        await api.post('/api/auth/password-reset/confirm', resetForm);
+        setSuccessMessage('Password updated successfully. Please login.');
+        setIsForgotPassword(false);
+        setResetStep(1);
+        setActiveTab('login');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Action failed. Please verify.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 py-12 dark:bg-slate-950">
-      {/* Ambient backgrounds */}
-      <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-brand-300 to-indigo-300 opacity-20 blur-[100px] dark:from-brand-900/20 dark:to-indigo-900/20" />
-      <div className="absolute -right-40 bottom-0 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-indigo-300 to-rose-300 opacity-20 blur-[100px] dark:from-indigo-950/20 dark:to-rose-950/20" />
-
-      <div className="relative z-10 w-full max-w-lg">
-        {/* Header Logo */}
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white shadow-xl shadow-brand-500/20 nav-glow">
-            <TrendingUp size={26} className="animate-pulse-slow" />
+    <div className="flex min-h-screen items-center justify-center bg-[#0B1120] px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        
+        {/* LOGO */}
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-[#06B6D4] text-white shadow-xl shadow-blue-500/10">
+            <TrendingUp size={24} />
           </div>
-          <h2 className="mt-4 text-3xl font-extrabold tracking-tight">Lead Growth</h2>
-          <p className="mt-1.5 text-xs font-semibold text-slate-400 dark:text-slate-500">
-            One Dashboard. Every Lead. Complete Growth.
+          <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-white">
+            Lead Growth
+          </h2>
+          <p className="mt-1.5 text-xs font-semibold text-slate-400">
+            Enterprise SaaS Campaign Lead & Team Productivity Platform
           </p>
         </div>
 
-        {/* Card Panel */}
-        <div className="glass-card rounded-3xl p-8 shadow-2xl backdrop-blur-md">
-          {/* Tab buttons */}
-          <div className="mb-8 flex rounded-2xl bg-slate-100 p-1 dark:bg-slate-800/60">
-            <button
-              onClick={() => { setActiveTab('login'); setError(''); }}
-              className={`flex-1 rounded-xl py-3 text-sm font-bold transition-all ${
-                activeTab === 'login'
-                  ? 'bg-white text-brand-600 shadow dark:bg-slate-900 dark:text-white'
-                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => { setActiveTab('signup'); setError(''); }}
-              className={`flex-1 rounded-xl py-3 text-sm font-bold transition-all ${
-                activeTab === 'signup'
-                  ? 'bg-white text-brand-600 shadow dark:bg-slate-900 dark:text-white'
-                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          {/* Form Content */}
-          <AnimatePresence mode="wait">
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-600 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400"
+        {/* AUTH CARD */}
+        <div className="rounded-3xl border border-slate-800 bg-[#111827]/80 p-8 shadow-2xl backdrop-blur-md">
+          
+          {/* TAB HEADERS */}
+          {!isForgotPassword && !inviteToken && (
+            <div className="mb-6 flex rounded-2xl bg-slate-950 p-1">
+              <button
+                onClick={() => { setActiveTab('login'); setError(''); }}
+                className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all ${
+                  activeTab === 'login' 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
               >
-                {error}
-              </motion.div>
-            )}
-
-            {activeTab === 'login' ? (
-              <motion.form
-                key="login"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                transition={{ duration: 0.2 }}
-                onSubmit={handleLoginSubmit}
-                className="space-y-5"
+                Sign In
+              </button>
+              <button
+                onClick={() => { setActiveTab('signup'); setSignupStep(1); setError(''); }}
+                className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all ${
+                  activeTab === 'signup' 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
               >
+                Register Team
+              </button>
+            </div>
+          )}
+
+          {/* MESSAGES */}
+          {error && (
+            <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-xs font-medium text-red-400">
+              {error}
+            </div>
+          )}
+          {successMessage && (
+            <div className="mb-4 rounded-xl bg-green-500/10 border border-green-500/30 p-3 text-xs font-medium text-green-400">
+              {successMessage}
+            </div>
+          )}
+
+          {/* INLINE FORGOT PASSWORD FORM */}
+          {isForgotPassword ? (
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white uppercase">Reset Password</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(false)}
+                  className="text-xs text-blue-500 font-bold hover:underline"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+
+              {resetStep === 1 ? (
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
-                      <Mail size={18} />
-                    </span>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</label>
+                  <div className="relative mt-1">
+                    <span className="absolute inset-y-0 left-3 flex items-center text-slate-500"><Mail size={14} /></span>
                     <input
                       type="email"
                       required
-                      placeholder="name@company.com"
-                      value={loginForm.email}
-                      onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3.5 pl-12 pr-4 text-sm outline-none transition-all focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50 dark:focus:border-brand-500"
+                      placeholder="rahul@example.com"
+                      value={forgotForm.email}
+                      onChange={(e) => setForgotForm({ email: e.target.value })}
+                      className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-9 pr-4 text-xs font-medium text-white outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
-                      <Lock size={18} />
-                    </span>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Reset Code</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter 8-digit code"
+                      value={resetForm.token}
+                      onChange={(e) => setResetForm({ ...resetForm, token: e.target.value })}
+                      className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 py-2 px-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">New Password</label>
                     <input
                       type="password"
                       required
-                      placeholder="••••••••"
-                      value={loginForm.password}
-                      onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3.5 pl-12 pr-4 text-sm outline-none transition-all focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50 dark:focus:border-brand-500"
+                      placeholder="Minimum 6 characters"
+                      value={resetForm.newPassword}
+                      onChange={(e) => setResetForm({ ...resetForm, newPassword: e.target.value })}
+                      className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 py-2 px-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Confirm New Password</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Repeat password"
+                      value={resetForm.confirmPassword}
+                      onChange={(e) => setResetForm({ ...resetForm, confirmPassword: e.target.value })}
+                      className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 py-2 px-4 text-xs font-medium text-white outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
+              )}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 py-3.5 font-bold text-white shadow-lg shadow-brand-500/20 transition-all hover:scale-[1.01] hover:shadow-brand-500/30 disabled:opacity-70 nav-glow"
-                >
-                  {loading ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <span>Sign In</span>
-                  )}
-                </button>
-              </motion.form>
-            ) : (
-              <motion.form
-                key="signup"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                onSubmit={handleSignupSubmit}
-                className="space-y-4"
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-lg transition-all hover:bg-blue-700 disabled:opacity-50"
               >
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
-                      <User size={18} />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      placeholder="John Doe"
-                      value={signupForm.fullName}
-                      onChange={(e) => setSignupForm({ ...signupForm, fullName: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3 pl-12 pr-4 text-sm outline-none transition-all focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50 dark:focus:border-brand-500"
-                    />
-                  </div>
+                {loading ? <Loader2 size={16} className="animate-spin" /> : resetStep === 1 ? 'Generate Reset Code' : 'Update Password'}
+              </button>
+            </form>
+          ) : activeTab === 'login' ? (
+            
+            /* SIGN IN FORM */
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</label>
+                <div className="relative mt-1">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-slate-500"><Mail size={14} /></span>
+                  <input
+                    type="email"
+                    required
+                    placeholder="rahul@leadgrowth.com"
+                    value={loginForm.email}
+                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                  />
                 </div>
+              </div>
 
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Company Name
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
-                      <Briefcase size={18} />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Growth Marketing Agency"
-                      value={signupForm.companyName}
-                      onChange={(e) => setSignupForm({ ...signupForm, companyName: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3 pl-12 pr-4 text-sm outline-none transition-all focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50 dark:focus:border-brand-500"
-                    />
-                  </div>
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Password</label>
+                  <button
+                    type="button"
+                    onClick={() => { setIsForgotPassword(true); setError(''); setSuccessMessage(''); }}
+                    className="text-[10px] text-blue-500 font-bold hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
                 </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
-                      <Mail size={18} />
-                    </span>
-                    <input
-                      type="email"
-                      required
-                      placeholder="name@company.com"
-                      value={signupForm.email}
-                      onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3 pl-12 pr-4 text-sm outline-none transition-all focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50 dark:focus:border-brand-500"
-                    />
-                  </div>
+                <div className="relative mt-1">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-slate-500"><Lock size={14} /></span>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Password@123"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                  />
                 </div>
+              </div>
 
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
-                      <Phone size={18} />
-                    </span>
-                    <input
-                      type="tel"
-                      placeholder="+1 (555) 000-0000"
-                      value={signupForm.phone}
-                      onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3 pl-12 pr-4 text-sm outline-none transition-all focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50 dark:focus:border-brand-500"
-                    />
-                  </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={loginForm.rememberMe}
+                  onChange={(e) => setLoginForm({ ...loginForm, rememberMe: e.target.checked })}
+                  className="rounded border-slate-800 bg-slate-950 text-blue-600 focus:ring-0"
+                />
+                <label htmlFor="rememberMe" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 cursor-pointer">
+                  Remember Me (Stay signed in)
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-lg transition-all hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : 'Access Workspace'}
+              </button>
+            </form>
+          ) : (
+            
+            /* SIGNUP WIZARD FORM */
+            <form onSubmit={handleSignupSubmit} className="space-y-4">
+              
+              {/* INVITE BANNER */}
+              {inviteToken && (
+                <div className="mb-3 rounded-xl bg-blue-600/10 border border-blue-500/20 p-3 text-xs text-blue-400">
+                  <p className="font-bold uppercase tracking-wider text-[10px]">Invitation Active</p>
+                  <p className="mt-1 font-medium">Joining workspace: <span className="font-bold text-white">{inviteWorkspaceName}</span> as <span className="font-bold text-white">{inviteRole}</span></p>
                 </div>
+              )}
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* STEP INDICATORS */}
+              {!inviteToken && (
+                <div className="mb-4 flex items-center justify-between">
+                  {[1, 2, 3].map((s) => (
+                    <div key={s} className="flex items-center">
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold transition-all ${
+                        signupStep === s 
+                          ? 'bg-blue-600 text-white shadow-lg ring-4 ring-blue-500/20' 
+                          : signupStep > s 
+                          ? 'bg-green-600 text-white' 
+                          : 'bg-slate-900 border border-slate-800 text-slate-500'
+                      }`}>
+                        {signupStep > s ? '✓' : s}
+                      </div>
+                      {s < 3 && <div className={`h-0.5 w-16 mx-1 transition-all ${signupStep > s ? 'bg-green-600' : 'bg-slate-800'}`} />}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* STEP 1: Profile Info */}
+              {signupStep === 1 && (
+                <div className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={signupForm.password}
-                      onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3 px-4 text-sm outline-none transition-all focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50 dark:focus:border-brand-500"
-                    />
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Name</label>
+                    <div className="relative mt-1">
+                      <span className="absolute inset-y-0 left-3 flex items-center text-slate-500"><User size={14} /></span>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Rahul Sharma"
+                        value={signupForm.fullName}
+                        onChange={(e) => setSignupForm({ ...signupForm, fullName: e.target.value })}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      Confirm Password
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={signupForm.confirmPassword}
-                      onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3 px-4 text-sm outline-none transition-all focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50 dark:focus:border-brand-500"
-                    />
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</label>
+                    <div className="relative mt-1">
+                      <span className="absolute inset-y-0 left-3 flex items-center text-slate-500"><Mail size={14} /></span>
+                      <input
+                        type="email"
+                        required
+                        disabled={!!inviteToken}
+                        placeholder="rahul@example.com"
+                        value={signupForm.email}
+                        onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-4 text-xs font-medium text-white outline-none focus:border-blue-500 disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone Number</label>
+                    <div className="relative mt-1">
+                      <span className="absolute inset-y-0 left-3 flex items-center text-slate-500"><Phone size={14} /></span>
+                      <input
+                        type="text"
+                        required
+                        placeholder="+91 99999 99999"
+                        value={signupForm.phone}
+                        onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
                   </div>
                 </div>
+              )}
 
+              {/* STEP 2: Passwords */}
+              {signupStep === 2 && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Password</label>
+                    <div className="relative mt-1">
+                      <span className="absolute inset-y-0 left-3 flex items-center text-slate-500"><Lock size={14} /></span>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Minimum 6 characters"
+                        value={signupForm.password}
+                        onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Confirm Password</label>
+                    <div className="relative mt-1">
+                      <span className="absolute inset-y-0 left-3 flex items-center text-slate-500"><Lock size={14} /></span>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Confirm password"
+                        value={signupForm.confirmPassword}
+                        onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: Workspace Action (Only for non-invited registration) */}
+              {signupStep === 3 && !inviteToken && (
+                <div className="space-y-3">
+                  <div className="mb-4 grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setWorkspaceAction('CREATE')}
+                      className={`rounded-2xl border p-4 text-center transition-all ${
+                        workspaceAction === 'CREATE'
+                          ? 'border-blue-500 bg-blue-600/10 text-white'
+                          : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <Briefcase size={20} className="mx-auto mb-1.5" />
+                      <span className="block text-[11px] font-extrabold uppercase tracking-wider">Create Workspace</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWorkspaceAction('JOIN')}
+                      className={`rounded-2xl border p-4 text-center transition-all ${
+                        workspaceAction === 'JOIN'
+                          ? 'border-blue-500 bg-blue-600/10 text-white'
+                          : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <HelpCircle size={20} className="mx-auto mb-1.5" />
+                      <span className="block text-[11px] font-extrabold uppercase tracking-wider">Join Workspace</span>
+                    </button>
+                  </div>
+
+                  {workspaceAction === 'CREATE' ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Workspace Name</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Acme Marketing Agency"
+                          value={signupForm.workspaceName}
+                          onChange={(e) => setSignupForm({ ...signupForm, workspaceName: e.target.value })}
+                          className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 py-2.5 px-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Company Name</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Acme Corp"
+                          value={signupForm.companyName}
+                          onChange={(e) => setSignupForm({ ...signupForm, companyName: e.target.value })}
+                          className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 py-2.5 px-4 text-xs font-medium text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Workspace Invite Code</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="WS-XXXXXXXX"
+                        value={signupForm.inviteCode}
+                        onChange={(e) => setSignupForm({ ...signupForm, inviteCode: e.target.value })}
+                        className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 py-2.5 px-4 text-xs font-medium text-white outline-none focus:border-blue-500 uppercase"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* NAVIGATION BUTTONS */}
+              <div className="flex gap-3">
+                {signupStep > 1 && !inviteToken && (
+                  <button
+                    type="button"
+                    onClick={() => { setError(''); setSignupStep(prev => prev - 1); }}
+                    className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-950 px-4 text-slate-400 hover:text-white"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                )}
+                
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 py-3.5 mt-2 font-bold text-white shadow-lg shadow-brand-500/20 transition-all hover:scale-[1.01] hover:shadow-brand-500/30 disabled:opacity-70 nav-glow"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-lg transition-all hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? (
-                    <Loader2 size={18} className="animate-spin" />
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : inviteToken ? (
+                    'Accept & Register'
+                  ) : signupStep < 3 ? (
+                    <>Next Step <ChevronRight size={14} /></>
                   ) : (
-                    <span className="flex items-center gap-1">
-                      <Sparkles size={16} />
-                      Create Account
-                    </span>
+                    'Complete Setup'
                   )}
                 </button>
-              </motion.form>
-            )}
-          </AnimatePresence>
+              </div>
+
+            </form>
+          )}
+
         </div>
 
-        {/* Demo Credentials Info Box for fast sign-in */}
-        <div className="mt-6 rounded-2xl border border-slate-200/50 bg-white/30 p-4 text-xs dark:border-slate-800/40 dark:bg-slate-900/25">
-          <p className="font-bold text-slate-700 dark:text-slate-300 mb-2">💡 Quick Access Credentials:</p>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <p className="font-semibold text-brand-600 dark:text-brand-400">Admin Role</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">admin@leadgrowth.com</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500">Admin@123</p>
-            </div>
-            <div>
-              <p className="font-semibold text-indigo-500">Manager Role</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">manager@leadgrowth.com</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500">Manager@123</p>
-            </div>
-            <div>
-              <p className="font-semibold text-emerald-500">User Role</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">user@leadgrowth.com</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500">User@123</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

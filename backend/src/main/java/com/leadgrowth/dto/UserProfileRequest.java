@@ -11,15 +11,17 @@ public class UserProfileRequest {
     private String designation;
     private String bio;
     private String profileImage;
+    private String department;
 
     public UserProfileRequest() {}
 
-    public UserProfileRequest(String fullName, String phone, String designation, String bio, String profileImage) {
+    public UserProfileRequest(String fullName, String phone, String designation, String bio, String profileImage, String department) {
         this.fullName = fullName;
         this.phone = phone;
         this.designation = designation;
         this.bio = bio;
         this.profileImage = profileImage;
+        this.department = department;
     }
 
     public String getFullName() { return fullName; }
@@ -36,4 +38,7 @@ public class UserProfileRequest {
 
     public String getProfileImage() { return profileImage; }
     public void setProfileImage(String profileImage) { this.profileImage = profileImage; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
 }

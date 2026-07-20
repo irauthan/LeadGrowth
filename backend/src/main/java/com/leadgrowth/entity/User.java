@@ -1,5 +1,6 @@
 package com.leadgrowth.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -16,6 +17,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @JsonIgnore
     @Column(nullable = false, length = 255)
     private String password;
 
@@ -34,6 +36,9 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    @Column(nullable = false, length = 20)
+    private String status = "ACTIVE";
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "workspace_id")
     private Workspace workspace;
@@ -46,6 +51,15 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
+    @Column(length = 100)
+    private String department;
+
+    @Column(name = "last_active_at")
+    private LocalDateTime lastActiveAt;
+
+    @Column(name = "is_email_verified", nullable = false)
+    private boolean isEmailVerified = false;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -57,7 +71,7 @@ public class User {
     // Constructors
     public User() {}
 
-    public User(Long id, String email, String password, String fullName, String designation, String bio, String profileImage, String phone, Workspace workspace, Set<Role> roles, LocalDateTime createdAt) {
+    public User(Long id, String email, String password, String fullName, String designation, String bio, String profileImage, String phone, Workspace workspace, Set<Role> roles, String status, String department, LocalDateTime lastActiveAt, boolean isEmailVerified, LocalDateTime createdAt) {
         this.id = id;
         this.email = email;
         this.password = password;
@@ -68,6 +82,10 @@ public class User {
         this.phone = phone;
         this.workspace = workspace;
         this.roles = roles != null ? roles : new HashSet<>();
+        this.status = status != null ? status : "ACTIVE";
+        this.department = department;
+        this.lastActiveAt = lastActiveAt;
+        this.isEmailVerified = isEmailVerified;
         this.createdAt = createdAt;
     }
 
@@ -96,11 +114,23 @@ public class User {
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
 
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
     public Workspace getWorkspace() { return workspace; }
     public void setWorkspace(Workspace workspace) { this.workspace = workspace; }
 
     public Set<Role> getRoles() { return roles; }
     public void setRoles(Set<Role> roles) { this.roles = roles; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+
+    public LocalDateTime getLastActiveAt() { return lastActiveAt; }
+    public void setLastActiveAt(LocalDateTime lastActiveAt) { this.lastActiveAt = lastActiveAt; }
+
+    public boolean isEmailVerified() { return isEmailVerified; }
+    public void setEmailVerified(boolean emailVerified) { isEmailVerified = emailVerified; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
@@ -119,8 +149,12 @@ public class User {
         private String bio;
         private String profileImage;
         private String phone;
+        private String status = "ACTIVE";
         private Workspace workspace;
         private Set<Role> roles = new HashSet<>();
+        private String department;
+        private LocalDateTime lastActiveAt;
+        private boolean isEmailVerified = false;
         private LocalDateTime createdAt;
 
         UserBuilder() {}
@@ -133,12 +167,16 @@ public class User {
         public UserBuilder bio(String bio) { this.bio = bio; return this; }
         public UserBuilder profileImage(String profileImage) { this.profileImage = profileImage; return this; }
         public UserBuilder phone(String phone) { this.phone = phone; return this; }
+        public UserBuilder status(String status) { this.status = status; return this; }
         public UserBuilder workspace(Workspace workspace) { this.workspace = workspace; return this; }
         public UserBuilder roles(Set<Role> roles) { this.roles = roles; return this; }
+        public UserBuilder department(String department) { this.department = department; return this; }
+        public UserBuilder lastActiveAt(LocalDateTime lastActiveAt) { this.lastActiveAt = lastActiveAt; return this; }
+        public UserBuilder isEmailVerified(boolean isEmailVerified) { this.isEmailVerified = isEmailVerified; return this; }
         public UserBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public User build() {
-            return new User(id, email, password, fullName, designation, bio, profileImage, phone, workspace, roles, createdAt);
+            return new User(id, email, password, fullName, designation, bio, profileImage, phone, workspace, roles, status, department, lastActiveAt, isEmailVerified, createdAt);
         }
     }
 }

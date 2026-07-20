@@ -24,15 +24,22 @@ public class RegisterRequest {
     @NotBlank(message = "Confirm password is required")
     private String confirmPassword;
 
+    private String workspaceAction; // "CREATE" or "JOIN"
+    private String workspaceName;
+    private String inviteCode;
+
     public RegisterRequest() {}
 
-    public RegisterRequest(String fullName, String companyName, String email, String phone, String password, String confirmPassword) {
+    public RegisterRequest(String fullName, String companyName, String email, String phone, String password, String confirmPassword, String workspaceAction, String workspaceName, String inviteCode) {
         this.fullName = fullName;
         this.companyName = companyName;
         this.email = email;
         this.phone = phone;
         this.password = password;
         this.confirmPassword = confirmPassword;
+        this.workspaceAction = workspaceAction;
+        this.workspaceName = workspaceName;
+        this.inviteCode = inviteCode;
     }
 
     public String getFullName() { return fullName; }
@@ -52,4 +59,13 @@ public class RegisterRequest {
 
     public String getConfirmPassword() { return confirmPassword; }
     public void setConfirmPassword(String confirmPassword) { this.confirmPassword = confirmPassword; }
+
+    public String getWorkspaceAction() { return workspaceAction; }
+    public void setWorkspaceAction(String workspaceAction) { this.workspaceAction = workspaceAction; }
+
+    public String getWorkspaceName() { return workspaceName; }
+    public void setWorkspaceName(String workspaceName) { this.workspaceName = workspaceName; }
+
+    public String getInviteCode() { return inviteCode; }
+    public void setInviteCode(String inviteCode) { this.inviteCode = inviteCode; }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { 
   Building, 
@@ -8,8 +8,10 @@ import {
   ShieldAlert,
   ArrowRight,
   Check,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
+import api from '../services/api';
 
 export default function WorkspaceManagement() {
   const user = useAuthStore((state) => state.user);
@@ -18,28 +20,70 @@ export default function WorkspaceManagement() {
   const [workspaceName, setWorkspaceName] = useState(user?.workspaceName || 'Default Workspace');
   const [workspaceSlug, setWorkspaceSlug] = useState(user?.workspaceSlug || 'default-slug');
   const [inviteCode, setInviteCode] = useState(user?.inviteCode || 'LG-DEFAULT');
+  const [companyName, setCompanyName] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [teamSize, setTeamSize] = useState<number>(1);
+  const [website, setWebsite] = useState('');
+  const [timezone, setTimezone] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingWorkspace, setLoadingWorkspace] = useState(true);
 
-  const handleUpdateWorkspace = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchWorkspace();
+  }, []);
+
+  const fetchWorkspace = async () => {
+    try {
+      const res = await api.get('/api/workspaces/current');
+      const ws = res.data;
+      setWorkspaceName(ws.name);
+      setWorkspaceSlug(ws.slug);
+      setInviteCode(ws.inviteCode);
+      setCompanyName(ws.companyName || '');
+      setIndustry(ws.industry || '');
+      setTeamSize(ws.teamSize || 1);
+      setWebsite(ws.website || '');
+      setTimezone(ws.timezone || 'UTC');
+    } catch (err) {
+      console.error('Failed to load workspace settings', err);
+    } finally {
+      setLoadingWorkspace(false);
+    }
+  };
+
+  const handleUpdateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMsg('');
     setLoading(true);
 
-    setTimeout(() => {
-      // Simulate saving changes
-      setLoading(false);
+    try {
+      const res = await api.put('/api/workspaces/current', {
+        name: workspaceName,
+        companyName,
+        industry,
+        teamSize,
+        website,
+        timezone,
+        inviteCode,
+        slug: workspaceSlug
+      });
+
       setSuccessMsg('Workspace configurations saved successfully!');
       
       // Update local Zustand store so changes propagate globally
       setWorkspace(
-        user?.workspaceId,
-        workspaceName,
-        workspaceSlug,
-        inviteCode,
+        res.data.id,
+        res.data.name,
+        res.data.slug,
+        res.data.inviteCode,
         user?.roles[0]
       );
-    }, 800);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update workspace settings.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResetInviteCode = () => {
@@ -51,6 +95,28 @@ export default function WorkspaceManagement() {
     setInviteCode(newCode);
     setSuccessMsg('New invite code generated! Make sure to save changes.');
   };
+
+  const handleDeleteWorkspace = async () => {
+    if (!window.confirm("ARE YOU ABSOLUTELY SURE you want to delete this workspace? This will permanently delete all leads, tasks, campaigns, and API integrations!")) {
+      return;
+    }
+    try {
+      await api.delete('/api/workspaces/current');
+      const logout = useAuthStore.getState().logout;
+      logout();
+      window.location.href = '/auth';
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete workspace.');
+    }
+  };
+
+  if (loadingWorkspace) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 size={36} className="animate-spin text-theme-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -71,7 +137,7 @@ export default function WorkspaceManagement() {
         <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Active Integrations</span>
-            <h3 className="text-lg font-extrabold mt-1 text-theme-text">4 Services Connected</h3>
+            <h3 className="text-lg font-extrabold mt-1 text-theme-text">2 Services Connected</h3>
           </div>
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-500/10 text-theme-primary">
             <Database size={20} />
@@ -80,8 +146,8 @@ export default function WorkspaceManagement() {
 
         <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Seat Seats</span>
-            <h3 className="text-lg font-extrabold mt-1 text-theme-text">12 Members (Uncapped)</h3>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Workspace Team Size</span>
+            <h3 className="text-lg font-extrabold mt-1 text-theme-text">{teamSize} Members</h3>
           </div>
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
             <Users size={20} />
@@ -105,14 +171,73 @@ export default function WorkspaceManagement() {
           )}
 
           <form onSubmit={handleUpdateWorkspace} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-theme-text-muted mb-2">Workspace Name</label>
+                <input
+                  type="text"
+                  required
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  placeholder="Enter workspace name"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none focus:border-theme-primary focus:bg-theme-card"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-text-muted mb-2">Company Name</label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Enter company name"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none focus:border-theme-primary focus:bg-theme-card"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-theme-text-muted mb-2">Industry</label>
+                <input
+                  type="text"
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  placeholder="e.g. Technology"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none focus:border-theme-primary focus:bg-theme-card"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-text-muted mb-2">Team Size</label>
+                <input
+                  type="number"
+                  value={teamSize}
+                  onChange={(e) => setTeamSize(parseInt(e.target.value) || 1)}
+                  placeholder="e.g. 15"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none focus:border-theme-primary focus:bg-theme-card"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-theme-text-muted mb-2">Timezone</label>
+                <input
+                  type="text"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  placeholder="e.g. UTC+5:30"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none focus:border-theme-primary focus:bg-theme-card"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-semibold text-theme-text-muted mb-2">Workspace Name</label>
+              <label className="block text-xs font-semibold text-theme-text-muted mb-2">Website URL</label>
               <input
                 type="text"
-                required
-                value={workspaceName}
-                onChange={(e) => setWorkspaceName(e.target.value)}
-                placeholder="Enter workspace name"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://company.com"
                 className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none focus:border-theme-primary focus:bg-theme-card"
               />
             </div>
@@ -185,8 +310,12 @@ export default function WorkspaceManagement() {
 
             <div className="p-4 rounded-2xl border border-rose-500/10 bg-rose-500/5">
               <span className="text-xs font-bold text-rose-500">Archive / Delete Workspace</span>
-              <p className="text-[10px] text-theme-text-muted mt-1 leading-relaxed">Permanently purge all data, including 15,420 captured leads, campaign logs, and API sync records.</p>
-              <button className="flex items-center gap-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 text-[10px] font-bold mt-3">
+              <p className="text-[10px] text-theme-text-muted mt-1 leading-relaxed">Permanently purge all data, including campaigns, leads, and API sync records.</p>
+              <button
+                type="button"
+                onClick={handleDeleteWorkspace}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 text-[10px] font-bold mt-3"
+              >
                 Delete Workspace
               </button>
             </div>

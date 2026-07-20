@@ -26,6 +26,10 @@ public class Task {
     @JoinColumn(name = "assigned_to_id")
     private User assignedTo;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_by_id")
+    private User assignedBy;
+
     @Column(name = "due_date")
     private LocalDate dueDate;
 
@@ -46,12 +50,13 @@ public class Task {
     // Constructors
     public Task() {}
 
-    public Task(Long id, Workspace workspace, String title, String description, User assignedTo, LocalDate dueDate, String priority, String status, LocalDateTime createdAt) {
+    public Task(Long id, Workspace workspace, String title, String description, User assignedTo, User assignedBy, LocalDate dueDate, String priority, String status, LocalDateTime createdAt) {
         this.id = id;
         this.workspace = workspace;
         this.title = title;
         this.description = description;
         this.assignedTo = assignedTo;
+        this.assignedBy = assignedBy;
         this.dueDate = dueDate;
         this.priority = priority;
         this.status = status;
@@ -73,6 +78,9 @@ public class Task {
 
     public User getAssignedTo() { return assignedTo; }
     public void setAssignedTo(User assignedTo) { this.assignedTo = assignedTo; }
+
+    public User getAssignedBy() { return assignedBy; }
+    public void setAssignedBy(User assignedBy) { this.assignedBy = assignedBy; }
 
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
@@ -97,6 +105,7 @@ public class Task {
         private String title;
         private String description;
         private User assignedTo;
+        private User assignedBy;
         private LocalDate dueDate;
         private String priority;
         private String status;
@@ -109,13 +118,14 @@ public class Task {
         public TaskBuilder title(String title) { this.title = title; return this; }
         public TaskBuilder description(String description) { this.description = description; return this; }
         public TaskBuilder assignedTo(User assignedTo) { this.assignedTo = assignedTo; return this; }
+        public TaskBuilder assignedBy(User assignedBy) { this.assignedBy = assignedBy; return this; }
         public TaskBuilder dueDate(LocalDate dueDate) { this.dueDate = dueDate; return this; }
         public TaskBuilder priority(String priority) { this.priority = priority; return this; }
         public TaskBuilder status(String status) { this.status = status; return this; }
         public TaskBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public Task build() {
-            return new Task(id, workspace, title, description, assignedTo, dueDate, priority, status, createdAt);
+            return new Task(id, workspace, title, description, assignedTo, assignedBy, dueDate, priority, status, createdAt);
         }
     }
 }

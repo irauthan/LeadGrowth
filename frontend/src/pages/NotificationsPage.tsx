@@ -21,11 +21,11 @@ interface AlertItem {
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<AlertItem[]>([
-    { id: 1, type: 'LEAD', title: 'New Meta Lead Qualified', desc: 'Sophia Williams was auto-qualified from Facebook Leads integration with an estimated revenue potential of $14,000.', time: '5m ago', read: false },
-    { id: 2, type: 'TASK', title: 'Task Review Assigned', desc: 'John Doe assigned you a task: "Review Google Ads Spring ROAS Metrics Report".', time: '1h ago', read: false },
+    { id: 1, type: 'LEAD', title: 'New Meta Lead Qualified', desc: 'Aarav Sharma was auto-qualified from Facebook Leads integration with an estimated revenue potential of ₹14,000.', time: '5m ago', read: false },
+    { id: 2, type: 'TASK', title: 'Task Review Assigned', desc: 'Arjun Mehta assigned you a task: "Review Google Ads Spring ROAS Metrics Report".', time: '1h ago', read: false },
     { id: 3, type: 'CAMPAIGN', title: 'Meta Ads Auto-Sync Success', desc: 'Successfully fetched campaign conversions stats. 850 total leads matched, updated dashboard metrics.', time: '3h ago', read: true },
     { id: 4, type: 'SYSTEM', title: 'API Integration Alert', desc: 'Google Analytics API keys are nearing expiration. Please refresh credentials in integrations console.', time: '1d ago', read: true },
-    { id: 5, type: 'LEAD', title: 'New Google Search Lead', desc: 'Marcus Brody filled out landing contact request. Assigned to Team Management queue.', time: '2d ago', read: true },
+    { id: 5, type: 'LEAD', title: 'New Google Search Lead', desc: 'Vikram Malhotra filled out landing contact request. Assigned to Team Management queue.', time: '2d ago', read: true },
   ]);
 
   const markAllRead = () => {

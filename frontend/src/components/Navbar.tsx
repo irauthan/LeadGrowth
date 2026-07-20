@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import type { AppTheme } from '../store/themeStore';
@@ -12,9 +12,12 @@ import {
   Settings,
   Megaphone,
   UserCheck,
-  CheckSquare
+  CheckSquare,
+  Menu
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import api from '../services/api';
+import { useLayoutStore } from '../store/layoutStore';
 
 export default function Navbar() {
   const user = useAuthStore((state) => state.user);
@@ -25,9 +28,42 @@ export default function Navbar() {
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
 
+  // Global layout and search state
+  const { isCollapsed, toggleMobileOpen } = useLayoutStore();
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [globalSearchResults, setGlobalSearchResults] = useState<{title: string, type: string, subtitle: string, url: string}[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  useEffect(() => {
+    if (!globalSearchQuery.trim()) {
+      setGlobalSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get(`/api/dashboard/search?q=${encodeURIComponent(globalSearchQuery)}`);
+        setGlobalSearchResults(res.data);
+        setShowSearchResults(true);
+      } catch (err) {
+        console.error('Global search failed', err);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [globalSearchQuery]);
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setShowSearchResults(false);
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
+
   // Mock Notifications
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New lead qualified', message: 'Sophia Williams was qualified from Meta campaign.', time: '5m ago', read: false },
+    { id: 1, title: 'New lead qualified', message: 'Aarav Sharma was qualified from Meta campaign.', time: '5m ago', read: false },
     { id: 2, title: 'Task assigned', message: 'You have been assigned to review Google Ads campaign metrics.', time: '1h ago', read: false },
     { id: 3, title: 'Campaign Synced', message: 'Meta & Google Marketing APIs synced successfully.', time: '2h ago', read: true }
   ]);
@@ -80,33 +116,87 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 flex h-20 items-center justify-between border-b border-theme-border bg-theme-bg/85 px-6 backdrop-blur-md transition-colors duration-300 pl-24 md:pl-28 lg:pl-[300px]">
-      {/* Breadcrumbs Left */}
-      <div className="flex flex-col">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-theme-text-muted">
-          <span>Home</span>
-          {getBreadcrumbs().map((b) => (
-            <span key={b.path} className="flex items-center gap-1.5">
-              <span className="text-[10px] opacity-70">/</span>
-              <Link to={b.path} className="hover:text-theme-primary transition-colors">{b.label}</Link>
-            </span>
-          ))}
+    <header className={`fixed left-0 right-0 top-0 z-30 flex h-20 items-center justify-between border-b border-theme-border bg-theme-bg/85 px-6 backdrop-blur-md transition-all duration-300 ${isCollapsed ? 'lg:pl-[110px]' : 'lg:pl-[300px]'} pl-4`}>
+      {/* Mobile Toggle & Breadcrumbs Left */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleMobileOpen(); }}
+          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/50 text-theme-text shadow-sm hover:bg-theme-bg-alt lg:hidden"
+          title="Open Menu"
+        >
+          <Menu size={18} />
+        </button>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-theme-text-muted">
+            <span>Home</span>
+            {getBreadcrumbs().map((b) => (
+              <span key={b.path} className="flex items-center gap-1.5">
+                <span className="text-[10px] opacity-70">/</span>
+                <Link to={b.path} className="hover:text-theme-primary transition-colors">{b.label}</Link>
+              </span>
+            ))}
+          </div>
+          <h1 className="text-lg font-bold text-theme-text mt-0.5">{getPageTitle()}</h1>
         </div>
-        <h1 className="text-lg font-bold text-theme-text mt-0.5">{getPageTitle()}</h1>
       </div>
 
       {/* Global Actions Right */}
       <div className="flex items-center gap-4">
         {/* Search Input */}
-        <div className="relative hidden w-64 md:block">
+        <div className="relative hidden w-64 md:block" onClick={(e) => e.stopPropagation()}>
           <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
             <Search size={16} />
           </span>
           <input
             type="text"
             placeholder="Quick search..."
-            className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 py-2 pl-10 pr-4 text-xs font-medium outline-none transition-all placeholder:text-theme-text-muted focus:border-theme-primary focus:bg-theme-card"
+            value={globalSearchQuery}
+            onChange={(e) => setGlobalSearchQuery(e.target.value)}
+            onFocus={() => setShowSearchResults(true)}
+            className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 py-2 pl-10 pr-4 text-xs font-medium outline-none transition-all placeholder:text-theme-text-muted focus:border-theme-primary focus:bg-theme-card text-theme-text"
           />
+          {showSearchResults && globalSearchQuery.trim() && (
+            <div className="absolute left-0 mt-3 w-80 rounded-2xl border border-theme-border bg-theme-card p-2 shadow-2xl z-50 max-h-96 overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-theme-border/20 px-3 py-1.5 mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Search Results</span>
+                <button
+                  onClick={() => { setGlobalSearchQuery(''); setShowSearchResults(false); }}
+                  className="text-[10px] text-rose-500 font-bold hover:underline"
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="space-y-1">
+                {globalSearchResults.length > 0 ? (
+                  globalSearchResults.map((r, idx) => (
+                    <Link
+                      key={idx}
+                      to={r.url}
+                      onClick={() => {
+                        setShowSearchResults(false);
+                        setGlobalSearchQuery('');
+                      }}
+                      className="flex flex-col gap-0.5 rounded-xl px-3 py-2 hover:bg-theme-bg-alt/50 transition-colors text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-theme-text truncate max-w-[180px]">{r.title}</span>
+                        <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
+                          r.type === 'LEAD' ? 'bg-emerald-500/10 text-emerald-500' :
+                          r.type === 'CAMPAIGN' ? 'bg-blue-500/10 text-theme-primary' :
+                          r.type === 'USER' ? 'bg-cyan-500/10 text-cyan-400' :
+                          r.type === 'REPORT' ? 'bg-purple-500/10 text-purple-400' :
+                          'bg-amber-500/10 text-amber-500'
+                        }`}>{r.type}</span>
+                      </div>
+                      <p className="text-[10px] text-theme-text-muted truncate mt-0.5">{r.subtitle}</p>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="p-3 text-center text-xs text-theme-text-muted italic">No records found matching "{globalSearchQuery}"</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions Add Dropdown */}

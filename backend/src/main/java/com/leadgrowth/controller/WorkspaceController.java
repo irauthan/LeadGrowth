@@ -3,6 +3,8 @@ package com.leadgrowth.controller;
 import com.leadgrowth.dto.AuthResponse;
 import com.leadgrowth.dto.CreateWorkspaceRequest;
 import com.leadgrowth.dto.JoinWorkspaceRequest;
+import com.leadgrowth.dto.WorkspaceUpdateRequest;
+import com.leadgrowth.entity.Workspace;
 import com.leadgrowth.service.WorkspaceService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -29,5 +31,24 @@ public class WorkspaceController {
     public ResponseEntity<AuthResponse> joinWorkspace(@Valid @RequestBody JoinWorkspaceRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(workspaceService.joinWorkspace(request, email));
+    }
+
+    @GetMapping("/current")
+    public ResponseEntity<Workspace> getCurrentWorkspace() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(workspaceService.getCurrentWorkspace(email));
+    }
+
+    @PutMapping("/current")
+    public ResponseEntity<Workspace> updateWorkspace(@Valid @RequestBody WorkspaceUpdateRequest request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(workspaceService.updateWorkspace(request, email));
+    }
+
+    @DeleteMapping("/current")
+    public ResponseEntity<Void> deleteWorkspace() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        workspaceService.deleteWorkspace(email);
+        return ResponseEntity.ok().build();
     }
 }

@@ -12,11 +12,14 @@ public class LoginRequest {
     @NotBlank(message = "Password is required")
     private String password;
 
+    private boolean rememberMe;
+
     public LoginRequest() {}
 
-    public LoginRequest(String email, String password) {
+    public LoginRequest(String email, String password, boolean rememberMe) {
         this.email = email;
         this.password = password;
+        this.rememberMe = rememberMe;
     }
 
     public String getEmail() { return email; }
@@ -24,4 +27,7 @@ public class LoginRequest {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public boolean isRememberMe() { return rememberMe; }
+    public void setRememberMe(boolean rememberMe) { this.rememberMe = rememberMe; }
 }

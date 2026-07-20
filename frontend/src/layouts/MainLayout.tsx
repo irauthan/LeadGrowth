@@ -2,11 +2,13 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import { useLayoutStore } from '../store/layoutStore';
 
 export default function MainLayout() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const location = useLocation();
+  const isCollapsed = useLayoutStore((state) => state.isCollapsed);
 
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
@@ -25,9 +27,9 @@ export default function MainLayout() {
   return (
     <div className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-300">
       <Sidebar />
-      <div className="flex flex-col pl-24 md:pl-28 lg:pl-[280px]">
+      <div className={`flex flex-col min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:pl-[110px]' : 'lg:pl-[300px]'} pl-0`}>
         <Navbar />
-        <main className="flex-1 px-6 pb-8 pt-28">
+        <main className="flex-1 px-4 sm:px-6 pb-8 pt-28">
           <Outlet />
         </main>
       </div>

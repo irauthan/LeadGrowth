@@ -23,11 +23,11 @@ export default function ActivityLogs() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUCCESS' | 'WARNING' | 'INFO'>('ALL');
 
   const [logs] = useState<LogEntry[]>([
-    { id: 1, user: 'John Doe (Admin)', action: 'Google Ads Sync', details: 'Synced campaign ID: Google_Spring_24. Added 14 new leads.', timestamp: '2026-07-17 11:24:12', status: 'SUCCESS', ip: '192.168.1.15' },
-    { id: 2, user: 'Sarah Smith (Manager)', action: 'Lead Reassigned', details: 'Sophia Williams reassigned to Sarah Smith.', timestamp: '2026-07-17 10:45:00', status: 'INFO', ip: '192.168.1.22' },
+    { id: 1, user: 'Arjun Mehta (Admin)', action: 'Google Ads Sync', details: 'Synced campaign ID: Google_Spring_24. Added 14 new leads.', timestamp: '2026-07-17 11:24:12', status: 'SUCCESS', ip: '192.168.1.15' },
+    { id: 2, user: 'Sunita Sharma (Manager)', action: 'Lead Reassigned', details: 'Aarav Sharma reassigned to Sunita Sharma.', timestamp: '2026-07-17 10:45:00', status: 'INFO', ip: '192.168.1.22' },
     { id: 3, user: 'System Bot', action: 'Webhook Error', details: 'Meta Ads Webhook subscription failed. Retrying...', timestamp: '2026-07-17 09:12:05', status: 'WARNING', ip: '127.0.0.1' },
-    { id: 4, user: 'Jane Miller (User)', action: 'Exported Leads', details: 'Exported qualified leads list as PDF format.', timestamp: '2026-07-17 08:33:45', status: 'SUCCESS', ip: '192.168.1.84' },
-    { id: 5, user: 'John Doe (Admin)', action: 'Workspace Config', details: 'Updated JWT Expiration time in application setting.', timestamp: '2026-07-16 18:22:10', status: 'SUCCESS', ip: '192.168.1.15' },
+    { id: 4, user: 'Devendra Kumar (User)', action: 'Exported Leads', details: 'Exported qualified leads list as PDF format.', timestamp: '2026-07-17 08:33:45', status: 'SUCCESS', ip: '192.168.1.84' },
+    { id: 5, user: 'Arjun Mehta (Admin)', action: 'Workspace Config', details: 'Updated JWT Expiration time in application setting.', timestamp: '2026-07-16 18:22:10', status: 'SUCCESS', ip: '192.168.1.15' },
   ]);
 
   const filteredLogs = logs.filter(log => {

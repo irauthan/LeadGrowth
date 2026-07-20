@@ -87,49 +87,148 @@ public class DataInitializer implements CommandLineRunner {
         User managerUser = null;
         User standardUser = null;
 
-        if (!userRepository.existsByEmail("admin@leadgrowth.com")) {
+        // Admins
+        if (!userRepository.existsByEmail("rahul@leadgrowth.com")) {
             adminUser = userRepository.save(User.builder()
-                    .email("admin@leadgrowth.com")
-                    .password(passwordEncoder.encode("Admin@123"))
-                    .fullName("Alexander Wright")
+                    .email("rahul@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Rahul Sharma")
                     .designation("CEO & Founder")
-                    .bio("Admin of Lead Growth workspace. Managing all digital campaigns.")
-                    .phone("+1 (555) 019-2834")
+                    .department("Management")
+                    .bio("Admin of Lead Growth workspace. Managing all operations.")
+                    .phone("+91 98765 43210")
                     .workspace(workspace)
                     .roles(new HashSet<>(List.of(adminRole)))
+                    .status("ACTIVE")
                     .build());
         } else {
-            adminUser = userRepository.findByEmail("admin@leadgrowth.com").orElse(null);
+            adminUser = userRepository.findByEmail("rahul@leadgrowth.com").orElse(null);
         }
 
-        if (!userRepository.existsByEmail("manager@leadgrowth.com")) {
+        if (!userRepository.existsByEmail("priya@leadgrowth.com")) {
+            userRepository.save(User.builder()
+                    .email("priya@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Priya Verma")
+                    .designation("Co-Founder & VP")
+                    .department("Management")
+                    .bio("Admin of Lead Growth. Leading growth strategy.")
+                    .phone("+91 98765 43211")
+                    .workspace(workspace)
+                    .roles(new HashSet<>(List.of(adminRole)))
+                    .status("ACTIVE")
+                    .build());
+        }
+
+        // Managers
+        if (!userRepository.existsByEmail("amit@leadgrowth.com")) {
             managerUser = userRepository.save(User.builder()
-                    .email("manager@leadgrowth.com")
-                    .password(passwordEncoder.encode("Manager@123"))
-                    .fullName("Sarah Jenkins")
+                    .email("amit@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Amit Kumar")
                     .designation("Marketing Manager")
+                    .department("Marketing")
                     .bio("Overseeing team tasks and lead pipeline conversions.")
-                    .phone("+1 (555) 014-9988")
+                    .phone("+91 87654 32109")
                     .workspace(workspace)
                     .roles(new HashSet<>(List.of(managerRole)))
+                    .status("ACTIVE")
                     .build());
         } else {
-            managerUser = userRepository.findByEmail("manager@leadgrowth.com").orElse(null);
+            managerUser = userRepository.findByEmail("amit@leadgrowth.com").orElse(null);
         }
 
-        if (!userRepository.existsByEmail("user@leadgrowth.com")) {
+        if (!userRepository.existsByEmail("neha@leadgrowth.com")) {
+            userRepository.save(User.builder()
+                    .email("neha@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Neha Singh")
+                    .designation("Sales Manager")
+                    .department("Sales")
+                    .bio("Managing sales pipeline and customer acquisition.")
+                    .phone("+91 87654 32110")
+                    .workspace(workspace)
+                    .roles(new HashSet<>(List.of(managerRole)))
+                    .status("ACTIVE")
+                    .build());
+        }
+
+        // Users
+        if (!userRepository.existsByEmail("rohit@leadgrowth.com")) {
             standardUser = userRepository.save(User.builder()
-                    .email("user@leadgrowth.com")
-                    .password(passwordEncoder.encode("User@123"))
-                    .fullName("Daniel Carter")
+                    .email("rohit@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Rohit Patel")
                     .designation("Lead Specialist")
+                    .department("Marketing")
                     .bio("Focused on contacting new prospects and qualifying leads.")
-                    .phone("+1 (555) 012-3344")
+                    .phone("+91 76543 21098")
                     .workspace(workspace)
                     .roles(new HashSet<>(List.of(userRole)))
+                    .status("ACTIVE")
                     .build());
         } else {
-            standardUser = userRepository.findByEmail("user@leadgrowth.com").orElse(null);
+            standardUser = userRepository.findByEmail("rohit@leadgrowth.com").orElse(null);
+        }
+
+        if (!userRepository.existsByEmail("ankit@leadgrowth.com")) {
+            userRepository.save(User.builder()
+                    .email("ankit@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Ankit Gupta")
+                    .designation("Sales Representative")
+                    .department("Sales")
+                    .bio("Converting qualified leads into enterprise deals.")
+                    .phone("+91 76543 21099")
+                    .workspace(workspace)
+                    .roles(new HashSet<>(List.of(userRole)))
+                    .status("ACTIVE")
+                    .build());
+        }
+
+        if (!userRepository.existsByEmail("pooja@leadgrowth.com")) {
+            userRepository.save(User.builder()
+                    .email("pooja@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Pooja Yadav")
+                    .designation("Customer Success")
+                    .department("Support")
+                    .bio("Helping clients implement marketing dashboard settings.")
+                    .phone("+91 76543 21100")
+                    .workspace(workspace)
+                    .roles(new HashSet<>(List.of(userRole)))
+                    .status("ACTIVE")
+                    .build());
+        }
+
+        if (!userRepository.existsByEmail("vikas@leadgrowth.com")) {
+            userRepository.save(User.builder()
+                    .email("vikas@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Vikas Sharma")
+                    .designation("Marketing Associate")
+                    .department("Marketing")
+                    .bio("Optimizing Meta Ads and search campaigns copy.")
+                    .phone("+91 76543 21101")
+                    .workspace(workspace)
+                    .roles(new HashSet<>(List.of(userRole)))
+                    .status("ACTIVE")
+                    .build());
+        }
+
+        if (!userRepository.existsByEmail("sneha@leadgrowth.com")) {
+            userRepository.save(User.builder()
+                    .email("sneha@leadgrowth.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .fullName("Sneha Jain")
+                    .designation("SEO Analyst")
+                    .department("Marketing")
+                    .bio("Researching keywords and building conversion funnels.")
+                    .phone("+91 76543 21102")
+                    .workspace(workspace)
+                    .roles(new HashSet<>(List.of(userRole)))
+                    .status("ACTIVE")
+                    .build());
         }
 
         // 4. Seed Campaigns
@@ -201,9 +300,9 @@ public class DataInitializer implements CommandLineRunner {
             }
 
             // 6. Seed Leads
-            List<String> names = Arrays.asList("Sophia Williams", "Liam Johnson", "Olivia Martinez", "Noah Davis", "Emma Rodriguez", "Jackson Brown", "Ava Wilson", "Lucas Garcia", "Isabella Martinez", "Mason Taylor");
-            List<String> emails = Arrays.asList("sophia@example.com", "liam@example.com", "olivia@example.com", "noah@example.com", "emma@example.com", "jackson@example.com", "ava@example.com", "lucas@example.com", "isabella@example.com", "mason@example.com");
-            List<String> phones = Arrays.asList("+1 (555) 234-5678", "+1 (555) 876-5432", "+1 (555) 345-6789", "+1 (555) 987-6543", "+1 (555) 456-7890", "+1 (555) 098-7654", "+1 (555) 567-8901", "+1 (555) 109-8765", "+1 (555) 678-9012", "+1 (555) 210-9876");
+            List<String> names = Arrays.asList("Aarav Sharma", "Priya Patel", "Amit Verma", "Neha Gupta", "Rahul Singh", "Ananya Iyer", "Vikram Malhotra", "Siddharth Rao", "Divya Nair", "Kabir Joshi");
+            List<String> emails = Arrays.asList("aarav@example.com", "priya@example.com", "amit@example.com", "neha@example.com", "rahul@example.com", "ananya@example.com", "vikram@example.com", "siddharth@example.com", "divya@example.com", "kabir@example.com");
+            List<String> phones = Arrays.asList("+91 99999 11111", "+91 99999 22222", "+91 99999 33333", "+91 99999 44444", "+91 99999 55555", "+91 99999 66666", "+91 99999 77777", "+91 99999 88888", "+91 99999 99999", "+91 99999 00000");
             List<String> platforms = Arrays.asList("Meta", "Google", "Meta", "Google", "Meta", "Google", "Meta", "Google", "Meta", "Google");
             List<String> statuses = Arrays.asList("New", "Contacted", "Qualified", "Converted", "Rejected", "New", "Contacted", "Qualified", "Converted", "New");
             List<Campaign> campaigns = Arrays.asList(c1, c2, c1, c2, c3, c1, c2, c1, c2, c1);
@@ -245,7 +344,7 @@ public class DataInitializer implements CommandLineRunner {
             taskRepository.save(Task.builder()
                     .workspace(workspace)
                     .title("Call Qualified Meta leads")
-                    .description("Follow up with Sophia and Olivia on the CRM proposal details.")
+                    .description("Follow up with Aarav and Amit on the CRM proposal details.")
                     .assignedTo(standardUser)
                     .dueDate(LocalDate.now().plusDays(1))
                     .priority("High")

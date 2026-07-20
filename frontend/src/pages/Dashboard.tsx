@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
-import type { DashboardKpis as KpiType, Task } from '../types';
+import type { DashboardKpis as KpiType, Task, Lead, User as MemberType } from '../types';
 import { formatCurrency, formatNumber, formatDate } from '../utils';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { 
@@ -10,21 +10,21 @@ import {
   Area, 
   XAxis, 
   YAxis, 
-  Tooltip, 
-  BarChart, 
-  Bar, 
-  Cell
+  Tooltip
 } from 'recharts';
 import { 
   Users, 
-  MousePointer, 
-  Eye, 
   TrendingUp, 
   DollarSign, 
-  Activity, 
   CheckCircle2, 
-  Clock,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  Loader2,
+  Zap,
+  Layers,
+  Sparkles,
+  ClipboardList,
+  AlertTriangle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -33,6 +33,17 @@ export default function Dashboard() {
   const [data, setData] = useState<KpiType | null>(null);
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [members, setMembers] = useState<MemberType[]>([]);
+
+  // Task assignment form (for Manager Dashboard)
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', assignedToId: '', priority: 'Medium', dueDate: '' });
+  const [assigningTask, setAssigningTask] = useState(false);
+  const [taskSuccess, setTaskSuccess] = useState('');
+
+  // Sticky notes (for User Dashboard)
+  const [stickies, setStickies] = useState<string[]>(['Follow up with Pooja Sharma tomorrow.', 'Review campaigns spend breakdown for Priya.']);
+  const [newSticky, setNewSticky] = useState('');
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
   const isManager = user?.roles.includes('ROLE_MANAGER');
@@ -41,6 +52,10 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData();
     fetchTasks();
+    fetchLeads();
+    if (!isUser) {
+      fetchMembers();
+    }
   }, []);
 
   const fetchDashboardData = async () => {
@@ -63,11 +78,28 @@ export default function Dashboard() {
     }
   };
 
+  const fetchLeads = async () => {
+    try {
+      const res = await api.get('/api/leads');
+      setLeads(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchMembers = async () => {
+    try {
+      const res = await api.get('/api/users/members');
+      setMembers(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Live WebSocket Integration
   useWebSocket({
     workspaceId: user?.workspaceId,
     onLeadReceived: (newLead) => {
-      // Prepend to recentLeads list on live lead trigger
       setData((prev) => {
         if (!prev) return prev;
         const leads = [newLead, ...prev.recentLeads.filter(l => l.id !== newLead.id)].slice(0, 10);
@@ -77,8 +109,69 @@ export default function Dashboard() {
           recentLeads: leads
         };
       });
+      fetchLeads();
     }
   });
+
+  const handleAssignLead = async (leadId: number, userId: string) => {
+    try {
+      await api.patch(`/api/leads/${leadId}/assign?userId=${userId}`);
+      fetchLeads();
+      fetchDashboardData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleTaskSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAssigningTask(true);
+    setTaskSuccess('');
+    try {
+      const payload = {
+        title: taskForm.title,
+        description: taskForm.description,
+        assignedToId: taskForm.assignedToId ? parseInt(taskForm.assignedToId) : undefined,
+        dueDate: taskForm.dueDate,
+        priority: taskForm.priority,
+        status: 'Pending'
+      };
+      await api.post('/api/tasks', payload);
+      setTaskForm({ title: '', description: '', assignedToId: '', priority: 'Medium', dueDate: '' });
+      setTaskSuccess('Task assigned successfully!');
+      fetchTasks();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAssigningTask(false);
+    }
+  };
+
+  const handleTaskStatus = async (taskId: number, status: string) => {
+    try {
+      await api.patch(`/api/tasks/${taskId}/status?status=${status}`);
+      fetchTasks();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleLeadStatus = async (leadId: number, status: string) => {
+    try {
+      await api.patch(`/api/leads/${leadId}/status?status=${status}`);
+      fetchLeads();
+      fetchDashboardData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const addSticky = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSticky.trim()) return;
+    setStickies([newSticky, ...stickies]);
+    setNewSticky('');
+  };
 
   if (loading) {
     return (
@@ -97,345 +190,544 @@ export default function Dashboard() {
     );
   }
 
-  // Define Funnel Chart Data
-  const funnelData = data ? Object.entries(data.funnel).map(([name, value]) => ({
-    name,
-    value,
-  })) : [];
-
-  const COLORS = ['#3b82f6', '#6366f1', '#eab308', '#10b981', '#ef4444'];
-
-  return (
-    <div className="space-y-8">
-      {/* Title greeting */}
+  // Dashboard Header Title Greeting
+  const renderHeader = () => (
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
-          Welcome back, {user?.fullName}
+        <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+          Welcome back, {user?.fullName} <Sparkles className="text-cyan-400 animate-pulse" size={24} />
         </h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Role: <span className="font-bold text-brand-600 dark:text-brand-400">{user?.roles[0]?.replace('ROLE_', '')}</span> • Workspace invites linked.
+        <p className="mt-1 text-xs font-semibold text-slate-400">
+          SaaS Workspace: <span className="text-blue-500 font-bold">{user?.workspaceName}</span> • Role: <span className="bg-blue-600/10 border border-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full uppercase text-[9px] ml-1">{user?.roles[0]?.replace('ROLE_', '')}</span>
         </p>
       </div>
+      <div className="flex gap-2">
+        <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-2xl">
+          <Zap size={12} className="animate-bounce" /> Live WebSockets
+        </span>
+      </div>
+    </div>
+  );
 
-      {/* KPI Stats Cards - Layout shifts depending on role */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total Leads Card */}
-        <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Leads</p>
-            <h3 className="mt-2 text-3xl font-extrabold">{formatNumber(data?.totalLeads)}</h3>
-            <p className="mt-1 text-[11px] font-semibold text-green-500">Live web socket active</p>
-          </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400">
-            <Users size={22} />
-          </div>
+  // ==========================================
+  // ADMIN DASHBOARD
+  // ==========================================
+  const renderAdminDashboard = () => {
+    const kpis = [
+      { label: 'Total Revenue', value: formatCurrency(data?.totalRevenue), desc: 'Aggregated earnings', icon: DollarSign, color: 'text-emerald-400 bg-emerald-500/10' },
+      { label: 'Total Leads', value: formatNumber(data?.totalLeads), desc: 'Workspace total leads', icon: Users, color: 'text-blue-400 bg-blue-500/10' },
+      { label: 'Marketing Spend', value: formatCurrency(data?.totalSpend), desc: 'Ad campaigns cost', icon: TrendingUp, color: 'text-rose-400 bg-rose-500/10' },
+      { label: 'Team Size', value: members.length.toString(), desc: 'Active workspace members', icon: Layers, color: 'text-cyan-400 bg-cyan-500/10' }
+    ];
+
+    return (
+      <div className="space-y-6">
+        {/* KPI Row */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {kpis.map((kpi, idx) => (
+            <div key={idx} className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{kpi.label}</p>
+                <h3 className="mt-2 text-2xl font-extrabold text-white">{kpi.value}</h3>
+                <p className="mt-1 text-[10px] font-medium text-slate-500">{kpi.desc}</p>
+              </div>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${kpi.color}`}>
+                <kpi.icon size={20} />
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Clicks (Admin/Manager) / Assigned Tasks (User) */}
-        {!isUser ? (
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Clicks</p>
-              <h3 className="mt-2 text-3xl font-extrabold">{formatNumber(data?.totalClicks)}</h3>
-              <p className="mt-1 text-[11px] text-slate-400">Avg CTR: {data?.ctr.toFixed(2)}%</p>
+        {/* Recharts Trend Line + Workspace Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 lg:col-span-2 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">Growth Reports</h4>
+                <p className="text-[11px] text-slate-500">Revenue vs spend performance trends</p>
+              </div>
+              <span className="text-[10px] bg-slate-800 text-slate-300 font-bold px-2 py-1 rounded">Last 7 Days</span>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
-              <MousePointer size={22} />
-            </div>
-          </div>
-        ) : (
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Pending Tasks</p>
-              <h3 className="mt-2 text-3xl font-extrabold">
-                {tasks.filter(t => t.status !== 'Completed').length}
-              </h3>
-              <p className="mt-1 text-[11px] text-slate-400">Total tasks: {tasks.length}</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-              <Clock size={22} />
-            </div>
-          </div>
-        )}
-
-        {/* Spend (Admin) / Impressions (Manager) / Completed tasks (User) */}
-        {isAdmin ? (
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Spend</p>
-              <h3 className="mt-2 text-3xl font-extrabold">{formatCurrency(data?.totalSpend)}</h3>
-              <p className="mt-1 text-[11px] text-slate-400">Avg CPC: ${data?.cpc.toFixed(2)}</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
-              <DollarSign size={22} />
-            </div>
-          </div>
-        ) : isManager ? (
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Impressions</p>
-              <h3 className="mt-2 text-3xl font-extrabold">{formatNumber(data?.totalImpressions)}</h3>
-              <p className="mt-1 text-[11px] text-slate-400">Campaign views</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
-              <Eye size={22} />
-            </div>
-          </div>
-        ) : (
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Completed Tasks</p>
-              <h3 className="mt-2 text-3xl font-extrabold">
-                {tasks.filter(t => t.status === 'Completed').length}
-              </h3>
-              <p className="mt-1 text-[11px] text-slate-400">Nice progress!</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-              <CheckCircle2 size={22} />
-            </div>
-          </div>
-        )}
-
-        {/* Revenue (Admin) / Conversions (Manager) / Performance Status (User) */}
-        {isAdmin ? (
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Revenue</p>
-              <h3 className="mt-2 text-3xl font-extrabold">{formatCurrency(data?.totalRevenue)}</h3>
-              <p className="mt-1 text-[11px] text-slate-400">ROAS: {data?.roas.toFixed(2)}x</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-              <TrendingUp size={22} />
-            </div>
-          </div>
-        ) : isManager ? (
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Conversions</p>
-              <h3 className="mt-2 text-3xl font-extrabold">{formatNumber(data?.totalConversions)}</h3>
-              <p className="mt-1 text-[11px] text-slate-400">Qualified leads</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-              <TrendingUp size={22} />
-            </div>
-          </div>
-        ) : (
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 shadow-sm">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">My Performance</p>
-              <h3 className="mt-2 text-3xl font-extrabold">
-                {data?.totalLeads ? Math.round((data.recentLeads.filter(l => l.status === 'Converted').length / data.totalLeads) * 100) : 0}%
-              </h3>
-              <p className="mt-1 text-[11px] text-slate-400">Conversion Rate</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
-              <Activity size={22} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Main Charts & Widgets section */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Trend Area Chart (Recharts) */}
-        {!isUser && (
-          <div className="glass-card rounded-3xl p-6 shadow-sm lg:col-span-2">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Revenue vs Spend Trends</h3>
-            <p className="text-xs text-slate-400 mb-6">Daily marketing efficiency tracking</p>
             <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data?.trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="spend" stroke="#ef4444" fillOpacity={0.1} fill="url(#colorSpend)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="revenue" stroke="#10b981" fillOpacity={0.1} fill="url(#colorRev)" strokeWidth={2} />
+                <AreaChart data={data?.trends || []}>
                   <defs>
-                    <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                    </linearGradient>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                     </linearGradient>
+                    <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
                   </defs>
+                  <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#111827', borderColor: '#334155', borderRadius: '12px' }} labelStyle={{ color: '#94a3b8', fontSize: '11px', fontWeight: 'bold' }} />
+                  <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" name="Revenue" />
+                  <Area type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorSpend)" name="Spend" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
-        )}
 
-        {/* User Specific tasks panel */}
-        {isUser && (
-          <div className="glass-card rounded-3xl p-6 shadow-sm lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">My Tasks</h3>
-                <p className="text-xs text-slate-400">Assigned task backlog</p>
+          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl flex flex-col justify-between">
+            <div>
+              <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">Workspace Health</h4>
+              <p className="text-[11px] text-slate-500">API configurations & metadata metrics</p>
+              
+              <div className="mt-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
+                  <span className="text-xs text-slate-400">Timezone</span>
+                  <span className="text-xs font-bold text-white">GMT+5:30 (India)</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
+                  <span className="text-xs text-slate-400">Industry Sector</span>
+                  <span className="text-xs font-bold text-white">Digital Marketing</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
+                  <span className="text-xs text-slate-400">Invite Code</span>
+                  <span className="text-xs font-mono font-bold text-cyan-400">{user?.inviteCode}</span>
+                </div>
               </div>
-              <Link to="/tasks" className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
-                <span>View all</span>
-                <ExternalLink size={12} />
-              </Link>
             </div>
-            <div className="space-y-3">
-              {tasks.filter(t => t.status !== 'Completed').slice(0, 4).map((task) => (
-                <div key={task.id} className="flex items-center justify-between rounded-2xl border border-slate-100 p-4 dark:border-slate-800 bg-white/40">
-                  <div>
-                    <h4 className="text-sm font-bold">{task.title}</h4>
-                    <p className="text-xs text-slate-500 mt-0.5">{task.description}</p>
-                  </div>
-                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                    task.priority === 'High' ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {task.priority}
-                  </span>
+
+            <div className="mt-6 border-t border-slate-800/40 pt-4">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-3">API Integration Status</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <span className="text-xs font-semibold text-white">Meta API V18</span>
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
-              ))}
-              {tasks.filter(t => t.status !== 'Completed').length === 0 && (
-                <div className="text-center py-10">
-                  <p className="text-sm text-slate-400">🎉 No pending tasks! All clear.</p>
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <span className="text-xs font-semibold text-white">Google Marketing API</span>
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Lead Funnel Chart (Recharts) */}
-        <div className="glass-card rounded-3xl p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Lead Pipeline Funnel</h3>
-          <p className="text-xs text-slate-400 mb-6">Pipeline distribution counts</p>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={funnelData} layout="vertical" margin={{ left: -10, right: 10 }}>
-                <XAxis type="number" stroke="#94a3b8" fontSize={10} hide />
-                <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <Tooltip />
-                <Bar dataKey="value" barSize={16} radius={8}>
-                  {funnelData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        {/* User Directory Quick Look */}
+        <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">Workspace Users Directory</h4>
+              <p className="text-[11px] text-slate-500">Quick list of registered team members</p>
+            </div>
+            <Link to="/admin/users" className="text-xs text-blue-500 font-bold hover:underline flex items-center gap-1">
+              Manage Users <ExternalLink size={12} />
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-800 text-[10px] font-extrabold uppercase text-slate-500">
+                  <th className="py-2">Name</th>
+                  <th className="py-2">Email</th>
+                  <th className="py-2">Role</th>
+                  <th className="py-2">Department</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/40 text-xs">
+                {members.slice(0, 5).map((m) => (
+                  <tr key={m.id} className="text-slate-300">
+                    <td className="py-3 font-bold text-white">{m.fullName}</td>
+                    <td className="py-3">{m.email}</td>
+                    <td className="py-3"><span className="text-[10px] font-semibold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full">{((typeof m.roles?.[0] === 'string' ? m.roles[0] : (m.roles?.[0] as any)?.name) || 'USER').replace('ROLE_', '')}</span></td>
+                    <td className="py-3">{m.department || 'N/A'}</td>
+                    <td className="py-3">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${m.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                        {m.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
+    );
+  };
 
-      {/* Second grid: Live Leads Counter & Team activities list */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Live Leads Counter Panel */}
-        <div className="glass-card rounded-3xl p-6 shadow-sm lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
+  // ==========================================
+  // MANAGER DASHBOARD
+  // ==========================================
+  const renderManagerDashboard = () => {
+    // KPI aggregations
+    const unassignedCount = leads.filter(l => l.assignedToId === null || l.assignedToId === undefined).length;
+    const pendingTasks = tasks.filter(t => t.status === 'Pending' || t.status === 'In_Progress').length;
+    const conversionsRate = leads.length > 0 
+      ? ((leads.filter(l => l.status === 'Converted').length / leads.length) * 100).toFixed(1)
+      : '0.0';
+
+    return (
+      <div className="space-y-6">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Live Leads Feed</h3>
-                <span className="flex h-2 w-2 rounded-full bg-red-500 animate-ping" />
-                <span className="rounded bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-500">LIVE NOW</span>
-              </div>
-              <p className="text-xs text-slate-400">Recent leads syncing to your workspace</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Unassigned Leads</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-amber-500">{unassignedCount}</h3>
+              <p className="mt-1 text-[10px] text-slate-500">Awaiting assignment</p>
             </div>
-            <Link to="/leads" className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline">
-              Manage leads
-            </Link>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400">
+              <AlertTriangle size={20} />
+            </div>
+          </div>
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Active Workload</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-blue-500">{pendingTasks}</h3>
+              <p className="mt-1 text-[10px] text-slate-500">Incomplete team tasks</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+              <ClipboardList size={20} />
+            </div>
+          </div>
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Lead Conversion Rate</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-emerald-500">{conversionsRate}%</h3>
+              <p className="mt-1 text-[10px] text-slate-500">Lead to Converted ratio</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+              <CheckCircle2 size={20} />
+            </div>
+          </div>
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Campaign Conversions</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-cyan-500">{data?.totalConversions}</h3>
+              <p className="mt-1 text-[10px] text-slate-500">Total conversions tracked</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400">
+              <TrendingUp size={20} />
+            </div>
+          </div>
+        </div>
+
+        {/* Lead Assignment Widget + Assign Task Form */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Quick Lead Assignment Table */}
+          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">Unassigned Leads Queue</h4>
+            <p className="text-[11px] text-slate-500 mb-4">Select workspace member to assign lead</p>
+
+            <div className="overflow-x-auto max-h-72">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-800 text-[10px] font-extrabold uppercase text-slate-500">
+                    <th className="py-2">Lead</th>
+                    <th className="py-2">Source</th>
+                    <th className="py-2">Assign To</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40 text-xs">
+                  {leads.filter(l => !l.assignedToId).map((l) => (
+                    <tr key={l.id} className="text-slate-300">
+                      <td className="py-2">
+                        <div className="font-bold text-white">{l.name}</div>
+                        <div className="text-[10px] text-slate-500">{l.email}</div>
+                      </td>
+                      <td className="py-2">{l.sourcePlatform}</td>
+                      <td className="py-2">
+                        <select
+                          onChange={(e) => handleAssignLead(l.id, e.target.value)}
+                          className="rounded-xl border border-slate-800 bg-slate-950 px-2 py-1 text-xs outline-none focus:border-blue-500 text-white"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Select User...</option>
+                          <option value="-1">🎲 Auto Load Balance</option>
+                          {members.filter(u => u.status === 'ACTIVE').map(u => (
+                            <option key={u.id} value={u.id}>{u.fullName}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                  {leads.filter(l => !l.assignedToId).length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="py-6 text-center text-slate-500 italic">No unassigned leads found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
+          {/* Quick Task Assign Form */}
+          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">Create & Assign Workspace Task</h4>
+            <p className="text-[11px] text-slate-500 mb-4">Input instructions and select assignee</p>
+
+            {taskSuccess && (
+              <div className="mb-3 rounded-xl bg-green-500/10 border border-green-500/30 p-2.5 text-xs text-green-400">
+                {taskSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleTaskSubmit} className="space-y-3">
+              <div>
+                <input
+                  type="text"
+                  required
+                  placeholder="Task title..."
+                  value={taskForm.title}
+                  onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                />
+              </div>
+              <div>
+                <textarea
+                  rows={2}
+                  placeholder="Task instructions/description..."
+                  value={taskForm.description}
+                  onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <select
+                    value={taskForm.assignedToId}
+                    onChange={(e) => setTaskForm({ ...taskForm, assignedToId: e.target.value })}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                  >
+                    <option value="">Unassigned</option>
+                    <option value="-1">🎲 Auto Load Balance</option>
+                    {members.filter(u => u.status === 'ACTIVE').map(u => (
+                      <option key={u.id} value={u.id}>{u.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <input
+                    type="date"
+                    required
+                    value={taskForm.dueDate}
+                    onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={assigningTask}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {assigningTask ? <Loader2 size={14} className="animate-spin" /> : <><Plus size={14} /> Assign Task</>}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================
+  // USER DASHBOARD
+  // ==========================================
+  const renderUserDashboard = () => {
+    const myLeads = leads.filter(l => l.assignedToId === user?.id);
+    const myTasks = tasks.filter(t => t.assignedToId === user?.id);
+
+    return (
+      <div className="space-y-6">
+        {/* User KPIs */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">My Leads</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-blue-400">{myLeads.length}</h3>
+              <p className="mt-1 text-[10px] text-slate-500">Leads assigned to me</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+              <Users size={20} />
+            </div>
+          </div>
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">My Completed Tasks</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-emerald-400">{myTasks.filter(t => t.status === 'Completed').length}</h3>
+              <p className="mt-1 text-[10px] text-slate-500">Out of {myTasks.length} total tasks</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+              <CheckCircle2 size={20} />
+            </div>
+          </div>
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Active Leads Pipeline</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-cyan-400">{myLeads.filter(l => l.status === 'Qualified' || l.status === 'Contacted').length}</h3>
+              <p className="mt-1 text-[10px] text-slate-500">Qualified or Contacted</p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400">
+              <Zap size={20} />
+            </div>
+          </div>
+        </div>
+
+        {/* Assigned Tasks & Leads Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* My Tasks Kanban Column */}
+          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 lg:col-span-2 shadow-xl">
+            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">My Assigned Tasks Kanban</h4>
+            <p className="text-[11px] text-slate-500 mb-4">Click action icons to transition status values</p>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {myTasks.map((t) => (
+                <div key={t.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                        t.priority === 'High' || t.priority === 'Urgent' ? 'bg-red-500/10 text-red-400' : 'bg-slate-800 text-slate-400'
+                      }`}>{t.priority}</span>
+                      <h5 className="text-xs font-bold text-white">{t.title}</h5>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400">{t.description}</p>
+                    <p className="mt-1 text-[9px] font-semibold text-slate-500">Due: {formatDate(t.dueDate)} • Issued By: {t.assignedByName}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      t.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400' :
+                      t.status === 'In_Progress' || t.status === 'In Progress' ? 'bg-blue-500/10 text-blue-400' :
+                      t.status === 'Rejected' ? 'bg-red-500/10 text-red-400' :
+                      'bg-slate-800 text-slate-400'
+                    }`}>{t.status}</span>
+
+                    {t.status !== 'Completed' && t.status !== 'Rejected' && (
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => handleTaskStatus(t.id, 'In_Progress')}
+                          className="px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-[10px] font-bold"
+                        >
+                          Work
+                        </button>
+                        <button
+                          onClick={() => handleTaskStatus(t.id, 'Completed')}
+                          className="px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 text-[10px] font-bold"
+                        >
+                          Finish
+                        </button>
+                        <button
+                          onClick={() => handleTaskStatus(t.id, 'Rejected')}
+                          className="px-2 py-1 rounded bg-red-600/20 hover:bg-red-600/30 text-red-400 text-[10px] font-bold"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {myTasks.length === 0 && (
+                <p className="py-8 text-center text-xs text-slate-500 italic">No tasks currently assigned.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Sticky Notes Widget */}
+          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl flex flex-col justify-between">
+            <div>
+              <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">My Work Sticky Pad</h4>
+              <p className="text-[11px] text-slate-500 mb-4">Quick reminders and scratch notes</p>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {stickies.map((s, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 font-medium text-left">
+                    {s}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={addSticky} className="mt-4 flex gap-2">
+              <input
+                type="text"
+                placeholder="Add sticky note..."
+                value={newSticky}
+                onChange={(e) => setNewSticky(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-800 bg-slate-950 py-1.5 px-3 text-xs outline-none focus:border-blue-500 text-white"
+              />
+              <button
+                type="submit"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus size={16} />
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* My Assigned Leads pipeline */}
+        <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">My Leads List</h4>
+          <p className="text-[11px] text-slate-500 mb-4">Update status of leads assigned to you</p>
+
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 dark:border-slate-800">
-                  <th className="pb-3">Name</th>
-                  <th className="pb-3">Platform</th>
-                  <th className="pb-3">Campaign</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3 text-right">Date</th>
+                <tr className="border-b border-slate-800 text-[10px] font-extrabold uppercase text-slate-500">
+                  <th className="py-2">Name</th>
+                  <th className="py-2">Email</th>
+                  <th className="py-2">Platform</th>
+                  <th className="py-2">Status</th>
+                  <th className="py-2">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {data?.recentLeads.slice(0, 5).map((lead) => (
-                  <tr key={lead.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/20">
-                    <td className="py-3 font-semibold">{lead.name}</td>
+              <tbody className="divide-y divide-slate-800/40 text-xs">
+                {myLeads.map((l) => (
+                  <tr key={l.id} className="text-slate-300">
+                    <td className="py-3 font-bold text-white">{l.name}</td>
+                    <td className="py-3">{l.email}</td>
+                    <td className="py-3">{l.sourcePlatform}</td>
                     <td className="py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        lead.sourcePlatform === 'Meta' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30'
-                      }`}>
-                        {lead.sourcePlatform}
-                      </span>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                        l.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-400' :
+                        l.status === 'Rejected' ? 'bg-red-500/10 text-red-400' :
+                        'bg-slate-800 text-slate-400'
+                      }`}>{l.status}</span>
                     </td>
-                    <td className="py-3 max-w-[150px] truncate">{lead.campaignName}</td>
                     <td className="py-3">
-                      <span className="rounded bg-brand-500/10 px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-400">
-                        {lead.status}
-                      </span>
+                      <select
+                        onChange={(e) => handleLeadStatus(l.id, e.target.value)}
+                        className="rounded bg-slate-950 border border-slate-800 text-white text-[10px] p-1 font-semibold"
+                        value={l.status}
+                      >
+                        <option value="New">New</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Qualified">Qualified</option>
+                        <option value="Converted">Converted</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
                     </td>
-                    <td className="py-3 text-right text-xs text-slate-400">{formatDate(lead.createdAt).substring(0, 12)}</td>
                   </tr>
                 ))}
-                {data?.recentLeads.length === 0 && (
+                {myLeads.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="text-center py-6 text-slate-400">No leads captured yet. Connect Meta/Google integrations!</td>
+                    <td colSpan={5} className="py-6 text-center text-slate-500 italic">No leads assigned.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
-
-        {/* Team Activities Feed / Workspace Stats (Admin Only) */}
-        {isAdmin && data?.workspaceStats && data.workspaceStats.length > 0 ? (
-          <div className="glass-card rounded-3xl p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 font-sans">Workspace Monitor</h3>
-            <p className="text-xs text-slate-400 mb-6">Cross-tenant statistics overview</p>
-            <div className="space-y-4">
-              {data.workspaceStats.map((stat, i) => (
-                <div key={i} className="flex flex-col gap-1 rounded-2xl border border-slate-100 p-4 dark:border-slate-800 bg-white/40">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold">{stat.name}</h4>
-                    <span className="text-[10px] text-brand-600 dark:text-brand-400 font-bold">{stat.industry}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mt-2 text-center text-xs">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-semibold uppercase">Team</p>
-                      <p className="font-bold text-slate-700 dark:text-slate-200">{stat.teamSize}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-semibold uppercase">Campaigns</p>
-                      <p className="font-bold text-slate-700 dark:text-slate-200">{stat.activeCampaigns}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-semibold uppercase">Leads</p>
-                      <p className="font-bold text-slate-700 dark:text-slate-200">{stat.totalLeads}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="glass-card rounded-3xl p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Team Activity Logs</h3>
-            <p className="text-xs text-slate-400 mb-6">Logs of actions within workspace</p>
-            <div className="space-y-4 overflow-y-auto max-h-80 pr-1">
-              {data?.teamActivities.map((act) => (
-                <div key={act.id} className="flex items-start gap-3">
-                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                    <Activity size={14} />
-                  </div>
-                  <div className="flex-1 text-xs">
-                    <p className="font-bold text-slate-800 dark:text-slate-200">{act.userName}</p>
-                    <p className="text-slate-500 mt-0.5">{act.description}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">{act.timestamp.replace('T', ' ').substring(0, 16)}</p>
-                  </div>
-                </div>
-              ))}
-              {data?.teamActivities.length === 0 && (
-                <p className="text-center text-xs text-slate-400 py-6">No recent workspace actions recorded.</p>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+    );
+  };
+
+  return (
+    <div className="space-y-8">
+      {renderHeader()}
+      {isAdmin ? renderAdminDashboard() : isManager ? renderManagerDashboard() : renderUserDashboard()}
     </div>
   );
 }

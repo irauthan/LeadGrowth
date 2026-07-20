@@ -4,6 +4,7 @@ import java.util.Set;
 
 public class AuthResponse {
     private String token;
+    private String refreshToken;
     private Long userId;
     private String email;
     private String fullName;
@@ -17,8 +18,9 @@ public class AuthResponse {
 
     public AuthResponse() {}
 
-    public AuthResponse(String token, Long userId, String email, String fullName, String designation, String profileImage, Set<String> roles, Long workspaceId, String workspaceName, String workspaceSlug, String inviteCode) {
+    public AuthResponse(String token, String refreshToken, Long userId, String email, String fullName, String designation, String profileImage, Set<String> roles, Long workspaceId, String workspaceName, String workspaceSlug, String inviteCode) {
         this.token = token;
+        this.refreshToken = refreshToken;
         this.userId = userId;
         this.email = email;
         this.fullName = fullName;
@@ -33,6 +35,9 @@ public class AuthResponse {
 
     public String getToken() { return token; }
     public void setToken(String token) { this.token = token; }
+
+    public String getRefreshToken() { return refreshToken; }
+    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
@@ -71,6 +76,7 @@ public class AuthResponse {
 
     public static class AuthResponseBuilder {
         private String token;
+        private String refreshToken;
         private Long userId;
         private String email;
         private String fullName;
@@ -85,6 +91,7 @@ public class AuthResponse {
         AuthResponseBuilder() {}
 
         public AuthResponseBuilder token(String token) { this.token = token; return this; }
+        public AuthResponseBuilder refreshToken(String refreshToken) { this.refreshToken = refreshToken; return this; }
         public AuthResponseBuilder userId(Long userId) { this.userId = userId; return this; }
         public AuthResponseBuilder email(String email) { this.email = email; return this; }
         public AuthResponseBuilder fullName(String fullName) { this.fullName = fullName; return this; }
@@ -97,7 +104,7 @@ public class AuthResponse {
         public AuthResponseBuilder inviteCode(String inviteCode) { this.inviteCode = inviteCode; return this; }
 
         public AuthResponse build() {
-            return new AuthResponse(token, userId, email, fullName, designation, profileImage, roles, workspaceId, workspaceName, workspaceSlug, inviteCode);
+            return new AuthResponse(token, refreshToken, userId, email, fullName, designation, profileImage, roles, workspaceId, workspaceName, workspaceSlug, inviteCode);
         }
     }
 }
