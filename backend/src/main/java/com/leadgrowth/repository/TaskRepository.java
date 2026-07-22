@@ -15,6 +15,9 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     
     long countByAssignedToAndStatusIn(com.leadgrowth.entity.User user, List<String> statuses);
 
+    List<Task> findByWorkspaceIdAndAssignedToIsNullAndStatusIn(Long workspaceId, List<String> statuses);
+    List<Task> findByWorkspaceIdAndAssignedToIdAndStatusIn(Long workspaceId, Long userId, List<String> statuses);
+
     @Modifying
     @Query("DELETE FROM Task t WHERE t.workspace.id = :workspaceId")
     void deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);

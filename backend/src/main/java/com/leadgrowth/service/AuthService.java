@@ -141,6 +141,8 @@ public class AuthService {
                 .workspaceName(ws != null ? ws.getName() : null)
                 .workspaceSlug(ws != null ? ws.getSlug() : null)
                 .inviteCode(ws != null ? ws.getInviteCode() : null)
+                .availabilityStatus(user.getAvailabilityStatus())
+                .skills(user.getSkills())
                 .build();
     }
 
@@ -189,6 +191,8 @@ public class AuthService {
                 .workspaceName(ws != null ? ws.getName() : null)
                 .workspaceSlug(ws != null ? ws.getSlug() : null)
                 .inviteCode(ws != null ? ws.getInviteCode() : null)
+                .availabilityStatus(user.getAvailabilityStatus())
+                .skills(user.getSkills())
                 .build();
     }
 
@@ -212,6 +216,8 @@ public class AuthService {
                 .workspaceName(ws != null ? ws.getName() : null)
                 .workspaceSlug(ws != null ? ws.getSlug() : null)
                 .inviteCode(ws != null ? ws.getInviteCode() : null)
+                .availabilityStatus(user.getAvailabilityStatus())
+                .skills(user.getSkills())
                 .build();
     }
 
@@ -279,6 +285,8 @@ public class AuthService {
                 .workspaceName(invitation.getWorkspace().getName())
                 .workspaceSlug(invitation.getWorkspace().getSlug())
                 .inviteCode(invitation.getWorkspace().getInviteCode())
+                .availabilityStatus(user.getAvailabilityStatus())
+                .skills(user.getSkills())
                 .build();
     }
 
@@ -342,6 +350,8 @@ public class AuthService {
                 .workspaceName(ws != null ? ws.getName() : null)
                 .workspaceSlug(ws != null ? ws.getSlug() : null)
                 .inviteCode(ws != null ? ws.getInviteCode() : null)
+                .availabilityStatus(user.getAvailabilityStatus())
+                .skills(user.getSkills())
                 .build();
     }
 

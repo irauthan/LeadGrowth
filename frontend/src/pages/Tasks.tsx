@@ -8,9 +8,9 @@ import {
   Calendar, 
   User as UserIcon, 
   ArrowRight,
-  ArrowLeft,
   CheckCircle,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 
 export default function Tasks() {
@@ -27,6 +27,7 @@ export default function Tasks() {
     assignedToId: '',
     dueDate: '',
     priority: 'Medium',
+    requiredSkill: '',
   });
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
@@ -67,6 +68,33 @@ export default function Tasks() {
     }
   };
 
+  const handleApprove = async (taskId: number) => {
+    try {
+      const res = await api.post(`/api/tasks/${taskId}/approve`);
+      setTasks(tasks.map((t) => (t.id === taskId ? res.data : t)));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleReject = async (taskId: number) => {
+    try {
+      const res = await api.post(`/api/tasks/${taskId}/reject`);
+      setTasks(tasks.map((t) => (t.id === taskId ? res.data : t)));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAutoAssign = async (taskId: number) => {
+    try {
+      const res = await api.post(`/api/tasks/${taskId}/auto-assign`);
+      setTasks(tasks.map((t) => (t.id === taskId ? res.data : t)));
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Auto-assignment failed. No eligible team members available.');
+    }
+  };
+
   const handleDelete = async (taskId: number) => {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
     try {
@@ -92,6 +120,7 @@ export default function Tasks() {
         assignedToId: '',
         dueDate: '',
         priority: 'Medium',
+        requiredSkill: '',
       });
       fetchTasks();
     } catch (err) {
@@ -100,13 +129,18 @@ export default function Tasks() {
   };
 
   // Group tasks for Kanban columns
-  const pendingTasks = tasks.filter((t) => t.status === 'Pending');
-  const inProgressTasks = tasks.filter((t) => t.status === 'In_Progress');
-  const completedTasks = tasks.filter((t) => t.status === 'Completed');
+  const pendingTasks = tasks.filter((t) => t.status === 'PENDING' || t.status === 'Pending');
+  const inProgressTasks = tasks.filter((t) => t.status === 'IN_PROGRESS' || t.status === 'In_Progress' || t.status === 'In Progress' || t.status === 'REJECTED' || t.status === 'Rejected');
+  const reviewTasks = tasks.filter((t) => t.status === 'PENDING_REVIEW' || t.status === 'Pending_Review');
+  const approvedTasks = tasks.filter((t) => t.status === 'APPROVED' || t.status === 'Approved' || t.status === 'Completed' || t.status === 'COMPLETED');
 
   const renderCard = (task: Task) => {
+    const isTaskPending = task.status === 'PENDING' || task.status === 'Pending';
+    const isTaskActive = task.status === 'IN_PROGRESS' || task.status === 'In_Progress' || task.status === 'In Progress' || task.status === 'REJECTED' || task.status === 'Rejected';
+    const isTaskReview = task.status === 'PENDING_REVIEW' || task.status === 'Pending_Review';
+    
     return (
-      <div key={task.id} className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900/60 flex flex-col justify-between">
+      <div key={task.id} className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/60 flex flex-col justify-between">
         <div>
           <div className="flex items-start justify-between gap-2">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight">{task.title}</h4>
@@ -121,6 +155,13 @@ export default function Tasks() {
             )}
           </div>
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{task.description}</p>
+          {task.requiredSkill && (
+            <div className="mt-2.5">
+              <span className="bg-brand-500/10 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Skill: {task.requiredSkill}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
@@ -137,29 +178,33 @@ export default function Tasks() {
           </div>
 
           {/* Action Row */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-              task.priority === 'High' 
+              task.priority?.toUpperCase() === 'HIGH' || task.priority?.toUpperCase() === 'URGENT'
                 ? 'bg-rose-500/10 text-rose-500' 
-                : task.priority === 'Medium' 
+                : task.priority?.toUpperCase() === 'MEDIUM' 
                 ? 'bg-indigo-500/10 text-indigo-500' 
                 : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
             }`}>
               {task.priority} Priority
             </span>
 
-            {/* Quick State-Transition arrows */}
+            {/* Quick State-Transition actions */}
             <div className="flex items-center gap-1.5">
-              {task.status === 'In_Progress' && (
+              {/* Unassigned -> auto-assign trigger */}
+              {isTaskPending && !task.assignedToId && (isAdmin || isManager) && (
                 <button
-                  onClick={() => handleStatusChange(task.id, 'Pending')}
-                  className="rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 p-1 text-slate-500 dark:hover:bg-slate-700"
-                  title="Move back to Pending"
+                  onClick={() => handleAutoAssign(task.id)}
+                  className="rounded-xl bg-gradient-to-r from-brand-600 to-indigo-500 text-white hover:from-brand-700 hover:to-indigo-600 text-[10px] font-bold px-2 py-1 shadow-sm flex items-center gap-1"
+                  title="Trigger Hybrid Assignment Algorithm"
                 >
-                  <ArrowLeft size={12} />
+                  <Sparkles size={10} />
+                  <span>Auto-Assign</span>
                 </button>
               )}
-              {task.status === 'Pending' && (
+
+              {/* Pending Queue -> start task */}
+              {isTaskPending && task.assignedToId && (
                 <button
                   onClick={() => handleStatusChange(task.id, 'In_Progress')}
                   className="rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 p-1 dark:text-indigo-400"
@@ -168,14 +213,35 @@ export default function Tasks() {
                   <ArrowRight size={12} />
                 </button>
               )}
-              {task.status !== 'Completed' && (
+
+              {/* Active -> submit for review */}
+              {isTaskActive && (
                 <button
                   onClick={() => handleStatusChange(task.id, 'Completed')}
-                  className="rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 p-1 dark:text-emerald-400"
-                  title="Complete Task"
+                  className="rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 text-[10px] font-bold px-2.5 py-1.5 transition-all flex items-center gap-1 shadow-sm"
+                  title="Submit for Approval"
                 >
-                  <CheckCircle size={12} />
+                  <CheckCircle size={11} />
+                  <span>Submit Review</span>
                 </button>
+              )}
+
+              {/* Review -> Approve / Reject */}
+              {isTaskReview && (isAdmin || isManager) && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleApprove(task.id)}
+                    className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-bold px-2 py-1 shadow-xs"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReject(task.id)}
+                    className="rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-bold px-2 py-1 shadow-xs"
+                  >
+                    Reject
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -215,12 +281,12 @@ export default function Tasks() {
       </div>
 
       {/* Kanban Board Columns */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Pending Column */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        {/* Queue Column */}
         <div className="rounded-3xl border border-slate-200/50 bg-slate-50 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/15 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-700 dark:text-slate-300">Pending</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">Task Queue</span>
               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                 {pendingTasks.length}
               </span>
@@ -229,16 +295,16 @@ export default function Tasks() {
           <div className="flex-1 space-y-4 max-h-[600px] overflow-y-auto pr-1">
             {pendingTasks.map(renderCard)}
             {pendingTasks.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-10">No pending tasks.</p>
+              <p className="text-center text-xs text-slate-400 py-10">Queue is empty.</p>
             )}
           </div>
         </div>
 
-        {/* In Progress Column */}
+        {/* Active Column */}
         <div className="rounded-3xl border border-slate-200/50 bg-slate-50 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/15 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-700 dark:text-slate-300">In Progress</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">Active</span>
               <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
                 {inProgressTasks.length}
               </span>
@@ -247,25 +313,43 @@ export default function Tasks() {
           <div className="flex-1 space-y-4 max-h-[600px] overflow-y-auto pr-1">
             {inProgressTasks.map(renderCard)}
             {inProgressTasks.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-10">No tasks in progress.</p>
+              <p className="text-center text-xs text-slate-400 py-10">No active tasks.</p>
             )}
           </div>
         </div>
 
-        {/* Completed Column */}
+        {/* Pending Review Column */}
         <div className="rounded-3xl border border-slate-200/50 bg-slate-50 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/15 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-700 dark:text-slate-300">Completed</span>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                {completedTasks.length}
+              <span className="font-bold text-slate-700 dark:text-slate-300">Pending Review</span>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                {reviewTasks.length}
               </span>
             </div>
           </div>
           <div className="flex-1 space-y-4 max-h-[600px] overflow-y-auto pr-1">
-            {completedTasks.map(renderCard)}
-            {completedTasks.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-10">No tasks completed yet.</p>
+            {reviewTasks.map(renderCard)}
+            {reviewTasks.length === 0 && (
+              <p className="text-center text-xs text-slate-400 py-10">No tasks pending approval.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Approved Column */}
+        <div className="rounded-3xl border border-slate-200/50 bg-slate-50 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/15 flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-700 dark:text-slate-300">Approved</span>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                {approvedTasks.length}
+              </span>
+            </div>
+          </div>
+          <div className="flex-1 space-y-4 max-h-[600px] overflow-y-auto pr-1">
+            {approvedTasks.map(renderCard)}
+            {approvedTasks.length === 0 && (
+              <p className="text-center text-xs text-slate-400 py-10">No approved tasks.</p>
             )}
           </div>
         </div>
@@ -287,7 +371,7 @@ export default function Tasks() {
                   placeholder="e.g. Optimize ad target keywords"
                   value={createForm.title}
                   onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
                 />
               </div>
 
@@ -298,7 +382,7 @@ export default function Tasks() {
                   placeholder="Briefly state action instructions..."
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
                 />
               </div>
 
@@ -308,15 +392,28 @@ export default function Tasks() {
                   <select
                     value={createForm.assignedToId}
                     onChange={(e) => setCreateForm({ ...createForm, assignedToId: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-theme-text"
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
                   >
-                    <option value="">Unassigned</option>
-                    <option value="-1">🎲 Randomly Assign</option>
+                    <option value="">Unassigned (Queue)</option>
+                    <option value="-1">🎲 Auto-Assign via Engine</option>
                     {members.map((m) => (
                       <option key={m.id} value={m.id}>{m.fullName}</option>
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Required Skill</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Meta Ads, Copywriting"
+                    value={createForm.requiredSkill}
+                    onChange={(e) => setCreateForm({ ...createForm, requiredSkill: e.target.value })}
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Due Date</label>
                   <input
@@ -324,29 +421,29 @@ export default function Tasks() {
                     required
                     value={createForm.dueDate}
                     onChange={(e) => setCreateForm({ ...createForm, dueDate: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Priority</label>
-                <select
-                  value={createForm.priority}
-                  onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
-                >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Priority</label>
+                  <select
+                    value={createForm.priority}
+                    onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })}
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
+                  className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
                 >
                   Cancel
                 </button>

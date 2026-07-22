@@ -20,9 +20,11 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final com.leadgrowth.service.ProductivityService productivityService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, com.leadgrowth.service.ProductivityService productivityService) {
         this.userService = userService;
+        this.productivityService = productivityService;
     }
 
     @PutMapping("/profile")
@@ -85,5 +87,17 @@ public class UserController {
     public ResponseEntity<com.leadgrowth.entity.Workspace> transferWorkspaceOwnership(@RequestParam Long newOwnerId) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(userService.transferWorkspaceOwnership(newOwnerId, email));
+    }
+
+    @PutMapping("/availability")
+    public ResponseEntity<User> updateAvailabilityStatus(@RequestParam String status) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(userService.updateAvailabilityStatus(status, email));
+    }
+
+    @GetMapping("/productivity")
+    public ResponseEntity<List<com.leadgrowth.dto.TeamProductivityDto>> getTeamProductivity() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(productivityService.getTeamProductivity(email));
     }
 }

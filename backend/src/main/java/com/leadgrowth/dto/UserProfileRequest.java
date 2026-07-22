@@ -12,6 +12,7 @@ public class UserProfileRequest {
     private String bio;
     private String profileImage;
     private String department;
+    private String skills;
 
     public UserProfileRequest() {}
 
@@ -22,6 +23,16 @@ public class UserProfileRequest {
         this.bio = bio;
         this.profileImage = profileImage;
         this.department = department;
+    }
+
+    public UserProfileRequest(String fullName, String phone, String designation, String bio, String profileImage, String department, String skills) {
+        this.fullName = fullName;
+        this.phone = phone;
+        this.designation = designation;
+        this.bio = bio;
+        this.profileImage = profileImage;
+        this.department = department;
+        this.skills = skills;
     }
 
     public String getFullName() { return fullName; }
@@ -41,4 +52,7 @@ public class UserProfileRequest {
 
     public String getDepartment() { return department; }
     public void setDepartment(String department) { this.department = department; }
+
+    public String getSkills() { return skills; }
+    public void setSkills(String skills) { this.skills = skills; }
 }

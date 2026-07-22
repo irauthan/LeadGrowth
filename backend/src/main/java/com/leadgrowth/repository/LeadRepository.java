@@ -18,6 +18,7 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     List<Lead> findTop100ByWorkspaceIdOrderByCreatedAtDesc(Long workspaceId);
     
     long countByAssignedToAndStatusIn(com.leadgrowth.entity.User user, List<String> statuses);
+    List<Lead> findByWorkspaceIdAndAssignedToIsNull(Long workspaceId);
 
     @Modifying
     @Query("DELETE FROM Lead l WHERE l.workspace.id = :workspaceId")

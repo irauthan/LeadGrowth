@@ -21,12 +21,30 @@ import { useLayoutStore } from '../store/layoutStore';
 
 export default function Navbar() {
   const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const { theme, setTheme } = useThemeStore();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
+
+  const statusOptions = [
+    { value: 'AVAILABLE', label: 'Available', color: 'bg-emerald-500' },
+    { value: 'BUSY', label: 'Busy', color: 'bg-amber-500' },
+    { value: 'ON_BREAK', label: 'On Break', color: 'bg-blue-400' },
+    { value: 'OFFLINE', label: 'Offline', color: 'bg-slate-400' },
+    { value: 'ON_LEAVE', label: 'On Leave', color: 'bg-purple-500' }
+  ];
+
+  const changeAvailability = async (newStatus: string) => {
+    try {
+      await api.put(`/api/users/availability?status=${newStatus}`);
+      updateUser({ availabilityStatus: newStatus as any });
+    } catch (err) {
+      console.error('Failed to change availability status', err);
+    }
+  };
 
   // Global layout and search state
   const { isCollapsed, toggleMobileOpen } = useLayoutStore();
@@ -356,17 +374,23 @@ export default function Navbar() {
             }}
             className="flex items-center gap-3 rounded-2xl border border-theme-border bg-theme-card/50 p-1 pr-3 shadow-sm hover:bg-theme-bg-alt transition-all"
           >
-            {user?.profileImage ? (
-              <img
-                src={user.profileImage}
-                alt="profile"
-                className="h-8 w-8 rounded-xl object-cover shadow"
-              />
-            ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-xs font-extrabold text-white shadow">
-                {getInitials(user?.fullName || '')}
-              </div>
-            )}
+            <div className="relative">
+              {user?.profileImage ? (
+                <img
+                  src={user.profileImage}
+                  alt="profile"
+                  className="h-8 w-8 rounded-xl object-cover shadow"
+                />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-xs font-extrabold text-white shadow">
+                  {getInitials(user?.fullName || '')}
+                </div>
+              )}
+              {/* Availability Indicator dot */}
+              <span className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-theme-card ${
+                statusOptions.find(o => o.value === user?.availabilityStatus)?.color || 'bg-emerald-500'
+              }`} />
+            </div>
             <div className="hidden text-left text-xs md:block">
               <p className="font-bold leading-tight">{user?.fullName}</p>
               <p className="text-[10px] text-theme-text-muted font-semibold">{user?.roles[0]?.replace('ROLE_', '') || 'MEMBER'}</p>
@@ -374,11 +398,43 @@ export default function Navbar() {
           </button>
 
           {showProfileMenu && (
-            <div className="absolute right-0 mt-3 w-52 rounded-2xl border border-theme-border bg-theme-card p-2 shadow-2xl">
+            <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-theme-border bg-theme-card p-2 shadow-2xl">
               <div className="border-b border-theme-border/20 p-3">
                 <p className="text-xs font-bold truncate leading-none">{user?.fullName}</p>
                 <p className="text-[10px] text-theme-text-muted truncate mt-1">{user?.email}</p>
+                
+                {/* Active Availability Badge */}
+                <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-theme-border bg-theme-bg-alt/50 px-2.5 py-1">
+                  <span className={`h-2 w-2 rounded-full ${
+                    statusOptions.find(o => o.value === user?.availabilityStatus)?.color || 'bg-emerald-500'
+                  }`} />
+                  <span className="text-[9px] font-extrabold text-theme-text uppercase tracking-wider">
+                    {user?.availabilityStatus || 'AVAILABLE'}
+                  </span>
+                </div>
               </div>
+
+              {/* Status Toggler Options */}
+              <div className="p-1 border-b border-theme-border/20 grid grid-cols-1 gap-0.5">
+                {statusOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      changeAvailability(opt.value);
+                      setShowProfileMenu(false);
+                    }}
+                    className={`flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-[10px] font-bold transition-all ${
+                      user?.availabilityStatus === opt.value 
+                        ? 'bg-theme-bg-alt text-theme-primary' 
+                        : 'text-theme-text-muted hover:bg-theme-bg-alt/50 hover:text-theme-text'
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${opt.color}`} />
+                    <span>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+
               <div className="py-1">
                 <Link
                   to="/profile"

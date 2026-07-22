@@ -98,4 +98,11 @@ public class LeadController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(leadService.bulkUpdateLeadStatus(leadIds, status, email));
     }
+
+    @PostMapping("/{id}/auto-assign")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<LeadDto> autoAssignLead(@PathVariable Long id) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.assignLead(id, -1L, email));
+    }
 }

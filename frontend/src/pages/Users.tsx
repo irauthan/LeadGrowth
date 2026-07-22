@@ -10,7 +10,9 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Award,
+  BookOpen
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Link } from 'react-router-dom';
@@ -21,11 +23,12 @@ export default function Users() {
 
   // States
   const [members, setMembers] = useState<MemberType[]>([]);
+  const [productivity, setProductivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'MANAGER' | 'USER'>('ALL');
   const [deptFilter, setDeptFilter] = useState<'ALL' | 'Marketing' | 'Sales' | 'Support' | 'Management'>('ALL');
-  const [sortOrder, setSortOrder] = useState<'NAME_ASC' | 'NAME_DESC' | 'ACTIVE_DESC'>('NAME_ASC');
+  const [sortOrder, setSortOrder] = useState<'NAME_ASC' | 'NAME_DESC' | 'ACTIVE_DESC' | 'PROD_DESC'>('NAME_ASC');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,8 +42,24 @@ export default function Users() {
   const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
-    fetchMembers();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [membersRes, prodRes] = await Promise.all([
+        api.get('/api/users/members'),
+        api.get('/api/users/productivity')
+      ]);
+      setMembers(membersRes.data);
+      setProductivity(prodRes.data);
+    } catch (e) {
+      console.error('Failed to fetch team details', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchMembers = async () => {
     try {
@@ -48,8 +67,6 @@ export default function Users() {
       setMembers(res.data);
     } catch (e) {
       console.error(e);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -103,6 +120,10 @@ export default function Users() {
       return (b.fullName || '').localeCompare(a.fullName || '');
     } else if (sortOrder === 'ACTIVE_DESC') {
       return (b.lastActiveAt || '').localeCompare(a.lastActiveAt || '');
+    } else if (sortOrder === 'PROD_DESC') {
+      const scoreA = productivity.find(p => p.userId === a.id)?.productivityScore || 0;
+      const scoreB = productivity.find(p => p.userId === b.id)?.productivityScore || 0;
+      return scoreB - scoreA;
     }
     return 0;
   });
@@ -129,8 +150,8 @@ export default function Users() {
             <Building size={20} />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Workspace Members Directory</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">Explore active profiles, departments, and communication handles of the team.</p>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Team Performance & Directory</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">Track workload distribution, live team availability, skills, and productivity scores.</p>
           </div>
         </div>
 
@@ -198,49 +219,110 @@ export default function Users() {
             <option value="NAME_ASC">Name (A-Z)</option>
             <option value="NAME_DESC">Name (Z-A)</option>
             <option value="ACTIVE_DESC">Last Active</option>
+            <option value="PROD_DESC">Top Performers</option>
           </select>
         </div>
       </div>
 
       {/* Grid of Team Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {paginated.map((item) => (
-          <div key={item.id} className="rounded-3xl border border-slate-800 bg-[#111827] p-6 shadow-xl space-y-4 flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-500 font-extrabold text-base">
-                  {getInitials(item.fullName)}
+        {paginated.map((item) => {
+          const prod = productivity.find(p => p.userId === item.id);
+          
+          return (
+            <div key={item.id} className="rounded-3xl border border-slate-850 bg-[#111827] p-6 shadow-xl space-y-4 flex flex-col justify-between hover:border-slate-800 transition-all">
+              <div className="space-y-4">
+                {/* Header info */}
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-500 font-extrabold text-base border border-blue-500/10 relative">
+                    {getInitials(item.fullName)}
+                    {/* Live Availability dot on avatar */}
+                    <span className={`absolute -bottom-0.5 -right-0.5 block h-3.5 w-3.5 rounded-full border-2 border-[#111827] ${
+                      item.availabilityStatus === 'AVAILABLE' ? 'bg-emerald-500' :
+                      item.availabilityStatus === 'BUSY' ? 'bg-amber-500' :
+                      item.availabilityStatus === 'ON_BREAK' ? 'bg-blue-400' :
+                      item.availabilityStatus === 'OFFLINE' ? 'bg-slate-500' :
+                      'bg-purple-500'
+                    }`} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-extrabold text-white leading-tight">{item.fullName}</h4>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{item.designation || 'CRM Specialist'}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-extrabold text-white">{item.fullName}</h4>
-                  <p className="text-[10px] text-slate-500 font-medium">{item.designation || 'Specialist'}</p>
+
+                {/* Productivity Section */}
+                {prod && (
+                  <div className="bg-slate-950/70 border border-slate-900 rounded-2xl p-3 flex items-center justify-between shadow-inner">
+                    <div className="flex items-center gap-2">
+                      <Award size={16} className="text-indigo-400" />
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Performance Index</span>
+                        <span className="text-xs font-black text-white">{Math.round(prod.productivityScore)}% Score</span>
+                      </div>
+                    </div>
+                    <span className={`rounded-xl px-2.5 py-1 text-[8px] font-extrabold uppercase tracking-wide ${
+                      prod.performanceCategory === 'Top Performer' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                      prod.performanceCategory === 'Average Performer' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                      'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}>
+                      {prod.performanceCategory}
+                    </span>
+                  </div>
+                )}
+
+                {/* Skills tags list */}
+                {item.skills && (
+                  <div className="space-y-1.5">
+                    <span className="flex items-center gap-1 text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">
+                      <BookOpen size={10} />
+                      Required Skills
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {item.skills.split(',').map(s => s.trim()).filter(Boolean).map((skill, idx) => (
+                        <span key={idx} className="bg-slate-900 text-slate-400 text-[9px] font-bold px-2 py-0.5 rounded-full border border-slate-850">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contact details */}
+                <div className="space-y-2 border-t border-slate-900 pt-3">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Mail size={13} className="text-slate-500" />
+                    <span className="text-[10px] font-mono truncate">{item.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Smartphone size={13} className="text-slate-500" />
+                    <span className="text-[10px]">{item.phone || 'No phone listed'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Building size={13} className="text-slate-500" />
+                    <span className="text-[10px] font-semibold text-slate-400">Department: {item.department || 'Marketing'}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2 border-t border-slate-800/40 pt-3">
-                <div className="flex items-center gap-2 text-slate-300">
-                  <Mail size={14} className="text-slate-500" />
-                  <span className="text-[11px] font-mono">{item.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-300">
-                  <Smartphone size={14} className="text-slate-500" />
-                  <span className="text-[11px]">{item.phone || 'No phone listed'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-300">
-                  <Building size={14} className="text-slate-500" />
-                  <span className="text-[11px] font-semibold text-slate-400">Dept: {item.department || 'Marketing'}</span>
+              {/* Status details footer */}
+              <div className="flex items-center justify-between border-t border-slate-900 pt-3 text-[10px] font-bold">
+                <span className="text-slate-500 uppercase">Role: <span className="text-blue-400">{getRoleName(item)}</span></span>
+                
+                <div className="flex items-center gap-1">
+                  <span className={`px-2 py-0.5 rounded-full ${
+                    item.availabilityStatus === 'AVAILABLE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                    item.availabilityStatus === 'BUSY' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                    item.availabilityStatus === 'ON_BREAK' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                    'bg-slate-800 text-slate-400'
+                  }`}>
+                    {item.availabilityStatus || 'OFFLINE'}
+                  </span>
                 </div>
               </div>
             </div>
-
-            <div className="flex items-center justify-between border-t border-slate-800/40 pt-3 text-[10px] font-bold">
-              <span className="text-slate-500 uppercase">Role: <span className="text-blue-400">{getRoleName(item)}</span></span>
-              <span className={`px-2 py-0.5 rounded-full ${item.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                {item.status || 'ACTIVE'}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {paginated.length === 0 && (
           <div className="col-span-full py-12 text-center text-slate-500 italic">No workspace members match the filters.</div>

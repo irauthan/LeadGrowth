@@ -34,10 +34,16 @@ public class Task {
     private LocalDate dueDate;
 
     @Column(length = 20)
-    private String priority; // Low, Medium, High
+    private String priority; // Low, Medium, High, Urgent
 
     @Column(length = 20)
-    private String status; // Pending, In_Progress, Completed
+    private String status; // Pending, In_Progress, Completed, etc.
+
+    @Column(name = "required_skill", length = 100)
+    private String requiredSkill;
+
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -50,7 +56,7 @@ public class Task {
     // Constructors
     public Task() {}
 
-    public Task(Long id, Workspace workspace, String title, String description, User assignedTo, User assignedBy, LocalDate dueDate, String priority, String status, LocalDateTime createdAt) {
+    public Task(Long id, Workspace workspace, String title, String description, User assignedTo, User assignedBy, LocalDate dueDate, String priority, String status, String requiredSkill, LocalDateTime assignedAt, LocalDateTime createdAt) {
         this.id = id;
         this.workspace = workspace;
         this.title = title;
@@ -60,6 +66,8 @@ public class Task {
         this.dueDate = dueDate;
         this.priority = priority;
         this.status = status;
+        this.requiredSkill = requiredSkill;
+        this.assignedAt = assignedAt;
         this.createdAt = createdAt;
     }
 
@@ -91,6 +99,12 @@ public class Task {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
+    public String getRequiredSkill() { return requiredSkill; }
+    public void setRequiredSkill(String requiredSkill) { this.requiredSkill = requiredSkill; }
+
+    public LocalDateTime getAssignedAt() { return assignedAt; }
+    public void setAssignedAt(LocalDateTime assignedAt) { this.assignedAt = assignedAt; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -109,6 +123,8 @@ public class Task {
         private LocalDate dueDate;
         private String priority;
         private String status;
+        private String requiredSkill;
+        private LocalDateTime assignedAt;
         private LocalDateTime createdAt;
 
         TaskBuilder() {}
@@ -122,10 +138,12 @@ public class Task {
         public TaskBuilder dueDate(LocalDate dueDate) { this.dueDate = dueDate; return this; }
         public TaskBuilder priority(String priority) { this.priority = priority; return this; }
         public TaskBuilder status(String status) { this.status = status; return this; }
+        public TaskBuilder requiredSkill(String requiredSkill) { this.requiredSkill = requiredSkill; return this; }
+        public TaskBuilder assignedAt(LocalDateTime assignedAt) { this.assignedAt = assignedAt; return this; }
         public TaskBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public Task build() {
-            return new Task(id, workspace, title, description, assignedTo, assignedBy, dueDate, priority, status, createdAt);
+            return new Task(id, workspace, title, description, assignedTo, assignedBy, dueDate, priority, status, requiredSkill, assignedAt, createdAt);
         }
     }
 }

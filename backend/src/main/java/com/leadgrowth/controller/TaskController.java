@@ -75,4 +75,25 @@ public class TaskController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(taskService.bulkUpdateStatus(taskIds, status, email));
     }
+
+    @PostMapping("/{id}/auto-assign")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<TaskDto> autoAssignTask(@PathVariable Long id) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.autoAssignTask(id, email));
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<TaskDto> approveTask(@PathVariable Long id) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.approveTask(id, email));
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<TaskDto> rejectTask(@PathVariable Long id) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.rejectTask(id, email));
+    }
 }

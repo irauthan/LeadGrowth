@@ -42,6 +42,7 @@ export default function Leads() {
     sourcePlatform: 'Meta',
     campaignId: '',
     campaignName: '',
+    assignedToId: '',
   });
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
@@ -181,6 +182,7 @@ export default function Leads() {
         ...createForm,
         campaignId: createForm.campaignId ? parseInt(createForm.campaignId) : undefined,
         campaignName: camp ? camp.name : 'Direct Intake',
+        assignedToId: createForm.assignedToId ? parseInt(createForm.assignedToId) : undefined,
       };
       await api.post('/api/leads', payload);
       setShowCreateModal(false);
@@ -192,6 +194,7 @@ export default function Leads() {
         sourcePlatform: 'Meta',
         campaignId: '',
         campaignName: '',
+        assignedToId: '',
       });
       fetchLeads();
     } catch (err) {
@@ -399,10 +402,18 @@ export default function Leads() {
                     ) : (
                       <select
                         value={selectedLead.assignedToId || ''}
-                        onChange={(e) => handleAssignChange(parseInt(e.target.value))}
-                        className="rounded-2xl border border-slate-200 bg-white/60 px-3 py-1.5 text-xs font-semibold outline-none dark:border-slate-800/80 dark:bg-slate-900/50"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '-1') {
+                            handleAssignChange(-1);
+                          } else if (val !== '') {
+                            handleAssignChange(parseInt(val));
+                          }
+                        }}
+                        className="rounded-2xl border border-slate-200 bg-white/60 px-3 py-1.5 text-xs font-semibold outline-none dark:border-slate-800/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-100"
                       >
                         <option value="">Unassigned</option>
+                        <option value="-1">🎲 Auto-Assign via Engine</option>
                         {members.map((m) => (
                           <option key={m.id} value={m.id}>{m.fullName} ({m.designation || 'Staff'})</option>
                         ))}
@@ -534,6 +545,21 @@ export default function Leads() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Assignee</label>
+                <select
+                  value={createForm.assignedToId}
+                  onChange={(e) => setCreateForm({ ...createForm, assignedToId: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Unassigned (Queue)</option>
+                  <option value="-1">🎲 Auto-Assign via Engine</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>{m.fullName}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">

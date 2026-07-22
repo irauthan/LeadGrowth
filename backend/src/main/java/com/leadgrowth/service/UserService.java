@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.context.annotation.Lazy;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -24,19 +25,22 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final InvitationRepository invitationRepository;
     private final ActivityLogRepository activityLogRepository;
+    private final TaskService taskService;
 
     public UserService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             RoleRepository roleRepository,
             InvitationRepository invitationRepository,
-            ActivityLogRepository activityLogRepository
+            ActivityLogRepository activityLogRepository,
+            @Lazy TaskService taskService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.roleRepository = roleRepository;
         this.invitationRepository = invitationRepository;
         this.activityLogRepository = activityLogRepository;
+        this.taskService = taskService;
     }
 
     @Transactional
@@ -49,6 +53,7 @@ public class UserService {
         user.setDesignation(request.getDesignation());
         user.setBio(request.getBio());
         user.setDepartment(request.getDepartment());
+        user.setSkills(request.getSkills());
         
         if (request.getProfileImage() != null) {
             user.setProfileImage(request.getProfileImage());
@@ -230,6 +235,7 @@ public class UserService {
         targetUser.setDesignation(request.getDesignation());
         targetUser.setBio(request.getBio());
         targetUser.setDepartment(request.getDepartment());
+        targetUser.setSkills(request.getSkills());
         if (request.getProfileImage() != null) {
             targetUser.setProfileImage(request.getProfileImage());
         }
@@ -319,5 +325,23 @@ public class UserService {
         userRepository.save(targetUser);
 
         return admin.getWorkspace();
+    }
+
+    @Transactional
+    public User updateAvailabilityStatus(String availabilityStatus, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        String status = availabilityStatus.toUpperCase();
+        if (!List.of("AVAILABLE", "BUSY", "ON_BREAK", "OFFLINE", "ON_LEAVE").contains(status)) {
+            throw new IllegalArgumentException("Invalid availability status: " + availabilityStatus);
+        }
+        user.setAvailabilityStatus(status);
+        
+        // Trigger auto-reassignments immediately
+        if ("OFFLINE".equals(status) || "ON_LEAVE".equals(status)) {
+            taskService.handleUserOffline(user.getId());
+        }
+        
+        return userRepository.save(user);
     }
 }

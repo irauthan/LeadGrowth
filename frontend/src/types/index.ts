@@ -14,6 +14,8 @@ export interface User {
   department?: string;
   status?: 'ACTIVE' | 'SUSPENDED';
   lastActiveAt?: string;
+  availabilityStatus?: 'AVAILABLE' | 'BUSY' | 'ON_BREAK' | 'OFFLINE' | 'ON_LEAVE';
+  skills?: string;
 }
 
 export interface Workspace {
@@ -76,8 +78,9 @@ export interface Task {
   assignedToName?: string;
   assignedByName?: string;
   dueDate: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'Pending' | 'In_Progress' | 'In Progress' | 'Completed' | 'Rejected';
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent' | 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: 'Pending' | 'In_Progress' | 'In Progress' | 'Completed' | 'Rejected' | 'PENDING' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'Pending_Review' | 'APPROVED' | 'Approved' | 'REJECTED' | 'Rejected' | 'COMPLETED';
+  requiredSkill?: string;
   createdAt: string;
 }
 

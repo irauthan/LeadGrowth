@@ -17,4 +17,19 @@ public class WebSocketManager {
         String destination = "/topic/workspace/" + workspaceId + "/leads";
         messagingTemplate.convertAndSend(destination, leadDto);
     }
+
+    public void broadcastTask(Long workspaceId, Object taskDto) {
+        String destination = "/topic/workspace/" + workspaceId + "/tasks";
+        messagingTemplate.convertAndSend(destination, taskDto);
+    }
+
+    public void broadcastNotification(Long userId, Object notificationDto) {
+        String destination = "/topic/user/" + userId + "/notifications";
+        messagingTemplate.convertAndSend(destination, notificationDto);
+    }
+
+    public void broadcastWorkspaceNotification(Long workspaceId, Object notificationDto) {
+        String destination = "/topic/workspace/" + workspaceId + "/notifications";
+        messagingTemplate.convertAndSend(destination, notificationDto);
+    }
 }
