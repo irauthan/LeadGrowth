@@ -255,7 +255,7 @@ export default function Leads() {
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-500/20 hover:scale-[1.01] nav-glow"
+            className="flex items-center gap-2 rounded-2xl bg-blue-400 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-500/20 hover:scale-[1.01] nav-glow"
           >
             <Plus size={16} />
             <span>Add Lead</span>

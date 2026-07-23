@@ -138,10 +138,10 @@ export default function Tasks() {
     const isTaskReview = task.status === 'PENDING_REVIEW' || task.status === 'Pending_Review';
     
     return (
-      <div key={task.id} className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/60 flex flex-col justify-between">
+      <div key={task.id} className="group rounded-2xl border border-theme-border bg-theme-card p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between">
         <div>
           <div className="flex items-start justify-between gap-2">
-            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight">{task.title}</h4>
+            <h4 className="text-base font-bold text-theme-text leading-tight">{task.title}</h4>
             {(isAdmin || isManager) && (
               <button
                 onClick={() => handleDelete(task.id)}
@@ -152,13 +152,13 @@ export default function Tasks() {
               </button>
             )}
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{task.description}</p>
+          <p className="mt-2 text-sm text-theme-text-muted leading-relaxed">{task.description}</p>
 
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+        <div className="mt-4 pt-4 border-t border-theme-border space-y-3">
           {/* Metadata */}
-          <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold text-slate-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-theme-text-muted">
             <div className="flex items-center gap-1.5">
               <UserIcon size={12} />
               <span>{task.assignedToName || 'Unassigned'}</span>
@@ -171,12 +171,12 @@ export default function Tasks() {
 
           {/* Action Row */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
               task.priority?.toUpperCase() === 'HIGH' || task.priority?.toUpperCase() === 'URGENT'
                 ? 'bg-rose-500/10 text-rose-500' 
                 : task.priority?.toUpperCase() === 'MEDIUM' 
                 ? 'bg-indigo-500/10 text-indigo-500' 
-                : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                : 'bg-theme-bg-alt text-theme-text-muted'
             }`}>
               {task.priority} Priority
             </span>
@@ -187,7 +187,7 @@ export default function Tasks() {
               {isTaskPending && !task.assignedToId && (isAdmin || isManager) && (
                 <button
                   onClick={() => handleAutoAssign(task.id)}
-                  className="rounded-xl bg-gradient-to-r from-brand-600 to-indigo-500 text-white hover:from-brand-700 hover:to-indigo-600 text-[10px] font-bold px-2 py-1 shadow-sm flex items-center gap-1"
+                  className="rounded-xl bg-theme-primary text-white hover:bg-theme-primary-hover text-xs font-bold px-2 py-1 shadow-sm flex items-center gap-1"
                   title="Trigger Hybrid Assignment Algorithm"
                 >
                   <Sparkles size={10} />
@@ -210,7 +210,7 @@ export default function Tasks() {
               {isTaskActive && (
                 <button
                   onClick={() => handleStatusChange(task.id, 'Completed')}
-                  className="rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 text-[10px] font-bold px-2.5 py-1.5 transition-all flex items-center gap-1 shadow-sm"
+                  className="rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 text-xs font-bold px-2.5 py-1.5 transition-all flex items-center gap-1 shadow-sm"
                   title="Submit for Approval"
                 >
                   <CheckCircle size={11} />
@@ -223,13 +223,13 @@ export default function Tasks() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleApprove(task.id)}
-                    className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-bold px-2 py-1 shadow-xs"
+                    className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold px-2 py-1 shadow-xs"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleReject(task.id)}
-                    className="rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-bold px-2 py-1 shadow-xs"
+                    className="rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-bold px-2 py-1 shadow-xs"
                   >
                     Reject
                   </button>
@@ -245,7 +245,7 @@ export default function Tasks() {
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <Loader2 size={36} className="animate-spin text-brand-500" />
+        <Loader2 size={36} className="animate-spin text-theme-primary" />
       </div>
     );
   }
@@ -255,8 +255,8 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">Tasks Board</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="text-4xl font-extrabold tracking-tight text-theme-text">Tasks Board</h1>
+          <p className="mt-1 text-base text-theme-text-muted">
             Assign duties to lead specialists and follow up on marketing goals.
           </p>
         </div>
@@ -264,7 +264,7 @@ export default function Tasks() {
         {(isAdmin || isManager) && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg"
+            className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-base font-bold text-white shadow-lg"
           >
             <Plus size={16} />
             <span>Create Task</span>
@@ -275,11 +275,11 @@ export default function Tasks() {
       {/* Kanban Board Columns */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Queue Column */}
-        <div className="rounded-3xl border border-slate-200/50 bg-slate-50 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/15 flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+        <div className="rounded-3xl border border-theme-border bg-theme-bg-alt p-4 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-theme-border pb-3">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-700 dark:text-slate-300">Task Queue</span>
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              <span className="font-bold text-theme-text">Task Queue</span>
+              <span className="rounded-full bg-theme-bg-alt px-2 py-0.5 text-sm font-bold text-theme-text-muted">
                 {pendingTasks.length}
               </span>
             </div>
@@ -287,17 +287,17 @@ export default function Tasks() {
           <div className="flex-1 space-y-4 max-h-[600px] overflow-y-auto pr-1">
             {pendingTasks.map(renderCard)}
             {pendingTasks.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-10">Queue is empty.</p>
+              <p className="text-center text-sm text-theme-text-muted py-10">Queue is empty.</p>
             )}
           </div>
         </div>
 
         {/* Active Column */}
-        <div className="rounded-3xl border border-slate-200/50 bg-slate-50 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/15 flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+        <div className="rounded-3xl border border-theme-border bg-theme-bg-alt p-4 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-theme-border pb-3">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-700 dark:text-slate-300">Active</span>
-              <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+              <span className="font-bold text-theme-text">Active</span>
+              <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-bold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
                 {inProgressTasks.length}
               </span>
             </div>
@@ -305,17 +305,17 @@ export default function Tasks() {
           <div className="flex-1 space-y-4 max-h-[600px] overflow-y-auto pr-1">
             {inProgressTasks.map(renderCard)}
             {inProgressTasks.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-10">No active tasks.</p>
+              <p className="text-center text-sm text-theme-text-muted py-10">No active tasks.</p>
             )}
           </div>
         </div>
 
         {/* Pending Review Column */}
-        <div className="rounded-3xl border border-slate-200/50 bg-slate-50 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/15 flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+        <div className="rounded-3xl border border-theme-border bg-theme-bg-alt p-4 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-theme-border pb-3">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-700 dark:text-slate-300">Pending Review</span>
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <span className="font-bold text-theme-text">Pending Review</span>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-sm font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                 {reviewTasks.length}
               </span>
             </div>
@@ -323,17 +323,17 @@ export default function Tasks() {
           <div className="flex-1 space-y-4 max-h-[600px] overflow-y-auto pr-1">
             {reviewTasks.map(renderCard)}
             {reviewTasks.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-10">No tasks pending approval.</p>
+              <p className="text-center text-sm text-theme-text-muted py-10">No tasks pending approval.</p>
             )}
           </div>
         </div>
 
         {/* Approved Column */}
-        <div className="rounded-3xl border border-slate-200/50 bg-slate-50 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/15 flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+        <div className="rounded-3xl border border-theme-border bg-theme-bg-alt p-4 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-theme-border pb-3">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-700 dark:text-slate-300">Approved</span>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+              <span className="font-bold text-theme-text">Approved</span>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-sm font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                 {approvedTasks.length}
               </span>
             </div>
@@ -341,7 +341,7 @@ export default function Tasks() {
           <div className="flex-1 space-y-4 max-h-[600px] overflow-y-auto pr-1">
             {approvedTasks.map(renderCard)}
             {approvedTasks.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-10">No approved tasks.</p>
+              <p className="text-center text-sm text-theme-text-muted py-10">No approved tasks.</p>
             )}
           </div>
         </div>
@@ -350,40 +350,40 @@ export default function Tasks() {
       {/* Create Task Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Create Workspace Task</h3>
-            <p className="text-xs text-slate-400 mb-4">Set up a task card for a team member.</p>
+          <div className="w-full max-w-lg rounded-3xl bg-theme-card p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-theme-text">Create Workspace Task</h3>
+            <p className="text-sm text-theme-text-muted mb-4">Set up a task card for a team member.</p>
 
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Task Title</label>
+                <label className="mb-1 block text-sm font-bold uppercase tracking-wider text-theme-text-muted">Task Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Optimize ad target keywords"
                   value={createForm.title}
                   onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-base outline-none focus:border-theme-primary text-theme-text"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Description</label>
+                <label className="mb-1 block text-sm font-bold uppercase tracking-wider text-theme-text-muted">Description</label>
                 <textarea
                   rows={3}
                   placeholder="Briefly state action instructions..."
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-base outline-none focus:border-theme-primary text-theme-text"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Assignee</label>
+                <label className="mb-1 block text-sm font-bold uppercase tracking-wider text-theme-text-muted">Assignee</label>
                 <select
                   value={createForm.assignedToId}
                   onChange={(e) => setCreateForm({ ...createForm, assignedToId: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-base outline-none focus:border-theme-primary text-theme-text"
                 >
                   <option value="">Unassigned (Queue)</option>
                   <option value="-1">🎲 Auto-Assign via Engine</option>
@@ -395,21 +395,21 @@ export default function Tasks() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Due Date</label>
+                  <label className="mb-1 block text-sm font-bold uppercase tracking-wider text-theme-text-muted">Due Date</label>
                   <input
                     type="date"
                     required
                     value={createForm.dueDate}
                     onChange={(e) => setCreateForm({ ...createForm, dueDate: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-base outline-none focus:border-theme-primary text-theme-text"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Priority</label>
+                  <label className="mb-1 block text-sm font-bold uppercase tracking-wider text-theme-text-muted">Priority</label>
                   <select
                     value={createForm.priority}
                     onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-base outline-none focus:border-theme-primary text-theme-text"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -423,13 +423,13 @@ export default function Tasks() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                  className="rounded-2xl border border-theme-border bg-theme-bg-alt px-5 py-2.5 text-base font-semibold hover:bg-theme-card text-theme-text"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg"
+                  className="rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-5 py-2.5 text-base font-bold text-white shadow-lg"
                 >
                   Create Task
                 </button>

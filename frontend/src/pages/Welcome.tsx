@@ -105,7 +105,7 @@ export default function Welcome() {
 
           <div className="flex items-center gap-3">
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white shadow-xl">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-blue-600 text-white shadow-xl">
 
               <TrendingUp size={22} />
 
@@ -166,7 +166,7 @@ export default function Welcome() {
               {/* antialiased + text-stroke removes the whitish halo that shows up on
                   bold gradient-clipped glyphs (most visible on curved letters like "S") */}
              <span
-  className="bg-purple-500 bg-clip-text text-transparent"
+  className="bg-blue-500 bg-clip-text text-transparent"
   style={{ WebkitTextFillColor: "transparent" }}
 >
   Smarter Than Ever
@@ -190,7 +190,7 @@ export default function Welcome() {
             >
           <Link
   to="/auth"
-  className="group flex items-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-400 px-9 py-4 font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:scale-105 shadow-none ring-0 outline-none border-0"
+  className="group flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-400 px-9 py-4 font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:scale-105 shadow-none ring-0 outline-none border-0"
 >
   Get Started
 
@@ -334,7 +334,7 @@ export default function Welcome() {
                       Conversion Rate
                     </p>
 
-                    <h2 className="mt-3 text-4xl font-black text-purple-600">
+                    <h2 className="mt-3 text-4xl font-black text-blue-600">
                       91%
                     </h2>
 
@@ -343,7 +343,7 @@ export default function Welcome() {
                       {[45, 65, 80, 55, 95, 72, 100].map((height, index) => (
                         <div
                           key={index}
-                          className="flex-1 rounded-full bg-gradient-to-t from-purple-600 to-indigo-500"
+                          className="flex-1 rounded-full bg-gradient-to-t from-purple-400 to-indigo-500"
                           style={{
                             height: `${height}px`,
                           }}
