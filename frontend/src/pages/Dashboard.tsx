@@ -194,11 +194,11 @@ export default function Dashboard() {
   const renderHeader = () => (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+        <h1 className="text-3xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
           Welcome back, {user?.fullName} <Sparkles className="text-cyan-400 animate-pulse" size={24} />
         </h1>
-        <p className="mt-1 text-xs font-semibold text-slate-400">
-          SaaS Workspace: <span className="text-blue-500 font-bold">{user?.workspaceName}</span> • Role: <span className="bg-blue-600/10 border border-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full uppercase text-[9px] ml-1">{user?.roles[0]?.replace('ROLE_', '')}</span>
+        <p className="mt-1 text-xs font-semibold text-theme-text-muted">
+          SaaS Workspace: <span className="text-theme-primary font-bold">{user?.workspaceName}</span> • Role: <span className="bg-theme-primary/10 border border-theme-primary/20 text-theme-primary font-bold px-2 py-0.5 rounded-full uppercase text-[9px] ml-1">{user?.roles[0]?.replace('ROLE_', '')}</span>
         </p>
       </div>
       <div className="flex gap-2">
@@ -225,11 +225,11 @@ export default function Dashboard() {
         {/* KPI Row */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {kpis.map((kpi, idx) => (
-            <div key={idx} className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+            <div key={idx} className="glass-card flex items-center justify-between rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
               <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{kpi.label}</p>
-                <h3 className="mt-2 text-2xl font-extrabold text-white">{kpi.value}</h3>
-                <p className="mt-1 text-[10px] font-medium text-slate-500">{kpi.desc}</p>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">{kpi.label}</p>
+                <h3 className="mt-2 text-2xl font-extrabold text-theme-text">{kpi.value}</h3>
+                <p className="mt-1 text-[10px] font-medium text-theme-text-muted">{kpi.desc}</p>
               </div>
               <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${kpi.color}`}>
                 <kpi.icon size={20} />
@@ -240,13 +240,13 @@ export default function Dashboard() {
 
         {/* Recharts Trend Line + Workspace Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 lg:col-span-2 shadow-xl">
+          <div className="glass-card rounded-3xl p-6 border border-theme-border bg-theme-card lg:col-span-2 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">Growth Reports</h4>
-                <p className="text-[11px] text-slate-500">Revenue vs spend performance trends</p>
+                <h4 className="text-sm font-extrabold text-theme-text uppercase tracking-wider">Growth Reports</h4>
+                <p className="text-[11px] text-theme-text-muted">Revenue vs spend performance trends</p>
               </div>
-              <span className="text-[10px] bg-slate-800 text-slate-300 font-bold px-2 py-1 rounded">Last 7 Days</span>
+              <span className="text-[10px] bg-theme-bg-alt text-theme-text-muted border border-theme-border font-bold px-2 py-1 rounded">Last 7 Days</span>
             </div>
             <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -261,9 +261,9 @@ export default function Dashboard() {
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#111827', borderColor: '#334155', borderRadius: '12px' }} labelStyle={{ color: '#94a3b8', fontSize: '11px', fontWeight: 'bold' }} />
+                  <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                  <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', borderRadius: '12px', color: 'var(--text-main)' }} labelStyle={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold' }} />
                   <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" name="Revenue" />
                   <Area type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorSpend)" name="Spend" />
                 </AreaChart>
@@ -271,36 +271,36 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl flex flex-col justify-between">
+          <div className="glass-card rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl flex flex-col justify-between">
             <div>
-              <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">Workspace Health</h4>
-              <p className="text-[11px] text-slate-500">API configurations & metadata metrics</p>
+              <h4 className="text-sm font-extrabold text-theme-text uppercase tracking-wider">Workspace Health</h4>
+              <p className="text-[11px] text-theme-text-muted">API configurations & metadata metrics</p>
               
               <div className="mt-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
-                  <span className="text-xs text-slate-400">Timezone</span>
-                  <span className="text-xs font-bold text-white">GMT+5:30 (India)</span>
+                <div className="flex items-center justify-between border-b border-theme-border/40 pb-2">
+                  <span className="text-xs text-theme-text-muted">Timezone</span>
+                  <span className="text-xs font-bold text-theme-text">GMT+5:30 (India)</span>
                 </div>
-                <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
-                  <span className="text-xs text-slate-400">Industry Sector</span>
-                  <span className="text-xs font-bold text-white">Digital Marketing</span>
+                <div className="flex items-center justify-between border-b border-theme-border/40 pb-2">
+                  <span className="text-xs text-theme-text-muted">Industry Sector</span>
+                  <span className="text-xs font-bold text-theme-text">Digital Marketing</span>
                 </div>
-                <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
-                  <span className="text-xs text-slate-400">Invite Code</span>
+                <div className="flex items-center justify-between border-b border-theme-border/40 pb-2">
+                  <span className="text-xs text-theme-text-muted">Invite Code</span>
                   <span className="text-xs font-mono font-bold text-cyan-400">{user?.inviteCode}</span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 border-t border-slate-800/40 pt-4">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-3">API Integration Status</span>
+            <div className="mt-6 border-t border-theme-border/40 pt-4">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted block mb-3">API Integration Status</span>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800">
-                  <span className="text-xs font-semibold text-white">Meta API V18</span>
+                <div className="flex items-center justify-between p-2 rounded-xl bg-theme-bg-alt border border-theme-border">
+                  <span className="text-xs font-semibold text-theme-text">Meta API V18</span>
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800">
-                  <span className="text-xs font-semibold text-white">Google Marketing API</span>
+                <div className="flex items-center justify-between p-2 rounded-xl bg-theme-bg-alt border border-theme-border">
+                  <span className="text-xs font-semibold text-theme-text">Google Marketing API</span>
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
               </div>
@@ -309,20 +309,20 @@ export default function Dashboard() {
         </div>
 
         {/* User Directory Quick Look */}
-        <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+        <div className="glass-card rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">Workspace Users Directory</h4>
-              <p className="text-[11px] text-slate-500">Quick list of registered team members</p>
+              <h4 className="text-sm font-extrabold text-theme-text uppercase tracking-wider">Workspace Users Directory</h4>
+              <p className="text-[11px] text-theme-text-muted">Quick list of registered team members</p>
             </div>
-            <Link to="/admin/users" className="text-xs text-blue-500 font-bold hover:underline flex items-center gap-1">
+            <Link to="/admin/users" className="text-xs text-theme-primary font-bold hover:underline flex items-center gap-1">
               Manage Users <ExternalLink size={12} />
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-slate-800 text-[10px] font-extrabold uppercase text-slate-500">
+                <tr className="border-b border-theme-border text-[10px] font-extrabold uppercase text-theme-text-muted">
                   <th className="py-2">Name</th>
                   <th className="py-2">Email</th>
                   <th className="py-2">Role</th>
@@ -330,13 +330,13 @@ export default function Dashboard() {
                   <th className="py-2">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/40 text-xs">
+              <tbody className="divide-y divide-theme-border/40 text-xs">
                 {members.slice(0, 5).map((m) => (
-                  <tr key={m.id} className="text-slate-300">
-                    <td className="py-3 font-bold text-white">{m.fullName}</td>
-                    <td className="py-3">{m.email}</td>
-                    <td className="py-3"><span className="text-[10px] font-semibold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full">{((typeof m.roles?.[0] === 'string' ? m.roles[0] : (m.roles?.[0] as any)?.name) || 'USER').replace('ROLE_', '')}</span></td>
-                    <td className="py-3">{m.department || 'N/A'}</td>
+                  <tr key={m.id} className="text-theme-text">
+                    <td className="py-3 font-bold text-theme-text">{m.fullName}</td>
+                    <td className="py-3 text-theme-text-muted">{m.email}</td>
+                    <td className="py-3"><span className="text-[10px] font-semibold text-theme-text-muted bg-theme-bg-alt px-2 py-0.5 rounded-full">{((typeof m.roles?.[0] === 'string' ? m.roles[0] : (m.roles?.[0] as any)?.name) || 'USER').replace('ROLE_', '')}</span></td>
+                    <td className="py-3 text-theme-text-muted">{m.department || 'N/A'}</td>
                     <td className="py-3">
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${m.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                         {m.status}
@@ -367,41 +367,41 @@ export default function Dashboard() {
       <div className="space-y-6">
         {/* KPI Cards */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Unassigned Leads</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">Unassigned Leads</p>
               <h3 className="mt-2 text-2xl font-extrabold text-amber-500">{unassignedCount}</h3>
-              <p className="mt-1 text-[10px] text-slate-500">Awaiting assignment</p>
+              <p className="mt-1 text-[10px] text-theme-text-muted">Awaiting assignment</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400">
               <AlertTriangle size={20} />
             </div>
           </div>
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Active Workload</p>
-              <h3 className="mt-2 text-2xl font-extrabold text-blue-500">{pendingTasks}</h3>
-              <p className="mt-1 text-[10px] text-slate-500">Incomplete team tasks</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">Active Workload</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-theme-primary">{pendingTasks}</h3>
+              <p className="mt-1 text-[10px] text-theme-text-muted">Incomplete team tasks</p>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary">
               <ClipboardList size={20} />
             </div>
           </div>
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Lead Conversion Rate</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">Lead Conversion Rate</p>
               <h3 className="mt-2 text-2xl font-extrabold text-emerald-500">{conversionsRate}%</h3>
-              <p className="mt-1 text-[10px] text-slate-500">Lead to Converted ratio</p>
+              <p className="mt-1 text-[10px] text-theme-text-muted">Lead to Converted ratio</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
               <CheckCircle2 size={20} />
             </div>
           </div>
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Campaign Conversions</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">Campaign Conversions</p>
               <h3 className="mt-2 text-2xl font-extrabold text-cyan-500">{data?.totalConversions}</h3>
-              <p className="mt-1 text-[10px] text-slate-500">Total conversions tracked</p>
+              <p className="mt-1 text-[10px] text-theme-text-muted">Total conversions tracked</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400">
               <TrendingUp size={20} />
@@ -413,31 +413,31 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Quick Lead Assignment Table */}
-          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
-            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">Unassigned Leads Queue</h4>
-            <p className="text-[11px] text-slate-500 mb-4">Select workspace member to assign lead</p>
+          <div className="glass-card rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
+            <h4 className="text-sm font-extrabold text-theme-text uppercase tracking-wider mb-2">Unassigned Leads Queue</h4>
+            <p className="text-[11px] text-theme-text-muted mb-4">Select workspace member to assign lead</p>
 
             <div className="overflow-x-auto max-h-72">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-slate-800 text-[10px] font-extrabold uppercase text-slate-500">
+                  <tr className="border-b border-theme-border text-[10px] font-extrabold uppercase text-theme-text-muted">
                     <th className="py-2">Lead</th>
                     <th className="py-2">Source</th>
                     <th className="py-2">Assign To</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/40 text-xs">
+                <tbody className="divide-y divide-theme-border/40 text-xs">
                   {leads.filter(l => !l.assignedToId).map((l) => (
-                    <tr key={l.id} className="text-slate-300">
+                    <tr key={l.id} className="text-theme-text">
                       <td className="py-2">
-                        <div className="font-bold text-white">{l.name}</div>
-                        <div className="text-[10px] text-slate-500">{l.email}</div>
+                        <div className="font-bold text-theme-text">{l.name}</div>
+                        <div className="text-[10px] text-theme-text-muted">{l.email}</div>
                       </td>
-                      <td className="py-2">{l.sourcePlatform}</td>
+                      <td className="py-2 text-theme-text-muted">{l.sourcePlatform}</td>
                       <td className="py-2">
                         <select
                           onChange={(e) => handleAssignLead(l.id, e.target.value)}
-                          className="rounded-xl border border-slate-800 bg-slate-950 px-2 py-1 text-xs outline-none focus:border-blue-500 text-white"
+                          className="rounded-xl border border-theme-border bg-theme-bg-alt px-2 py-1 text-xs outline-none focus:border-theme-primary text-theme-text"
                           defaultValue=""
                         >
                           <option value="" disabled>Select User...</option>
@@ -460,9 +460,9 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Task Assign Form */}
-          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
-            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">Create & Assign Workspace Task</h4>
-            <p className="text-[11px] text-slate-500 mb-4">Input instructions and select assignee</p>
+          <div className="glass-card rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
+            <h4 className="text-sm font-extrabold text-theme-text uppercase tracking-wider mb-2">Create & Assign Workspace Task</h4>
+            <p className="text-[11px] text-theme-text-muted mb-4">Input instructions and select assignee</p>
 
             {taskSuccess && (
               <div className="mb-3 rounded-xl bg-green-500/10 border border-green-500/30 p-2.5 text-xs text-green-400">
@@ -478,7 +478,7 @@ export default function Dashboard() {
                   placeholder="Task title..."
                   value={taskForm.title}
                   onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt py-2 px-3 text-xs outline-none focus:border-theme-primary text-theme-text"
                 />
               </div>
               <div>
@@ -487,7 +487,7 @@ export default function Dashboard() {
                   placeholder="Task instructions/description..."
                   value={taskForm.description}
                   onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt py-2 px-3 text-xs outline-none focus:border-theme-primary text-theme-text"
                 />
               </div>
 
@@ -496,7 +496,7 @@ export default function Dashboard() {
                   <select
                     value={taskForm.assignedToId}
                     onChange={(e) => setTaskForm({ ...taskForm, assignedToId: e.target.value })}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                    className="w-full rounded-xl border border-theme-border bg-theme-bg-alt py-2 px-3 text-xs outline-none focus:border-theme-primary text-theme-text"
                   >
                     <option value="">Unassigned</option>
                     <option value="-1">🎲 Auto Load Balance</option>
@@ -511,7 +511,7 @@ export default function Dashboard() {
                     required
                     value={taskForm.dueDate}
                     onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                    className="w-full rounded-xl border border-theme-border bg-theme-bg-alt py-2 px-3 text-xs outline-none focus:border-theme-primary text-theme-text"
                   />
                 </div>
               </div>
@@ -519,7 +519,7 @@ export default function Dashboard() {
               <button
                 type="submit"
                 disabled={assigningTask}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-theme-primary py-2 text-xs font-bold text-white hover:bg-theme-primary-hover disabled:opacity-50"
               >
                 {assigningTask ? <Loader2 size={14} className="animate-spin" /> : <><Plus size={14} /> Assign Task</>}
               </button>
@@ -541,31 +541,31 @@ export default function Dashboard() {
       <div className="space-y-6">
         {/* User KPIs */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">My Leads</p>
-              <h3 className="mt-2 text-2xl font-extrabold text-blue-400">{myLeads.length}</h3>
-              <p className="mt-1 text-[10px] text-slate-500">Leads assigned to me</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">My Leads</p>
+              <h3 className="mt-2 text-2xl font-extrabold text-theme-primary">{myLeads.length}</h3>
+              <p className="mt-1 text-[10px] text-theme-text-muted">Leads assigned to me</p>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary">
               <Users size={20} />
             </div>
           </div>
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">My Completed Tasks</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">My Completed Tasks</p>
               <h3 className="mt-2 text-2xl font-extrabold text-emerald-400">{myTasks.filter(t => t.status === 'Completed').length}</h3>
-              <p className="mt-1 text-[10px] text-slate-500">Out of {myTasks.length} total tasks</p>
+              <p className="mt-1 text-[10px] text-theme-text-muted">Out of {myTasks.length} total tasks</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
               <CheckCircle2 size={20} />
             </div>
           </div>
-          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
+          <div className="glass-card flex items-center justify-between rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Active Leads Pipeline</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">Active Leads Pipeline</p>
               <h3 className="mt-2 text-2xl font-extrabold text-cyan-400">{myLeads.filter(l => l.status === 'Qualified' || l.status === 'Contacted').length}</h3>
-              <p className="mt-1 text-[10px] text-slate-500">Qualified or Contacted</p>
+              <p className="mt-1 text-[10px] text-theme-text-muted">Qualified or Contacted</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400">
               <Zap size={20} />
@@ -577,37 +577,37 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* My Tasks Kanban Column */}
-          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 lg:col-span-2 shadow-xl">
-            <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">My Assigned Tasks Kanban</h4>
-            <p className="text-[11px] text-slate-500 mb-4">Click action icons to transition status values</p>
+          <div className="glass-card rounded-3xl p-6 border border-theme-border bg-theme-card lg:col-span-2 shadow-xl">
+            <h4 className="text-sm font-extrabold text-theme-text uppercase tracking-wider mb-2">My Assigned Tasks Kanban</h4>
+            <p className="text-[11px] text-theme-text-muted mb-4">Click action icons to transition status values</p>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {myTasks.map((t) => (
-                <div key={t.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div key={t.id} className="p-4 rounded-2xl bg-theme-bg-alt border border-theme-border flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
-                        t.priority === 'High' || t.priority === 'Urgent' ? 'bg-red-500/10 text-red-400' : 'bg-slate-800 text-slate-400'
+                        t.priority === 'High' || t.priority === 'Urgent' ? 'bg-red-500/10 text-red-400' : 'bg-theme-bg text-theme-text-muted'
                       }`}>{t.priority}</span>
-                      <h5 className="text-xs font-bold text-white">{t.title}</h5>
+                      <h5 className="text-xs font-bold text-theme-text">{t.title}</h5>
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-400">{t.description}</p>
-                    <p className="mt-1 text-[9px] font-semibold text-slate-500">Due: {formatDate(t.dueDate)} • Issued By: {t.assignedByName}</p>
+                    <p className="mt-1 text-[11px] text-theme-text-muted">{t.description}</p>
+                    <p className="mt-1 text-[9px] font-semibold text-theme-text-muted">Due: {formatDate(t.dueDate)} • Issued By: {t.assignedByName}</p>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                       t.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400' :
-                      t.status === 'In_Progress' || t.status === 'In Progress' ? 'bg-blue-500/10 text-blue-400' :
+                      t.status === 'In_Progress' || t.status === 'In Progress' ? 'bg-theme-primary/10 text-theme-primary' :
                       t.status === 'Rejected' ? 'bg-red-500/10 text-red-400' :
-                      'bg-slate-800 text-slate-400'
+                      'bg-theme-bg text-theme-text-muted'
                     }`}>{t.status}</span>
 
                     {t.status !== 'Completed' && t.status !== 'Rejected' && (
                       <div className="flex gap-1.5">
                         <button
                           onClick={() => handleTaskStatus(t.id, 'In_Progress')}
-                          className="px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-[10px] font-bold"
+                          className="px-2 py-1 rounded bg-theme-primary/20 hover:bg-theme-primary/30 text-theme-primary text-[10px] font-bold"
                         >
                           Work
                         </button>
@@ -629,16 +629,16 @@ export default function Dashboard() {
                 </div>
               ))}
               {myTasks.length === 0 && (
-                <p className="py-8 text-center text-xs text-slate-500 italic">No tasks currently assigned.</p>
+                <p className="py-8 text-center text-xs text-theme-text-muted italic">No tasks currently assigned.</p>
               )}
             </div>
           </div>
 
           {/* Sticky Notes Widget */}
-          <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl flex flex-col justify-between">
+          <div className="glass-card rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl flex flex-col justify-between">
             <div>
-              <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">My Work Sticky Pad</h4>
-              <p className="text-[11px] text-slate-500 mb-4">Quick reminders and scratch notes</p>
+              <h4 className="text-sm font-extrabold text-theme-text uppercase tracking-wider mb-2">My Work Sticky Pad</h4>
+              <p className="text-[11px] text-theme-text-muted mb-4">Quick reminders and scratch notes</p>
 
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {stickies.map((s, idx) => (
@@ -655,11 +655,11 @@ export default function Dashboard() {
                 placeholder="Add sticky note..."
                 value={newSticky}
                 onChange={(e) => setNewSticky(e.target.value)}
-                className="flex-1 rounded-xl border border-slate-800 bg-slate-950 py-1.5 px-3 text-xs outline-none focus:border-blue-500 text-white"
+                className="flex-1 rounded-xl border border-theme-border bg-theme-bg-alt py-1.5 px-3 text-xs outline-none focus:border-theme-primary text-theme-text"
               />
               <button
                 type="submit"
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white"
               >
                 <Plus size={16} />
               </button>
@@ -668,14 +668,14 @@ export default function Dashboard() {
         </div>
 
         {/* My Assigned Leads pipeline */}
-        <div className="glass-card rounded-3xl p-6 border border-slate-800 bg-[#111827]/60 shadow-xl">
-          <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">My Leads List</h4>
-          <p className="text-[11px] text-slate-500 mb-4">Update status of leads assigned to you</p>
+        <div className="glass-card rounded-3xl p-6 border border-theme-border bg-theme-card shadow-xl">
+          <h4 className="text-sm font-extrabold text-theme-text uppercase tracking-wider mb-2">My Leads List</h4>
+          <p className="text-[11px] text-theme-text-muted mb-4">Update status of leads assigned to you</p>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-slate-800 text-[10px] font-extrabold uppercase text-slate-500">
+                <tr className="border-b border-theme-border text-[10px] font-extrabold uppercase text-theme-text-muted">
                   <th className="py-2">Name</th>
                   <th className="py-2">Email</th>
                   <th className="py-2">Platform</th>
@@ -683,23 +683,23 @@ export default function Dashboard() {
                   <th className="py-2">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/40 text-xs">
+              <tbody className="divide-y divide-theme-border/40 text-xs">
                 {myLeads.map((l) => (
-                  <tr key={l.id} className="text-slate-300">
-                    <td className="py-3 font-bold text-white">{l.name}</td>
-                    <td className="py-3">{l.email}</td>
-                    <td className="py-3">{l.sourcePlatform}</td>
+                  <tr key={l.id} className="text-theme-text">
+                    <td className="py-3 font-bold text-theme-text">{l.name}</td>
+                    <td className="py-3 text-theme-text-muted">{l.email}</td>
+                    <td className="py-3 text-theme-text-muted">{l.sourcePlatform}</td>
                     <td className="py-3">
                       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                         l.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-400' :
                         l.status === 'Rejected' ? 'bg-red-500/10 text-red-400' :
-                        'bg-slate-800 text-slate-400'
+                        'bg-theme-bg-alt text-theme-text-muted'
                       }`}>{l.status}</span>
                     </td>
                     <td className="py-3">
                       <select
                         onChange={(e) => handleLeadStatus(l.id, e.target.value)}
-                        className="rounded bg-slate-950 border border-slate-800 text-white text-[10px] p-1 font-semibold"
+                        className="rounded bg-theme-bg-alt border border-theme-border text-theme-text text-[10px] p-1 font-semibold"
                         value={l.status}
                       >
                         <option value="New">New</option>
@@ -713,7 +713,7 @@ export default function Dashboard() {
                 ))}
                 {myLeads.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-slate-500 italic">No leads assigned.</td>
+                    <td colSpan={5} className="py-6 text-center text-theme-text-muted italic">No leads assigned.</td>
                   </tr>
                 )}
               </tbody>
