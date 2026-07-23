@@ -101,8 +101,8 @@ export default function Profile() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100 font-sans">Settings & Profile</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h1 className="text-3xl font-extrabold tracking-tight text-theme-text font-sans">Settings & Profile</h1>
+        <p className="mt-1 text-sm text-theme-text-muted">
           Manage your personal account credentials, designations, and workspace preferences.
         </p>
       </div>
@@ -111,7 +111,7 @@ export default function Profile() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left pane: Profile summary */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="glass-card rounded-3xl p-6 shadow-sm flex flex-col items-center text-center">
+          <div className="glass-card rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm flex flex-col items-center text-center">
             {/* Avatar picker container */}
             <div className="relative group mb-4">
               {profileForm.profileImage ? (
@@ -121,20 +121,18 @@ export default function Profile() {
                   className="h-28 w-28 rounded-3xl object-cover shadow-md"
                 />
               ) : (
-                <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-3xl font-extrabold text-white shadow-md">
+                <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-theme-primary text-3xl font-extrabold text-white shadow-md">
                   {getInitials(user?.fullName || '')}
                 </div>
               )}
             </div>
 
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{user?.fullName}</h3>
-            <p className="text-xs text-brand-600 dark:text-brand-400 font-bold mt-1 uppercase tracking-wider">{user?.roles[0]?.replace('ROLE_', '')}</p>
-            <p className="text-xs text-slate-400 mt-0.5 leading-normal">{user?.email}</p>
-
-
+            <h3 className="text-xl font-bold text-theme-text">{user?.fullName}</h3>
+            <p className="text-xs text-theme-primary font-bold mt-1 uppercase tracking-wider">{user?.roles[0]?.replace('ROLE_', '')}</p>
+            <p className="text-xs text-theme-text-muted mt-0.5 leading-normal">{user?.email}</p>
 
             {user?.bio && (
-              <p className="mt-5 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-4 w-full leading-normal">
+              <p className="mt-5 text-xs text-theme-text-muted border-t border-theme-border/40 pt-4 w-full leading-normal">
                 "{user.bio}"
               </p>
             )}
@@ -144,19 +142,19 @@ export default function Profile() {
         {/* Center/Right pane: Edit fields */}
         <div className="lg:col-span-2 space-y-6">
           {/* Edit Profile */}
-          <div className="glass-card rounded-3xl p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
-              <UserIcon size={18} className="text-slate-400" />
+          <div className="glass-card rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-theme-text mb-6 flex items-center gap-2">
+              <UserIcon size={18} className="text-theme-text-muted" />
               <span>Profile Settings</span>
             </h3>
 
             {profileMessage && (
-              <div className="mb-4 rounded-xl bg-green-50 p-4 text-xs font-bold text-green-700 dark:bg-green-950/20 dark:text-green-400">
+              <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-xs font-bold text-emerald-400">
                 {profileMessage}
               </div>
             )}
             {profileError && (
-              <div className="mb-4 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-700 dark:bg-red-950/20 dark:text-red-400">
+              <div className="mb-4 rounded-xl bg-rose-500/10 border border-rose-500/20 p-4 text-xs font-bold text-rose-400">
                 {profileError}
               </div>
             )}
@@ -164,26 +162,26 @@ export default function Profile() {
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Full Name</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Full Name</label>
                   <input
                     type="text"
                     required
                     value={profileForm.fullName}
                     onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Phone Number</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Phone Number</label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
+                    <span className="absolute inset-y-0 left-4 flex items-center text-theme-text-muted">
                       <Smartphone size={16} />
                     </span>
                     <input
                       type="tel"
                       value={profileForm.phone}
                       onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 pl-11 pr-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 pl-11 pr-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                     />
                   </div>
                 </div>
@@ -191,9 +189,9 @@ export default function Profile() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Designation / Title</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Designation / Title</label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
+                    <span className="absolute inset-y-0 left-4 flex items-center text-theme-text-muted">
                       <Briefcase size={16} />
                     </span>
                     <input
@@ -201,14 +199,14 @@ export default function Profile() {
                       placeholder="e.g. Lead Analyst"
                       value={profileForm.designation}
                       onChange={(e) => setProfileForm({ ...profileForm, designation: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 pl-11 pr-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 pl-11 pr-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Avatar Image URL</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Avatar Image URL</label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
+                    <span className="absolute inset-y-0 left-4 flex items-center text-theme-text-muted">
                       <Camera size={16} />
                     </span>
                     <input
@@ -216,16 +214,16 @@ export default function Profile() {
                       placeholder="https://images.unsplash.com/photo-..."
                       value={profileForm.profileImage}
                       onChange={(e) => setProfileForm({ ...profileForm, profileImage: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 pl-11 pr-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 pl-11 pr-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Biography</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Biography</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-3 text-slate-400">
+                  <span className="absolute left-4 top-3 text-theme-text-muted">
                     <FileText size={16} />
                   </span>
                   <textarea
@@ -233,18 +231,16 @@ export default function Profile() {
                     placeholder="Short bio description..."
                     value={profileForm.bio}
                     onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 pl-11 pr-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 pl-11 pr-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                   />
                 </div>
               </div>
-
-
 
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
                   disabled={profileLoading}
-                  className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 px-6 py-2.5 text-sm font-bold text-white shadow"
+                  className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all"
                 >
                   {profileLoading ? <Loader2 size={16} className="animate-spin" /> : null}
                   <span>Save Changes</span>
@@ -254,57 +250,57 @@ export default function Profile() {
           </div>
 
           {/* Change Password */}
-          <div className="glass-card rounded-3xl p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
-              <Lock size={18} className="text-slate-400" />
+          <div className="glass-card rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-theme-text mb-6 flex items-center gap-2">
+              <Lock size={18} className="text-theme-text-muted" />
               <span>Change Security Password</span>
             </h3>
 
             {passwordMessage && (
-              <div className="mb-4 rounded-xl bg-green-50 p-4 text-xs font-bold text-green-700 dark:bg-green-950/20 dark:text-green-400">
+              <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-xs font-bold text-emerald-400">
                 {passwordMessage}
               </div>
             )}
             {passwordError && (
-              <div className="mb-4 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-700 dark:bg-red-950/20 dark:text-red-400">
+              <div className="mb-4 rounded-xl bg-rose-500/10 border border-rose-500/20 p-4 text-xs font-bold text-rose-400">
                 {passwordError}
               </div>
             )}
 
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Old Password</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Old Password</label>
                 <input
                   type="password"
                   required
                   placeholder="••••••••"
                   value={passwordForm.oldPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">New Password</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">New Password</label>
                   <input
                     type="password"
                     required
                     placeholder="••••••••"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Confirm New Password</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Confirm New Password</label>
                   <input
                     type="password"
                     required
                     placeholder="••••••••"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                   />
                 </div>
               </div>
@@ -313,7 +309,7 @@ export default function Profile() {
                 <button
                   type="submit"
                   disabled={passwordLoading}
-                  className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 px-6 py-2.5 text-sm font-bold text-white shadow"
+                  className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all"
                 >
                   {passwordLoading ? <Loader2 size={16} className="animate-spin" /> : null}
                   <span>Change Password</span>

@@ -72,9 +72,9 @@ export default function Settings() {
   const themesList: { id: AppTheme; name: string; desc: string; bg: string; text: string; previewBg: string }[] = [
     { id: 'light', name: 'Light Slate', desc: 'Clean, professional slate look.', bg: 'bg-[#F8FAFC]', text: 'text-slate-900', previewBg: 'from-blue-600 to-indigo-500' },
     { id: 'dark', name: 'Dark Charcoal', desc: 'Standard slate dark mode.', bg: 'bg-[#0F172A]', text: 'text-white', previewBg: 'from-blue-500 to-cyan-400' },
-    { id: 'midnight', name: 'Midnight Indigo', desc: 'Deep cosmic space feel.', bg: 'bg-[#020617]', text: 'text-indigo-200', previewBg: 'from-indigo-600 to-purple-500' },
-    { id: 'ocean', name: 'Ocean Cyan', desc: 'Deep aquatic teals and greens.', bg: 'bg-[#051622]', text: 'text-cyan-200', previewBg: 'from-cyan-500 to-emerald-400' },
-    { id: 'purple', name: 'Royal Purple', desc: 'Vibrant neon purple accents.', bg: 'bg-[#0F051D]', text: 'text-purple-200', previewBg: 'from-purple-600 to-pink-500' },
+    { id: 'midnight', name: 'Midnight Neon', desc: 'Deep cosmic space feel.', bg: 'bg-[#030712]', text: 'text-indigo-200', previewBg: 'from-indigo-600 to-purple-500' },
+    { id: 'ocean', name: 'Deep Ocean', desc: 'Deep aquatic teals and greens.', bg: 'bg-[#04151F]', text: 'text-cyan-200', previewBg: 'from-cyan-500 to-emerald-400' },
+    { id: 'purple', name: 'Royal Velvet', desc: 'Vibrant neon purple accents.', bg: 'bg-[#0D0714]', text: 'text-purple-200', previewBg: 'from-purple-600 to-pink-500' },
   ];
 
   return (

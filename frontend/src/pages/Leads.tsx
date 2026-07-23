@@ -15,6 +15,7 @@ import {
   Mail,
   User as UserIcon
 } from 'lucide-react';
+import { downloadReport } from '../services/reportService';
 
 export default function Leads() {
   const user = useAuthStore((state) => state.user);
@@ -202,9 +203,13 @@ export default function Leads() {
     }
   };
 
-  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
-    const url = `http://localhost:8080/api/reports/leads/${format}`;
-    window.open(url, '_blank');
+  const handleExport = async (format: 'csv' | 'excel' | 'pdf') => {
+    try {
+      await downloadReport('leads', format);
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to export leads as ${format.toUpperCase()}.`);
+    }
   };
 
   // Filtered Leads
@@ -230,11 +235,11 @@ export default function Leads() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">Live Lead Tracker</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-theme-text">Live Lead Tracker</h1>
             <span className="flex h-2.5 w-2.5 rounded-full bg-red-500 animate-ping" />
             <span className="rounded bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-500">LIVE NOW</span>
           </div>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-sm text-theme-text-muted">
             Qualify incoming customer contacts and assign follow-up tasks to team members.
           </p>
         </div>
@@ -242,20 +247,20 @@ export default function Leads() {
         {/* Action buttons */}
         <div className="flex gap-3">
           <div className="relative group">
-            <button className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+            <button className="flex items-center gap-2 rounded-2xl border border-theme-border bg-theme-card px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-theme-bg-alt text-theme-text transition-all">
               <Download size={16} />
               <span>Export Leads</span>
             </button>
-            <div className="absolute right-0 top-11 hidden w-36 rounded-xl border border-slate-100 bg-white p-1 shadow-2xl dark:border-slate-800 dark:bg-slate-900 group-hover:block z-10">
-              <button onClick={() => handleExport('csv')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800">CSV Sheet</button>
-              <button onClick={() => handleExport('excel')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800">Excel Sheet</button>
-              <button onClick={() => handleExport('pdf')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800">PDF Sheet</button>
+            <div className="absolute right-0 top-11 hidden w-36 rounded-xl border border-theme-border bg-theme-card p-1 shadow-2xl group-hover:block z-10">
+              <button onClick={() => handleExport('csv')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">CSV Sheet</button>
+              <button onClick={() => handleExport('excel')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">Excel Sheet</button>
+              <button onClick={() => handleExport('pdf')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">PDF Sheet</button>
             </div>
           </div>
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 rounded-2xl bg-blue-400 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-500/20 hover:scale-[1.01] nav-glow"
+            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-500/20 hover:scale-[1.01] nav-glow"
           >
             <Plus size={16} />
             <span>Add Lead</span>
@@ -266,11 +271,11 @@ export default function Leads() {
       {/* Main Grid Panel */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left Side Pane: Leads Feed list */}
-        <div className="flex flex-col gap-4 rounded-3xl border border-slate-200/50 bg-white/45 p-4 shadow-sm dark:border-slate-800/40 dark:bg-slate-900/25 lg:col-span-1">
+        <div className="flex flex-col gap-4 rounded-3xl border border-theme-border bg-theme-card p-4 shadow-sm lg:col-span-1">
           {/* List filters */}
           <div className="space-y-3">
             <div className="relative">
-              <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
+              <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
                 <Search size={16} />
               </span>
               <input
@@ -278,7 +283,7 @@ export default function Leads() {
                 placeholder="Search leads..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-white/60 py-2 pl-9 pr-4 text-xs outline-none focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50"
+                className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2 pl-9 pr-4 text-xs outline-none focus:border-theme-primary text-theme-text"
               />
             </div>
             
@@ -286,7 +291,7 @@ export default function Leads() {
               <select
                 value={platformFilter}
                 onChange={(e) => setPlatformFilter(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-white/60 px-3 py-1.5 text-xs outline-none dark:border-slate-800/80 dark:bg-slate-900/50"
+                className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary"
               >
                 <option value="All">All Platforms</option>
                 <option value="Meta">Meta</option>
@@ -297,7 +302,7 @@ export default function Leads() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-white/60 px-3 py-1.5 text-xs outline-none dark:border-slate-800/80 dark:bg-slate-900/50"
+                className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary"
               >
                 <option value="All">All Statuses</option>
                 <option value="New">New</option>
@@ -319,23 +324,23 @@ export default function Leads() {
                   onClick={() => handleLeadSelect(lead)}
                   className={`w-full rounded-2xl border p-4 text-left transition-all ${
                     isSelected
-                      ? 'border-brand-500 bg-brand-50/20 shadow-md dark:bg-brand-950/20'
-                      : 'border-slate-200/50 bg-white/50 hover:bg-white dark:border-slate-800 dark:bg-slate-900/40'
+                      ? 'border-theme-primary bg-theme-primary/10 shadow-md ring-1 ring-theme-primary'
+                      : 'border-theme-border/60 bg-theme-bg-alt/40 hover:bg-theme-bg-alt'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{lead.name}</span>
-                    <span className="text-[10px] text-slate-400">{formatShortDate(lead.createdAt)}</span>
+                    <span className="font-bold text-theme-text">{lead.name}</span>
+                    <span className="text-[10px] text-theme-text-muted">{formatShortDate(lead.createdAt)}</span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">{lead.email}</p>
+                  <p className="mt-1 text-xs text-theme-text-muted truncate">{lead.email}</p>
                   
                   <div className="mt-3 flex items-center justify-between">
                     <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                      lead.sourcePlatform === 'Meta' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30'
+                      lead.sourcePlatform === 'Meta' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
                     }`}>
                       {lead.sourcePlatform}
                     </span>
-                    <span className="rounded bg-brand-500/10 px-2 py-0.5 text-[9px] font-bold text-brand-600 dark:text-brand-400">
+                    <span className="rounded bg-theme-primary/10 px-2 py-0.5 text-[9px] font-bold text-theme-primary">
                       {lead.status}
                     </span>
                   </div>
@@ -343,7 +348,7 @@ export default function Leads() {
               );
             })}
             {filteredLeads.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-10">No leads match filters.</p>
+              <p className="text-center text-xs text-theme-text-muted py-10">No leads match filters.</p>
             )}
           </div>
         </div>
@@ -351,21 +356,21 @@ export default function Leads() {
         {/* Right Side Pane: Selected Lead details view */}
         <div className="lg:col-span-2">
           {selectedLead ? (
-            <div className="glass-card flex flex-col gap-6 rounded-3xl p-6 shadow-sm">
+            <div className="glass-card flex flex-col gap-6 rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
               {/* Top Summary header */}
-              <div className="flex flex-col gap-4 border-b border-slate-100 pb-6 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 border-b border-theme-border pb-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{selectedLead.name}</h2>
-                  <p className="text-xs text-slate-400 mt-1">Captured via {selectedLead.campaignName || 'Direct Intake'}</p>
+                  <h2 className="text-2xl font-extrabold text-theme-text">{selectedLead.name}</h2>
+                  <p className="text-xs text-theme-text-muted mt-1">Captured via {selectedLead.campaignName || 'Direct Intake'}</p>
                 </div>
 
                 {/* Status selector */}
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status:</span>
+                  <span className="text-xs font-bold text-theme-text-muted uppercase tracking-wider">Status:</span>
                   <select
                     value={selectedLead.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="rounded-2xl border border-slate-200 bg-white/60 px-4 py-2 text-sm font-semibold outline-none dark:border-slate-800/80 dark:bg-slate-900/50"
+                    className="rounded-2xl border border-theme-border bg-theme-bg-alt px-4 py-2 text-sm font-semibold outline-none text-theme-text focus:border-theme-primary"
                   >
                     <option value="New">New</option>
                     <option value="Contacted">Contacted</option>
@@ -379,24 +384,24 @@ export default function Leads() {
               {/* Lead Details fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Contact Details</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">Contact Details</h3>
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                      <Mail size={16} />
+                    <div className="flex items-center gap-3 text-theme-text">
+                      <Mail size={16} className="text-theme-text-muted" />
                       <span className="text-sm">{selectedLead.email}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                      <Phone size={16} />
+                    <div className="flex items-center gap-3 text-theme-text">
+                      <Phone size={16} className="text-theme-text-muted" />
                       <span className="text-sm">{selectedLead.phone || 'No phone recorded'}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Assignment</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">Assignment</h3>
                   {/* Lead Assignment Selector (Admin/Manager only) */}
-                  <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                    <UserIcon size={16} />
+                  <div className="flex items-center gap-3 text-theme-text">
+                    <UserIcon size={16} className="text-theme-text-muted" />
                     {!(isAdmin || isManager) ? (
                       <span className="text-sm font-semibold">{selectedLead.assignedToName}</span>
                     ) : (
@@ -410,7 +415,7 @@ export default function Leads() {
                             handleAssignChange(parseInt(val));
                           }
                         }}
-                        className="rounded-2xl border border-slate-200 bg-white/60 px-3 py-1.5 text-xs font-semibold outline-none dark:border-slate-800/80 dark:bg-slate-900/50 text-slate-800 dark:text-slate-100"
+                        className="rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs font-semibold outline-none text-theme-text focus:border-theme-primary"
                       >
                         <option value="">Unassigned</option>
                         <option value="-1">🎲 Auto-Assign via Engine</option>
@@ -424,8 +429,8 @@ export default function Leads() {
               </div>
 
               {/* Notes timeline logs */}
-              <div className="border-t border-slate-100 pt-6 dark:border-slate-800 space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Activity & Note Logs</h3>
+              <div className="border-t border-theme-border pt-6 space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">Activity & Note Logs</h3>
                 
                 {/* Add Note textarea */}
                 <form onSubmit={handleAddNoteSubmit} className="relative mt-2">
@@ -434,11 +439,11 @@ export default function Leads() {
                     placeholder="Add notes about calls, client requests, pricing negotiation..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200/80 bg-white/50 p-4 pr-12 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-4 pr-12 text-sm outline-none transition-all placeholder:text-theme-text-muted focus:border-theme-primary text-theme-text"
                   />
                   <button
                     type="submit"
-                    className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-xl bg-brand-600 text-white shadow hover:scale-105 transition-transform"
+                    className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white shadow transition-transform"
                   >
                     <Send size={14} />
                   </button>
@@ -448,28 +453,28 @@ export default function Leads() {
                 <div className="space-y-4 pt-2">
                   {notes.map((note) => (
                     <div key={note.id} className="flex gap-3">
-                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-500">
+                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text-muted">
                         {note.user?.fullName ? note.user.fullName[0].toUpperCase() : 'U'}
                       </div>
-                      <div className="rounded-2xl bg-slate-50/50 p-4 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800 flex-1">
+                      <div className="rounded-2xl bg-theme-bg-alt/50 p-4 border border-theme-border flex-1">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{note.user?.fullName}</span>
-                          <span className="text-[10px] text-slate-400">{formatDate(note.createdAt)}</span>
+                          <span className="text-xs font-bold text-theme-text">{note.user?.fullName}</span>
+                          <span className="text-[10px] text-theme-text-muted">{formatDate(note.createdAt)}</span>
                         </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-normal">{note.note}</p>
+                        <p className="text-xs text-theme-text-muted leading-normal">{note.note}</p>
                       </div>
                     </div>
                   ))}
                   {notes.length === 0 && (
-                    <p className="text-center text-xs text-slate-400 py-6">No notes added yet. Record interactions to keep team updated.</p>
+                    <p className="text-center text-xs text-theme-text-muted py-6">No notes added yet. Record interactions to keep team updated.</p>
                   )}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="glass-card flex h-96 flex-col items-center justify-center rounded-3xl p-6 shadow-sm">
-              <MessageSquare size={48} className="text-slate-300 dark:text-slate-700 mb-3" />
-              <p className="text-slate-500 dark:text-slate-400 font-semibold">Select a lead to view details and update notes.</p>
+            <div className="glass-card flex h-96 flex-col items-center justify-center rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
+              <MessageSquare size={48} className="text-theme-text-muted mb-3 opacity-50" />
+              <p className="text-theme-text-muted font-semibold">Select a lead to view details and update notes.</p>
             </div>
           )}
         </div>
@@ -478,54 +483,54 @@ export default function Leads() {
       {/* Add Lead Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Add Lead manually</h3>
-            <p className="text-xs text-slate-400 mb-4">Intake a customer contact into the dashboard.</p>
+          <div className="w-full max-w-lg rounded-3xl bg-theme-card border border-theme-border p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-theme-text">Add Lead manually</h3>
+            <p className="text-xs text-theme-text-muted mb-4">Intake a customer contact into the dashboard.</p>
 
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Full Name</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Full Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Liam Martinez"
                   value={createForm.name}
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Email Address</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Email Address</label>
                   <input
                     type="email"
                     required
                     placeholder="liam@example.com"
                     value={createForm.email}
                     onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Phone Number</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Phone Number</label>
                   <input
                     type="tel"
                     placeholder="+1 (555) 000-0000"
                     value={createForm.phone}
                     onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Source Platform</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Source Platform</label>
                   <select
                     value={createForm.sourcePlatform}
                     onChange={(e) => setCreateForm({ ...createForm, sourcePlatform: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                   >
                     <option value="Meta">Meta Ads</option>
                     <option value="Google">Google Ads</option>
@@ -533,11 +538,11 @@ export default function Leads() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Link Campaign</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Link Campaign</label>
                   <select
                     value={createForm.campaignId}
                     onChange={(e) => setCreateForm({ ...createForm, campaignId: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                   >
                     <option value="">Direct Intake (No campaign)</option>
                     {campaigns.map((c) => (
@@ -548,11 +553,11 @@ export default function Leads() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Assignee</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Assignee</label>
                 <select
                   value={createForm.assignedToId}
                   onChange={(e) => setCreateForm({ ...createForm, assignedToId: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                 >
                   <option value="">Unassigned (Queue)</option>
                   <option value="-1">🎲 Auto-Assign via Engine</option>
@@ -566,13 +571,13 @@ export default function Leads() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
+                  className="rounded-2xl border border-theme-border bg-theme-bg-alt px-5 py-2.5 text-sm font-semibold hover:bg-theme-bg text-theme-text-muted"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg"
+                  className="rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-theme-primary/10 transition-all"
                 >
                   Create Lead
                 </button>

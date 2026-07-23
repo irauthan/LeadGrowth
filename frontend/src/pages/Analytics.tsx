@@ -40,7 +40,7 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <Loader2 size={36} className="animate-spin text-brand-500" />
+        <Loader2 size={36} className="animate-spin text-theme-primary" />
       </div>
     );
   }
@@ -59,8 +59,8 @@ export default function Analytics() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">Analytics</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h1 className="text-3xl font-extrabold tracking-tight text-theme-text">Analytics</h1>
+        <p className="mt-1 text-sm text-theme-text-muted">
           Drill down campaign clicks, conversion flows, and return on investment trends.
         </p>
       </div>
@@ -68,15 +68,15 @@ export default function Analytics() {
       {/* Analytics Charts Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Spend vs Revenue Trends */}
-        <div className="glass-card rounded-3xl p-6 shadow-sm">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Spend vs Revenue Efficiency</h3>
+        <div className="glass-card rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted mb-4">Spend vs Revenue Efficiency</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.trends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} />
-                <YAxis stroke="#94a3b8" fontSize={11} />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" opacity={0.5} vertical={false} />
+                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
+                <YAxis stroke="var(--text-muted)" fontSize={11} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-main)', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }} />
                 <Legend />
                 <Bar dataKey="spend" fill="#ef4444" radius={[4, 4, 0, 0]} name="Ad Spend ($)" />
                 <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} name="Generated Revenue ($)" />
@@ -86,15 +86,15 @@ export default function Analytics() {
         </div>
 
         {/* Click and Lead Conversion Trends */}
-        <div className="glass-card rounded-3xl p-6 shadow-sm">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Lead Capture Trends</h3>
+        <div className="glass-card rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted mb-4">Lead Capture Trends</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data?.trends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} />
-                <YAxis stroke="#94a3b8" fontSize={11} />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" opacity={0.5} vertical={false} />
+                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
+                <YAxis stroke="var(--text-muted)" fontSize={11} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-main)', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }} />
                 <Legend />
                 <Area type="monotone" dataKey="leads" stroke="#6366f1" fillOpacity={0.15} fill="url(#colorLeads)" name="Leads Count" strokeWidth={2} />
                 <Area type="monotone" dataKey="clicks" stroke="#3b82f6" fillOpacity={0.15} fill="url(#colorClicks)" name="Clicks Count" strokeWidth={2} />
@@ -114,8 +114,8 @@ export default function Analytics() {
         </div>
 
         {/* Leads by Platform share */}
-        <div className="glass-card rounded-3xl p-6 shadow-sm">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Leads by platform share</h3>
+        <div className="glass-card rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted mb-4">Leads by platform share</h3>
           <div className="flex h-80 w-full items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -134,7 +134,7 @@ export default function Analytics() {
                     <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-main)', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -142,15 +142,15 @@ export default function Analytics() {
         </div>
 
         {/* Lead Funnel Pipeline Breakdown */}
-        <div className="glass-card rounded-3xl p-6 shadow-sm">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Lead funnel conversion rate</h3>
+        <div className="glass-card rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted mb-4">Lead funnel conversion rate</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={funnelData} layout="vertical" margin={{ left: -10, right: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" stroke="#94a3b8" fontSize={11} />
-                <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" opacity={0.5} horizontal={false} />
+                <XAxis type="number" stroke="var(--text-muted)" fontSize={11} />
+                <YAxis dataKey="name" type="category" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-main)', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }} />
                 <Bar dataKey="value" barSize={20} radius={10}>
                   {funnelData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={FUNNEL_COLORS[index % FUNNEL_COLORS.length]} />

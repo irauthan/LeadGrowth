@@ -158,14 +158,14 @@ export default function Users() {
           {isAdmin && (
             <Link
               to="/admin/users"
-              className="flex items-center gap-1.5 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover text-white px-4 py-2.5 text-xs font-bold shadow-lg"
+              className="flex items-center gap-1.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 text-xs font-bold shadow-lg shadow-blue-500/10"
             >
               Manage Seats <ExternalLink size={12} />
             </Link>
           )}
           <button
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-1.5 rounded-2xl bg-theme-bg-alt hover:bg-theme-card text-theme-text px-4 py-2.5 text-xs font-bold"
+            className="flex items-center gap-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 text-xs font-bold"
           >
             <UserPlus size={14} />
             Invite Member
@@ -184,7 +184,7 @@ export default function Users() {
             placeholder="Search team members..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-            className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-4 py-2.5 pl-10 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary"
+            className="w-full rounded-2xl border border-slate-800 bg-[#111827] px-4 py-2.5 pl-10 text-xs font-semibold text-white outline-none focus:border-blue-500"
           />
         </div>
 
@@ -192,7 +192,7 @@ export default function Users() {
           <select
             value={roleFilter}
             onChange={(e) => { setRoleFilter(e.target.value as any); setCurrentPage(1); }}
-            className="rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
+            className="rounded-2xl border border-slate-800 bg-[#111827] px-3 py-2.5 text-xs font-bold text-white outline-none focus:border-blue-500"
           >
             <option value="ALL">All Roles</option>
             <option value="ADMIN">Admin</option>
@@ -202,7 +202,7 @@ export default function Users() {
           <select
             value={deptFilter}
             onChange={(e) => { setDeptFilter(e.target.value as any); setCurrentPage(1); }}
-            className="rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
+            className="rounded-2xl border border-slate-800 bg-[#111827] px-3 py-2.5 text-xs font-bold text-white outline-none focus:border-blue-500"
           >
             <option value="ALL">All Departments</option>
             <option value="Marketing">Marketing</option>
@@ -213,7 +213,7 @@ export default function Users() {
           <select
             value={sortOrder}
             onChange={(e) => { setSortOrder(e.target.value as any); setCurrentPage(1); }}
-            className="rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
+            className="rounded-2xl border border-slate-800 bg-[#111827] px-3 py-2.5 text-xs font-bold text-white outline-none focus:border-blue-500"
           >
             <option value="NAME_ASC">Name (A-Z)</option>
             <option value="NAME_DESC">Name (Z-A)</option>
@@ -229,11 +229,11 @@ export default function Users() {
           const prod = productivity.find(p => p.userId === item.id);
           
           return (
-            <div key={item.id} className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-xl space-y-4 flex flex-col justify-between hover:shadow-2xl transition-all">
+            <div key={item.id} className="rounded-3xl border border-slate-850 bg-[#111827] p-6 shadow-xl space-y-4 flex flex-col justify-between hover:border-slate-800 transition-all">
               <div className="space-y-4">
                 {/* Header info */}
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary font-extrabold text-base border border-theme-primary/10 relative">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-500 font-extrabold text-base border border-blue-500/10 relative">
                     {getInitials(item.fullName)}
                     {/* Live Availability dot on avatar */}
                     <span className={`absolute -bottom-0.5 -right-0.5 block h-3.5 w-3.5 rounded-full border-2 border-theme-card ${
@@ -254,7 +254,7 @@ export default function Users() {
                 {prod && (
                   <div className="bg-theme-bg-alt border border-theme-border rounded-2xl p-3 flex items-center justify-between shadow-inner">
                     <div className="flex items-center gap-2">
-                      <Award size={16} className="text-indigo-600 dark:text-indigo-400" />
+                      <Award size={16} className="text-indigo-400" />
                       <div className="flex flex-col">
                         <span className="text-[9px] text-theme-text-muted font-bold uppercase tracking-wider">Performance Index</span>
                         <span className="text-xs font-black text-theme-text">{Math.round(prod.productivityScore)}% Score</span>
@@ -270,35 +270,33 @@ export default function Users() {
                   </div>
                 )}
 
-
-
                 {/* Contact details */}
-                <div className="space-y-2 border-t border-theme-border pt-3">
-                  <div className="flex items-center gap-2 text-theme-text-muted">
-                    <Mail size={13} className="text-theme-text-muted" />
+                <div className="space-y-2 border-t border-slate-900 pt-3">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Mail size={13} className="text-slate-500" />
                     <span className="text-[10px] font-mono truncate">{item.email}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-theme-text-muted">
-                    <Smartphone size={13} className="text-theme-text-muted" />
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Smartphone size={13} className="text-slate-500" />
                     <span className="text-[10px]">{item.phone || 'No phone listed'}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-theme-text-muted">
-                    <Building size={13} className="text-theme-text-muted" />
-                    <span className="text-[10px] font-semibold text-theme-text-muted">Department: {item.department || 'Marketing'}</span>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Building size={13} className="text-slate-500" />
+                    <span className="text-[10px] font-semibold text-slate-400">Department: {item.department || 'Marketing'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Status details footer */}
-              <div className="flex items-center justify-between border-t border-theme-border pt-3 text-[10px] font-bold">
-                <span className="text-theme-text-muted uppercase">Role: <span className="text-theme-primary">{getRoleName(item)}</span></span>
+              <div className="flex items-center justify-between border-t border-slate-900 pt-3 text-[10px] font-bold">
+                <span className="text-slate-500 uppercase">Role: <span className="text-blue-400">{getRoleName(item)}</span></span>
                 
                 <div className="flex items-center gap-1">
                   <span className={`px-2 py-0.5 rounded-full ${
-                    item.availabilityStatus === 'AVAILABLE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
-                    item.availabilityStatus === 'BUSY' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' :
-                    item.availabilityStatus === 'ON_BREAK' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20' :
-                    'bg-theme-bg-alt text-theme-text-muted'
+                    item.availabilityStatus === 'AVAILABLE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                    item.availabilityStatus === 'BUSY' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                    item.availabilityStatus === 'ON_BREAK' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                    'bg-slate-800 text-slate-400'
                   }`}>
                     {item.availabilityStatus || 'OFFLINE'}
                   </span>
@@ -321,14 +319,14 @@ export default function Users() {
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(currentPage - 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-theme-bg-alt hover:bg-theme-card text-theme-text disabled:opacity-50"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50"
             >
               <ChevronLeft size={16} />
             </button>
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(currentPage + 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-theme-bg-alt hover:bg-theme-card text-theme-text disabled:opacity-50"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50"
             >
               <ChevronRight size={16} />
             </button>
@@ -338,11 +336,11 @@ export default function Users() {
 
       {/* INVITE MODAL */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-theme-border bg-theme-card p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center border-b border-theme-border pb-2">
-              <h3 className="text-sm font-bold text-theme-text uppercase tracking-wider flex items-center gap-1.5"><UserPlus size={16} /> Invite Team Member</h3>
-              <button onClick={() => { setShowInviteModal(false); setInviteSuccess(''); setGeneratedLink(''); }} className="text-theme-text-muted hover:text-theme-text text-xs font-bold">Close</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-[#111827] p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800/40 pb-2">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5"><UserPlus size={16} /> Invite Team Member</h3>
+              <button onClick={() => { setShowInviteModal(false); setInviteSuccess(''); setGeneratedLink(''); }} className="text-slate-500 hover:text-white text-xs font-bold">Close</button>
             </div>
             
             {inviteSuccess && (
@@ -365,8 +363,8 @@ export default function Users() {
               </div>
 
               {generatedLink && (
-                <div className="p-3 rounded-xl bg-theme-bg-alt border border-theme-border space-y-2">
-                  <span className="block text-[10px] font-mono text-emerald-600 dark:text-emerald-400 select-all overflow-x-auto">{generatedLink}</span>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-850 space-y-2">
+                  <span className="block text-[10px] font-mono text-emerald-400 select-all overflow-x-auto">{generatedLink}</span>
                   <button
                     type="button"
                     onClick={() => {

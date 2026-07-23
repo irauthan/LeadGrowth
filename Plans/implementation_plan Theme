@@ -1,0 +1,90 @@
+# Implementation Plan: Fix Theme System & Color Accessibility Across All Themes
+
+The LeadGrowth web application has 5 selectable themes (**Light Slate**, **Dark Charcoal**, **Midnight Neon**, **Deep Ocean**, **Royal Velvet**). However, many pages and components contain hardcoded text colors (`text-white`, `text-slate-900`, `text-slate-300`) and hardcoded background colors (`bg-slate-950`, `bg-[#111827]`, `bg-slate-900`, `bg-white`, `dark:bg-slate-900`). 
+
+When switching to **Light Slate**, hardcoded `text-white` causes text to become completely invisible against light backgrounds. When switching to dark variants like **Deep Ocean** or **Royal Velvet**, hardcoded slate backgrounds override the theme colors.
+
+This plan details how we will clean up CSS variables, theme classes, and refactor all components to rely strictly on dynamic design system tokens (`text-theme-text`, `text-theme-text-muted`, `bg-theme-bg`, `bg-theme-bg-alt`, `bg-theme-card`, `border-theme-border`, `bg-theme-primary`).
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> - **All 5 Themes Will Be Audited**: Light Slate, Dark Charcoal, Midnight Neon, Deep Ocean, Royal Velvet.
+> - **Theme Names Alignment**: Standardized across both Navbar dropdown and Settings page.
+> - **Dynamic Text Contrast**: Text contrast will automatically adapt in light and all dark theme modes.
+
+---
+
+## Proposed Changes
+
+### Core CSS & Theme Management
+
+#### [MODIFY] [index.css](file:///e:/WEB/LeadGrowth/frontend/src/index.css)
+- Refine root and theme CSS variable definitions for high contrast across all 5 themes (`.theme-light`, `.theme-dark`, `.theme-midnight`, `.theme-ocean`, `.theme-purple`).
+- Ensure `--bg-card` provides solid/opaque card backgrounds in dark themes so contrast for text inside cards remains crisp.
+- Verify `@theme` token mappings for `--color-theme-*` variables (`bg`, `bg-alt`, `card`, `border`, `text`, `text-muted`, `primary`, `primary-hover`, `glow`).
+
+#### [MODIFY] [themeStore.ts](file:///e:/WEB/LeadGrowth/frontend/src/store/themeStore.ts)
+- Update `applyThemeClass` to ensure explicit class `.theme-light` is added for light mode, and correctly toggles classes (`theme-light`, `theme-dark`, `theme-midnight`, `theme-ocean`, `theme-purple`, `dark`).
+
+---
+
+### UI Navigation Components
+
+#### [MODIFY] [Navbar.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/Navbar.tsx)
+- Align theme names in theme menu: Light Slate, Dark Charcoal, Midnight Neon, Deep Ocean, Royal Velvet.
+- Replace any hardcoded text/background colors with theme tokens.
+
+#### [MODIFY] [Settings.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Settings.tsx)
+- Align `themesList` labels and descriptions with Navbar.
+- Replace hardcoded background preview boxes with dynamic, theme-consistent palette chips.
+
+---
+
+### Page Components & Modals Refactoring
+
+#### [MODIFY] [Dashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Dashboard.tsx)
+- Replace hardcoded `text-white`, `text-slate-400`, `text-slate-500`, `border-slate-800`, and `bg-slate-900` with `text-theme-text`, `text-theme-text-muted`, `border-theme-border`, and `bg-theme-card` / `bg-theme-bg-alt`.
+
+#### [MODIFY] [Leads.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Leads.tsx)
+- Replace hardcoded inputs, filter boxes, table text, and modal background colors with theme classes.
+
+#### [MODIFY] [Campaigns.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Campaigns.tsx)
+- Standardize campaign cards, headers, modal inputs, and status text to use `theme-*` tokens.
+
+#### [MODIFY] [Analytics.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Analytics.tsx)
+- Update chart card containers, metrics text, and header indicators to maintain high contrast in light & dark themes.
+
+#### [MODIFY] [Reports.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Reports.tsx)
+- Refactor report table headers, rows, download buttons, and modal dialogs for theme compatibility.
+
+#### [MODIFY] [Tasks.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Tasks.tsx)
+- Replace `bg-white dark:bg-slate-900`, hardcoded `text-slate-800 dark:text-slate-100`, and input backgrounds in modal forms.
+
+#### [MODIFY] [Users.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Users.tsx) & [UserManagement.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/UserManagement.tsx)
+- Replace hardcoded `bg-[#111827]`, `bg-slate-950`, `bg-slate-800`, `text-white` in forms, inputs, tables, and modal dialogs with theme tokens.
+
+#### [MODIFY] [ActivityLogs.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/ActivityLogs.tsx) & [NotificationsPage.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/NotificationsPage.tsx)
+- Update list items, timeline indicators, filter dropdowns, and text colors to use `text-theme-text` and `text-theme-text-muted`.
+
+#### [MODIFY] [WorkspaceManagement.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/WorkspaceManagement.tsx), [ApiManagement.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/ApiManagement.tsx), [SystemMonitoring.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/SystemMonitoring.tsx)
+- Standardize administration panels, code snippets, inputs, and toggle components.
+
+---
+
+## Verification Plan
+
+### Automated Verification
+- Run frontend type check and build:
+  ```powershell
+  cd e:\WEB\LeadGrowth\frontend
+  npm run build
+  ```
+
+### Manual Verification
+- Test switching between all 5 themes (**Light Slate**, **Dark Charcoal**, **Midnight Neon**, **Deep Ocean**, **Royal Velvet**) from both Navbar and Settings.
+- Verify text visibility across all main pages:
+  - Check headers, cards, tables, inputs, modal dialogs, and dropdown menus in Light Slate mode to ensure zero invisible white-on-white text.
+  - Check dark modes to ensure rich background hues (Deep Ocean cyan, Royal Velvet purple, Midnight Neon indigo) render correctly without slate overrides.
