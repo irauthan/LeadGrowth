@@ -53,7 +53,6 @@ public class UserService {
         user.setDesignation(request.getDesignation());
         user.setBio(request.getBio());
         user.setDepartment(request.getDepartment());
-        user.setSkills(request.getSkills());
         
         if (request.getProfileImage() != null) {
             user.setProfileImage(request.getProfileImage());
@@ -235,7 +234,6 @@ public class UserService {
         targetUser.setDesignation(request.getDesignation());
         targetUser.setBio(request.getBio());
         targetUser.setDepartment(request.getDepartment());
-        targetUser.setSkills(request.getSkills());
         if (request.getProfileImage() != null) {
             targetUser.setProfileImage(request.getProfileImage());
         }
@@ -336,6 +334,7 @@ public class UserService {
             throw new IllegalArgumentException("Invalid availability status: " + availabilityStatus);
         }
         user.setAvailabilityStatus(status);
+        user.setLastActiveAt(LocalDateTime.now());
         
         // Trigger auto-reassignments immediately
         if ("OFFLINE".equals(status) || "ON_LEAVE".equals(status)) {

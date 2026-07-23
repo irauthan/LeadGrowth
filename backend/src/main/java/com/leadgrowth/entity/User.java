@@ -60,9 +60,6 @@ public class User {
     @Column(name = "availability_status", nullable = false, length = 20)
     private String availabilityStatus = "AVAILABLE";
 
-    @Column(length = 255)
-    private String skills;
-
     @Column(name = "last_assigned_at")
     private LocalDateTime lastAssignedAt;
 
@@ -80,7 +77,7 @@ public class User {
     // Constructors
     public User() {}
 
-    public User(Long id, String email, String password, String fullName, String designation, String bio, String profileImage, String phone, Workspace workspace, Set<Role> roles, String status, String department, LocalDateTime lastActiveAt, String availabilityStatus, String skills, LocalDateTime lastAssignedAt, boolean isEmailVerified, LocalDateTime createdAt) {
+    public User(Long id, String email, String password, String fullName, String designation, String bio, String profileImage, String phone, Workspace workspace, Set<Role> roles, String status, String department, LocalDateTime lastActiveAt, String availabilityStatus, LocalDateTime lastAssignedAt, boolean isEmailVerified, LocalDateTime createdAt) {
         this.id = id;
         this.email = email;
         this.password = password;
@@ -95,7 +92,6 @@ public class User {
         this.department = department;
         this.lastActiveAt = lastActiveAt;
         this.availabilityStatus = availabilityStatus != null ? availabilityStatus : "AVAILABLE";
-        this.skills = skills;
         this.lastAssignedAt = lastAssignedAt;
         this.isEmailVerified = isEmailVerified;
         this.createdAt = createdAt;
@@ -144,9 +140,6 @@ public class User {
     public String getAvailabilityStatus() { return availabilityStatus; }
     public void setAvailabilityStatus(String availabilityStatus) { this.availabilityStatus = availabilityStatus; }
 
-    public String getSkills() { return skills; }
-    public void setSkills(String skills) { this.skills = skills; }
-
     public LocalDateTime getLastAssignedAt() { return lastAssignedAt; }
     public void setLastAssignedAt(LocalDateTime lastAssignedAt) { this.lastAssignedAt = lastAssignedAt; }
 
@@ -176,7 +169,6 @@ public class User {
         private String department;
         private LocalDateTime lastActiveAt;
         private String availabilityStatus = "AVAILABLE";
-        private String skills;
         private LocalDateTime lastAssignedAt;
         private boolean isEmailVerified = false;
         private LocalDateTime createdAt;
@@ -197,13 +189,12 @@ public class User {
         public UserBuilder department(String department) { this.department = department; return this; }
         public UserBuilder lastActiveAt(LocalDateTime lastActiveAt) { this.lastActiveAt = lastActiveAt; return this; }
         public UserBuilder availabilityStatus(String availabilityStatus) { this.availabilityStatus = availabilityStatus; return this; }
-        public UserBuilder skills(String skills) { this.skills = skills; return this; }
         public UserBuilder lastAssignedAt(LocalDateTime lastAssignedAt) { this.lastAssignedAt = lastAssignedAt; return this; }
         public UserBuilder isEmailVerified(boolean isEmailVerified) { this.isEmailVerified = isEmailVerified; return this; }
         public UserBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public User build() {
-            return new User(id, email, password, fullName, designation, bio, profileImage, phone, workspace, roles, status, department, lastActiveAt, availabilityStatus, skills, lastAssignedAt, isEmailVerified, createdAt);
+            return new User(id, email, password, fullName, designation, bio, profileImage, phone, workspace, roles, status, department, lastActiveAt, availabilityStatus, lastAssignedAt, isEmailVerified, createdAt);
         }
     }
 }

@@ -136,7 +136,6 @@ public class WorkspaceService {
                 .workspaceSlug(savedWorkspace.getSlug())
                 .inviteCode(savedWorkspace.getInviteCode())
                 .availabilityStatus(user.getAvailabilityStatus())
-                .skills(user.getSkills())
                 .build();
     }
 
@@ -182,7 +181,6 @@ public class WorkspaceService {
                 .workspaceSlug(workspace.getSlug())
                 .inviteCode(workspace.getInviteCode())
                 .availabilityStatus(user.getAvailabilityStatus())
-                .skills(user.getSkills())
                 .build();
     }
 

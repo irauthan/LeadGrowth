@@ -16,11 +16,10 @@ public class AuthResponse {
     private String workspaceSlug;
     private String inviteCode;
     private String availabilityStatus;
-    private String skills;
 
     public AuthResponse() {}
 
-    public AuthResponse(String token, String refreshToken, Long userId, String email, String fullName, String designation, String profileImage, Set<String> roles, Long workspaceId, String workspaceName, String workspaceSlug, String inviteCode, String availabilityStatus, String skills) {
+    public AuthResponse(String token, String refreshToken, Long userId, String email, String fullName, String designation, String profileImage, Set<String> roles, Long workspaceId, String workspaceName, String workspaceSlug, String inviteCode, String availabilityStatus) {
         this.token = token;
         this.refreshToken = refreshToken;
         this.userId = userId;
@@ -34,7 +33,6 @@ public class AuthResponse {
         this.workspaceSlug = workspaceSlug;
         this.inviteCode = inviteCode;
         this.availabilityStatus = availabilityStatus;
-        this.skills = skills;
     }
 
     public String getToken() { return token; }
@@ -76,9 +74,6 @@ public class AuthResponse {
     public String getAvailabilityStatus() { return availabilityStatus; }
     public void setAvailabilityStatus(String availabilityStatus) { this.availabilityStatus = availabilityStatus; }
 
-    public String getSkills() { return skills; }
-    public void setSkills(String skills) { this.skills = skills; }
-
     // Builder
     public static AuthResponseBuilder builder() {
         return new AuthResponseBuilder();
@@ -98,7 +93,6 @@ public class AuthResponse {
         private String workspaceSlug;
         private String inviteCode;
         private String availabilityStatus;
-        private String skills;
 
         AuthResponseBuilder() {}
 
@@ -115,10 +109,9 @@ public class AuthResponse {
         public AuthResponseBuilder workspaceSlug(String workspaceSlug) { this.workspaceSlug = workspaceSlug; return this; }
         public AuthResponseBuilder inviteCode(String inviteCode) { this.inviteCode = inviteCode; return this; }
         public AuthResponseBuilder availabilityStatus(String availabilityStatus) { this.availabilityStatus = availabilityStatus; return this; }
-        public AuthResponseBuilder skills(String skills) { this.skills = skills; return this; }
 
         public AuthResponse build() {
-            return new AuthResponse(token, refreshToken, userId, email, fullName, designation, profileImage, roles, workspaceId, workspaceName, workspaceSlug, inviteCode, availabilityStatus, skills);
+            return new AuthResponse(token, refreshToken, userId, email, fullName, designation, profileImage, roles, workspaceId, workspaceName, workspaceSlug, inviteCode, availabilityStatus);
         }
     }
 }

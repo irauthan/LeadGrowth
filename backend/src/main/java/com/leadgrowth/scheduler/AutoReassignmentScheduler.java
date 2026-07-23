@@ -33,10 +33,12 @@ public class AutoReassignmentScheduler {
             }
             String avail = u.getAvailabilityStatus();
             if ("OFFLINE".equalsIgnoreCase(avail) || "ON_LEAVE".equalsIgnoreCase(avail)) {
-                try {
-                    taskService.handleUserOffline(u.getId());
-                } catch (Exception e) {
-                    logger.error("Failed to sweep/reassign tasks for user ID: " + u.getId(), e);
+                if (u.getLastActiveAt() == null || u.getLastActiveAt().isBefore(java.time.LocalDateTime.now().minusMinutes(5))) {
+                    try {
+                        taskService.handleUserOffline(u.getId());
+                    } catch (Exception e) {
+                        logger.error("Failed to sweep/reassign tasks for user ID: " + u.getId(), e);
+                    }
                 }
             }
         }

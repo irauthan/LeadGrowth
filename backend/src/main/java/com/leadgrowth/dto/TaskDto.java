@@ -16,11 +16,9 @@ public class TaskDto {
     private String status; // Pending, In_Progress, Completed, Rejected
     private LocalDateTime createdAt;
 
-    private String requiredSkill;
-
     public TaskDto() {}
 
-    public TaskDto(Long id, String title, String description, Long assignedToId, String assignedToName, Long assignedById, String assignedByName, LocalDate dueDate, String priority, String status, String requiredSkill, LocalDateTime createdAt) {
+    public TaskDto(Long id, String title, String description, Long assignedToId, String assignedToName, Long assignedById, String assignedByName, LocalDate dueDate, String priority, String status, LocalDateTime createdAt) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -31,7 +29,6 @@ public class TaskDto {
         this.dueDate = dueDate;
         this.priority = priority;
         this.status = status;
-        this.requiredSkill = requiredSkill;
         this.createdAt = createdAt;
     }
 
@@ -65,9 +62,6 @@ public class TaskDto {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    public String getRequiredSkill() { return requiredSkill; }
-    public void setRequiredSkill(String requiredSkill) { this.requiredSkill = requiredSkill; }
-
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -87,7 +81,6 @@ public class TaskDto {
         private LocalDate dueDate;
         private String priority;
         private String status;
-        private String requiredSkill;
         private LocalDateTime createdAt;
 
         TaskDtoBuilder() {}
@@ -102,11 +95,10 @@ public class TaskDto {
         public TaskDtoBuilder dueDate(LocalDate dueDate) { this.dueDate = dueDate; return this; }
         public TaskDtoBuilder priority(String priority) { this.priority = priority; return this; }
         public TaskDtoBuilder status(String status) { this.status = status; return this; }
-        public TaskDtoBuilder requiredSkill(String requiredSkill) { this.requiredSkill = requiredSkill; return this; }
         public TaskDtoBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public TaskDto build() {
-            return new TaskDto(id, title, description, assignedToId, assignedToName, assignedById, assignedByName, dueDate, priority, status, requiredSkill, createdAt);
+            return new TaskDto(id, title, description, assignedToId, assignedToName, assignedById, assignedByName, dueDate, priority, status, createdAt);
         }
     }
 }

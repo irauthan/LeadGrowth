@@ -82,7 +82,7 @@ public class TaskService {
 
         // Auto Assignment Trigger
         if (dto.getAssignedToId() != null && dto.getAssignedToId() == -1) {
-            assignedTo = findBestAssignee(user.getWorkspace(), dto.getRequiredSkill());
+            assignedTo = findBestAssignee(user.getWorkspace());
             if (assignedTo != null) {
                 algorithmDetails = "Assigned via Hybrid Auto-Assignment Algorithm.";
             } else {
@@ -102,7 +102,6 @@ public class TaskService {
                 .dueDate(dto.getDueDate())
                 .priority(dto.getPriority() != null ? dto.getPriority().toUpperCase() : "MEDIUM")
                 .status(assignedTo != null ? "IN_PROGRESS" : "PENDING")
-                .requiredSkill(dto.getRequiredSkill())
                 .assignedAt(assignedTo != null ? LocalDateTime.now() : null)
                 .build();
 
@@ -238,7 +237,7 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
 
-        User best = findBestAssignee(task.getWorkspace(), task.getRequiredSkill());
+        User best = findBestAssignee(task.getWorkspace());
         if (best == null) {
             throw new IllegalStateException("No eligible available team members to assign this task to");
         }
@@ -291,7 +290,7 @@ public class TaskService {
             Task task = taskRepository.findById(id).orElse(null);
             if (task != null && task.getWorkspace().getId().equals(user.getWorkspace().getId())) {
                 User assignedTo = userId == -1 
-                        ? findBestAssignee(user.getWorkspace(), task.getRequiredSkill())
+                        ? findBestAssignee(user.getWorkspace())
                         : userRepository.findById(userId).orElse(null);
                 
                 if (assignedTo != null) {
@@ -341,7 +340,7 @@ public class TaskService {
         return updated;
     }
 
-    public User findBestAssignee(Workspace workspace, String requiredSkill) {
+    public User findBestAssignee(Workspace workspace) {
         List<User> members = userRepository.findByWorkspaceId(workspace.getId());
         List<User> activeMembers = members.stream()
                 .filter(u -> !"SUSPENDED".equalsIgnoreCase(u.getStatus()))
@@ -371,24 +370,11 @@ public class TaskService {
             return null;
         }
 
-        // Step 2: Skill Matching (if requiredSkill is provided)
-        List<User> skillMatchedUsers = new ArrayList<>();
-        if (requiredSkill != null && !requiredSkill.trim().isEmpty()) {
-            String skillSearch = requiredSkill.trim().toLowerCase();
-            for (User u : eligibleUsers) {
-                if (u.getSkills() != null && u.getSkills().toLowerCase().contains(skillSearch)) {
-                    skillMatchedUsers.add(u);
-                }
-            }
-        }
-
-        List<User> candidates = skillMatchedUsers.isEmpty() ? eligibleUsers : skillMatchedUsers;
-
-        // Step 3: Least Workload
+        // Step 2: Workload Balancing (Least Workload)
         long minWorkload = Long.MAX_VALUE;
         List<User> minWorkloadUsers = new ArrayList<>();
 
-        for (User u : candidates) {
+        for (User u : eligibleUsers) {
             long workload = taskRepository.countByAssignedToAndStatusIn(u, 
                     List.of("PENDING", "IN_PROGRESS", "PENDING_REVIEW", "Pending", "In_Progress", "In Progress"));
             if (workload < minWorkload) {
@@ -400,7 +386,7 @@ public class TaskService {
             }
         }
 
-        // Step 4: Round Robin Fallback
+        // Step 3: Round Robin Fallback
         if (minWorkloadUsers.size() == 1) {
             return minWorkloadUsers.get(0);
         }
@@ -444,18 +430,8 @@ public class TaskService {
             return t1.getCreatedAt().compareTo(t2.getCreatedAt()); // ascending
         });
 
-        // Find first task matching user skills
-        Task targetTask = null;
-        for (Task t : pendingTasks) {
-            String reqSkill = t.getRequiredSkill();
-            if (reqSkill == null || reqSkill.trim().isEmpty()) {
-                targetTask = t;
-                break;
-            } else if (user.getSkills() != null && user.getSkills().toLowerCase().contains(reqSkill.trim().toLowerCase())) {
-                targetTask = t;
-                break;
-            }
-        }
+        // Select highest priority task
+        Task targetTask = pendingTasks.get(0);
 
         if (targetTask != null) {
             targetTask.setAssignedTo(user);
@@ -528,7 +504,7 @@ public class TaskService {
             ));
 
             // Auto-assign immediately if possible
-            User best = findBestAssignee(user.getWorkspace(), task.getRequiredSkill());
+            User best = findBestAssignee(user.getWorkspace());
             if (best != null) {
                 task.setAssignedTo(best);
                 task.setStatus("IN_PROGRESS");
@@ -561,7 +537,6 @@ public class TaskService {
                 .dueDate(task.getDueDate())
                 .priority(task.getPriority())
                 .status(task.getStatus())
-                .requiredSkill(task.getRequiredSkill())
                 .createdAt(task.getCreatedAt())
                 .build();
     }
