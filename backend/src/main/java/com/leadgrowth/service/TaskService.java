@@ -523,6 +523,81 @@ public class TaskService {
                         "Task \"" + task.getTitle() + "\" was auto-reassigned to you because the previous assignee went offline/on leave.");
             }
         }
+    @Transactional
+    public TaskDto suspendTask(Long taskId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+
+        if (task.getAssignedTo() == null || !task.getAssignedTo().getId().equals(user.getId())) {
+            throw new IllegalStateException("You can only suspend tasks assigned to you");
+        }
+
+        task.setAssignedTo(null);
+        task.setStatus("SUSPENDED");
+        task.setAssignedAt(null);
+        Task saved = taskRepository.save(task);
+
+        assignmentLogRepository.save(new AssignmentLog(
+                user.getWorkspace(), "TASK", saved.getId(), null,
+                "Task suspended by user " + user.getFullName() + " due to heavy workload."
+        ));
+
+        List<User> managers = userRepository.findByWorkspaceId(task.getWorkspace().getId()).stream()
+                .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_MANAGER")))
+                .collect(Collectors.toList());
+        for (User mgr : managers) {
+            createAndSendNotification(mgr, "⚠️ Task Suspended (Workload Alert)",
+                    user.getFullName() + " suspended task: \"" + task.getTitle() + "\" due to heavy workload. Please reassign.");
+        }
+
+        TaskDto resultDto = convertToDto(saved);
+        webSocketManager.broadcastTask(task.getWorkspace().getId(), resultDto);
+        return resultDto;
+    }
+
+    @Transactional
+    public TaskDto reassignTask(Long taskId, Long newUserId, String managerEmail) {
+        User manager = userRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("Manager not found"));
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+
+        boolean isAuthorized = manager.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_MANAGER"));
+        if (!isAuthorized) {
+            throw new IllegalStateException("Only admins or managers can reassign tasks");
+        }
+
+        User newAssignee = newUserId == -1
+                ? findBestAssignee(task.getWorkspace())
+                : userRepository.findById(newUserId).orElse(null);
+
+        if (newAssignee == null) {
+            throw new IllegalStateException("Selected team member not found or unavailable");
+        }
+
+        task.setAssignedTo(newAssignee);
+        task.setAssignedBy(manager);
+        task.setStatus("IN_PROGRESS");
+        task.setAssignedAt(LocalDateTime.now());
+        Task saved = taskRepository.save(task);
+
+        newAssignee.setLastAssignedAt(LocalDateTime.now());
+        userRepository.save(newAssignee);
+
+        taskAssignmentRepository.save(new TaskAssignment(saved, newAssignee, manager));
+        assignmentLogRepository.save(new AssignmentLog(
+                task.getWorkspace(), "TASK", saved.getId(), newAssignee,
+                "Reassigned by manager " + manager.getFullName() + "."
+        ));
+
+        createAndSendNotification(newAssignee, "Task Reassigned To You",
+                "Manager " + manager.getFullName() + " reassigned task: \"" + saved.getTitle() + "\" to you.");
+
+        TaskDto resultDto = convertToDto(saved);
+        webSocketManager.broadcastTask(task.getWorkspace().getId(), resultDto);
+        return resultDto;
     }
 
     private TaskDto convertToDto(Task task) {

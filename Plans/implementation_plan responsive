@@ -1,0 +1,48 @@
+# Fully Responsive Native App-Like Navigation System
+
+Transform the navigation experience into a highly responsive, modern, app-like interface for mobile devices, tablets, and desktop displays.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Key UX Enhancements Introduced:**
+> - **Mobile Bottom Application Dock**: A fixed native-app style bottom navigation bar for mobile screens featuring instant access to **Dashboard**, **Campaigns**, **Quick Add (+)**, **Leads**, and **Menu**.
+> - **Mobile Quick Search Drawer**: Dedicated mobile search trigger and slide-down modal for searching leads, campaigns, users, and reports on mobile.
+> - **Mobile Bottom Sheets**: Quick Actions, Notifications, Theme Selector, and Profile menus dynamically transition into touch-friendly bottom sheets on small screens instead of overflowing popovers.
+> - **Drawer & Layout Polishing**: Close button on mobile sidebar, improved backdrop blur, and content padding adjustments to prevent clipping.
+
+## Proposed Changes
+
+### Navigation Components
+
+#### [NEW] [MobileBottomNav.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/MobileBottomNav.tsx)
+- Create native mobile bottom dock component (`lg:hidden`).
+- Floating elevated `+` Quick Action button in center with glowing gradient.
+- Active tab indicator pill with Framer Motion spring physics.
+- Smooth trigger for mobile sidebar drawer.
+
+#### [MODIFY] [Navbar.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/Navbar.tsx)
+- Adjust responsive height (`h-16 sm:h-20`), padding, and font sizes for mobile screens.
+- Add Mobile Search trigger icon button (`Search`) on small screens, opening a full mobile search sheet with real-time results.
+- Render mobile bottom sheets (`max-sm:fixed max-sm:inset-x-3 max-sm:bottom-4 max-sm:top-auto sm:absolute`) for Quick Actions, Theme Switcher, Workspace Notifications, and User Profile menu.
+- Show Brand logo pill on top left on mobile when sidebar is closed.
+
+#### [MODIFY] [Sidebar.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/Sidebar.tsx)
+- Add mobile close button (`X`) inside sidebar header.
+- Ensure all navigation link clicks trigger `setMobileOpen(false)` so drawer closes smoothly after navigation.
+- Refine mobile backdrop backdrop-blur overlay.
+
+#### [MODIFY] [MainLayout.tsx](file:///e:/WEB/LeadGrowth/frontend/src/layouts/MainLayout.tsx)
+- Render `<MobileBottomNav />` inside `MainLayout`.
+- Update main element padding (`pt-20 sm:pt-24 pb-24 lg:pb-8`) for ideal content scrolling on mobile and desktop.
+
+## Verification Plan
+
+### Automated Tests & Build Verification
+- Run `npm run build` in `frontend/` to ensure zero TypeScript or bundling errors.
+
+### Manual Verification
+- Test mobile view (`< 640px`), tablet view (`640px - 1024px`), and desktop view (`> 1024px`).
+- Test Mobile Bottom Nav tab switching & center `+` button modal opening.
+- Test Mobile Search modal trigger, live query execution, and clear function.
+- Test Theme palette switcher, notifications drawer, profile availability toggler, and quick link clicks on mobile screen dimensions.

@@ -1,0 +1,323 @@
+📘 LeadGrowth - Master System Architecture, Database Schema, & Complete Technical Workflow Guide
+🏛️ 1. High-Level System Architecture
+LeadGrowth is built on a Decoupled Multi-Tenant Architecture leveraging modern backend and frontend stacks:
+
+mermaid
+graph TD
+    Client[React 18 + Vite Frontend] <-->|REST APIs over HTTP/s| Gateway[Spring Boot Controller Layer]
+    Client <-->|Real-Time STOMP over WebSockets| WS[Spring WebSocket Broker /ws-leads]
+    
+    subgraph Spring Boot 3 Backend
+        Gateway --> Security[Spring Security + JWT Filter]
+        Security --> Service[Business Logic Services]
+        Service --> Algo[Hybrid Auto-Assignment Engine]
+        Service --> Export[Apache POI / OpenCSV Exporter]
+        Service --> Data[Spring Data JPA Repositories]
+    end
+    
+    subgraph Database Layer
+        Data <--> DB[(H2 Database / PostgreSQL Schema)]
+    end
+🗄️ 2. Complete Database Schema (DDL Queries & Tables)
+The database consists of 22 Relational Tables linked with strict multi-tenancy constraints via workspace_id. Below are the complete DDL Creation Scripts:
+
+sql
+-- 1. WORKSPACES TABLE
+CREATE TABLE workspaces (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    company_name VARCHAR(100),
+    industry VARCHAR(50),
+    team_size INT,
+    website VARCHAR(255),
+    timezone VARCHAR(50),
+    invite_code VARCHAR(20) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- 2. USERS TABLE
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    designation VARCHAR(100),
+    bio TEXT,
+    profile_image VARCHAR(500),
+    phone VARCHAR(20),
+    workspace_id BIGINT,
+    department VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SUSPENDED
+    availability_status VARCHAR(20) DEFAULT 'AVAILABLE', -- AVAILABLE, BUSY, ON_BREAK, OFFLINE, ON_LEAVE
+    last_active_at TIMESTAMP,
+    last_assigned_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL
+);
+-- 3. ROLES TABLE
+CREATE TABLE roles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL -- ROLE_ADMIN, ROLE_MANAGER, ROLE_MEMBER
+);
+-- 4. USER_ROLES JOIN TABLE
+CREATE TABLE user_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+);
+-- 5. CAMPAIGNS TABLE
+CREATE TABLE campaigns (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    workspace_id BIGINT NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    platform VARCHAR(50) NOT NULL, -- Meta, Google, LinkedIn
+    status VARCHAR(20) NOT NULL, -- Active, Paused, Completed
+    spend DECIMAL(12, 2) DEFAULT 0.00,
+    clicks INT DEFAULT 0,
+    impressions INT DEFAULT 0,
+    leads_count INT DEFAULT 0,
+    conversions INT DEFAULT 0,
+    revenue DECIMAL(12, 2) DEFAULT 0.00,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+-- 6. LEADS TABLE
+CREATE TABLE leads (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    workspace_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    phone VARCHAR(20),
+    source_platform VARCHAR(50) NOT NULL, -- Meta Ads, Google Ads, Organic
+    campaign_name VARCHAR(150),
+    campaign_id BIGINT,
+    status VARCHAR(20) DEFAULT 'New', -- New, Contacted, Qualified, Converted, Lost
+    score INT DEFAULT 0,
+    assigned_to_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_to_id) REFERENCES users(id) ON DELETE SET NULL
+);
+-- 7. LEAD NOTES TABLE
+CREATE TABLE lead_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    lead_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    note TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- 8. TASKS TABLE
+CREATE TABLE tasks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    workspace_id BIGINT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    assigned_to_id BIGINT,
+    assigned_by_id BIGINT,
+    due_date DATE,
+    priority VARCHAR(20) DEFAULT 'Medium', -- Low, Medium, High, Urgent
+    status VARCHAR(30) DEFAULT 'PENDING', -- PENDING, IN_PROGRESS, SUSPENDED, PENDING_REVIEW, APPROVED, REJECTED
+    assigned_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_by_id) REFERENCES users(id) ON DELETE SET NULL
+);
+-- 9. TASK ASSIGNMENTS LOG TABLE
+CREATE TABLE task_assignments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    task_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    assigned_by_id BIGINT,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- 10. ASSIGNMENT LOGS TABLE
+CREATE TABLE assignment_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    workspace_id BIGINT NOT NULL,
+    entity_type VARCHAR(20) NOT NULL, -- TASK, LEAD
+    entity_id BIGINT NOT NULL,
+    assigned_to_id BIGINT,
+    details TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+-- 11. NOTIFICATIONS TABLE
+CREATE TABLE notifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- 12. AD METRICS TABLE
+CREATE TABLE ad_metrics (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    campaign_id BIGINT NOT NULL,
+    date DATE NOT NULL,
+    spend DECIMAL(10, 2) DEFAULT 0,
+    clicks INT DEFAULT 0,
+    impressions INT DEFAULT 0,
+    conversions INT DEFAULT 0,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+);
+-- 13. SYNC LOGS TABLE
+CREATE TABLE sync_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    workspace_id BIGINT NOT NULL,
+    platform VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL, -- Success, Failed
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+-- 14. INTEGRATIONS TABLE
+CREATE TABLE integrations (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    workspace_id BIGINT NOT NULL,
+    platform VARCHAR(50) NOT NULL,
+    api_key VARCHAR(255) NOT NULL,
+    status VARCHAR(20) DEFAULT 'Connected', -- Connected, Disconnected
+    last_synced_at TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+-- 15. REPORTS TABLE
+CREATE TABLE reports (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    workspace_id BIGINT NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- Performance, Leads, Campaign_ROI
+    format VARCHAR(10) NOT NULL, -- CSV, XLSX, PDF
+    file_path VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+-- 16. USER PRODUCTIVITY TABLE
+CREATE TABLE user_productivity (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    tasks_completed INT DEFAULT 0,
+    avg_completion_time_hrs DECIMAL(6, 2) DEFAULT 0.0,
+    efficiency_score DECIMAL(5, 2) DEFAULT 0.0,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- 17. REFRESH TOKENS TABLE
+CREATE TABLE refresh_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expiry_date TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- 18. ACTIVITY LOGS TABLE
+CREATE TABLE activity_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    workspace_id BIGINT NOT NULL,
+    user_id BIGINT,
+    action VARCHAR(100) NOT NULL,
+    description TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+🔍 3. JPA Repository Queries (Backend Data Access Layer)
+Here are the key SQL & JPQL queries executed by the Spring Data Repositories:
+
+1. UserRepository.java
+java
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmail(String email);
+    List<User> findByWorkspaceId(Long workspaceId);
+    boolean existsByEmail(String email);
+}
+2. TaskRepository.java
+java
+public interface TaskRepository extends JpaRepository<Task, Long> {
+    List<Task> findByWorkspaceIdOrderByCreatedAtDesc(Long workspaceId);
+    List<Task> findByWorkspaceIdAndAssignedToIdOrderByCreatedAtDesc(Long workspaceId, Long assignedToId);
+    
+    // Count active tasks for workload threshold calculation
+    long countByAssignedToAndStatusIn(User assignedTo, List<String> statuses);
+    
+    // Unassigned pending tasks for Idle Prevention queue sweep
+    List<Task> findByWorkspaceIdAndAssignedToIsNullAndStatusIn(Long workspaceId, List<String> statuses);
+}
+3. LeadRepository.java
+java
+public interface LeadRepository extends JpaRepository<Lead, Long> {
+    List<Lead> findByWorkspaceIdOrderByCreatedAtDesc(Long workspaceId);
+    long countByWorkspaceIdAndStatus(Long workspaceId, String status);
+}
+4. CampaignRepository.java
+java
+public interface CampaignRepository extends JpaRepository<Campaign, Long> {
+    List<Campaign> findByWorkspaceId(Long workspaceId);
+    
+    @Query("SELECT SUM(c.revenue) FROM Campaign c WHERE c.workspace.id = :wsId")
+    BigDecimal getTotalRevenueByWorkspace(@Param("wsId") Long workspaceId);
+}
+⚙️ 4. Advanced Technical Logic & Algorithms
+🤖 Algorithm 1: Hybrid Auto-Assignment & Idle Prevention Engine
+Located in 
+
+TaskService.java
+:
+
+1. FILTER active workspace members (status != 'SUSPENDED').
+2. CHECK availability status:
+   - If availabilityStatus == 'AVAILABLE' -> ELIGIBLE.
+   - If availabilityStatus == 'BUSY' -> Check active workload count. If active_tasks < 5 -> ELIGIBLE.
+   - If ON_BREAK / OFFLINE / ON_LEAVE -> INELIGIBLE.
+3. WORKLOAD BALANCING:
+   - Select member(s) with minimum current active task count (MIN workload).
+4. ROUND-ROBIN FALLBACK:
+   - If multiple members tie with minimum workload, pick the user with oldest `last_assigned_at` timestamp.
+📈 Algorithm 2: Marketing Analytics Formulas
+$\text{ROAS (Return on Ad Spend)} = \left(\frac{\text{Total Revenue}}{\text{Total Spend}}\right) \times 100$
+$\text{CTR (Click-Through Rate)} = \left(\frac{\text{Total Clicks}}{\text{Total Impressions}}\right) \times 100$
+$\text{CPL (Cost Per Lead)} = \frac{\text{Total Spend}}{\text{Total Leads Generated}}$
+🔄 Algorithm 3: Task Status State Machine & Workload Suspend Workflow
+[PENDING] 
+   │
+   ├── (Manual/Auto Assign) ──► [IN_PROGRESS]
+                                     │
+                                     ├── (User Overloaded?) ──► [SUSPENDED] ──► (Manager Alerts & Reassigns) ──► [IN_PROGRESS]
+                                     │
+                                     └── (Completed by User) ──► [PENDING_REVIEW] ──► (Manager Approves) ──► [APPROVED + 🏅 Verified Badge]
+📡 5. Complete REST API Reference Table
+HTTP Method	Endpoint Path	Role Allowed	Description
+POST	/api/auth/register	Public	Register new user
+POST	/api/auth/login	Public	Authenticate user & get JWT token
+GET	/api/workspaces/current	Any Auth	Get logged-in workspace details
+POST	/api/workspaces/create	Any Auth	Create workspace + generate 6-char Invite Code
+POST	/api/workspaces/join	Any Auth	Join workspace via Invite Code
+GET	/api/dashboard/kpis	Any Auth	Calculate workspace KPIs & trend metrics
+GET	/api/dashboard/search	Any Auth	Concurrently search Leads, Campaigns, Tasks, Users
+GET	/api/campaigns	Any Auth	List workspace marketing campaigns
+POST	/api/campaigns	Admin/Manager	Create marketing campaign
+GET	/api/leads	Any Auth	Fetch workspace lead pipeline
+POST	/api/leads	Any Auth	Create lead / Auto-score calculation
+GET	/api/tasks	Any Auth	List tasks (Filtered for Member, All for Manager)
+POST	/api/tasks	Admin/Manager	Create task (Manual or Auto-Assign)
+POST	/api/tasks/{id}/suspend	Assigned User	Suspend task due to heavy workload & alert manager
+POST	/api/tasks/{id}/reassign	Admin/Manager	Reassign suspended task to another member
+POST	/api/tasks/{id}/approve	Admin/Manager	Approve task & award 🏅 Verified Completed Badge
+GET	/api/reports/export/csv	Any Auth	Download CSV analytics report
+GET	/api/reports/export/excel	Any Auth	Download Excel (.xlsx) analytics report
+🎨 6. Frontend Architecture & Dynamic Layout Engine
+The frontend is managed by 3 global Zustand Stores:
+
+authStore.ts: Manages JWT token, current user details, role permissions, and active workspace state.
+themeStore.ts: Controls theme palettes (light, dark, midnight, ocean, purple).
+layoutStore.ts:
+sidebarPosition: 'left' | 'right' | 'top' | 'bottom'
+On top and bottom positions, the bar renders as a Centered Floating Horizontal Dock displaying icons only with micro tooltips.
+enabledNavItems: Array of active navigation item IDs. Allows users to add or remove navbar items dynamically from the Settings UI.
