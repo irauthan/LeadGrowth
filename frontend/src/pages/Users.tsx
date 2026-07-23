@@ -11,8 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  Award,
-  BookOpen
+  Award
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Link } from 'react-router-dom';
@@ -151,7 +150,7 @@ export default function Users() {
           </div>
           <div>
             <h2 className="text-sm font-bold text-white uppercase tracking-wider">Team Performance & Directory</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">Track workload distribution, live team availability, skills, and productivity scores.</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Track workload distribution, live team availability, and productivity scores.</p>
           </div>
         </div>
 
@@ -271,22 +270,7 @@ export default function Users() {
                   </div>
                 )}
 
-                {/* Skills tags list */}
-                {item.skills && (
-                  <div className="space-y-1.5">
-                    <span className="flex items-center gap-1 text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">
-                      <BookOpen size={10} />
-                      Required Skills
-                    </span>
-                    <div className="flex flex-wrap gap-1">
-                      {item.skills.split(',').map(s => s.trim()).filter(Boolean).map((skill, idx) => (
-                        <span key={idx} className="bg-slate-900 text-slate-400 text-[9px] font-bold px-2 py-0.5 rounded-full border border-slate-850">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Contact details */}
                 <div className="space-y-2 border-t border-slate-900 pt-3">

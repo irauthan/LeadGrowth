@@ -22,7 +22,6 @@ export default function Profile() {
     designation: user?.designation || '',
     bio: user?.bio || '',
     profileImage: user?.profileImage || '',
-    skills: user?.skills || '',
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -55,7 +54,6 @@ export default function Profile() {
         designation: data.designation,
         bio: data.bio,
         profileImage: data.profileImage,
-        skills: data.skills,
       });
 
       setProfileMessage('Profile settings updated successfully.');
@@ -133,15 +131,7 @@ export default function Profile() {
             <p className="text-xs text-brand-600 dark:text-brand-400 font-bold mt-1 uppercase tracking-wider">{user?.roles[0]?.replace('ROLE_', '')}</p>
             <p className="text-xs text-slate-400 mt-0.5 leading-normal">{user?.email}</p>
 
-            {user?.skills && (
-              <div className="mt-3 flex flex-wrap gap-1 justify-center">
-                {user.skills.split(',').map(s => s.trim()).filter(Boolean).map((skill, idx) => (
-                  <span key={idx} className="bg-brand-500/10 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            )}
+
 
             {user?.bio && (
               <p className="mt-5 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-4 w-full leading-normal">
@@ -248,16 +238,7 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Skills (Comma-separated)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Lead Management, Cold Outreach, Email Campaign, Technical Sales"
-                  value={profileForm.skills}
-                  onChange={(e) => setProfileForm({ ...profileForm, skills: e.target.value })}
-                  className="w-full rounded-2xl border border-slate-200 bg-white/50 py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
-                />
-              </div>
+
 
               <div className="flex justify-end pt-2">
                 <button

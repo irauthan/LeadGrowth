@@ -27,7 +27,6 @@ export default function Tasks() {
     assignedToId: '',
     dueDate: '',
     priority: 'Medium',
-    requiredSkill: '',
   });
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
@@ -120,7 +119,6 @@ export default function Tasks() {
         assignedToId: '',
         dueDate: '',
         priority: 'Medium',
-        requiredSkill: '',
       });
       fetchTasks();
     } catch (err) {
@@ -155,13 +153,7 @@ export default function Tasks() {
             )}
           </div>
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{task.description}</p>
-          {task.requiredSkill && (
-            <div className="mt-2.5">
-              <span className="bg-brand-500/10 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Skill: {task.requiredSkill}
-              </span>
-            </div>
-          )}
+
         </div>
 
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
@@ -386,31 +378,19 @@ export default function Tasks() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Assignee</label>
-                  <select
-                    value={createForm.assignedToId}
-                    onChange={(e) => setCreateForm({ ...createForm, assignedToId: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="">Unassigned (Queue)</option>
-                    <option value="-1">🎲 Auto-Assign via Engine</option>
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>{m.fullName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Required Skill</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Meta Ads, Copywriting"
-                    value={createForm.requiredSkill}
-                    onChange={(e) => setCreateForm({ ...createForm, requiredSkill: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
-                  />
-                </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Assignee</label>
+                <select
+                  value={createForm.assignedToId}
+                  onChange={(e) => setCreateForm({ ...createForm, assignedToId: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Unassigned (Queue)</option>
+                  <option value="-1">🎲 Auto-Assign via Engine</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>{m.fullName}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
