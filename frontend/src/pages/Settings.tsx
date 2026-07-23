@@ -10,15 +10,37 @@ import {
   Bell, 
   Building,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import axios from 'axios';
+
+import { useLayoutStore } from '../store/layoutStore';
+import type { SidebarPosition } from '../store/layoutStore';
 
 export default function Settings() {
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const { theme, setTheme } = useThemeStore();
+  const { sidebarPosition, setSidebarPosition, enabledNavItems, toggleNavItem, resetNavItems } = useLayoutStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'security' | 'notifications' | 'workspace'>('profile');
+
+  const allNavItemsList = [
+    { id: '/dashboard', label: 'Dashboard', category: 'General' },
+    { id: '/campaigns', label: 'Campaigns', category: 'General' },
+    { id: '/leads', label: 'Leads', category: 'General' },
+    { id: '/analytics', label: 'Analytics', category: 'General' },
+    { id: '/reports', label: 'Reports', category: 'General' },
+    { id: '/tasks', label: 'Tasks', category: 'General' },
+    { id: '/users', label: 'Team Management', category: 'General' },
+    { id: '/activity-logs', label: 'Activity Logs', category: 'General' },
+    { id: '/notifications-page', label: 'Notifications', category: 'General' },
+    { id: '/settings', label: 'Settings', category: 'General' },
+    { id: '/admin/users', label: 'User Management', category: 'Admin' },
+    { id: '/admin/workspace', label: 'Workspace Control', category: 'Admin' },
+    { id: '/admin/api', label: 'API Management', category: 'Admin' },
+    { id: '/admin/system', label: 'System Monitoring', category: 'Admin' },
+  ];
 
   // Security Form State
   const [oldPassword, setOldPassword] = useState('');
@@ -233,6 +255,89 @@ export default function Settings() {
                     </button>
                   );
                 })}
+              </div>
+
+              {/* PC Navbar Position Settings */}
+              <div className="pt-6 border-t border-theme-border/40 space-y-3">
+                <div>
+                  <h4 className="text-sm font-bold text-theme-text">PC Navigation Bar & Sidebar Position</h4>
+                  <p className="text-xs text-theme-text-muted">Customize where the primary navigation sidebar is docked on desktop screens (PC).</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { id: 'left', label: 'Left Side', icon: '⬅️', desc: 'Standard left panel' },
+                    { id: 'right', label: 'Right Side', icon: '➡️', desc: 'Dock panel on right' },
+                    { id: 'top', label: 'Top Bar', icon: '⬆️', desc: 'Top navigation bar' },
+                    { id: 'bottom', label: 'Bottom Dock', icon: '⬇️', desc: 'Bottom floating dock' }
+                  ].map((pos) => {
+                    const isSelected = sidebarPosition === pos.id;
+                    return (
+                      <button
+                        key={pos.id}
+                        type="button"
+                        onClick={() => setSidebarPosition(pos.id as SidebarPosition)}
+                        className={`flex flex-col items-center justify-center p-4 rounded-2xl border text-center transition-all ${
+                          isSelected
+                            ? 'border-theme-primary bg-theme-primary/10 ring-2 ring-theme-primary font-bold text-theme-primary'
+                            : 'border-theme-border bg-theme-bg-alt/40 hover:bg-theme-bg-alt text-theme-text/80'
+                        }`}
+                      >
+                        <span className="text-2xl mb-1">{pos.icon}</span>
+                        <span className="text-xs font-bold">{pos.label}</span>
+                        <span className="text-[9px] text-theme-text-muted mt-0.5">{pos.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Navbar Items Customization Section */}
+              <div className="pt-6 border-t border-theme-border/40 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-bold text-theme-text">Navbar & Sidebar Items Customization</h4>
+                    <p className="text-xs text-theme-text-muted">Select which items to show or hide in your navigation menu.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={resetNavItems}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-semibold text-theme-text hover:bg-theme-border/20 transition-all self-start sm:self-auto"
+                  >
+                    <RotateCcw size={14} />
+                    Reset Default
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {allNavItemsList.map((item) => {
+                    const isEnabled = enabledNavItems.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleNavItem(item.id)}
+                        className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all ${
+                          isEnabled
+                            ? 'border-theme-primary/40 bg-theme-primary/5 text-theme-text ring-1 ring-theme-primary/20'
+                            : 'border-theme-border/30 bg-theme-bg-alt/20 opacity-50 hover:opacity-80 text-theme-text-muted'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className={`h-2.5 w-2.5 rounded-full ${isEnabled ? 'bg-theme-primary' : 'bg-slate-500'}`} />
+                          <div>
+                            <span className="text-xs font-bold block">{item.label}</span>
+                            <span className="text-[9px] text-theme-text-muted font-semibold">{item.category}</span>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase ${
+                          isEnabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-400'
+                        }`}>
+                          {isEnabled ? 'Shown' : 'Hidden'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </motion.div>
           )}

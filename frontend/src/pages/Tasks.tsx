@@ -85,6 +85,25 @@ export default function Tasks() {
     }
   };
 
+  const handleSuspend = async (taskId: number) => {
+    if (!window.confirm('Workload Overload? Do you want to suspend this task and return it to manager queue?')) return;
+    try {
+      const res = await api.post(`/api/tasks/${taskId}/suspend`);
+      setTasks(tasks.map((t) => (t.id === taskId ? res.data : t)));
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Failed to suspend task');
+    }
+  };
+
+  const handleReassign = async (taskId: number, targetUserId: number) => {
+    try {
+      const res = await api.post(`/api/tasks/${taskId}/reassign?userId=${targetUserId}`);
+      setTasks(tasks.map((t) => (t.id === taskId ? res.data : t)));
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Failed to reassign task');
+    }
+  };
+
   const handleAutoAssign = async (taskId: number) => {
     try {
       const res = await api.post(`/api/tasks/${taskId}/auto-assign`);
@@ -127,20 +146,30 @@ export default function Tasks() {
   };
 
   // Group tasks for Kanban columns
-  const pendingTasks = tasks.filter((t) => t.status === 'PENDING' || t.status === 'Pending');
+  const pendingTasks = tasks.filter((t) => t.status === 'PENDING' || t.status === 'Pending' || t.status === 'SUSPENDED' || t.status === 'Suspended');
   const inProgressTasks = tasks.filter((t) => t.status === 'IN_PROGRESS' || t.status === 'In_Progress' || t.status === 'In Progress' || t.status === 'REJECTED' || t.status === 'Rejected');
   const reviewTasks = tasks.filter((t) => t.status === 'PENDING_REVIEW' || t.status === 'Pending_Review');
   const approvedTasks = tasks.filter((t) => t.status === 'APPROVED' || t.status === 'Approved' || t.status === 'Completed' || t.status === 'COMPLETED');
 
   const renderCard = (task: Task) => {
-    const isTaskPending = task.status === 'PENDING' || task.status === 'Pending';
+    const isTaskPending = task.status === 'PENDING' || task.status === 'Pending' || task.status === 'SUSPENDED' || task.status === 'Suspended';
+    const isTaskSuspended = task.status === 'SUSPENDED' || task.status === 'Suspended';
     const isTaskActive = task.status === 'IN_PROGRESS' || task.status === 'In_Progress' || task.status === 'In Progress' || task.status === 'REJECTED' || task.status === 'Rejected';
     const isTaskReview = task.status === 'PENDING_REVIEW' || task.status === 'Pending_Review';
-    
+    const isTaskApproved = task.status === 'APPROVED' || task.status === 'Approved' || task.status === 'Completed' || task.status === 'COMPLETED';
+    const isAssignedToMe = task.assignedToId === user?.id;
+
     return (
-      <div key={task.id} className="group rounded-2xl border border-theme-border bg-theme-card p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between">
+      <div key={task.id} className="group rounded-2xl border border-theme-border bg-theme-card p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between relative overflow-hidden">
+        {/* Approved Glowing Badge */}
+        {isTaskApproved && (
+          <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-teal-500 text-white text-[9px] font-extrabold px-3 py-1 rounded-bl-2xl shadow-md flex items-center gap-1">
+            <span>🏅 Task Completed & Verified</span>
+          </div>
+        )}
+
         <div>
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-2 pt-1">
             <h4 className="text-sm font-bold text-theme-text leading-tight">{task.title}</h4>
             {(isAdmin || isManager) && (
               <button
@@ -154,6 +183,12 @@ export default function Tasks() {
           </div>
           <p className="mt-2 text-xs text-theme-text-muted leading-relaxed">{task.description}</p>
 
+          {/* Suspended alert banner */}
+          {isTaskSuspended && (
+            <div className="mt-3 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-500 flex items-center gap-1.5">
+              <span>⚠️ Workload Suspended by Assignee - Reassignment Required</span>
+            </div>
+          )}
         </div>
 
         <div className="mt-4 pt-4 border-t border-theme-border/40 space-y-3">
@@ -161,7 +196,7 @@ export default function Tasks() {
           <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold text-theme-text-muted">
             <div className="flex items-center gap-1.5">
               <UserIcon size={12} />
-              <span>{task.assignedToName || 'Unassigned'}</span>
+              <span>{task.assignedToName || 'Unassigned Queue'}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Calendar size={12} />
@@ -183,16 +218,35 @@ export default function Tasks() {
 
             {/* Quick State-Transition actions */}
             <div className="flex items-center gap-1.5">
-              {/* Unassigned -> auto-assign trigger */}
-              {isTaskPending && !task.assignedToId && (isAdmin || isManager) && (
-                <button
-                  onClick={() => handleAutoAssign(task.id)}
-                  className="rounded-xl bg-gradient-to-r from-brand-600 to-indigo-500 text-white hover:from-brand-700 hover:to-indigo-600 text-[10px] font-bold px-2 py-1 shadow-sm flex items-center gap-1"
-                  title="Trigger Hybrid Assignment Algorithm"
-                >
-                  <Sparkles size={10} />
-                  <span>Auto-Assign</span>
-                </button>
+              {/* Unassigned / Suspended -> Manager Reassign Option */}
+              {isTaskPending && (isAdmin || isManager) && (
+                <div className="flex items-center gap-1">
+                  {!task.assignedToId && (
+                    <button
+                      onClick={() => handleAutoAssign(task.id)}
+                      className="rounded-xl bg-gradient-to-r from-theme-primary to-indigo-500 text-white text-[10px] font-bold px-2 py-1 shadow-sm flex items-center gap-1"
+                      title="Trigger Hybrid Auto-Assignment Engine"
+                    >
+                      <Sparkles size={10} />
+                      <span>Auto</span>
+                    </button>
+                  )}
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleReassign(task.id, parseInt(e.target.value));
+                      }
+                    }}
+                    defaultValue=""
+                    className="rounded-xl border border-theme-border bg-theme-bg-alt text-[10px] font-bold px-2 py-1 outline-none text-theme-text"
+                  >
+                    <option value="" disabled>Reassign To...</option>
+                    <option value="-1">🎲 Auto-Assign</option>
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id}>{m.fullName}</option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               {/* Pending Queue -> start task */}
@@ -203,6 +257,17 @@ export default function Tasks() {
                   title="Start Task"
                 >
                   <ArrowRight size={12} />
+                </button>
+              )}
+
+              {/* Active -> Suspend Heavy Workload option */}
+              {isTaskActive && (isAssignedToMe || isAdmin || isManager) && (
+                <button
+                  onClick={() => handleSuspend(task.id)}
+                  className="rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500/20 text-[10px] font-bold px-2 py-1 transition-all"
+                  title="Suspend due to heavy workload & return to manager"
+                >
+                  <span>Suspend Workload</span>
                 </button>
               )}
 
@@ -218,18 +283,19 @@ export default function Tasks() {
                 </button>
               )}
 
-              {/* Review -> Approve / Reject */}
+              {/* Review -> Approve & Award Badge / Reject */}
               {isTaskReview && (isAdmin || isManager) && (
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleApprove(task.id)}
-                    className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-bold px-2 py-1 shadow-xs"
+                    className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-extrabold px-2.5 py-1 shadow-xs flex items-center gap-1"
+                    title="Approve & Award Verified Completion Badge"
                   >
-                    Approve
+                    <span>🏅 Approve & Badge</span>
                   </button>
                   <button
                     onClick={() => handleReject(task.id)}
-                    className="rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-bold px-2 py-1 shadow-xs"
+                    className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-bold px-2 py-1 shadow-xs"
                   >
                     Reject
                   </button>
@@ -253,10 +319,10 @@ export default function Tasks() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-theme-text">Tasks Board</h1>
-          <p className="mt-1 text-sm text-theme-text-muted">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-theme-text">Tasks Board</h1>
+          <p className="mt-1 text-xs sm:text-sm text-theme-text-muted">
             Assign duties to lead specialists and follow up on marketing goals.
           </p>
         </div>
@@ -264,7 +330,7 @@ export default function Tasks() {
         {(isAdmin || isManager) && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-theme-primary/10 transition-all"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-theme-primary/10 transition-all w-full sm:w-auto"
           >
             <Plus size={16} />
             <span>Create Task</span>
@@ -349,8 +415,8 @@ export default function Tasks() {
 
       {/* Create Task Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-3xl bg-theme-card border border-theme-border p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-3 py-6 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-theme-card border border-theme-border p-5 sm:p-6 shadow-2xl my-auto">
             <h3 className="text-lg font-bold text-theme-text">Create Workspace Task</h3>
             <p className="text-xs text-theme-text-muted mb-4">Set up a task card for a team member.</p>
 

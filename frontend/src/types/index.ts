@@ -78,7 +78,7 @@ export interface Task {
   assignedByName?: string;
   dueDate: string;
   priority: 'Low' | 'Medium' | 'High' | 'Urgent' | 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  status: 'Pending' | 'In_Progress' | 'In Progress' | 'Completed' | 'Rejected' | 'PENDING' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'Pending_Review' | 'APPROVED' | 'Approved' | 'REJECTED' | 'Rejected' | 'COMPLETED';
+  status: 'Pending' | 'In_Progress' | 'In Progress' | 'Completed' | 'Rejected' | 'PENDING' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'Pending_Review' | 'APPROVED' | 'Approved' | 'REJECTED' | 'Rejected' | 'COMPLETED' | 'SUSPENDED' | 'Suspended';
   createdAt: string;
 }
 

@@ -96,4 +96,20 @@ public class TaskController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(taskService.rejectTask(id, email));
     }
+
+    @PostMapping("/{id}/suspend")
+    public ResponseEntity<TaskDto> suspendTask(@PathVariable Long id) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.suspendTask(id, email));
+    }
+
+    @PostMapping("/{id}/reassign")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<TaskDto> reassignTask(
+            @PathVariable Long id,
+            @RequestParam Long userId
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.reassignTask(id, userId, email));
+    }
 }
