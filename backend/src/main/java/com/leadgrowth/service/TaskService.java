@@ -523,8 +523,6 @@ public class TaskService {
                         "Task \"" + task.getTitle() + "\" was auto-reassigned to you because the previous assignee went offline/on leave.");
             }
         }
-    }
-
     @Transactional
     public TaskDto suspendTask(Long taskId, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
