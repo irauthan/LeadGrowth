@@ -34,6 +34,8 @@ interface ManagedUser {
 
 export default function UserManagement() {
   const currentUser = useAuthStore((state) => state.user);
+  const isAdmin = currentUser?.roles.includes('ROLE_ADMIN');
+  const isManager = currentUser?.roles.includes('ROLE_MANAGER');
 
   // States
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -418,7 +420,7 @@ export default function UserManagement() {
                     <td className="p-4 whitespace-nowrap">
                       <select
                         value={item.role}
-                        disabled={item.id === currentUser?.id}
+                        disabled={!isAdmin || item.id === currentUser?.id}
                         onChange={(e) => handleChangeRole(item.id, e.target.value as any)}
                         className="bg-theme-bg-alt border border-theme-border rounded-xl px-2 py-1 text-[10px] font-bold outline-none focus:border-theme-primary text-theme-text disabled:opacity-50"
                       >
@@ -434,47 +436,67 @@ export default function UserManagement() {
                       </span>
                     </td>
                     <td className="p-4 whitespace-nowrap text-right space-x-1.5">
+                      {/* Edit Details - Disabled for Managers against Admin users */}
                       <button
                         onClick={() => setEditUser(item)}
-                        className="p-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border"
-                        title="Edit Details"
+                        disabled={isManager && item.role === 'ADMIN'}
+                        className="p-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={isManager && item.role === 'ADMIN' ? 'Managers cannot edit Administrator accounts' : 'Edit Details'}
                       >
                         <Edit2 size={12} />
                       </button>
+
+                      {/* Reset Password - Disabled for Managers against Admin users */}
                       <button
                         onClick={() => setResetUser(item)}
-                        className="p-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border"
-                        title="Reset Password"
+                        disabled={isManager && item.role === 'ADMIN'}
+                        className="p-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={isManager && item.role === 'ADMIN' ? 'Managers cannot reset Administrator passwords' : 'Reset Password'}
                       >
                         <Key size={12} />
                       </button>
+
                       {item.id !== currentUser?.id && (
                         <>
+                          {/* Suspend / Reactivate - Allowed for Admin & Manager (against non-admins) */}
                           <button
                             onClick={() => handleToggleStatus(item.id)}
-                            className={`p-2 rounded-xl border transition-colors ${
+                            disabled={isManager && item.role === 'ADMIN'}
+                            className={`p-2 rounded-xl border transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                               item.status === 'ACTIVE'
                                 ? 'border-rose-500/20 text-rose-500 hover:bg-rose-500/10'
                                 : 'border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10'
                             }`}
-                            title={item.status === 'ACTIVE' ? 'Suspend' : 'Reactivate'}
+                            title={
+                              isManager && item.role === 'ADMIN' 
+                                ? 'Managers cannot suspend Administrator accounts' 
+                                : item.status === 'ACTIVE' ? 'Suspend Account' : 'Reactivate Account'
+                            }
                           >
                             <ShieldAlert size={12} />
                           </button>
-                          <button
-                            onClick={() => handleDeleteUser(item.id)}
-                            className="p-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400"
-                            title="Remove User"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                          <button
-                            onClick={() => setTransferUser(item)}
-                            className="p-2 rounded-xl bg-amber-600/10 hover:bg-amber-600/20 text-amber-400"
-                            title="Transfer Admin Ownership"
-                          >
-                            <UserCheck size={12} />
-                          </button>
+
+                          {/* Delete User - Admin Only */}
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDeleteUser(item.id)}
+                              className="p-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400"
+                              title="Remove User"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+
+                          {/* Transfer Ownership - Admin Only */}
+                          {isAdmin && (
+                            <button
+                              onClick={() => setTransferUser(item)}
+                              className="p-2 rounded-xl bg-amber-600/10 hover:bg-amber-600/20 text-amber-400"
+                              title="Transfer Admin Ownership"
+                            >
+                              <UserCheck size={12} />
+                            </button>
+                          )}
                         </>
                       )}
                     </td>

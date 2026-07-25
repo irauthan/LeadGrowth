@@ -25,6 +25,12 @@ public class CampaignController {
         return ResponseEntity.ok(campaignService.getCampaigns(email));
     }
 
+    @GetMapping("/user-view")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getUserCampaigns() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(campaignService.getUserCampaigns(email));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Campaign> createCampaign(@RequestBody Campaign campaign) {

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { useClickOutside } from '../hooks/useClickOutside';
 import api from '../services/api';
 import type { Task, User } from '../types';
 import { 
@@ -10,7 +11,8 @@ import {
   ArrowRight,
   CheckCircle,
   Loader2,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 
 export default function Tasks() {
@@ -18,6 +20,8 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   // Task creation state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -27,6 +31,11 @@ export default function Tasks() {
     assignedToId: '',
     dueDate: '',
     priority: 'Medium',
+  });
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  useClickOutside(modalRef, () => {
+    if (showCreateModal) setShowCreateModal(false);
   });
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
@@ -62,8 +71,8 @@ export default function Tasks() {
       const res = await api.patch(`/api/tasks/${taskId}/status?status=${nextStatus}`);
       const updated = res.data;
       setTasks(tasks.map((t) => (t.id === taskId ? updated : t)));
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Failed to update task status.');
     }
   };
 
@@ -71,8 +80,8 @@ export default function Tasks() {
     try {
       const res = await api.post(`/api/tasks/${taskId}/approve`);
       setTasks(tasks.map((t) => (t.id === taskId ? res.data : t)));
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Failed to approve task.');
     }
   };
 
@@ -80,8 +89,8 @@ export default function Tasks() {
     try {
       const res = await api.post(`/api/tasks/${taskId}/reject`);
       setTasks(tasks.map((t) => (t.id === taskId ? res.data : t)));
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Failed to reject task.');
     }
   };
 
@@ -118,18 +127,36 @@ export default function Tasks() {
     try {
       await api.delete(`/api/tasks/${taskId}`);
       setTasks(tasks.filter((t) => t.id !== taskId));
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Failed to delete task.');
     }
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (!createForm.title.trim()) {
+      setErrorMsg('Task title is required.');
+      return;
+    }
+
     try {
-      const payload = {
-        ...createForm,
-        assignedToId: createForm.assignedToId ? parseInt(createForm.assignedToId) : undefined,
+      const payload: any = {
+        title: createForm.title.trim(),
+        description: createForm.description.trim(),
+        priority: createForm.priority,
       };
+
+      if (createForm.assignedToId) {
+        payload.assignedToId = parseInt(createForm.assignedToId);
+      }
+
+      if (createForm.dueDate && createForm.dueDate.trim() !== '') {
+        payload.dueDate = createForm.dueDate;
+      }
+
       await api.post('/api/tasks', payload);
       setShowCreateModal(false);
       setCreateForm({
@@ -139,9 +166,10 @@ export default function Tasks() {
         dueDate: '',
         priority: 'Medium',
       });
+      setSuccessMsg('Task created and assigned successfully!');
       fetchTasks();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Failed to create task. Verify fields.');
     }
   };
 
@@ -253,10 +281,11 @@ export default function Tasks() {
               {isTaskPending && task.assignedToId && (
                 <button
                   onClick={() => handleStatusChange(task.id, 'In_Progress')}
-                  className="rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 p-1 dark:text-indigo-400"
-                  title="Start Task"
+                  className="rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 transition-all flex items-center gap-1 shadow-sm"
+                  title="Start Working on Task"
                 >
-                  <ArrowRight size={12} />
+                  <ArrowRight size={11} />
+                  <span>Start Work</span>
                 </button>
               )}
 
@@ -329,7 +358,7 @@ export default function Tasks() {
 
         {(isAdmin || isManager) && (
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => { setShowCreateModal(true); setErrorMsg(''); setSuccessMsg(''); }}
             className="flex items-center justify-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-theme-primary/10 transition-all w-full sm:w-auto"
           >
             <Plus size={16} />
@@ -337,6 +366,13 @@ export default function Tasks() {
           </button>
         )}
       </div>
+
+      {successMsg && (
+        <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-xs font-bold text-emerald-500 flex items-center gap-2">
+          <CheckCircle size={16} />
+          {successMsg}
+        </div>
+      )}
 
       {/* Kanban Board Columns */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
@@ -416,13 +452,20 @@ export default function Tasks() {
       {/* Create Task Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-3 py-6 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-theme-card border border-theme-border p-5 sm:p-6 shadow-2xl my-auto">
+          <div ref={modalRef} className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-theme-card border border-theme-border p-5 sm:p-6 shadow-2xl my-auto">
             <h3 className="text-lg font-bold text-theme-text">Create Workspace Task</h3>
             <p className="text-xs text-theme-text-muted mb-4">Set up a task card for a team member.</p>
 
+            {errorMsg && (
+              <div className="mb-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 p-3 text-xs font-bold text-rose-500 flex items-center gap-2">
+                <AlertCircle size={14} />
+                {errorMsg}
+              </div>
+            )}
+
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Task Title</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Task Title *</label>
                 <input
                   type="text"
                   required
@@ -461,10 +504,9 @@ export default function Tasks() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Due Date</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Due Date (Optional)</label>
                   <input
                     type="date"
-                    required
                     value={createForm.dueDate}
                     onChange={(e) => setCreateForm({ ...createForm, dueDate: e.target.value })}
                     className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"

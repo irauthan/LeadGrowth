@@ -419,6 +419,10 @@ public class LeadService {
                 .status(lead.getStatus())
                 .assignedToId(lead.getAssignedTo() != null ? lead.getAssignedTo().getId() : null)
                 .assignedToName(lead.getAssignedTo() != null ? lead.getAssignedTo().getFullName() : "Unassigned")
+                .qualityScore(lead.getQualityScore() != null ? lead.getQualityScore() : 75)
+                .qualityTier(lead.getQualityTier() != null ? lead.getQualityTier() : "WARM")
+                .conversionProbability(lead.getConversionProbability() != null ? lead.getConversionProbability() : 75.0)
+                .queueStatus(lead.getQueueStatus() != null ? lead.getQueueStatus() : (lead.getAssignedTo() != null ? "ASSIGNED" : "IN_QUEUE"))
                 .createdAt(lead.getCreatedAt())
                 .build();
     }

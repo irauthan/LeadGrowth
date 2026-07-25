@@ -176,24 +176,31 @@ public class UserService {
     }
 
     @Transactional
-    public User updateUserStatus(Long userId, String status, String adminEmail) {
-        User admin = userRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new UsernameNotFoundException("Admin not found"));
+    public User updateUserStatus(Long userId, String status, String actorEmail) {
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        boolean isAdmin = admin.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
-        if (!isAdmin) {
-            throw new IllegalStateException("Only administrators can suspend/reactivate accounts");
+        boolean actorIsAdmin = actor.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
+        boolean actorIsManager = actor.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_MANAGER"));
+
+        if (!actorIsAdmin && !actorIsManager) {
+            throw new IllegalStateException("Only administrators or managers can suspend/reactivate accounts");
         }
 
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (targetUser.getId().equals(admin.getId())) {
+        if (targetUser.getId().equals(actor.getId())) {
             throw new IllegalArgumentException("You cannot suspend your own account");
         }
 
-        if (targetUser.getWorkspace() == null || !targetUser.getWorkspace().getId().equals(admin.getWorkspace().getId())) {
+        if (targetUser.getWorkspace() == null || !targetUser.getWorkspace().getId().equals(actor.getWorkspace().getId())) {
             throw new IllegalArgumentException("User does not belong to your workspace");
+        }
+
+        boolean targetIsAdmin = targetUser.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
+        if (actorIsManager && targetIsAdmin) {
+            throw new IllegalStateException("Managers are not authorized to suspend Administrator accounts");
         }
 
         String targetStatus = status.toUpperCase();
@@ -244,7 +251,7 @@ public class UserService {
     @Transactional
     public void deleteUser(Long userId, String adminEmail) {
         User admin = userRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new UsernameNotFoundException("Admin not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("Actor not found"));
 
         boolean isAdmin = admin.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
         if (!isAdmin) {

@@ -1,0 +1,128 @@
+# Implementation Plan — Lead Growth V2.0 Enterprise SaaS Transformation
+
+This plan details the full transformation of Lead Growth into a production-grade enterprise SaaS platform matching HubSpot, Salesforce, Monday.com, and Zoho CRM standards. Every component will be connected end-to-end (UI → API → MySQL Database → WebSocket Sync → Role Enforcement).
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Strict Role-Based Dashboard Architecture**:
+> - **Admin Dashboard (`Business Command Center`)**: Agency Owner view. Focuses on Total Revenue, Ad Spend, ROAS, Net Profit, Workspace Health, Team Productivity, System Health (API, DB, WebSockets, Scheduler), Audit Logs, and Billing controls.
+> - **Manager Dashboard (`Operations Control Center`)**: Team Leader view. Focuses on Team Workload, Capacity, Lead Queue, Task Review & Approvals, Task Assignment, Team Productivity Leaderboard, and Non-Admin User Management.
+> - **User Dashboard (`Personal Productivity Hub`)**: Sales Executive view. Focuses ONLY on "My Assigned Leads", "My Active Tasks", "My Follow-up Reminders", "My Conversion Rate", "My Quality Score", and "My Gamified Ranking". Restricts all revenue, profit, billing, API keys, and workspace settings.
+
+> [!NOTE]
+> **New Enterprise Subsystems**:
+> 1. **Lead Queue & Automated Distribution Engine**: Handles incoming leads from Meta Ads, Google Ads, and Landing Pages into a central queue for manual or hybrid auto-assignment.
+> 2. **User Idle Prevention Sweep**: Triggers upon task/lead completion to automatically draw next priority items from the queue.
+> 3. **Follow-up Reminders Engine**: Tracks Upcoming, Pending, Missed, and Completed lead follow-ups.
+> 4. **Audit Log System**: Full audit trail of security and operational actions with filterable Admin Audit Viewer.
+> 5. **Export & Report Exporter**: PDF, Excel, and CSV report exporter for workspace performance.
+
+---
+
+## Proposed Changes
+
+---
+
+### Backend Layer (`/backend`)
+
+#### [NEW] [AuditLog.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/entity/AuditLog.java) & [AuditLogRepository.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/repository/AuditLogRepository.java)
+- Create AuditLog entity and repository for recording all system/user mutations (`USER_CREATED`, `USER_SUSPENDED`, `LEAD_ASSIGNED`, `TASK_APPROVED`, `CAMPAIGN_MODIFIED`, `WORKSPACE_UPDATED`).
+
+#### [NEW] [FollowupReminder.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/entity/FollowupReminder.java) & [FollowupRepository.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/repository/FollowupRepository.java)
+- Create entity for tracking lead follow-ups: `lead`, `assignedTo`, `scheduledAt`, `status` (`UPCOMING`, `PENDING`, `COMPLETED`, `MISSED`), `notes`.
+
+#### [MODIFY] [Lead.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/entity/Lead.java)
+- Add fields for Lead Quality: `qualityScore` (0-100), `qualityTier` (`HOT`, `WARM`, `COLD`), `conversionProbability` (0-100%), `queueStatus` (`IN_QUEUE`, `ASSIGNED`, `ARCHIVED`).
+
+#### [MODIFY] [DashboardService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/DashboardService.java) & [DashboardController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/DashboardController.java)
+- Add role-tailored dashboard DTOs:
+  - `AdminDashboardDto`: Revenue, Spend, ROAS, Net Profit, Workspace Stats, System Health, Audit Logs, Active vs Suspended count.
+  - `ManagerDashboardDto`: Team Workload, Task Review Queue, Team Capacity, Lead Queue, Leaderboard, Productivity metrics.
+  - `UserDashboardDto`: My Leads, My Tasks, My Followups, My Conversion Rate, My Quality Score, My Ranking.
+
+#### [NEW] [LeadQueueService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/LeadQueueService.java) & [LeadQueueController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/LeadQueueController.java)
+- Implement Lead Queue Engine:
+  - Add leads to Queue from Facebook, Meta Ads, Google Ads, Forms.
+  - Manual and Auto-Assignment via Hybrid Algorithm (Availability, Workload, Round Robin).
+  - User Idle Prevention trigger when tasks/leads complete.
+
+#### [NEW] [FollowupService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/FollowupService.java) & [FollowupController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/FollowupController.java)
+- CRUD endpoints for managing lead follow-ups, automatic missed reminder checks, and completion updates.
+
+#### [NEW] [AuditLogController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/AuditLogController.java)
+- Endpoint `GET /api/admin/audit-logs` restricted to `ROLE_ADMIN`.
+
+#### [NEW] [ExportController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/ExportController.java) & [ExportService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/ExportService.java)
+- Generate CSV, Excel (CSV compatible), and HTML/PDF formatted report exports for Leads, Campaigns, and Team Productivity.
+
+---
+
+### Frontend Layer (`/frontend`)
+
+#### [NEW] [AdminDashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/dashboards/AdminDashboard.tsx)
+- Agency Owner Business Command Center:
+  - Revenue, Spend, Profit, ROAS, Lead Conversion KPIs.
+  - Real-time System Monitoring cards (API, DB, WebSockets, Scheduler).
+  - Workspace Analytics & Team Performance comparison.
+  - Audit Log feed viewer & Billing Quick Controls.
+
+#### [NEW] [ManagerDashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/dashboards/ManagerDashboard.tsx)
+- Team Leader Operations Control Center:
+  - Team Workload Distribution & Availability status indicators.
+  - Lead Queue Management (Unassigned leads, one-click Auto-Assign).
+  - Task Review & Approval Queue (Approve / Reject completed tasks).
+  - Team Productivity Leaderboard & Capacity Gauges.
+
+#### [NEW] [UserDashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/dashboards/UserDashboard.tsx)
+- Sales Executive Personal Productivity Hub:
+  - Personal KPIs (My Conversion Rate, My Quality Score, My Ranking).
+  - My Active Tasks Kanban & Quick Status transitions.
+  - My Lead Queue & Lead Contact Action Cards.
+  - My Upcoming & Pending Follow-up Reminders.
+  - Gamified Ranking Badge & Idle Prevention status ("Ready for Next Task").
+
+#### [MODIFY] [Dashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Dashboard.tsx)
+- Router component that dynamically renders `AdminDashboard`, `ManagerDashboard`, or `UserDashboard` based on logged-in user role.
+
+#### [NEW] [Followups.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Followups.tsx)
+- Complete Follow-up Engine UI: Filter by Upcoming, Pending, Missed, Completed with quick completion modal and lead contact shortcuts.
+
+#### [NEW] [AuditLogsView.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/AuditLogsView.tsx)
+- Dedicated Admin Audit Log Viewer page for filterable history of security & operational actions.
+
+#### [MODIFY] [Leads.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Leads.tsx)
+- Integrate Lead Quality badges (Hot 🔥, Warm ☀️, Cold ❄️), Lead Source icons (Meta, Google, Form), Lead Queue Auto-Assignment trigger, and Follow-up creation.
+
+#### [MODIFY] [Reports.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Reports.tsx)
+- Connect Export buttons to backend `/api/reports/export?format=csv` for instant file downloads.
+
+---
+
+## Verification Plan
+
+### Automated Tests & Compilation
+1. Run Spring Boot build check: `mvn compile -f backend/pom.xml`
+2. Run Frontend TypeScript check: `npx tsc --noEmit` inside `frontend/`
+3. Run Frontend production build check: `npm run build` inside `frontend/`
+
+### Manual Role Verification & Integration Test Matrix
+1. **Admin Login Test**:
+   - Verify Business Command Center displays Revenue, ROAS, Net Profit, System Health, Audit Logs, and Workspace Controls.
+   - Verify Admin can view Audit Logs, perform user CRUD, manage workspaces.
+2. **Manager Login Test**:
+   - Verify Operations Control Center displays Team Workload, Lead Queue, Task Review Queue, Leaderboard.
+   - Test one-click Auto-Assign on Lead Queue and Task Approval/Rejection.
+   - Verify Revenue, Profit, Billing, and API Keys are hidden.
+3. **User Login Test**:
+   - Verify Personal Productivity Hub displays ONLY "My Leads", "My Tasks", "My Followups", "My Quality Score", "My Ranking".
+   - Test updating task status, completing follow-ups, and triggering Idle Prevention queue sweep.
+   - Verify Revenue, ROAS, Billing, System Monitoring, User Management, and Workspace controls are completely hidden/blocked.
+4. **Lead Queue & Idle Prevention Test**:
+   - Add new lead via API/Form -> Appears in Lead Queue.
+   - Click "Auto Assign" -> Assigns to eligible user based on workload and availability status.
+   - Complete task -> Idle prevention assigns next item from queue.
+5. **Export Reports Test**:
+   - Click Export CSV / PDF in Reports page -> Verify download response.

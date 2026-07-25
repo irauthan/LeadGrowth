@@ -1,0 +1,151 @@
+# Implementation Plan — Lead Growth Enterprise SaaS Bug Fix, RBAC, UI/UX & Stability Upgrade
+
+This plan outlines the technical changes needed to transform the Lead Growth platform into a fully functional, enterprise-grade SaaS application. All 11 Epics (E1–E11) will be systematically implemented, tested, and validated without mock code or placeholders.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **RBAC Matrix Enforcements**:
+> - **Admin**: Full access to all modules, user role modification, workspace controls, system monitoring, billing, API management, and global config.
+> - **Manager**: Access to User Management, Team Settings, Lead & Task Assignment, User Suspension/Reactivation for non-admins. Restricted from modifying, suspending, deleting, or altering roles of Administrators.
+> - **User**: Access to Personal Settings, Assigned Tasks, Workflows, Lead updates, and Campaign work. Restricted from creating/assigning tasks, managing team users, or accessing admin settings.
+
+> [!NOTE]
+> **Design Theme Standardization**:
+> Welcome Page, Auth/Login Page, Dashboard, and all application sub-views will be unified under an Enterprise SaaS palette:
+> - **Primary Navy**: `#0F4C81`
+> - **Secondary Cyan**: `#1D9BF0`
+> - **Accent Teal**: `#00C2A8`
+> - **Background Light Slate**: `#F8FAFC`
+> - **Surface Card White**: `#FFFFFF`
+> - **Body Text**: `#1E293B`
+
+---
+
+## Proposed Changes
+
+---
+
+### Backend Service & Controller Layer (`/backend`)
+
+#### [MODIFY] [UserService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/UserService.java)
+- Update `updateUserStatus`:
+  - Allow Managers (in addition to Admins) to suspend and reactivate team members.
+  - Enforce restriction: If target user is an Administrator (`ROLE_ADMIN`), reject suspension request if actor is a Manager or another unauthorized user.
+- Update `editUserDetails`:
+  - Enforce restriction: Managers cannot edit Administrator profile details.
+- Update `deleteUser`:
+  - Enforce restriction: Managers cannot delete Administrator accounts. Only Admins can delete users, and Admins cannot delete themselves.
+- Update `updateUserRole`:
+  - Enforce restriction: Only Admins can change user roles, and cannot change another Admin's role to lower unless doing an ownership transfer.
+
+#### [MODIFY] [UserController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/UserController.java)
+- Ensure all user management endpoints (`PUT /api/users/{id}/status`, `PUT /api/users/{id}/role`, `PUT /api/users/{id}/details`, `DELETE /api/users/{id}`) have proper RBAC annotations (`@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")`) and return updated User objects or clear error responses.
+
+#### [MODIFY] [TaskService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/TaskService.java)
+- Fix `createTask`:
+  - Sanitize payload arguments (handle empty strings for `dueDate`, null `assignedToId`).
+  - Correctly execute Assignment Engine (manual assignment, hybrid auto-assignment for ID `-1`).
+  - Persist Task in MySQL, write `TaskAssignment` and `AssignmentLog`, trigger `Notification` entity generation, and broadcast via `WebSocketManager`.
+- Restrict task creation to Admin and Manager.
+
+#### [MODIFY] [TaskController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/TaskController.java)
+- Ensure task endpoints enforce role permissions via `@PreAuthorize`.
+
+#### [NEW] [SystemMonitoringController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/SystemMonitoringController.java)
+- Create `/api/admin/system/metrics` endpoint accessible strictly to `ROLE_ADMIN`.
+- Return live server health metrics:
+  - Spring Boot Tomcat / API Status
+  - HikariCP Database pool connections & status
+  - Active WebSocket client connections
+  - Scheduled task runner health
+  - System metrics: active users count, JVM memory allocation, CPU load estimations, error log statistics from `ActivityLogRepository`.
+
+---
+
+### Frontend Components & Pages (`/frontend`)
+
+#### [NEW] [useClickOutside.ts](file:///e:/WEB/LeadGrowth/frontend/src/hooks/useClickOutside.ts)
+- Create a custom React hook to detect clicks outside target elements and listen for `Escape` key presses for modals, dropdowns, and popups.
+
+#### [MODIFY] [Auth.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Auth.tsx)
+- Redesign Login Page:
+  - Remove plain dark background.
+  - Implement modern enterprise SaaS light theme (White/Light Slate with Navy `#0F4C81`, Cyan `#1D9BF0`, Teal `#00C2A8`).
+  - Add animated wave graphics, floating live metrics cards, growth charts, lead performance visuals.
+  - Add **Password Visibility Toggle** (Eye / Eye-off icon button).
+  - Implement form validations (email format, password length, required fields with inline messages).
+
+#### [MODIFY] [Welcome.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Welcome.tsx)
+- Redesign Welcome Page to share exact theme tokens, typography, hero graphics, and wave animations with the Auth page.
+
+#### [MODIFY] [UserManagement.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/UserManagement.tsx) & [Users.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Users.tsx)
+- Update RBAC controls:
+  - Allow Managers to access User Management.
+  - Enable Suspend, Reactivate, Edit, and Invite buttons for Managers.
+  - Dynamically disable/hide Suspend, Edit, Delete, and Role Change buttons for Admin user cards when logged in as a Manager.
+  - Fix action handlers to update local state instantly and show success/error notification toasts.
+
+#### [MODIFY] [Settings.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Settings.tsx)
+- Implement role-based settings visibility:
+  - **Admin**: Full access (Profile, Appearance, Security, Notifications, Workspace Control, User Roles, API Keys, System Monitoring link).
+  - **Manager**: Team Settings (Profile, Appearance, Security, Notifications, Team Members info).
+  - **User**: Personal Settings (Profile, Appearance, Security, Personal Notifications).
+
+#### [MODIFY] [SystemMonitoring.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/SystemMonitoring.tsx)
+- Add Admin-only route guard.
+- Connect to backend `/api/admin/system/metrics`.
+- Display:
+  - Backend Health (API, DB, WebSockets, Scheduler)
+  - System Metrics (Active Users, CPU, Memory, Response Time, Failed Requests, Error Count)
+  - Error Logs (Recent errors, warnings, failed jobs) with Green/Yellow/Red status badges.
+
+#### [MODIFY] [Tasks.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Tasks.tsx)
+- Fix task creation modal form:
+  - Sanitize `dueDate` payload (convert empty string `""` to `null`).
+  - Form validation: title required, priority required, assignee required.
+  - Limit Task Creation & Assignment buttons to Admin & Manager.
+  - Enable regular users to view assigned tasks, update task status (Pending -> In Progress -> Completed/Pending Review), and add task notes.
+  - Show instant UI updates and notification toasts on task state changes.
+
+#### [MODIFY] [Sidebar.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/Sidebar.tsx) & [App.tsx](file:///e:/WEB/LeadGrowth/frontend/src/App.tsx)
+- Update routes & navigation menu items:
+  - Show User Management in Sidebar for both Admin and Manager.
+  - Show System Monitoring and Workspace Management in Sidebar for Admin only.
+  - Add click-outside and ESC key handling to profile menu and notification popups.
+
+#### [MODIFY] [index.css](file:///e:/WEB/LeadGrowth/frontend/src/index.css)
+- Add design tokens and background animation utilities for waves, floating cards, and corporate SaaS graphics.
+
+---
+
+## Verification Plan
+
+### Automated Tests / Compilation
+1. Run Spring Boot build check: `mvn compile -f backend/pom.xml`
+2. Run Frontend build check: `npm run build` inside `frontend/`
+
+### Manual Verification & UX Validation
+1. **Login & Auth Redesign**:
+   - Verify light corporate theme, wave graphics, floating data cards.
+   - Verify password visibility toggle button works.
+   - Verify email & password form validation inline messages.
+2. **User Management & RBAC (Admin vs Manager vs User)**:
+   - Login as Admin: Suspend, Reactivate, Edit, Delete, Update Role for any user.
+   - Login as Manager: View Users, Suspend/Reactivate regular users, Edit regular users. Verify Admin users cannot be suspended, edited, deleted, or role-changed by Manager.
+   - Login as User: Verify User Management is hidden/restricted.
+3. **Task Creation & Assignment**:
+   - Create task as Admin/Manager with manual user assignment and with auto-assignment (`-1`).
+   - Verify task is saved in MySQL DB, notification created, and task appears in assignee's view.
+   - Verify regular user can view assigned tasks and update status to completed.
+4. **Settings Visibility**:
+   - Verify Admin sees all workspace & global settings.
+   - Verify Manager sees Team Settings.
+   - Verify User sees Personal Settings only.
+5. **System Monitoring Dashboard**:
+   - Access `/admin/system` as Admin. Verify live metrics cards, backend health status, CPU/Memory charts, error logs.
+   - Attempt access as non-Admin and verify access is blocked/redirected.
+6. **Dropdown & Modal Close Behavior**:
+   - Test clicking outside and pressing `Escape` key on Theme selector, Notifications popup, Profile menu, Task modal, and User invite modal.

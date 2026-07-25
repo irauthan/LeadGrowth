@@ -60,6 +60,8 @@ public class Notification {
 
     public Boolean getIsRead() { return isRead; }
     public void setIsRead(Boolean isRead) { this.isRead = isRead; }
+    public Boolean isRead() { return isRead; }
+    public void setRead(Boolean isRead) { this.isRead = isRead; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

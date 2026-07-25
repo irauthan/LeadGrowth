@@ -10,6 +10,7 @@ import com.leadgrowth.entity.User;
 import com.leadgrowth.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,30 +48,35 @@ public class UserController {
     }
 
     @PostMapping("/invite")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Invitation> inviteUser(@Valid @RequestBody UserInviteRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(userService.inviteUser(request, email));
     }
 
     @PutMapping("/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<User> updateUserRole(@PathVariable Long id, @Valid @RequestBody UserRoleUpdateRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(userService.updateUserRole(id, request.getRole(), email));
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<User> updateUserStatus(@PathVariable Long id, @Valid @RequestBody UserStatusUpdateRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(userService.updateUserStatus(id, request.getStatus(), email));
     }
 
     @PutMapping("/{id}/details")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<User> editUserDetails(@PathVariable Long id, @Valid @RequestBody UserProfileRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(userService.editUserDetails(id, request, email));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userService.deleteUser(id, email);

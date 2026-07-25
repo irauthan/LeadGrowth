@@ -35,12 +35,28 @@ public class Workspace {
     @Column(unique = true, nullable = false, length = 100)
     private String slug;
 
+    @Column(name = "subscription_plan", nullable = false, length = 30)
+    private String subscriptionPlan = "PROFESSIONAL"; // FREE, PROFESSIONAL, ENTERPRISE
+
+    @Column(name = "max_users")
+    private Integer maxUsers = 25;
+
+    @Column(name = "max_leads")
+    private Integer maxLeads = 10000;
+
+    @Column(name = "max_storage_mb")
+    private Integer maxStorageMb = 5000;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.subscriptionPlan == null) this.subscriptionPlan = "PROFESSIONAL";
+        if (this.maxUsers == null) this.maxUsers = 25;
+        if (this.maxLeads == null) this.maxLeads = 10000;
+        if (this.maxStorageMb == null) this.maxStorageMb = 5000;
     }
 
     // Constructors
@@ -86,6 +102,18 @@ public class Workspace {
 
     public String getSlug() { return slug; }
     public void setSlug(String slug) { this.slug = slug; }
+
+    public String getSubscriptionPlan() { return subscriptionPlan; }
+    public void setSubscriptionPlan(String subscriptionPlan) { this.subscriptionPlan = subscriptionPlan; }
+
+    public Integer getMaxUsers() { return maxUsers; }
+    public void setMaxUsers(Integer maxUsers) { this.maxUsers = maxUsers; }
+
+    public Integer getMaxLeads() { return maxLeads; }
+    public void setMaxLeads(Integer maxLeads) { this.maxLeads = maxLeads; }
+
+    public Integer getMaxStorageMb() { return maxStorageMb; }
+    public void setMaxStorageMb(Integer maxStorageMb) { this.maxStorageMb = maxStorageMb; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -1,0 +1,62 @@
+# Implementation Plan — Manager & Admin Panel Modules & Permissions
+
+This implementation plan details the complete implementation and verification of the **Manager Panel (Operations Control Center)** and **Admin Panel (Business Command Center)** in LeadGrowth CRM.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Role Hierarchy & Access Controls**:
+> 1. **User (Sales Executive)**: Restricted to personal assigned data (`WHERE assignedToId = userId`). No access to team analytics, user management, workspace settings, or financial profit/ROAS.
+> 2. **Manager (Team Leader)**: Operations control over team members, lead queue auto/bulk assignment, task review & approvals, team follow-ups, and team analytics. Restricted from deleting/modifying Admins, Workspace Settings, API Keys, Billing, Audit Logs, System Monitoring, and Net Profit.
+> 3. **Admin (Agency Owner)**: Complete control over the organization. Full CRUD on Users/Managers, workspace branding, billing, system health, security audit logs, API keys, and company-wide financial ROAS/ROI/Profit.
+
+---
+
+## Proposed Changes
+
+---
+
+### Backend Layer (`/backend`)
+
+#### [MODIFY] [UserController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/UserController.java) & [UserService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/UserService.java)
+- Ensure Managers (`ROLE_MANAGER`) can view, edit, activate, and suspend regular team members (`ROLE_USER`), but block Managers from editing, suspending, or deleting Admins (`ROLE_ADMIN`).
+
+#### [NEW] [ManagerAnalyticsService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/ManagerAnalyticsService.java) & [ManagerAnalyticsController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/ManagerAnalyticsController.java)
+- Endpoint `GET /api/manager/dashboard`: Delivers Operations Control Center KPIs (Team Leads, Active Leads, Converted Leads, Pending Leads, Team Tasks, Completed Tasks, Team Conversion Rate, Team Productivity Score) and team workload widgets.
+- Endpoint `GET /api/manager/analytics`: Returns team lead funnel, task completion analytics, and user performance rankings.
+
+#### [MODIFY] [LeadQueueController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/LeadQueueController.java) & [LeadQueueService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/LeadQueueService.java)
+- Support Bulk Lead Assignment endpoint `POST /api/leads/queue/bulk-assign` for Managers and Admins.
+
+---
+
+### Frontend Layer (`/frontend`)
+
+#### [MODIFY] [ManagerDashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/dashboards/ManagerDashboard.tsx)
+- Enhance Operations Control Center with 8 Team KPI Cards, Team Workload & Availability widgets, Unassigned Lead Queue with Auto/Bulk Assign, Task Review & Approval queue, and Team Leaderboard.
+
+#### [MODIFY] [AdminDashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/dashboards/AdminDashboard.tsx)
+- Enhance Business Command Center with 9 Business KPI Cards (Total Leads, Total Revenue, Ad Spend, Total Conversions, ROAS, ROI, Net Profit, Active Users, Active Managers) and live Subsystem Health monitors.
+
+#### [MODIFY] [UserManagement.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/UserManagement.tsx)
+- Enforce Manager protection rules: Hide edit/suspend/delete actions when target user is an Admin.
+
+#### [MODIFY] [Sidebar.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/Sidebar.tsx)
+- Enforce exact role-based navigation item visibility for `ROLE_USER`, `ROLE_MANAGER`, and `ROLE_ADMIN`.
+
+---
+
+## Verification Plan
+
+### Automated Tests & Compilation
+1. Run Spring Boot compilation: `mvn compile -f backend/pom.xml`
+2. Run Frontend TypeScript check: `npx tsc --noEmit` inside `frontend/`
+3. Run Frontend production build check: `npm run build` inside `frontend/`
+
+### Manual Verification Matrix
+1. **Manager Protection Guard Test**: Log in as Manager -> Attempt to suspend/edit an Admin -> Verify action blocked and Admin remains untouched.
+2. **Bulk Lead Assignment Test**: Open Manager Dashboard -> Select multiple unassigned leads -> Click Bulk Assign to a team member -> Verify leads assigned.
+3. **Task Review & Approval Test**: Log in as Manager -> Review completed task submission -> Click Approve/Reject -> Verify status update broadcast via WebSocket.
+4. **Admin Command Center Test**: Log in as Admin -> Open `/dashboard` -> Verify Total Revenue, Ad Spend, Net Profit, ROAS, and System Health monitors.

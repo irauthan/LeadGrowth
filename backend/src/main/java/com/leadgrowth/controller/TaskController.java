@@ -33,6 +33,16 @@ public class TaskController {
         return ResponseEntity.ok(taskService.createTask(dto, email));
     }
 
+    @PostMapping("/convert-from-lead/{leadId}")
+    public ResponseEntity<TaskDto> convertFromLead(
+            @PathVariable Long leadId,
+            @RequestBody(required = false) java.util.Map<String, String> payload
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        String customTitle = payload != null ? payload.get("title") : null;
+        return ResponseEntity.ok(taskService.convertLeadToTask(leadId, customTitle, email));
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<TaskDto> updateTaskStatus(
             @PathVariable Long id,

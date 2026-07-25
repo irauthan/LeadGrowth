@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
     List<ActivityLog> findByWorkspaceIdOrderByCreatedAtDesc(Long workspaceId);
+    List<ActivityLog> findTop10ByWorkspaceIdOrderByCreatedAtDesc(Long workspaceId);
 
     @Modifying
     @Query("DELETE FROM ActivityLog al WHERE al.workspace.id = :workspaceId")

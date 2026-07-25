@@ -1,0 +1,85 @@
+# Implementation Plan — Lead Growth V3.0 Enterprise CRM Transformation
+
+This implementation plan details the transformation of Lead Growth into a full-fledged enterprise CRM and multi-tenant workforce platform matching HubSpot, Salesforce, and Zoho CRM standards across 16 core modules.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **V3.0 Enterprise Architecture Enhancements**:
+> 1. **Enterprise Invitation System**: `WorkspaceInvite` entity and repository for tokenized secure invitation links (`/invite/accept?token=...`), expiration management, and registration setup.
+> 2. **HubSpot-Style Lead Timeline Engine**: Chronological timeline of all events per lead (Created, Status Changed, Note Added, Call Made, Follow-up Scheduled, Converted) stored in `lead_activities` table.
+> 3. **AI Lead Scoring Engine**: Automated scoring algorithm computing 0-100 scores and tier classifications (`HOT` 🔥, `WARM` ☀️, `COLD` ❄️) based on source, interactions, and follow-ups.
+> 4. **Subscription & Billing Dashboard**: Workspace SaaS Plans (`FREE`, `PROFESSIONAL`, `ENTERPRISE`), usage tracking (Users, Leads, Campaigns), feature gating, and billing page.
+> 5. **Security Center**: Admin Security Dashboard displaying active user sessions, login audit history, and failed login attempt detection.
+> 6. **Interactive Task Kanban & Lead Timeline UI**: Enhanced visual cards and timeline components.
+
+---
+
+## Proposed Changes
+
+---
+
+### Backend Layer (`/backend`)
+
+#### [NEW] [WorkspaceInvite.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/entity/WorkspaceInvite.java) & [WorkspaceInviteRepository.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/repository/WorkspaceInviteRepository.java)
+- Entity for managing tokenized workspace invitations (`id`, `workspace`, `email`, `role`, `token`, `status`, `expiresAt`, `createdAt`).
+
+#### [NEW] [LeadActivity.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/entity/LeadActivity.java) & [LeadActivityRepository.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/repository/LeadActivityRepository.java)
+- Entity for storing lead activity timeline items (`id`, `lead`, `actor`, `activityType`, `title`, `description`, `createdAt`).
+
+#### [NEW] [LeadTimelineService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/LeadTimelineService.java) & [LeadTimelineController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/LeadTimelineController.java)
+- Service and controller for logging lead timeline events and fetching chronological activity history per lead.
+
+#### [NEW] [LeadScoringService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/LeadScoringService.java)
+- Service to compute AI Lead Quality scores (0-100), quality tiers (`HOT`, `WARM`, `COLD`), and conversion probabilities based on source platform, interaction history, and follow-ups.
+
+#### [NEW] [BillingService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/BillingService.java) & [BillingController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/BillingController.java)
+- Subscription plan management (`FREE`, `PROFESSIONAL`, `ENTERPRISE`), usage quota calculations, and billing plan upgrade/downgrade endpoints.
+
+#### [NEW] [SecurityCenterService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/SecurityCenterService.java) & [SecurityCenterController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/SecurityCenterController.java)
+- Admin Security Center endpoint providing active sessions count, failed login attempt alerts, and security logs.
+
+#### [NEW] [InviteService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/InviteService.java) & [InviteController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/InviteController.java)
+- Endpoints for creating invites (`POST /api/invites`), validating tokens (`GET /api/invites/validate`), and accepting invites (`POST /api/invites/accept`).
+
+---
+
+### Frontend Layer (`/frontend`)
+
+#### [NEW] [AcceptInvite.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/AcceptInvite.tsx)
+- Public invitation acceptance page validating invitation tokens and allowing new team members to set passwords and join workspaces.
+
+#### [NEW] [Billing.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Billing.tsx)
+- SaaS Billing & Subscription Dashboard showing current plan, user/lead usage gauges, plan feature comparison, and upgrade options.
+
+#### [NEW] [SecurityCenter.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/SecurityCenter.tsx)
+- Admin Security Dashboard featuring active session history, security log stream, and account lock alerts.
+
+#### [MODIFY] [Leads.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Leads.tsx)
+- Add HubSpot-style Lead Activity Timeline modal, AI Quality Score badge, and Add Activity Note drawer.
+
+#### [MODIFY] [Sidebar.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/Sidebar.tsx) & [App.tsx](file:///e:/WEB/LeadGrowth/frontend/src/App.tsx)
+- Add routes for `/billing`, `/security-center`, and `/invite/accept`.
+
+---
+
+## Verification Plan
+
+### Automated Tests & Compilation
+1. Run Spring Boot build check: `mvn compile -f backend/pom.xml`
+2. Run Frontend TypeScript check: `npx tsc --noEmit` inside `frontend/`
+3. Run Frontend production build check: `npm run build` inside `frontend/`
+
+### Manual Verification Matrix
+1. **Invite Acceptance Flow Test**:
+   - Create invite -> Generate token -> Navigate to `/invite/accept?token=...` -> Set Password -> Auto-join workspace.
+2. **Lead Activity Timeline Test**:
+   - Open lead details modal -> View chronological activity timeline -> Add activity note -> Verify live timeline update.
+3. **AI Lead Scoring Test**:
+   - Verify Lead Quality score (0-100) and Tier (`HOT` 🔥 / `WARM` ☀️ / `COLD` ❄️) update dynamically upon activity.
+4. **Subscription & Billing Dashboard Test**:
+   - Open `/billing` -> Check plan details, resource usage metrics, and upgrade tiers.
+5. **Security Center Test**:
+   - Open `/admin/security` -> Check active session monitors and security log feed.

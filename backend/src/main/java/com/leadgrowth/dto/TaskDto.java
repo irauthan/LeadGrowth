@@ -1,10 +1,13 @@
 package com.leadgrowth.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class TaskDto {
     private Long id;
+
+    @NotBlank(message = "Task title is required")
     private String title;
     private String description;
     private Long assignedToId;

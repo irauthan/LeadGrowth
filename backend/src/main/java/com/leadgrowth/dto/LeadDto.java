@@ -13,11 +13,15 @@ public class LeadDto {
     private String status; // New, Contacted, Qualified, Converted, Rejected
     private Long assignedToId;
     private String assignedToName;
+    private Integer qualityScore;
+    private String qualityTier; // HOT, WARM, COLD
+    private Double conversionProbability;
+    private String queueStatus; // IN_QUEUE, ASSIGNED, ARCHIVED
     private LocalDateTime createdAt;
 
     public LeadDto() {}
 
-    public LeadDto(Long id, String name, String email, String phone, String sourcePlatform, String campaignName, Long campaignId, String status, Long assignedToId, String assignedToName, LocalDateTime createdAt) {
+    public LeadDto(Long id, String name, String email, String phone, String sourcePlatform, String campaignName, Long campaignId, String status, Long assignedToId, String assignedToName, Integer qualityScore, String qualityTier, Double conversionProbability, String queueStatus, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -28,6 +32,10 @@ public class LeadDto {
         this.status = status;
         this.assignedToId = assignedToId;
         this.assignedToName = assignedToName;
+        this.qualityScore = qualityScore;
+        this.qualityTier = qualityTier;
+        this.conversionProbability = conversionProbability;
+        this.queueStatus = queueStatus;
         this.createdAt = createdAt;
     }
 
@@ -61,6 +69,18 @@ public class LeadDto {
     public String getAssignedToName() { return assignedToName; }
     public void setAssignedToName(String assignedToName) { this.assignedToName = assignedToName; }
 
+    public Integer getQualityScore() { return qualityScore; }
+    public void setQualityScore(Integer qualityScore) { this.qualityScore = qualityScore; }
+
+    public String getQualityTier() { return qualityTier; }
+    public void setQualityTier(String qualityTier) { this.qualityTier = qualityTier; }
+
+    public Double getConversionProbability() { return conversionProbability; }
+    public void setConversionProbability(Double conversionProbability) { this.conversionProbability = conversionProbability; }
+
+    public String getQueueStatus() { return queueStatus; }
+    public void setQueueStatus(String queueStatus) { this.queueStatus = queueStatus; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -80,6 +100,10 @@ public class LeadDto {
         private String status;
         private Long assignedToId;
         private String assignedToName;
+        private Integer qualityScore;
+        private String qualityTier;
+        private Double conversionProbability;
+        private String queueStatus;
         private LocalDateTime createdAt;
 
         LeadDtoBuilder() {}
@@ -94,10 +118,14 @@ public class LeadDto {
         public LeadDtoBuilder status(String status) { this.status = status; return this; }
         public LeadDtoBuilder assignedToId(Long assignedToId) { this.assignedToId = assignedToId; return this; }
         public LeadDtoBuilder assignedToName(String assignedToName) { this.assignedToName = assignedToName; return this; }
+        public LeadDtoBuilder qualityScore(Integer qualityScore) { this.qualityScore = qualityScore; return this; }
+        public LeadDtoBuilder qualityTier(String qualityTier) { this.qualityTier = qualityTier; return this; }
+        public LeadDtoBuilder conversionProbability(Double conversionProbability) { this.conversionProbability = conversionProbability; return this; }
+        public LeadDtoBuilder queueStatus(String queueStatus) { this.queueStatus = queueStatus; return this; }
         public LeadDtoBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public LeadDto build() {
-            return new LeadDto(id, name, email, phone, sourcePlatform, campaignName, campaignId, status, assignedToId, assignedToName, createdAt);
+            return new LeadDto(id, name, email, phone, sourcePlatform, campaignName, campaignId, status, assignedToId, assignedToName, qualityScore, qualityTier, conversionProbability, queueStatus, createdAt);
         }
     }
 }

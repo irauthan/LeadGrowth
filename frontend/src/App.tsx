@@ -19,6 +19,11 @@ import UserManagement from './pages/UserManagement';
 import WorkspaceManagement from './pages/WorkspaceManagement';
 import ApiManagement from './pages/ApiManagement';
 import SystemMonitoring from './pages/SystemMonitoring';
+import Followups from './pages/Followups';
+import AuditLogsView from './pages/AuditLogsView';
+import AcceptInvite from './pages/AcceptInvite';
+import Billing from './pages/Billing';
+import SecurityCenter from './pages/SecurityCenter';
 
 export default function App() {
   return (
@@ -27,6 +32,7 @@ export default function App() {
         {/* Guest access routes */}
         <Route path="/" element={<Welcome />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/invite/accept" element={<AcceptInvite />} />
         
         {/* Protected onboarding flow */}
         <Route path="/onboarding" element={<Onboarding />} />
@@ -36,12 +42,14 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/leads" element={<Leads />} />
+          <Route path="/followups" element={<Followups />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/users" element={<Users />} />
           <Route path="/activity-logs" element={<ActivityLogs />} />
           <Route path="/notifications-page" element={<NotificationsPage />} />
+          <Route path="/billing" element={<Billing />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/profile" element={<Profile />} />
@@ -51,6 +59,8 @@ export default function App() {
           <Route path="/admin/workspace" element={<WorkspaceManagement />} />
           <Route path="/admin/api" element={<ApiManagement />} />
           <Route path="/admin/system" element={<SystemMonitoring />} />
+          <Route path="/admin/security" element={<SecurityCenter />} />
+          <Route path="/admin/audit-logs" element={<AuditLogsView />} />
         </Route>
 
         {/* Fallback route */}

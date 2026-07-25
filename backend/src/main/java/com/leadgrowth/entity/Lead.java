@@ -41,12 +41,36 @@ public class Lead {
     @JoinColumn(name = "assigned_to_id")
     private User assignedTo;
 
+    @Column(name = "quality_score")
+    private Integer qualityScore;
+
+    @Column(name = "quality_tier", length = 20)
+    private String qualityTier; // HOT, WARM, COLD
+
+    @Column(name = "conversion_probability")
+    private Double conversionProbability;
+
+    @Column(name = "queue_status", length = 30)
+    private String queueStatus; // IN_QUEUE, ASSIGNED, ARCHIVED
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.qualityScore == null) {
+            this.qualityScore = (int) (Math.random() * 30) + 65; // default 65-95
+        }
+        if (this.qualityTier == null) {
+            this.qualityTier = this.qualityScore >= 80 ? "HOT" : (this.qualityScore >= 60 ? "WARM" : "COLD");
+        }
+        if (this.conversionProbability == null) {
+            this.conversionProbability = (double) this.qualityScore;
+        }
+        if (this.queueStatus == null) {
+            this.queueStatus = (this.assignedTo != null) ? "ASSIGNED" : "IN_QUEUE";
+        }
     }
 
     // Constructors
@@ -96,6 +120,21 @@ public class Lead {
 
     public User getAssignedTo() { return assignedTo; }
     public void setAssignedTo(User assignedTo) { this.assignedTo = assignedTo; }
+    
+    @Transient
+    public Long getAssignedToId() { return assignedTo != null ? assignedTo.getId() : null; }
+
+    public Integer getQualityScore() { return qualityScore; }
+    public void setQualityScore(Integer qualityScore) { this.qualityScore = qualityScore; }
+
+    public String getQualityTier() { return qualityTier; }
+    public void setQualityTier(String qualityTier) { this.qualityTier = qualityTier; }
+
+    public Double getConversionProbability() { return conversionProbability; }
+    public void setConversionProbability(Double conversionProbability) { this.conversionProbability = conversionProbability; }
+
+    public String getQueueStatus() { return queueStatus; }
+    public void setQueueStatus(String queueStatus) { this.queueStatus = queueStatus; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

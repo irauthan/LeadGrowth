@@ -52,9 +52,13 @@ export interface Lead {
   sourcePlatform: string;
   campaignName: string;
   campaignId?: number;
-  status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Rejected';
+  status: 'New' | 'Contacted' | 'Interested' | 'Follow-Up' | 'Qualified' | 'Converted' | 'Rejected' | 'Lost';
   assignedToId?: number;
   assignedToName?: string;
+  qualityScore?: number;
+  qualityTier?: string;
+  conversionProbability?: number;
+  queueStatus?: string;
   createdAt: string;
 }
 

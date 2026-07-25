@@ -2,6 +2,7 @@ package com.leadgrowth.service;
 
 import com.leadgrowth.dto.TaskDto;
 import com.leadgrowth.entity.Task;
+import com.leadgrowth.entity.Lead;
 import com.leadgrowth.entity.User;
 import com.leadgrowth.entity.TaskAssignment;
 import com.leadgrowth.entity.AssignmentLog;
@@ -28,6 +29,7 @@ public class TaskService {
     private final TaskAssignmentRepository taskAssignmentRepository;
     private final AssignmentLogRepository assignmentLogRepository;
     private final NotificationRepository notificationRepository;
+    private final LeadRepository leadRepository;
     private final WebSocketManager webSocketManager;
 
     public TaskService(
@@ -36,6 +38,7 @@ public class TaskService {
             TaskAssignmentRepository taskAssignmentRepository,
             AssignmentLogRepository assignmentLogRepository,
             NotificationRepository notificationRepository,
+            LeadRepository leadRepository,
             WebSocketManager webSocketManager
     ) {
         this.taskRepository = taskRepository;
@@ -43,6 +46,7 @@ public class TaskService {
         this.taskAssignmentRepository = taskAssignmentRepository;
         this.assignmentLogRepository = assignmentLogRepository;
         this.notificationRepository = notificationRepository;
+        this.leadRepository = leadRepository;
         this.webSocketManager = webSocketManager;
     }
 
@@ -600,6 +604,39 @@ public class TaskService {
         TaskDto resultDto = convertToDto(saved);
         webSocketManager.broadcastTask(task.getWorkspace().getId(), resultDto);
         return resultDto;
+    }
+
+    @Transactional
+    public TaskDto convertLeadToTask(Long leadId, String customTitle, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
+
+        String title = (customTitle != null && !customTitle.isBlank()) ? customTitle : "Follow up with " + lead.getName();
+        String description = "Converted from Lead: " + lead.getName() + " (" + lead.getEmail() + "). Source: " + lead.getSourcePlatform();
+
+        Task task = Task.builder()
+                .title(title)
+                .description(description)
+                .assignedTo(user)
+                .assignedBy(user)
+                .workspace(user.getWorkspace())
+                .dueDate(java.time.LocalDate.now().plusDays(2))
+                .priority("HIGH")
+                .status("Pending")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        Task saved = taskRepository.save(task);
+
+        // Update lead status to Contacted/Interested
+        lead.setStatus("Interested");
+        leadRepository.save(lead);
+
+        TaskDto dto = convertToDto(saved);
+        webSocketManager.broadcastTask(user.getWorkspace().getId(), dto);
+        return dto;
     }
 
     private TaskDto convertToDto(Task task) {

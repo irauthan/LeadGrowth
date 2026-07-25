@@ -6,6 +6,7 @@ const ALL_DEFAULT_ITEMS = [
   '/dashboard',
   '/campaigns',
   '/leads',
+  '/followups',
   '/analytics',
   '/reports',
   '/tasks',
@@ -16,7 +17,8 @@ const ALL_DEFAULT_ITEMS = [
   '/admin/users',
   '/admin/workspace',
   '/admin/api',
-  '/admin/system'
+  '/admin/system',
+  '/admin/audit-logs'
 ];
 
 interface LayoutState {

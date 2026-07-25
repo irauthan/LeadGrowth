@@ -13,7 +13,8 @@ import {
   Loader2,
   Phone,
   Mail,
-  User as UserIcon
+  User as UserIcon,
+  CheckSquare
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 
@@ -26,6 +27,7 @@ export default function Leads() {
   // Selected Lead state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
+  const [timeline, setTimeline] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
 
   // Search & Filter state
@@ -90,8 +92,12 @@ export default function Leads() {
 
   const fetchNotes = async (leadId: number) => {
     try {
-      const res = await api.get(`/api/leads/${leadId}/notes`);
-      setNotes(res.data);
+      const [notesRes, timelineRes] = await Promise.all([
+        api.get(`/api/leads/${leadId}/notes`),
+        api.get(`/api/leads/${leadId}/timeline`).catch(() => ({ data: [] }))
+      ]);
+      setNotes(notesRes.data);
+      setTimeline(timelineRes.data || []);
     } catch (e) {
       console.error(e);
     }
@@ -168,10 +174,28 @@ export default function Leads() {
 
     try {
       await api.post(`/api/leads/${selectedLead.id}/notes`, { note: newNote });
+      await api.post(`/api/leads/${selectedLead.id}/timeline/notes`, { title: 'Activity Note Added', description: newNote }).catch(() => {});
       setNewNote('');
       fetchNotes(selectedLead.id);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleConvertToTask = async () => {
+    if (!selectedLead) return;
+    try {
+      const res = await api.post(`/api/tasks/convert-from-lead/${selectedLead.id}`, {
+        title: `Follow up with ${selectedLead.name}`
+      });
+      alert(`Task "${res.data.title}" successfully created and assigned to you!`);
+      
+      const updatedLead = { ...selectedLead, status: 'Interested' as const };
+      setSelectedLead(updatedLead);
+      setLeads((prev) => prev.map((l) => (l.id === selectedLead.id ? updatedLead : l)));
+      fetchNotes(selectedLead.id);
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Failed to convert lead to task.');
     }
   };
 
@@ -364,8 +388,15 @@ export default function Leads() {
                   <p className="text-xs text-theme-text-muted mt-1">Captured via {selectedLead.campaignName || 'Direct Intake'}</p>
                 </div>
 
-                {/* Status selector */}
+                {/* Status selector & Actions */}
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleConvertToTask}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover text-xs font-bold text-white shadow transition-all"
+                  >
+                    <CheckSquare size={14} /> Convert To Task
+                  </button>
+
                   <span className="text-xs font-bold text-theme-text-muted uppercase tracking-wider">Status:</span>
                   <select
                     value={selectedLead.status}
@@ -374,8 +405,11 @@ export default function Leads() {
                   >
                     <option value="New">New</option>
                     <option value="Contacted">Contacted</option>
+                    <option value="Interested">Interested</option>
+                    <option value="Follow-Up">Follow-Up</option>
                     <option value="Qualified">Qualified</option>
                     <option value="Converted">Converted</option>
+                    <option value="Lost">Lost</option>
                     <option value="Rejected">Rejected</option>
                   </select>
                 </div>
@@ -449,24 +483,42 @@ export default function Leads() {
                   </button>
                 </form>
 
-                {/* Timeline display */}
+                {/* Timeline & Notes Activity History */}
                 <div className="space-y-4 pt-2">
-                  {notes.map((note) => (
-                    <div key={note.id} className="flex gap-3">
-                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text-muted">
-                        {note.user?.fullName ? note.user.fullName[0].toUpperCase() : 'U'}
-                      </div>
-                      <div className="rounded-2xl bg-theme-bg-alt/50 p-4 border border-theme-border flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-bold text-theme-text">{note.user?.fullName}</span>
-                          <span className="text-[10px] text-theme-text-muted">{formatDate(note.createdAt)}</span>
+                  {timeline.length > 0 ? (
+                    timeline.map((item: any) => (
+                      <div key={item.id} className="flex gap-3">
+                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs font-extrabold text-cyan-400">
+                          {item.actorName ? item.actorName[0].toUpperCase() : 'S'}
                         </div>
-                        <p className="text-xs text-theme-text-muted leading-normal">{note.note}</p>
+                        <div className="rounded-2xl bg-theme-bg-alt/50 p-4 border border-theme-border flex-1">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-theme-text">{item.title}</span>
+                            <span className="text-[10px] font-mono text-theme-text-muted">{item.createdAt ? formatDate(item.createdAt) : 'Recent'}</span>
+                          </div>
+                          <p className="text-xs text-theme-text-muted leading-normal">{item.description}</p>
+                          <span className="text-[9px] text-theme-text-muted mt-1 block">By {item.actorName}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {notes.length === 0 && (
-                    <p className="text-center text-xs text-theme-text-muted py-6">No notes added yet. Record interactions to keep team updated.</p>
+                    ))
+                  ) : (
+                    notes.map((note) => (
+                      <div key={note.id} className="flex gap-3">
+                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text-muted">
+                          {note.user?.fullName ? note.user.fullName[0].toUpperCase() : 'U'}
+                        </div>
+                        <div className="rounded-2xl bg-theme-bg-alt/50 p-4 border border-theme-border flex-1">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-theme-text">{note.user?.fullName}</span>
+                            <span className="text-[10px] text-theme-text-muted">{formatDate(note.createdAt)}</span>
+                          </div>
+                          <p className="text-xs text-theme-text-muted leading-normal">{note.note}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {timeline.length === 0 && notes.length === 0 && (
+                    <p className="text-center text-xs text-theme-text-muted py-6">No activity history recorded yet. Add notes to update team timeline.</p>
                   )}
                 </div>
               </div>

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import type { AppTheme } from '../store/themeStore';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { 
   Bell, 
   Search, 
@@ -32,6 +33,15 @@ export default function Navbar() {
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+
+  const navbarActionsRef = useRef<HTMLDivElement>(null);
+  useClickOutside(navbarActionsRef, () => {
+    setShowNotifications(false);
+    setShowProfileMenu(false);
+    setShowThemeMenu(false);
+    setShowQuickActions(false);
+    setShowSearchResults(false);
+  });
 
   const statusOptions = [
     { value: 'AVAILABLE', label: 'Available', color: 'bg-emerald-500' },
@@ -248,7 +258,7 @@ export default function Navbar() {
         </div>
 
         {/* Right Section: Global Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div ref={navbarActionsRef} className="flex items-center gap-2 sm:gap-3">
           {/* Mobile Search Button */}
           <button
             onClick={() => setShowMobileSearch(true)}

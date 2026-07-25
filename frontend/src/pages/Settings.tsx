@@ -99,6 +99,9 @@ export default function Settings() {
     { id: 'purple', name: 'Royal Velvet', desc: 'Vibrant neon purple accents.', bg: 'bg-[#0D0714]', text: 'text-purple-200', previewBg: 'from-purple-600 to-pink-500' },
   ];
 
+  const isAdmin = user?.roles.includes('ROLE_ADMIN');
+  const isManager = user?.roles.includes('ROLE_MANAGER');
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row gap-6">
@@ -113,8 +116,9 @@ export default function Settings() {
             }`}
           >
             <User size={16} />
-            Profile Settings
+            Personal Profile
           </button>
+
           <button
             onClick={() => setActiveTab('appearance')}
             className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
@@ -126,6 +130,7 @@ export default function Settings() {
             <Palette size={16} />
             Theme & Appearance
           </button>
+
           <button
             onClick={() => setActiveTab('security')}
             className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
@@ -137,6 +142,7 @@ export default function Settings() {
             <Lock size={16} />
             Security & Passwords
           </button>
+
           <button
             onClick={() => setActiveTab('notifications')}
             className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
@@ -146,19 +152,23 @@ export default function Settings() {
             }`}
           >
             <Bell size={16} />
-            Notification Rules
+            {isManager || isAdmin ? 'Team & Notification Rules' : 'Personal Notifications'}
           </button>
-          <button
-            onClick={() => setActiveTab('workspace')}
-            className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              activeTab === 'workspace'
-                ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/10'
-                : 'text-theme-text-muted hover:bg-theme-bg-alt hover:text-theme-text'
-            }`}
-          >
-            <Building size={16} />
-            Workspace Info
-          </button>
+
+          {/* Admin Only Workspace Controls Tab */}
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('workspace')}
+              className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
+                activeTab === 'workspace'
+                  ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/10'
+                  : 'text-theme-text-muted hover:bg-theme-bg-alt hover:text-theme-text'
+              }`}
+            >
+              <Building size={16} />
+              Workspace Controls (Admin Only)
+            </button>
+          )}
         </div>
 
         {/* Content Container */}
@@ -291,54 +301,56 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Navbar Items Customization Section */}
-              <div className="pt-6 border-t border-theme-border/40 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <h4 className="text-sm font-bold text-theme-text">Navbar & Sidebar Items Customization</h4>
-                    <p className="text-xs text-theme-text-muted">Select which items to show or hide in your navigation menu.</p>
+              {/* Navbar Items Customization Section - Admin Only */}
+              {isAdmin && (
+                <div className="pt-6 border-t border-theme-border/40 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-bold text-theme-text">Navbar & Sidebar Items Customization (Admin Control)</h4>
+                      <p className="text-xs text-theme-text-muted">Select which items to show or hide in your navigation menu.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={resetNavItems}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-semibold text-theme-text hover:bg-theme-border/20 transition-all self-start sm:self-auto"
+                    >
+                      <RotateCcw size={14} />
+                      Reset Default
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={resetNavItems}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-semibold text-theme-text hover:bg-theme-border/20 transition-all self-start sm:self-auto"
-                  >
-                    <RotateCcw size={14} />
-                    Reset Default
-                  </button>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                  {allNavItemsList.map((item) => {
-                    const isEnabled = enabledNavItems.includes(item.id);
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => toggleNavItem(item.id)}
-                        className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all ${
-                          isEnabled
-                            ? 'border-theme-primary/40 bg-theme-primary/5 text-theme-text ring-1 ring-theme-primary/20'
-                            : 'border-theme-border/30 bg-theme-bg-alt/20 opacity-50 hover:opacity-80 text-theme-text-muted'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className={`h-2.5 w-2.5 rounded-full ${isEnabled ? 'bg-theme-primary' : 'bg-slate-500'}`} />
-                          <div>
-                            <span className="text-xs font-bold block">{item.label}</span>
-                            <span className="text-[9px] text-theme-text-muted font-semibold">{item.category}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {allNavItemsList.map((item) => {
+                      const isEnabled = enabledNavItems.includes(item.id);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => toggleNavItem(item.id)}
+                          className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all ${
+                            isEnabled
+                              ? 'border-theme-primary/40 bg-theme-primary/5 text-theme-text ring-1 ring-theme-primary/20'
+                              : 'border-theme-border/30 bg-theme-bg-alt/20 opacity-50 hover:opacity-80 text-theme-text-muted'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className={`h-2.5 w-2.5 rounded-full ${isEnabled ? 'bg-theme-primary' : 'bg-slate-500'}`} />
+                            <div>
+                              <span className="text-xs font-bold block">{item.label}</span>
+                              <span className="text-[9px] text-theme-text-muted font-semibold">{item.category}</span>
+                            </div>
                           </div>
-                        </div>
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase ${
-                          isEnabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-400'
-                        }`}>
-                          {isEnabled ? 'Shown' : 'Hidden'}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase ${
+                            isEnabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-400'
+                          }`}>
+                            {isEnabled ? 'Shown' : 'Hidden'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
 

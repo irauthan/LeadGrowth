@@ -20,6 +20,10 @@ import {
   ChevronRight,
   TrendingUp,
   Building,
+  Clock,
+  ShieldAlert,
+  CreditCard,
+  ShieldCheck,
   X
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -32,6 +36,7 @@ export default function Sidebar() {
   const user = useAuthStore((state) => state.user);
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
+  const isManager = user?.roles.includes('ROLE_MANAGER');
   const isHorizontal = sidebarPosition === 'top' || sidebarPosition === 'bottom';
 
   const getSidebarPlacement = () => {
@@ -55,24 +60,30 @@ export default function Sidebar() {
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Leads', icon: UserCheck, path: '/leads' },
+    { name: 'Follow-ups', icon: Clock, path: '/followups' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
     { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
     { name: 'Team Management', icon: Users, path: '/users' },
     { name: 'Activity Logs', icon: History, path: '/activity-logs' },
     { name: 'Notifications', icon: Bell, path: '/notifications-page' },
+    { name: 'SaaS Billing', icon: CreditCard, path: '/billing' },
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
   const adminMenu = [
-    { name: 'User Management', icon: UserCog, path: '/admin/users' },
-    { name: 'Workspace Management', icon: Building2, path: '/admin/workspace' },
-    { name: 'API Management', icon: Key, path: '/admin/api' },
-    { name: 'System Monitoring', icon: Activity, path: '/admin/system' },
+    { name: 'User Management', icon: UserCog, path: '/admin/users', adminOnly: false },
+    { name: 'Workspace Management', icon: Building2, path: '/admin/workspace', adminOnly: true },
+    { name: 'API Management', icon: Key, path: '/admin/api', adminOnly: true },
+    { name: 'System Monitoring', icon: Activity, path: '/admin/system', adminOnly: true },
+    { name: 'Security Center', icon: ShieldCheck, path: '/admin/security', adminOnly: true },
+    { name: 'Audit Logs', icon: ShieldAlert, path: '/admin/audit-logs', adminOnly: true },
   ];
 
-  const visibleGeneralMenu = generalMenu.filter(item => enabledNavItems.includes(item.path));
-  const visibleAdminMenu = adminMenu.filter(item => enabledNavItems.includes(item.path));
+  const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
+  const restrictedPaths = isUserOnly ? ['/billing', '/users', '/activity-logs'] : (!isAdmin ? ['/billing'] : []);
+  const visibleGeneralMenu = generalMenu.filter(item => enabledNavItems.includes(item.path) && !restrictedPaths.includes(item.path));
+  const visibleAdminMenu = adminMenu.filter(item => enabledNavItems.includes(item.path) && (isAdmin || (!item.adminOnly && isManager)));
 
   const getInitials = (name?: string) => {
     return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
@@ -334,11 +345,11 @@ export default function Sidebar() {
               })}
             </div>
 
-            {/* Admin only items */}
-            {isAdmin && visibleAdminMenu.length > 0 && (
+            {/* Admin and Management items */}
+            {(isAdmin || isManager) && visibleAdminMenu.length > 0 && (
               <div className="space-y-1 pt-2 border-t border-theme-border/30">
                 {(!isCollapsed || isMobileOpen) && (
-                  <span className="px-4 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Admin Only</span>
+                  <span className="px-4 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Management</span>
                 )}
                 {visibleAdminMenu.map((item) => {
                   const isActive = location.pathname === item.path;

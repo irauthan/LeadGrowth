@@ -100,111 +100,86 @@ export default function Welcome() {
       <div className="relative z-20">
 
         {/* Header */}
-
         <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7">
-
           <div className="flex items-center gap-3">
-
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white shadow-xl">
-
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#0F4C81] to-[#1D9BF0] text-white shadow-xl">
               <TrendingUp size={22} />
-
             </div>
-
             <div>
-
-              <h1 className="text-xl font-black tracking-tight">
-
+              <h1 className="text-xl font-black tracking-tight text-[#0F4C81]">
                 Lead Growth
-
               </h1>
-
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-
-                Marketing Intelligence Platform
-
+              <p className="text-xs text-slate-500 font-semibold">
+                Enterprise Marketing Intelligence Platform
               </p>
-
             </div>
-
           </div>
 
           <Link
             to="/auth"
-            className="rounded-2xl border border-slate-300 bg-white px-6 py-3 font-semibold shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            className="rounded-2xl bg-[#0F4C81] text-white px-6 py-3 font-semibold shadow-lg shadow-[#0F4C81]/20 transition-all duration-300 hover:-translate-y-1 hover:bg-[#0A365C]"
           >
-            Sign In
+            Sign In to Workspace
           </Link>
-
         </header>
 
         <main className="mx-auto max-w-7xl px-6">
-                    <motion.div
+          <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="flex flex-col items-center pt-10 pb-24 text-center lg:pt-20"
+            className="flex flex-col items-center pt-10 pb-24 text-center lg:pt-16"
           >
             {/* Badge */}
             <motion.div
               variants={itemVariants}
-              className="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-5 py-2 text-sm font-semibold text-brand-600 backdrop-blur dark:text-brand-400"
+              className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#0F4C81]/20 bg-[#0F4C81]/10 px-5 py-2 text-xs font-bold text-[#0F4C81]"
             >
-              <Sparkles size={15} />
-              <span>One Dashboard • Every Lead • Maximum Growth</span>
+              <Sparkles size={15} className="text-[#00C2A8]" />
+              <span>One Unified Dashboard • Every Lead • Enterprise SaaS Growth</span>
             </motion.div>
 
             {/* Heading */}
             <motion.h1
               variants={itemVariants}
-              className="max-w-5xl text-5xl font-black leading-tight tracking-tight text-slate-900 dark:text-white sm:text-6xl lg:text-7xl"
+              className="max-w-5xl text-5xl font-black leading-tight tracking-tight text-[#0F4C81] sm:text-6xl lg:text-7xl"
             >
               Grow Your Business
-
               <br />
-
-              {/* antialiased + text-stroke removes the whitish halo that shows up on
-                  bold gradient-clipped glyphs (most visible on curved letters like "S") */}
-             <span
-  className="bg-purple-500 bg-clip-text text-transparent"
-  style={{ WebkitTextFillColor: "transparent" }}
->
-  Smarter Than Ever
-</span>
+              <span className="bg-gradient-to-r from-[#1D9BF0] to-[#00C2A8] bg-clip-text text-transparent">
+                Smarter & Faster Than Ever
+              </span>
             </motion.h1>
 
             {/* Subtitle */}
             <motion.p
               variants={itemVariants}
-              className="mt-8 max-w-3xl text-xl leading-9 text-slate-600 dark:text-slate-400"
+              className="mt-8 max-w-3xl text-lg font-medium leading-8 text-slate-600"
             >
-              Manage campaigns, monitor marketing performance,
-              organize leads, collaborate with your team and increase
-              revenue — all from one modern dashboard.
+              Manage campaigns, monitor marketing performance, organize leads with automated RBAC distribution, collaborate with your team and scale revenue — all from one modern SaaS platform.
             </motion.p>
 
             {/* Buttons */}
             <motion.div
               variants={itemVariants}
-              className="mt-12 flex flex-wrap justify-center gap-5"
+              className="mt-10 flex flex-wrap justify-center gap-5"
             >
-          <Link
-  to="/auth"
-  className="group flex items-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-400 px-9 py-4 font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:scale-105 shadow-none ring-0 outline-none border-0"
->
-  Get Started
-
-  <ArrowRight
-    size={18}
-    className="transition-transform duration-300 group-hover:translate-x-1"
-  />
-</Link>
+              <Link
+                to="/auth"
+                className="group flex items-center gap-2 rounded-2xl bg-[#0F4C81] hover:bg-[#0A365C] px-9 py-4 font-bold text-white transition-all duration-300 hover:-translate-y-1 shadow-lg shadow-[#0F4C81]/25"
+              >
+                Access Dashboard
+                <ArrowRight
+                  size={18}
+                  className="transition-transform duration-300 group-hover:translate-x-1"
+                />
+              </Link>
 
               <a
                 href="#features"
-                className="rounded-2xl border border-slate-300 bg-white px-9 py-4 font-semibold shadow-lg transition-all duration-300 hover:-translate-y-1 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+                className="rounded-2xl border border-slate-300 bg-white px-9 py-4 font-bold text-slate-700 shadow-md transition-all duration-300 hover:-translate-y-1 hover:bg-slate-50"
               >
-                Explore Features
+                Explore Platform Capabilities
               </a>
             </motion.div>
 

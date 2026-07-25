@@ -26,6 +26,9 @@ public class Campaign {
     private String status;
 
     @Column(precision = 12, scale = 2)
+    private BigDecimal budget = BigDecimal.ZERO;
+
+    @Column(precision = 12, scale = 2)
     private BigDecimal spend = BigDecimal.ZERO;
 
     @Column
@@ -49,6 +52,7 @@ public class Campaign {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.budget == null) this.budget = BigDecimal.ZERO;
         if (this.spend == null) this.spend = BigDecimal.ZERO;
         if (this.clicks == null) this.clicks = 0;
         if (this.impressions == null) this.impressions = 0;
@@ -90,6 +94,9 @@ public class Campaign {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public BigDecimal getBudget() { return budget != null ? budget : BigDecimal.ZERO; }
+    public void setBudget(BigDecimal budget) { this.budget = budget; }
 
     public BigDecimal getSpend() { return spend; }
     public void setSpend(BigDecimal spend) { this.spend = spend; }

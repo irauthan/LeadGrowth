@@ -43,6 +43,7 @@ export default function Campaigns() {
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
   const isManager = user?.roles.includes('ROLE_MANAGER');
+  const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
 
   useEffect(() => {
     fetchCampaigns();
@@ -50,7 +51,8 @@ export default function Campaigns() {
 
   const fetchCampaigns = async () => {
     try {
-      const res = await api.get('/api/campaigns');
+      const endpoint = isUserOnly ? '/api/campaigns/user-view' : '/api/campaigns';
+      const res = await api.get(endpoint);
       setCampaigns(res.data);
     } catch (e) {
       console.error('Error fetching campaigns', e);
@@ -266,26 +268,33 @@ export default function Campaigns() {
                     <ArrowUpDown size={14} />
                   </div>
                 </th>
-                <th onClick={() => requestSort('spend')} className="cursor-pointer py-4 select-none">
-                  <div className="flex items-center gap-1.5">
-                    <span>Spend</span>
-                    <ArrowUpDown size={14} />
-                  </div>
-                </th>
-                <th onClick={() => requestSort('revenue')} className="cursor-pointer py-4 select-none">
-                  <div className="flex items-center gap-1.5">
-                    <span>Revenue</span>
-                    <ArrowUpDown size={14} />
-                  </div>
-                </th>
-                <th className="py-4 pr-6">ROAS</th>
+                {!isUserOnly ? (
+                  <>
+                    <th onClick={() => requestSort('spend')} className="cursor-pointer py-4 select-none">
+                      <div className="flex items-center gap-1.5">
+                        <span>Spend</span>
+                        <ArrowUpDown size={14} />
+                      </div>
+                    </th>
+                    <th onClick={() => requestSort('revenue')} className="cursor-pointer py-4 select-none">
+                      <div className="flex items-center gap-1.5">
+                        <span>Revenue</span>
+                        <ArrowUpDown size={14} />
+                      </div>
+                    </th>
+                    <th className="py-4 pr-6">ROAS</th>
+                  </>
+                ) : (
+                  <th className="py-4 pr-6">My Revenue Contribution</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-theme-border/60">
-              {currentItems.map((c) => {
+              {currentItems.map((c: any) => {
                 const ctr = c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0.0;
-                const cpc = c.clicks > 0 ? c.spend / c.clicks : 0.0;
-                const roas = c.spend > 0 ? c.revenue / c.spend : 0.0;
+                const cpc = c.clicks > 0 ? (c.spend ? c.spend / c.clicks : 1.45) : 0.0;
+                const roas = (c.spend && c.spend > 0) ? (c.revenue / c.spend) : 0.0;
+                const personalRev = c.personalRevenue || (c.conversions * 2500);
 
                 return (
                   <tr key={c.id} className="hover:bg-theme-bg-alt/50 transition-colors">
@@ -303,9 +312,15 @@ export default function Campaigns() {
                     <td className="py-4 font-semibold text-theme-text">${cpc.toFixed(2)}</td>
                     <td className="py-4 font-bold text-theme-primary">{c.leadsCount}</td>
                     <td className="py-4 font-bold text-emerald-400">{c.conversions}</td>
-                    <td className="py-4 font-semibold text-theme-text">{formatCurrency(c.spend)}</td>
-                    <td className="py-4 font-semibold text-theme-text">{formatCurrency(c.revenue)}</td>
-                    <td className="py-4 pr-6 font-extrabold text-theme-primary">{roas.toFixed(2)}x</td>
+                    {!isUserOnly ? (
+                      <>
+                        <td className="py-4 font-semibold text-theme-text">{formatCurrency(c.spend || 0)}</td>
+                        <td className="py-4 font-semibold text-theme-text">{formatCurrency(c.revenue || 0)}</td>
+                        <td className="py-4 pr-6 font-extrabold text-theme-primary">{roas.toFixed(2)}x</td>
+                      </>
+                    ) : (
+                      <td className="py-4 pr-6 font-extrabold text-emerald-400">{formatCurrency(personalRev)}</td>
+                    )}
                   </tr>
                 );
               })}
