@@ -136,7 +136,7 @@ export default function Navbar() {
       const path = '/' + segments.slice(0, idx + 1).join('/');
       let label = seg.charAt(0).toUpperCase() + seg.slice(1);
       if (seg === 'dashboard') label = 'Dashboard';
-      else if (seg === 'my-work') label = 'My Pipeline';
+      else if (seg === 'my-work') label = 'Pipelines';
       else if (seg === 'campaigns') label = 'Campaigns';
       else if (seg === 'leads') label = 'Leads';
       else if (seg === 'followups') label = 'Follow-ups';

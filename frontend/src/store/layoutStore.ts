@@ -49,6 +49,9 @@ const getSavedNavItems = (): string[] => {
     try {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        if (!parsed.includes('/my-work')) {
+          parsed.splice(1, 0, '/my-work');
+        }
         return parsed;
       }
     } catch (e) {

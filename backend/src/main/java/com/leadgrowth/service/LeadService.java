@@ -217,7 +217,11 @@ public class LeadService {
         }
 
         lead.setAssignedTo(assignTarget);
-        lead.setQueueStatus("ASSIGNED");
+        if (assignTarget != null && assignTarget.getId().equals(user.getId())) {
+            lead.setQueueStatus("IN_PIPELINE");
+        } else {
+            lead.setQueueStatus("ASSIGNED");
+        }
         if (assignTarget != null && assignTarget.getWorkspace() != null) {
             lead.setWorkspace(assignTarget.getWorkspace());
         }
@@ -595,5 +599,63 @@ public class LeadService {
         dto.setCreatedAt(lead.getCreatedAt());
 
         return dto;
+    }
+
+    @Transactional
+    public LeadDto addToPipeline(Long leadId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found with id: " + leadId));
+
+        if (lead.getAssignedTo() == null) {
+            lead.setAssignedTo(user);
+        }
+        lead.setQueueStatus("IN_PIPELINE");
+        if (lead.getWorkspace() == null && user.getWorkspace() != null) {
+            lead.setWorkspace(user.getWorkspace());
+        }
+        Lead saved = leadRepository.save(lead);
+
+        LeadDto resultDto = convertToDto(saved);
+        try {
+            if (user.getWorkspace() != null) {
+                webSocketManager.broadcastLead(user.getWorkspace().getId(), resultDto);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to broadcast lead update via WebSocket: " + e.getMessage());
+        }
+        return resultDto;
+    }
+
+    public List<LeadDto> getPipelineLeads(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        if (user.getWorkspace() == null) {
+            throw new IllegalStateException("User does not belong to a workspace");
+        }
+
+        boolean isUserOnly = user.getRoles().stream()
+                .anyMatch(r -> r.getName().equalsIgnoreCase("ROLE_USER") || r.getName().equalsIgnoreCase("USER")) &&
+                user.getRoles().stream().noneMatch(r -> r.getName().equalsIgnoreCase("ROLE_ADMIN") || r.getName().equalsIgnoreCase("ADMIN") || r.getName().equalsIgnoreCase("ROLE_MANAGER") || r.getName().equalsIgnoreCase("MANAGER"));
+
+        List<Lead> leads;
+        if (isUserOnly) {
+            leads = leadRepository.findPipelineLeadsByUserId(user.getId());
+        } else {
+            leads = leadRepository.findPipelineLeadsByWorkspaceId(user.getWorkspace().getId());
+            if (leads.isEmpty()) {
+                leads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(user.getWorkspace().getId());
+            }
+        }
+
+        return leads.stream().map(this::convertToDto).collect(Collectors.toList());
+    }
+
+    public List<LeadDto> getPendingAssignedLeads(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        List<Lead> leads = leadRepository.findPendingAssignedLeadsByUserId(user.getId());
+        return leads.stream().map(this::convertToDto).collect(Collectors.toList());
     }
 }

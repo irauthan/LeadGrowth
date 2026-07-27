@@ -49,7 +49,7 @@ public class LeadController {
     }
 
     @PatchMapping("/{id}/assign")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
     public ResponseEntity<LeadDto> assignLead(
             @PathVariable Long id,
             @RequestParam Long userId
@@ -110,6 +110,27 @@ public class LeadController {
     public ResponseEntity<List<LeadDto>> getWorkspaceLeads() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(leadService.getLeads(email));
+    }
+
+    @PostMapping("/{id}/add-to-pipeline")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    public ResponseEntity<LeadDto> addToPipeline(@PathVariable Long id) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.addToPipeline(id, email));
+    }
+
+    @GetMapping("/pipeline")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    public ResponseEntity<List<LeadDto>> getPipelineLeads() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.getPipelineLeads(email));
+    }
+
+    @GetMapping("/pending-assigned")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    public ResponseEntity<List<LeadDto>> getPendingAssignedLeads() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.getPendingAssignedLeads(email));
     }
 
     @PatchMapping("/{id}/activity")

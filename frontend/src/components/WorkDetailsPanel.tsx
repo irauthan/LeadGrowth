@@ -211,7 +211,7 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Priority & Quality</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-amber-400">🔥 {lead?.qualityTier} ({lead?.qualityScore} pts)</span>
+                    <span className="text-xs font-bold text-amber-400">{lead?.qualityTier} ({lead?.qualityScore} pts)</span>
                   </div>
                 </div>
               </div>

@@ -269,7 +269,7 @@ export default function Tasks() {
                     className="rounded-xl border border-theme-border bg-theme-bg-alt text-[10px] font-bold px-2 py-1 outline-none text-theme-text"
                   >
                     <option value="" disabled>Reassign To...</option>
-                    <option value="-1">🎲 Auto-Assign</option>
+                    <option value="-1">Auto-Assign via Engine</option>
                     {members.map((m) => (
                       <option key={m.id} value={m.id}>{m.fullName}</option>
                     ))}
@@ -495,7 +495,7 @@ export default function Tasks() {
                   className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                 >
                   <option value="">Unassigned (Queue)</option>
-                  <option value="-1">🎲 Auto-Assign via Engine</option>
+                  <option value="-1">Auto-Assign via Engine</option>
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>{m.fullName}</option>
                   ))}

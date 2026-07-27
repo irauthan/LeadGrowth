@@ -14,7 +14,8 @@ import {
   Phone,
   Mail,
   User as UserIcon,
-  CheckSquare
+  Briefcase,
+  UserCheck
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 
@@ -26,6 +27,7 @@ export default function Leads() {
 
   // Selected Lead state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedAssignUserId, setSelectedAssignUserId] = useState<string>('');
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
@@ -137,6 +139,7 @@ export default function Leads() {
 
   const handleLeadSelect = (lead: Lead) => {
     setSelectedLead(lead);
+    setSelectedAssignUserId(lead.assignedToId ? String(lead.assignedToId) : '');
     fetchNotes(lead.id);
   };
 
@@ -163,8 +166,10 @@ export default function Leads() {
       // Update local state
       setLeads(leads.map((l) => (l.id === updated.id ? updated : l)));
       setSelectedLead(updated);
-    } catch (e) {
+      alert(`Lead "${updated.name}" successfully assigned to ${updated.assignedToName || 'team member'}!`);
+    } catch (e: any) {
       console.error(e);
+      alert(e.response?.data?.message || 'Failed to assign lead.');
     }
   };
 
@@ -182,20 +187,18 @@ export default function Leads() {
     }
   };
 
-  const handleConvertToTask = async () => {
-    if (!selectedLead) return;
+  const handleAddToPipeline = async () => {
+    if (!selectedLead || !user) return;
     try {
-      const res = await api.post(`/api/tasks/convert-from-lead/${selectedLead.id}`, {
-        title: `Follow up with ${selectedLead.name}`
-      });
-      alert(`Task "${res.data.title}" successfully created and assigned to you!`);
-      
-      const updatedLead = { ...selectedLead, status: 'Interested' as const };
+      const res = await api.post(`/api/leads/${selectedLead.id}/add-to-pipeline`).catch(() =>
+        api.patch(`/api/leads/${selectedLead.id}/assign?userId=${user.id}`)
+      );
+      alert(`Lead "${selectedLead.name}" has been added to your Pipelines!`);
+      const updatedLead = res.data;
       setSelectedLead(updatedLead);
       setLeads((prev) => prev.map((l) => (l.id === selectedLead.id ? updatedLead : l)));
-      fetchNotes(selectedLead.id);
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to convert lead to task.');
+      alert(e.response?.data?.message || 'Failed to add lead to Pipelines.');
     }
   };
 
@@ -391,10 +394,10 @@ export default function Leads() {
                 {/* Status selector & Actions */}
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={handleConvertToTask}
+                    onClick={handleAddToPipeline}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover text-xs font-bold text-white shadow transition-all"
                   >
-                    <CheckSquare size={14} /> Convert To Task
+                    <Briefcase size={14} /> Add To Pipelines
                   </button>
 
                   <span className="text-xs font-bold text-theme-text-muted uppercase tracking-wider">Status:</span>
@@ -431,34 +434,53 @@ export default function Leads() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">Assignment</h3>
-                  {/* Lead Assignment Selector (Admin/Manager only) */}
-                  <div className="flex items-center gap-3 text-theme-text">
-                    <UserIcon size={16} className="text-theme-text-muted" />
-                    {!(isAdmin || isManager) ? (
-                      <span className="text-sm font-semibold">{selectedLead.assignedToName}</span>
-                    ) : (
-                      <select
-                        value={selectedLead.assignedToId || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '-1') {
-                            handleAssignChange(-1);
-                          } else if (val !== '') {
-                            handleAssignChange(parseInt(val));
-                          }
-                        }}
-                        className="rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs font-semibold outline-none text-theme-text focus:border-theme-primary"
-                      >
-                        <option value="">Unassigned</option>
-                        <option value="-1">🎲 Auto-Assign via Engine</option>
-                        {members.map((m) => (
-                          <option key={m.id} value={m.id}>{m.fullName} ({m.designation || 'Staff'})</option>
-                        ))}
-                      </select>
-                    )}
+                <div className="space-y-3 rounded-2xl border border-theme-border/60 bg-theme-bg-alt/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">Lead Assignment</h3>
+                    <span className="rounded-full bg-theme-primary/10 px-2.5 py-0.5 text-[10px] font-extrabold text-theme-primary">
+                      {selectedLead.assignedToName || 'Unassigned'}
+                    </span>
                   </div>
+
+                  {!(isAdmin || isManager) ? (
+                    <div className="flex items-center gap-2 text-sm font-semibold text-theme-text pt-1">
+                      <UserIcon size={16} className="text-theme-primary" />
+                      <span>{selectedLead.assignedToName || 'Unassigned'}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5 pt-1">
+                      <div className="flex items-center gap-2">
+                        <UserIcon size={16} className="text-theme-text-muted flex-shrink-0" />
+                        <select
+                          value={selectedAssignUserId}
+                          onChange={(e) => setSelectedAssignUserId(e.target.value)}
+                          className="w-full rounded-xl border border-theme-border bg-theme-card px-3 py-2 text-xs font-semibold outline-none text-theme-text focus:border-theme-primary shadow-xs"
+                        >
+                          <option value="">-- Select Team Member --</option>
+                          <option value="-1">Auto-Assign via Engine</option>
+                          {members.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.fullName} ({m.designation || 'Staff'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!selectedAssignUserId) {
+                            alert('Please select a team member first');
+                            return;
+                          }
+                          handleAssignChange(parseInt(selectedAssignUserId));
+                        }}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-theme-primary to-blue-600 hover:from-theme-primary-hover hover:to-blue-500 px-4 py-2 text-xs font-bold text-white shadow-md transition-all active:scale-[0.99]"
+                      >
+                        <UserCheck size={15} /> Assign Lead Now
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

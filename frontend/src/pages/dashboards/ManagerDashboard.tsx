@@ -313,7 +313,7 @@ export default function ManagerDashboard() {
             className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-xs font-medium outline-none focus:border-theme-primary text-theme-text"
           >
             <option value="">Unassigned Queue</option>
-            <option value="-1">🎲 Auto-Assign via Engine</option>
+            <option value="-1">Auto-Assign via Engine</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>{m.fullName}</option>
             ))}

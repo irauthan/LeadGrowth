@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
-import type { Lead } from '../../types';
 import { formatCurrency } from '../../utils';
 import { 
   UserCheck, 
@@ -26,6 +25,7 @@ export default function UserDashboard() {
   const [kpis, setKpis] = useState<any>(null);
   const [myLeads, setMyLeads] = useState<any[]>([]);
   const [followups, setFollowups] = useState<any[]>([]);
+  const [pendingLeads, setPendingLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [idleMessage, setIdleMessage] = useState('');
 
@@ -35,16 +35,17 @@ export default function UserDashboard() {
 
   const fetchUserData = async () => {
     try {
-      const [kpiRes, leadsRes, followupsRes] = await Promise.all([
+      const [kpiRes, leadsRes, followupsRes, pendingRes] = await Promise.all([
         api.get('/api/users/me/dashboard').catch(() => ({ data: null })),
-        api.get('/api/leads/workspace').catch(() => api.get('/api/leads')),
-        api.get('/api/followups').catch(() => ({ data: [] }))
+        api.get('/api/leads/pipeline').catch(() => api.get('/api/leads')),
+        api.get('/api/followups').catch(() => ({ data: [] })),
+        api.get('/api/leads/pending-assigned').catch(() => ({ data: [] }))
       ]);
 
       setKpis(kpiRes.data);
-      const myId = user?.id;
-      setMyLeads((leadsRes.data || []).filter((l: Lead) => l.assignedToId === myId || !l.assignedToId));
+      setMyLeads(leadsRes.data || []);
       setFollowups((followupsRes.data || []).filter((f: any) => f.status !== 'COMPLETED'));
+      setPendingLeads(pendingRes.data || []);
     } catch (err) {
       console.error('Failed to load User Productivity Hub data', err);
     } finally {
@@ -52,11 +53,25 @@ export default function UserDashboard() {
     }
   };
 
+  const handleAcceptPipeline = async (leadId: number, leadName: string) => {
+    if (!user) return;
+    try {
+      await api.post(`/api/leads/${leadId}/add-to-pipeline`).catch(() =>
+        api.patch(`/api/leads/${leadId}/assign?userId=${user.id}`)
+      );
+      setIdleMessage(`Lead "${leadName}" added to your Pipelines!`);
+      setTimeout(() => setIdleMessage(''), 4000);
+      fetchUserData();
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Failed to add lead to pipeline');
+    }
+  };
+
   const handleIdleSweep = async () => {
     try {
       const res = await api.post('/api/leads/queue/idle-sweep');
       if (res.data) {
-        setIdleMessage(`🎯 New lead auto-assigned: ${res.data.name}!`);
+        setIdleMessage(`New lead auto-assigned: ${res.data.name}! Click 'Add To Pipelines' to accept.`);
         fetchUserData();
       } else {
         setIdleMessage('Queue empty. You are fully caught up!');
@@ -95,7 +110,7 @@ export default function UserDashboard() {
             </span>
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1">
-            Welcome back, {user?.fullName}! 👋
+            Welcome back, {user?.fullName}!
           </h1>
           <p className="text-xs text-theme-text-muted mt-0.5">
             Manage your pipeline, advance workflow steps, complete client follow-ups, and drive conversions.
@@ -107,7 +122,7 @@ export default function UserDashboard() {
             to="/my-work"
             className="flex items-center gap-2 rounded-2xl bg-theme-bg-alt border border-theme-border hover:bg-theme-card px-4 py-2.5 text-xs font-bold text-theme-text transition-all"
           >
-            <Briefcase size={14} className="text-theme-primary" /> Open My Pipeline
+            <Briefcase size={14} className="text-theme-primary" /> Open Pipelines
           </Link>
           <button
             onClick={handleIdleSweep}
@@ -124,48 +139,114 @@ export default function UserDashboard() {
         </div>
       )}
 
+      {/* Newly Assigned Leads - Pending Pipeline Acceptance Card */}
+      {pendingLeads.length > 0 && (
+        <div className="p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent shadow-lg space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-3 w-3 rounded-full bg-amber-500 animate-ping" />
+              <h3 className="text-sm font-extrabold text-theme-text">
+                🔔 Newly Received Leads ({pendingLeads.length} Lead{pendingLeads.length > 1 ? 's' : ''} Assigned)
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold text-amber-500 uppercase px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+              Pending Pipeline Acceptance
+            </span>
+          </div>
+          <p className="text-xs text-theme-text-muted">
+            You have received a new lead assignment! Click <b>"Add To Pipelines"</b> below to activate it in your Open Pipelines workspace.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+            {pendingLeads.map((lead) => (
+              <div key={lead.id} className="p-4 rounded-2xl bg-theme-card border border-theme-border/60 shadow-sm space-y-3 flex flex-col justify-between hover:border-amber-500/40 transition-all">
+                <div>
+                  <div className="flex items-start justify-between">
+                    <h4 className="text-xs font-extrabold text-theme-text">{lead.name}</h4>
+                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      {lead.qualityTier || 'WARM'} ({lead.qualityScore || 75} pts)
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-theme-text-muted mt-1">{lead.email} • {lead.sourcePlatform || 'Meta'}</p>
+                  {lead.campaignName && (
+                    <span className="text-[9px] text-theme-primary font-bold block mt-0.5">Campaign: {lead.campaignName}</span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => handleAcceptPipeline(lead.id, lead.name)}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-bold shadow-md shadow-theme-primary/20 transition-all"
+                >
+                  <Briefcase size={14} /> Add To Pipelines
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Personal KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         
-        {/* 1. My Assigned Leads */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        {/* 1. My Assigned Leads -> /my-work */}
+        <Link
+          to="/my-work"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-theme-primary/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Assigned Pipeline</span>
-            <UserCheck size={16} className="text-theme-primary" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Assigned Pipeline</span>
+            <UserCheck size={16} className="text-theme-primary transition-transform group-hover:scale-110" />
           </div>
           <h3 className="text-2xl font-extrabold text-theme-text">{assignedLeadsCount}</h3>
-          <span className="text-[9px] font-bold text-theme-primary block">Active Contacts</span>
-        </div>
+          <span className="text-[9px] font-bold text-theme-primary flex items-center gap-1">
+            Active Contacts <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
 
-        {/* 2. My Pending Follow-Ups */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        {/* 2. My Pending Follow-Ups -> /followups */}
+        <Link
+          to="/followups"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-cyan-500/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Pending Follow-ups</span>
-            <Clock size={16} className="text-cyan-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-cyan-400 transition-colors">Pending Follow-ups</span>
+            <Clock size={16} className="text-cyan-400 transition-transform group-hover:scale-110" />
           </div>
           <h3 className="text-2xl font-extrabold text-theme-text">{pendingFollowupsCount}</h3>
-          <span className="text-[9px] font-bold text-cyan-400 block">Scheduled Reminders</span>
-        </div>
+          <span className="text-[9px] font-bold text-cyan-400 flex items-center gap-1">
+            Scheduled Reminders <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
 
-        {/* 3. My Conversions */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        {/* 3. My Conversions -> /my-work */}
+        <Link
+          to="/my-work"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-rose-500/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">My Conversions</span>
-            <Flame size={16} className="text-rose-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-rose-400 transition-colors">My Conversions</span>
+            <Flame size={16} className="text-rose-500 transition-transform group-hover:scale-110" />
           </div>
           <h3 className="text-2xl font-extrabold text-theme-text">{conversionsCount}</h3>
-          <span className="text-[9px] font-bold text-rose-500 block">{kpis?.conversionRate || 0}% Conversion Rate</span>
-        </div>
+          <span className="text-[9px] font-bold text-rose-500 flex items-center gap-1">
+            {kpis?.conversionRate || 0}% Conversion Rate <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
 
-        {/* 4. My Revenue Contribution */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        {/* 4. My Revenue Contribution -> /analytics */}
+        <Link
+          to="/analytics"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-emerald-500/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Revenue Contribution</span>
-            <DollarSign size={16} className="text-emerald-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-emerald-400 transition-colors">Revenue Contribution</span>
+            <DollarSign size={16} className="text-emerald-400 transition-transform group-hover:scale-110" />
           </div>
           <h3 className="text-lg font-extrabold text-emerald-400">{formatCurrency(personalRevenue)}</h3>
-          <span className="text-[9px] font-bold text-emerald-500 block">Closed Deals</span>
-        </div>
+          <span className="text-[9px] font-bold text-emerald-500 flex items-center gap-1">
+            Closed Deals <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
 
       </div>
 
@@ -185,9 +266,9 @@ export default function UserDashboard() {
               </Link>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[380px] overflow-y-auto rounded-2xl border border-theme-border/40">
               <table className="w-full text-left text-xs">
-                <thead className="bg-theme-bg-alt border-b border-theme-border text-theme-text-muted font-bold">
+                <thead className="bg-theme-bg-alt border-b border-theme-border text-theme-text-muted font-bold sticky top-0 z-10 backdrop-blur-md">
                   <tr>
                     <th className="p-3">Client Name</th>
                     <th className="p-3">Company</th>
@@ -197,10 +278,18 @@ export default function UserDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-theme-border/30">
-                  {myLeads.slice(0, 6).map((lead) => (
-                    <tr key={lead.id} className="hover:bg-theme-bg-alt/30 transition-colors">
-                      <td className="p-3 font-bold text-theme-text">{lead.name}</td>
-                      <td className="p-3 text-theme-text-muted font-medium">{lead.company || lead.sourcePlatform || 'Corporate'}</td>
+                  {myLeads.slice(0, 8).map((lead) => (
+                    <tr key={lead.id} className="hover:bg-theme-bg-alt/40 transition-colors">
+                      <td className="p-3 font-bold text-theme-text">
+                        <Link 
+                          to={`/my-work?leadId=${lead.id}`}
+                          className="hover:text-theme-primary hover:underline transition-colors flex items-center gap-1.5 group/link"
+                        >
+                          <span>{lead.name}</span>
+                          <ChevronRight size={12} className="text-theme-primary opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                        </Link>
+                      </td>
+                      <td className="p-3 text-theme-text-muted font-medium truncate max-w-[120px]">{lead.company || lead.sourcePlatform || 'Corporate'}</td>
                       <td className="p-3">
                         <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
                           lead.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-500' :
@@ -254,13 +343,20 @@ export default function UserDashboard() {
 
             <div className="space-y-3">
               {followups.slice(0, 5).map((f: any, idx: number) => (
-                <div key={idx} className="p-3.5 rounded-2xl border border-theme-border/40 bg-theme-bg-alt/30 space-y-1">
+                <Link 
+                  key={idx}
+                  to={`/my-work?leadId=${f.leadId || ''}`}
+                  className="block p-3.5 rounded-2xl border border-theme-border/40 bg-theme-bg-alt/30 hover:bg-theme-bg-alt hover:border-theme-primary/40 transition-all group space-y-1"
+                >
                   <div className="flex items-center justify-between text-xs font-bold text-theme-text">
-                    <span>{f.leadName || 'Client Touchpoint'}</span>
-                    <span className="text-[10px] text-cyan-400">{f.type || 'CALL'}</span>
+                    <span className="group-hover:text-theme-primary transition-colors flex items-center gap-1">
+                      {f.leadName || 'Client Touchpoint'}
+                      <ChevronRight size={12} className="text-theme-primary transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 uppercase">{f.type || 'CALL'}</span>
                   </div>
-                  <p className="text-[10px] text-theme-text-muted">{f.notes || 'Requirement collection & proposal follow-up'}</p>
-                </div>
+                  <p className="text-[10px] text-theme-text-muted truncate">{f.notes || 'Requirement collection & proposal follow-up'}</p>
+                </Link>
               ))}
               {followups.length === 0 && (
                 <p className="text-center text-xs text-theme-text-muted py-6">No pending follow-up reminders scheduled.</p>

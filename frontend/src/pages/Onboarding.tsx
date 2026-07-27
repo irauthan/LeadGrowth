@@ -325,7 +325,7 @@ export default function Onboarding() {
                     className="w-full rounded-2xl border border-slate-200 bg-white/50 py-3.5 px-4 font-mono text-center text-lg outline-none tracking-widest focus:border-brand-500 focus:bg-white dark:border-slate-800/80 dark:bg-slate-900/50"
                   />
                   <p className="mt-2 text-xs text-slate-400 leading-normal">
-                    💡 Ask your administrator/owner for the 9-digit alphanumeric code (e.g. LG-LEAD-GROWTH-2026) to link your account.
+                    Ask your administrator/owner for the 9-digit alphanumeric code (e.g. LG-LEAD-GROWTH-2026) to link your account.
                   </p>
                 </div>
 

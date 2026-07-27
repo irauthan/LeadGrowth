@@ -220,23 +220,24 @@ export default function Followups() {
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
         {[
-          { id: 'UPCOMING', label: 'Upcoming' },
-          { id: 'TODAY', label: "Today's" },
-          { id: 'OVERDUE', label: 'Overdue ⚠️' },
-          { id: 'COMPLETED', label: 'Completed ✅' },
-          { id: 'MISSED', label: 'Missed' },
-          { id: 'CANCELLED', label: 'Cancelled' }
+          { id: 'UPCOMING', label: 'Upcoming', icon: null },
+          { id: 'TODAY', label: "Today's", icon: null },
+          { id: 'OVERDUE', label: 'Overdue', icon: <AlertCircle size={12} className="text-amber-400" /> },
+          { id: 'COMPLETED', label: 'Completed', icon: <CheckCircle size={12} className="text-emerald-400" /> },
+          { id: 'MISSED', label: 'Missed', icon: null },
+          { id: 'CANCELLED', label: 'Cancelled', icon: null }
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setStatusTab(tab.id as any)}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all uppercase whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all uppercase whitespace-nowrap ${
               statusTab === tab.id
                 ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20'
                 : 'bg-theme-card border border-theme-border text-theme-text-muted hover:bg-theme-bg-alt'
             }`}
           >
-            {tab.label}
+            {tab.icon}
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>

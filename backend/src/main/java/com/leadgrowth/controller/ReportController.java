@@ -23,6 +23,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.leadgrowth.repository.UserRepository;
+import com.leadgrowth.entity.User;
+
 @RestController
 @RequestMapping("/api/reports")
 public class ReportController {
@@ -31,12 +34,19 @@ public class ReportController {
     private final CampaignService campaignService;
     private final LeadService leadService;
     private final ReportService reportService;
+    private final UserRepository userRepository;
 
-    public ReportController(ExportService exportService, CampaignService campaignService, LeadService leadService, ReportService reportService) {
+    public ReportController(ExportService exportService, CampaignService campaignService, LeadService leadService, ReportService reportService, UserRepository userRepository) {
         this.exportService = exportService;
         this.campaignService = campaignService;
         this.leadService = leadService;
         this.reportService = reportService;
+        this.userRepository = userRepository;
+    }
+
+    private String getWorkspaceName(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        return (user != null && user.getWorkspace() != null) ? user.getWorkspace().getName() : "LeadGrowth Enterprise Workspace";
     }
 
     @PostMapping("/daily")
@@ -98,7 +108,8 @@ public class ReportController {
     public ResponseEntity<byte[]> downloadCampaignsPdf() throws Exception {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         List<Campaign> campaigns = campaignService.getCampaigns(email);
-        byte[] data = exportService.exportCampaignsToPdf(campaigns);
+        String wsName = getWorkspaceName(email);
+        byte[] data = exportService.exportCampaignsToPdf(campaigns, wsName);
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=campaigns.pdf")
@@ -136,7 +147,8 @@ public class ReportController {
     public ResponseEntity<byte[]> downloadLeadsPdf() throws Exception {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         List<LeadDto> leads = leadService.getLeads(email);
-        byte[] data = exportService.exportLeadsToPdf(leads);
+        String wsName = getWorkspaceName(email);
+        byte[] data = exportService.exportLeadsToPdf(leads, wsName);
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=leads.pdf")

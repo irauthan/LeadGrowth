@@ -134,7 +134,7 @@ export default function Reports() {
             </span>
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1">
-            Daily Sales Reports & Export Console 📊
+            Daily Sales Reports & Export Console
           </h1>
           <p className="text-xs text-theme-text-muted mt-0.5">
             Submit daily activity reports to your manager, track review statuses, and download analytical database exports.
@@ -165,7 +165,7 @@ export default function Reports() {
               : 'bg-theme-card border border-theme-border text-theme-text-muted hover:bg-theme-bg-alt'
           }`}
         >
-          My Daily Reports 📝
+          My Daily Reports
         </button>
 
         {isManagerOrAdmin && (
@@ -177,7 +177,7 @@ export default function Reports() {
                 : 'bg-theme-card border border-theme-border text-theme-text-muted hover:bg-theme-bg-alt'
             }`}
           >
-            Team Report Approvals 👑
+            Team Report Approvals
           </button>
         )}
 
@@ -189,7 +189,7 @@ export default function Reports() {
               : 'bg-theme-card border border-theme-border text-theme-text-muted hover:bg-theme-bg-alt'
           }`}
         >
-          Database Export Downloads 📁
+          Database Export Downloads
         </button>
       </div>
 

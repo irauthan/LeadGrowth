@@ -11,7 +11,11 @@ import {
   Building,
   Check,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -275,10 +279,10 @@ export default function Settings() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { id: 'left', label: 'Left Side', icon: '⬅️', desc: 'Standard left panel' },
-                    { id: 'right', label: 'Right Side', icon: '➡️', desc: 'Dock panel on right' },
-                    { id: 'top', label: 'Top Bar', icon: '⬆️', desc: 'Top navigation bar' },
-                    { id: 'bottom', label: 'Bottom Dock', icon: '⬇️', desc: 'Bottom floating dock' }
+                    { id: 'left', label: 'Left Side', icon: <ArrowLeft size={20} className="text-theme-primary mb-1" />, desc: 'Standard left panel' },
+                    { id: 'right', label: 'Right Side', icon: <ArrowRight size={20} className="text-theme-primary mb-1" />, desc: 'Dock panel on right' },
+                    { id: 'top', label: 'Top Bar', icon: <ArrowUp size={20} className="text-theme-primary mb-1" />, desc: 'Top navigation bar' },
+                    { id: 'bottom', label: 'Bottom Dock', icon: <ArrowDown size={20} className="text-theme-primary mb-1" />, desc: 'Bottom floating dock' }
                   ].map((pos) => {
                     const isSelected = sidebarPosition === pos.id;
                     return (
@@ -292,7 +296,7 @@ export default function Settings() {
                             : 'border-theme-border bg-theme-bg-alt/40 hover:bg-theme-bg-alt text-theme-text/80'
                         }`}
                       >
-                        <span className="text-2xl mb-1">{pos.icon}</span>
+                        {pos.icon}
                         <span className="text-xs font-bold">{pos.label}</span>
                         <span className="text-[9px] text-theme-text-muted mt-0.5">{pos.desc}</span>
                       </button>

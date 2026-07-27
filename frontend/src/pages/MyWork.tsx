@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   LayoutGrid, 
   Table as TableIcon, 
@@ -9,7 +10,13 @@ import {
   Building, 
   Zap, 
   ChevronRight, 
-  Sparkles
+  Sparkles,
+  Flame,
+  Snowflake,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Briefcase
 } from 'lucide-react';
 import api from '../services/api';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
@@ -43,14 +50,27 @@ export default function MyWork() {
   // Idle Sweep notification
   const [sweepMessage, setSweepMessage] = useState('');
 
+  const [searchParams] = useSearchParams();
+
   useEffect(() => {
     fetchMyWorkLeads();
   }, []);
 
+  useEffect(() => {
+    const paramLeadId = searchParams.get('leadId');
+    if (paramLeadId && leads.length > 0) {
+      const targetId = parseInt(paramLeadId);
+      if (!isNaN(targetId)) {
+        setSelectedLeadId(targetId);
+        setIsPanelOpen(true);
+      }
+    }
+  }, [searchParams, leads]);
+
   const fetchMyWorkLeads = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/leads/workspace');
+      const res = await api.get('/api/leads/pipeline');
       setLeads(res.data || []);
     } catch (err) {
       console.error('Failed to load My Work workspace leads', err);
@@ -63,7 +83,7 @@ export default function MyWork() {
     try {
       const res = await api.post('/api/leads/queue/idle-sweep');
       if (res.data) {
-        setSweepMessage(`🎯 New lead auto-assigned: ${res.data.name}!`);
+        setSweepMessage(`New lead auto-assigned: ${res.data.name}!`);
         fetchMyWorkLeads();
       } else {
         setSweepMessage('Queue empty. You are fully caught up!');
@@ -139,8 +159,8 @@ export default function MyWork() {
               Unified Lead & Task Engine
             </span>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1">
-            My Work Workspace 💼
+          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1 flex items-center gap-2">
+            <Briefcase size={22} className="text-theme-primary" /> My Work Workspace
           </h1>
           <p className="text-xs text-theme-text-muted mt-0.5">
             Manage assigned leads, execute sales activities, complete client follow-ups, and auto-track progress from one interface.
@@ -189,24 +209,25 @@ export default function MyWork() {
       {/* Quick Filter Pills Bar */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {[
-          { key: 'ALL', label: 'All Work' },
-          { key: 'HOT', label: 'Hot Leads 🔥' },
-          { key: 'WARM', label: 'Warm Leads ⚡' },
-          { key: 'COLD', label: 'Cold Leads ❄️' },
-          { key: 'PENDING', label: 'Pending Action ⏳' },
-          { key: 'CONVERTED', label: 'Converted 🎯' },
-          { key: 'LOST', label: 'Lost ❌' },
+          { key: 'ALL', label: 'All Work', icon: null },
+          { key: 'HOT', label: 'Hot Leads', icon: <Flame size={12} className="text-rose-500" /> },
+          { key: 'WARM', label: 'Warm Leads', icon: <Zap size={12} className="text-amber-400" /> },
+          { key: 'COLD', label: 'Cold Leads', icon: <Snowflake size={12} className="text-blue-400" /> },
+          { key: 'PENDING', label: 'Pending Action', icon: <Clock size={12} className="text-amber-500" /> },
+          { key: 'CONVERTED', label: 'Converted', icon: <CheckCircle2 size={12} className="text-emerald-500" /> },
+          { key: 'LOST', label: 'Lost', icon: <XCircle size={12} className="text-rose-500" /> },
         ].map((pill) => (
           <button
             key={pill.key}
             onClick={() => setQuickFilter(pill.key as any)}
-            className={`px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${
               quickFilter === pill.key
                 ? 'bg-theme-primary text-white border-theme-primary shadow-md'
                 : 'bg-theme-card text-theme-text-muted border-theme-border hover:bg-theme-bg-alt hover:text-theme-text'
             }`}
           >
-            {pill.label}
+            {pill.icon}
+            <span>{pill.label}</span>
           </button>
         ))}
       </div>
@@ -236,7 +257,7 @@ export default function MyWork() {
             className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
           >
             <option value="ALL">Priority: All</option>
-            <option value="HIGH">Priority: High 🔥</option>
+            <option value="HIGH">Priority: High</option>
             <option value="MEDIUM">Priority: Medium</option>
             <option value="LOW">Priority: Low</option>
           </select>
@@ -248,7 +269,7 @@ export default function MyWork() {
             className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
           >
             <option value="ALL">Quality: All</option>
-            <option value="HOT">HOT Tier 🌟</option>
+            <option value="HOT">HOT Tier</option>
             <option value="WARM">WARM Tier</option>
             <option value="COLD">COLD Tier</option>
           </select>
