@@ -10,6 +10,10 @@ import com.leadgrowth.entity.LeadAssignment;
 import com.leadgrowth.entity.AssignmentLog;
 import com.leadgrowth.entity.Notification;
 import com.leadgrowth.entity.Workspace;
+import com.leadgrowth.dto.LeadHistoryDto;
+import com.leadgrowth.dto.SalesActivityDto;
+import com.leadgrowth.entity.SalesActivity;
+import com.leadgrowth.entity.LeadHistory;
 import com.leadgrowth.repository.*;
 import com.leadgrowth.websocket.WebSocketManager;
 import org.springframework.context.annotation.Lazy;
@@ -22,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +40,8 @@ public class LeadService {
     private final LeadAssignmentRepository leadAssignmentRepository;
     private final AssignmentLogRepository assignmentLogRepository;
     private final NotificationRepository notificationRepository;
+    private final SalesActivityRepository salesActivityRepository;
+    private final LeadHistoryRepository leadHistoryRepository;
 
     public LeadService(
             LeadRepository leadRepository,
@@ -44,7 +51,9 @@ public class LeadService {
             @Lazy WebSocketManager webSocketManager,
             LeadAssignmentRepository leadAssignmentRepository,
             AssignmentLogRepository assignmentLogRepository,
-            NotificationRepository notificationRepository
+            NotificationRepository notificationRepository,
+            SalesActivityRepository salesActivityRepository,
+            LeadHistoryRepository leadHistoryRepository
     ) {
         this.leadRepository = leadRepository;
         this.leadNoteRepository = leadNoteRepository;
@@ -54,6 +63,8 @@ public class LeadService {
         this.leadAssignmentRepository = leadAssignmentRepository;
         this.assignmentLogRepository = assignmentLogRepository;
         this.notificationRepository = notificationRepository;
+        this.salesActivityRepository = salesActivityRepository;
+        this.leadHistoryRepository = leadHistoryRepository;
     }
 
     public List<LeadDto> getLeads(String userEmail) {
@@ -64,14 +75,17 @@ public class LeadService {
         }
 
         boolean isUserOnly = user.getRoles().stream()
-                .anyMatch(r -> r.getName().equals("ROLE_USER")) &&
-                user.getRoles().stream().noneMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_MANAGER"));
+                .anyMatch(r -> r.getName().equalsIgnoreCase("ROLE_USER") || r.getName().equalsIgnoreCase("USER")) &&
+                user.getRoles().stream().noneMatch(r -> r.getName().equalsIgnoreCase("ROLE_ADMIN") || r.getName().equalsIgnoreCase("ADMIN") || r.getName().equalsIgnoreCase("ROLE_MANAGER") || r.getName().equalsIgnoreCase("MANAGER"));
 
         List<Lead> leads;
         if (isUserOnly) {
-            leads = leadRepository.findByWorkspaceIdAndAssignedToIdOrderByCreatedAtDesc(
-                    user.getWorkspace().getId(), user.getId()
-            );
+            leads = leadRepository.findByAssignedToIdOrderByCreatedAtDesc(user.getId());
+            if (leads.isEmpty() && user.getWorkspace() != null) {
+                leads = leadRepository.findByWorkspaceIdAndAssignedToIdOrderByCreatedAtDesc(
+                        user.getWorkspace().getId(), user.getId()
+                );
+            }
         } else {
             leads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(user.getWorkspace().getId());
         }
@@ -203,6 +217,10 @@ public class LeadService {
         }
 
         lead.setAssignedTo(assignTarget);
+        lead.setQueueStatus("ASSIGNED");
+        if (assignTarget != null && assignTarget.getWorkspace() != null) {
+            lead.setWorkspace(assignTarget.getWorkspace());
+        }
         Lead saved = leadRepository.save(lead);
 
         assignTarget.setLastAssignedAt(LocalDateTime.now());
@@ -238,6 +256,10 @@ public class LeadService {
                 
                 if (assignTarget != null) {
                     lead.setAssignedTo(assignTarget);
+                    lead.setQueueStatus("ASSIGNED");
+                    if (assignTarget.getWorkspace() != null) {
+                        lead.setWorkspace(assignTarget.getWorkspace());
+                    }
                     Lead saved = leadRepository.save(lead);
 
                     assignTarget.setLastAssignedAt(LocalDateTime.now());
@@ -407,23 +429,171 @@ public class LeadService {
         webSocketManager.broadcastWorkspaceNotification(recipient.getWorkspace().getId(), wsMsg);
     }
 
+    public void ensureDefaultSalesActivities(Lead lead) {
+        List<SalesActivity> existing = salesActivityRepository.findByLeadIdOrderByIdAsc(lead.getId());
+        if (existing.isEmpty()) {
+            List<SalesActivity> defaults = List.of(
+                new SalesActivity(lead, "FIRST_CALL", "First Call", "PENDING"),
+                new SalesActivity(lead, "REQUIREMENT_COLLECTION", "Requirement Collection", "PENDING"),
+                new SalesActivity(lead, "DEMO_SCHEDULED", "Demo Scheduled", "PENDING"),
+                new SalesActivity(lead, "PROPOSAL_SENT", "Proposal Sent", "PENDING"),
+                new SalesActivity(lead, "NEGOTIATION", "Negotiation", "PENDING"),
+                new SalesActivity(lead, "CLOSING", "Closing", "PENDING"),
+                new SalesActivity(lead, "PAYMENT_FOLLOWUP", "Payment Follow-up", "PENDING")
+            );
+            salesActivityRepository.saveAll(defaults);
+        }
+    }
+
+    @Transactional
+    public LeadDto updateLeadActivity(Long leadId, String activityKey, String status, String remarks, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found: " + leadId));
+
+        ensureDefaultSalesActivities(lead);
+
+        SalesActivity activity = salesActivityRepository.findByLeadIdAndActivityKey(leadId, activityKey)
+                .orElseGet(() -> new SalesActivity(lead, activityKey, activityKey, "PENDING"));
+
+        String oldStatus = activity.getStatus();
+        activity.setStatus(status);
+        if (remarks != null) {
+            activity.setRemarks(remarks);
+        }
+        if ("COMPLETED".equalsIgnoreCase(status)) {
+            activity.setCompletedAt(LocalDateTime.now());
+            activity.setCompletedBy(user);
+        }
+        salesActivityRepository.save(activity);
+
+        // Recalculate Lead Progress %
+        List<SalesActivity> activities = salesActivityRepository.findByLeadIdOrderByIdAsc(leadId);
+        long completedCount = activities.stream().filter(a -> "COMPLETED".equalsIgnoreCase(a.getStatus())).count();
+        int progress = (int) Math.round(((double) completedCount / activities.size()) * 100);
+        lead.setProgressPercentage(progress);
+
+        // Auto-advance stage based on activity progress
+        if ("FIRST_CALL".equals(activityKey) && "COMPLETED".equals(status) && "New".equalsIgnoreCase(lead.getStatus())) {
+            lead.setStatus("Contacted");
+        } else if ("PROPOSAL_SENT".equals(activityKey) && "COMPLETED".equals(status)) {
+            lead.setStatus("Proposal Sent");
+        } else if ("NEGOTIATION".equals(activityKey) && "COMPLETED".equals(status)) {
+            lead.setStatus("Negotiation");
+        } else if ("CLOSING".equals(activityKey) && "COMPLETED".equals(status)) {
+            lead.setStatus("Converted");
+        }
+        leadRepository.save(lead);
+
+        // Log timeline history
+        LeadHistory history = new LeadHistory(
+                lead,
+                "ACTIVITY_UPDATE",
+                "Activity '" + activity.getTitle() + "' updated to " + status + (remarks != null && !remarks.isBlank() ? " (Remarks: " + remarks + ")" : ""),
+                user,
+                oldStatus,
+                status
+        );
+        leadHistoryRepository.save(history);
+
+        return convertToDto(lead);
+    }
+
+    @Transactional
+    public LeadDto updateLeadWorkspace(Long leadId, LeadDto updateDto, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found: " + leadId));
+
+        String oldStatus = lead.getStatus();
+        if (updateDto.getStatus() != null && !updateDto.getStatus().isBlank()) {
+            lead.setStatus(updateDto.getStatus());
+        }
+        if (updateDto.getCompany() != null) lead.setCompany(updateDto.getCompany());
+        if (updateDto.getLocation() != null) lead.setLocation(updateDto.getLocation());
+        if (updateDto.getPriority() != null) lead.setPriority(updateDto.getPriority());
+        if (updateDto.getClientNotes() != null) lead.setClientNotes(updateDto.getClientNotes());
+        if (updateDto.getProposalAmount() != null) lead.setProposalAmount(updateDto.getProposalAmount());
+        if (updateDto.getProposalStatus() != null) lead.setProposalStatus(updateDto.getProposalStatus());
+        if (updateDto.getProgressPercentage() != null) lead.setProgressPercentage(updateDto.getProgressPercentage());
+
+        leadRepository.save(lead);
+
+        // Log change history
+        String desc = "Workspace auto-saved/updated.";
+        if (updateDto.getStatus() != null && !updateDto.getStatus().equals(oldStatus)) {
+            desc = "Lead status transitioned from " + oldStatus + " to " + updateDto.getStatus();
+        }
+        LeadHistory history = new LeadHistory(lead, "WORKSPACE_UPDATE", desc, user, oldStatus, lead.getStatus());
+        leadHistoryRepository.save(history);
+
+        return convertToDto(lead);
+    }
+
+    public List<LeadHistoryDto> getLeadTimeline(Long leadId) {
+        List<LeadHistory> list = leadHistoryRepository.findByLeadIdOrderByTimestampDesc(leadId);
+        return list.stream().map(h -> new LeadHistoryDto(
+                h.getId(),
+                h.getLead().getId(),
+                h.getAction(),
+                h.getDescription(),
+                h.getPerformedBy() != null ? h.getPerformedBy().getId() : null,
+                h.getPerformedBy() != null ? h.getPerformedBy().getFullName() : "System",
+                h.getPreviousStatus(),
+                h.getNewStatus(),
+                h.getTimestamp()
+        )).collect(Collectors.toList());
+    }
+
     private LeadDto convertToDto(Lead lead) {
-        return LeadDto.builder()
-                .id(lead.getId())
-                .name(lead.getName())
-                .email(lead.getEmail())
-                .phone(lead.getPhone())
-                .sourcePlatform(lead.getSourcePlatform())
-                .campaignName(lead.getCampaignName())
-                .campaignId(lead.getCampaign() != null ? lead.getCampaign().getId() : null)
-                .status(lead.getStatus())
-                .assignedToId(lead.getAssignedTo() != null ? lead.getAssignedTo().getId() : null)
-                .assignedToName(lead.getAssignedTo() != null ? lead.getAssignedTo().getFullName() : "Unassigned")
-                .qualityScore(lead.getQualityScore() != null ? lead.getQualityScore() : 75)
-                .qualityTier(lead.getQualityTier() != null ? lead.getQualityTier() : "WARM")
-                .conversionProbability(lead.getConversionProbability() != null ? lead.getConversionProbability() : 75.0)
-                .queueStatus(lead.getQueueStatus() != null ? lead.getQueueStatus() : (lead.getAssignedTo() != null ? "ASSIGNED" : "IN_QUEUE"))
-                .createdAt(lead.getCreatedAt())
-                .build();
+        ensureDefaultSalesActivities(lead);
+
+        List<SalesActivity> activities = salesActivityRepository.findByLeadIdOrderByIdAsc(lead.getId());
+        List<SalesActivityDto> activityDtos = activities.stream().map(a -> new SalesActivityDto(
+                a.getId(),
+                lead.getId(),
+                a.getActivityKey(),
+                a.getTitle(),
+                a.getStatus(),
+                a.getCompletedAt(),
+                a.getCompletedBy() != null ? a.getCompletedBy().getId() : null,
+                a.getCompletedBy() != null ? a.getCompletedBy().getFullName() : null,
+                a.getRemarks(),
+                a.getCreatedAt()
+        )).collect(Collectors.toList());
+
+        LeadDto dto = new LeadDto();
+        dto.setId(lead.getId());
+        dto.setName(lead.getName());
+        dto.setEmail(lead.getEmail());
+        dto.setPhone(lead.getPhone());
+        dto.setSourcePlatform(lead.getSourcePlatform());
+        dto.setCampaignName(lead.getCampaignName());
+        dto.setCampaignId(lead.getCampaign() != null ? lead.getCampaign().getId() : null);
+        dto.setStatus(lead.getStatus());
+        dto.setAssignedToId(lead.getAssignedTo() != null ? lead.getAssignedTo().getId() : null);
+        dto.setAssignedToName(lead.getAssignedTo() != null ? lead.getAssignedTo().getFullName() : "Unassigned");
+        dto.setQualityScore(lead.getQualityScore() != null ? lead.getQualityScore() : 75);
+        dto.setQualityTier(lead.getQualityTier() != null ? lead.getQualityTier() : "WARM");
+        dto.setConversionProbability(lead.getConversionProbability() != null ? lead.getConversionProbability() : 75.0);
+        dto.setQueueStatus(lead.getQueueStatus() != null ? lead.getQueueStatus() : (lead.getAssignedTo() != null ? "ASSIGNED" : "IN_QUEUE"));
+
+        dto.setCompany(lead.getCompany() != null ? lead.getCompany() : "N/A");
+        dto.setLocation(lead.getLocation() != null ? lead.getLocation() : "Remote / Unspecified");
+        dto.setPriority(lead.getPriority() != null ? lead.getPriority() : "MEDIUM");
+        dto.setAssignedByName(lead.getAssignedBy() != null ? lead.getAssignedBy().getFullName() : "System Queue");
+        dto.setAssignedDate(lead.getAssignedDate() != null ? lead.getAssignedDate() : lead.getCreatedAt());
+        dto.setProgressPercentage(lead.getProgressPercentage() != null ? lead.getProgressPercentage() : 0);
+        dto.setLastFollowupDate(lead.getLastFollowupDate());
+        dto.setDueDate(lead.getDueDate());
+        dto.setClientNotes(lead.getClientNotes());
+        dto.setProposalAmount(lead.getProposalAmount());
+        dto.setProposalStatus(lead.getProposalStatus());
+        dto.setActivities(activityDtos);
+        dto.setCreatedAt(lead.getCreatedAt());
+
+        return dto;
     }
 }

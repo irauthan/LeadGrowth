@@ -44,3 +44,23 @@ export const downloadReport = async (
     throw error;
   }
 };
+
+export const downloadSingleLeadPdf = async (leadId: number): Promise<void> => {
+  try {
+    const response = await api.get(`/api/reports/leads/${leadId}/pdf`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.setAttribute('download', `lead_${leadId}_dossier.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error(`Failed to download lead ${leadId} PDF report:`, error);
+    throw error;
+  }
+};

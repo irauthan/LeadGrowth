@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface LeadRepository extends JpaRepository<Lead, Long> {
     List<Lead> findByWorkspaceIdOrderByCreatedAtDesc(Long workspaceId);
+    List<Lead> findByAssignedToIdOrderByCreatedAtDesc(Long userId);
     
     @Query("SELECT l FROM Lead l WHERE l.workspace.id = :workspaceId AND l.assignedTo.id = :userId ORDER BY l.createdAt DESC")
     List<Lead> findByWorkspaceIdAndAssignedToIdOrderByCreatedAtDesc(@Param("workspaceId") Long workspaceId, @Param("userId") Long userId);

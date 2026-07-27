@@ -11,6 +11,8 @@ import java.util.List;
 @Repository
 public interface ReportRepository extends JpaRepository<Report, Long> {
     List<Report> findByWorkspaceIdOrderByCreatedAtDesc(Long workspaceId);
+    List<Report> findByGeneratedByIdOrderBySubmittedAtDesc(Long generatedById);
+    List<Report> findByWorkspaceIdAndStatusOrderBySubmittedAtDesc(Long workspaceId, String status);
 
     @Modifying
     @Query("DELETE FROM Report r WHERE r.workspace.id = :workspaceId")

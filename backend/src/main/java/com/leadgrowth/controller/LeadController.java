@@ -105,4 +105,30 @@ public class LeadController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(leadService.assignLead(id, -1L, email));
     }
+
+    @GetMapping("/workspace")
+    public ResponseEntity<List<LeadDto>> getWorkspaceLeads() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.getLeads(email));
+    }
+
+    @PatchMapping("/{id}/activity")
+    public ResponseEntity<LeadDto> updateActivity(
+            @PathVariable Long id,
+            @RequestParam String activityKey,
+            @RequestParam String status,
+            @RequestParam(required = false) String remarks
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.updateLeadActivity(id, activityKey, status, remarks, email));
+    }
+
+    @PatchMapping("/{id}/auto-save")
+    public ResponseEntity<LeadDto> autoSaveWorkspaceLead(
+            @PathVariable Long id,
+            @RequestBody LeadDto dto
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.updateLeadWorkspace(id, dto, email));
+    }
 }

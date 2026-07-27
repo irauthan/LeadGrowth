@@ -109,9 +109,9 @@ public class LeadQueueService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Long workspaceId = user.getWorkspace().getId();
-        List<Lead> queue = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
-                .filter(l -> l.getAssignedTo() == null || "IN_QUEUE".equals(l.getQueueStatus()))
+        Long workspaceId = user.getWorkspace() != null ? user.getWorkspace().getId() : null;
+        List<Lead> queue = leadRepository.findAll().stream()
+                .filter(l -> l.getAssignedTo() == null || "IN_QUEUE".equalsIgnoreCase(l.getQueueStatus()))
                 .collect(Collectors.toList());
 
         if (queue.isEmpty()) {
@@ -122,6 +122,9 @@ public class LeadQueueService {
         Lead leadToAssign = queue.get(0);
         leadToAssign.setAssignedTo(user);
         leadToAssign.setQueueStatus("ASSIGNED");
+        if (user.getWorkspace() != null) {
+            leadToAssign.setWorkspace(user.getWorkspace());
+        }
         Lead saved = leadRepository.save(leadToAssign);
 
         user.setLastAssignedAt(LocalDateTime.now());

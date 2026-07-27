@@ -8,7 +8,6 @@ import Campaigns from './pages/Campaigns';
 import Leads from './pages/Leads';
 import Analytics from './pages/Analytics';
 import Reports from './pages/Reports';
-import Tasks from './pages/Tasks';
 import Users from './pages/Users';
 import Integrations from './pages/Integrations';
 import Profile from './pages/Profile';
@@ -24,6 +23,7 @@ import AuditLogsView from './pages/AuditLogsView';
 import AcceptInvite from './pages/AcceptInvite';
 import Billing from './pages/Billing';
 import SecurityCenter from './pages/SecurityCenter';
+import MyWork from './pages/MyWork';
 
 export default function App() {
   return (
@@ -40,12 +40,13 @@ export default function App() {
         {/* Workspace core application routes */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/my-work" element={<MyWork />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/followups" element={<Followups />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/reports" element={<Reports />} />
-          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/tasks" element={<Navigate to="/my-work" replace />} />
           <Route path="/users" element={<Users />} />
           <Route path="/activity-logs" element={<ActivityLogs />} />
           <Route path="/notifications-page" element={<NotificationsPage />} />

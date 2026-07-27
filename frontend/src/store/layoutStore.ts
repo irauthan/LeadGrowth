@@ -4,12 +4,12 @@ export type SidebarPosition = 'left' | 'right' | 'top' | 'bottom';
 
 const ALL_DEFAULT_ITEMS = [
   '/dashboard',
+  '/my-work',
   '/campaigns',
   '/leads',
   '/followups',
   '/analytics',
   '/reports',
-  '/tasks',
   '/users',
   '/activity-logs',
   '/notifications-page',

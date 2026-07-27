@@ -6,7 +6,6 @@ import {
   UserCheck, 
   BarChart3, 
   FileSpreadsheet, 
-  CheckSquare, 
   Users, 
   History,
   Bell,
@@ -24,6 +23,7 @@ import {
   ShieldAlert,
   CreditCard,
   ShieldCheck,
+  Briefcase,
   X
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -58,12 +58,12 @@ export default function Sidebar() {
 
   const generalMenu = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { name: 'My Work', icon: Briefcase, path: '/my-work' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Leads', icon: UserCheck, path: '/leads' },
     { name: 'Follow-ups', icon: Clock, path: '/followups' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
-    { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
     { name: 'Team Management', icon: Users, path: '/users' },
     { name: 'Activity Logs', icon: History, path: '/activity-logs' },
     { name: 'Notifications', icon: Bell, path: '/notifications-page' },

@@ -136,11 +136,12 @@ export default function Navbar() {
       const path = '/' + segments.slice(0, idx + 1).join('/');
       let label = seg.charAt(0).toUpperCase() + seg.slice(1);
       if (seg === 'dashboard') label = 'Dashboard';
+      else if (seg === 'my-work') label = 'My Pipeline';
       else if (seg === 'campaigns') label = 'Campaigns';
       else if (seg === 'leads') label = 'Leads';
+      else if (seg === 'followups') label = 'Follow-ups';
       else if (seg === 'analytics') label = 'Analytics';
       else if (seg === 'reports') label = 'Reports';
-      else if (seg === 'tasks') label = 'Tasks';
       else if (seg === 'users') label = 'Team Management';
       else if (seg === 'activity-logs') label = 'Activity Logs';
       else if (seg === 'notifications-page') label = 'Notifications';
@@ -366,12 +367,12 @@ export default function Navbar() {
                       <span>Add Lead</span>
                     </Link>
                     <Link
-                      to="/tasks"
+                      to="/followups"
                       onClick={() => setShowQuickActions(false)}
                       className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-theme-text/80 hover:bg-theme-bg-alt"
                     >
                       <CheckSquare size={16} className="text-amber-500" />
-                      <span>Assign Task</span>
+                      <span>Schedule Follow-up</span>
                     </Link>
                   </div>
                 </div>

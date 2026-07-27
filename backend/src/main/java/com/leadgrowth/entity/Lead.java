@@ -53,11 +53,52 @@ public class Lead {
     @Column(name = "queue_status", length = 30)
     private String queueStatus; // IN_QUEUE, ASSIGNED, ARCHIVED
 
+    @Column(length = 100)
+    private String company;
+
+    @Column(length = 100)
+    private String location;
+
+    @Column(length = 20)
+    private String priority; // HIGH, MEDIUM, LOW
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_by_id")
+    private User assignedBy;
+
+    @Column(name = "assigned_date")
+    private LocalDateTime assignedDate;
+
+    @Column(name = "progress_percentage")
+    private Integer progressPercentage;
+
+    @Column(name = "last_followup_date")
+    private LocalDateTime lastFollowupDate;
+
+    @Column(name = "due_date")
+    private LocalDateTime dueDate;
+
+    @Column(name = "client_notes", columnDefinition = "TEXT")
+    private String clientNotes;
+
+    @Column(name = "proposal_amount")
+    private Double proposalAmount;
+
+    @Column(name = "proposal_status", length = 30)
+    private String proposalStatus;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        if (this.priority == null) {
+            this.priority = "MEDIUM";
+        }
+        if (this.progressPercentage == null) {
+            this.progressPercentage = 0;
+        }
         this.createdAt = LocalDateTime.now();
         if (this.qualityScore == null) {
             this.qualityScore = (int) (Math.random() * 30) + 65; // default 65-95
@@ -138,6 +179,42 @@ public class Lead {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getCompany() { return company; }
+    public void setCompany(String company) { this.company = company; }
+
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
+
+    public User getAssignedBy() { return assignedBy; }
+    public void setAssignedBy(User assignedBy) { this.assignedBy = assignedBy; }
+
+    @Transient
+    public Long getAssignedById() { return assignedBy != null ? assignedBy.getId() : null; }
+
+    public LocalDateTime getAssignedDate() { return assignedDate; }
+    public void setAssignedDate(LocalDateTime assignedDate) { this.assignedDate = assignedDate; }
+
+    public Integer getProgressPercentage() { return progressPercentage; }
+    public void setProgressPercentage(Integer progressPercentage) { this.progressPercentage = progressPercentage; }
+
+    public LocalDateTime getLastFollowupDate() { return lastFollowupDate; }
+    public void setLastFollowupDate(LocalDateTime lastFollowupDate) { this.lastFollowupDate = lastFollowupDate; }
+
+    public LocalDateTime getDueDate() { return dueDate; }
+    public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
+
+    public String getClientNotes() { return clientNotes; }
+    public void setClientNotes(String clientNotes) { this.clientNotes = clientNotes; }
+
+    public Double getProposalAmount() { return proposalAmount; }
+    public void setProposalAmount(Double proposalAmount) { this.proposalAmount = proposalAmount; }
+
+    public String getProposalStatus() { return proposalStatus; }
+    public void setProposalStatus(String proposalStatus) { this.proposalStatus = proposalStatus; }
 
     // Builder
     public static LeadBuilder builder() {
