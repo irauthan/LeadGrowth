@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   UserCheck, 
   Megaphone, 
@@ -6,7 +7,8 @@ import {
   AlertCircle, 
   Check, 
   Loader2,
-  Bell
+  Bell,
+  ArrowRight
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -58,6 +60,41 @@ export default function NotificationsPage() {
     }
   };
 
+  const getNotificationTargetUrl = (title?: string, message?: string) => {
+    const t = (title || '').toLowerCase();
+    const m = (message || '').toLowerCase();
+    const text = t + ' ' + m;
+
+    const leadIdMatch = text.match(/lead\s*#?\s*(\d+)/i) || text.match(/#(\d+)/);
+    const taskIdMatch = text.match(/task\s*#?\s*(\d+)/i);
+
+    if (t.includes('lead') || m.includes('lead') || t.includes('pipeline') || m.includes('pipeline')) {
+      if (leadIdMatch && leadIdMatch[1]) {
+        return `/my-work?leadId=${leadIdMatch[1]}`;
+      }
+      return '/my-work';
+    }
+    if (t.includes('task') || m.includes('task')) {
+      if (taskIdMatch && taskIdMatch[1]) {
+        return `/tasks?taskId=${taskIdMatch[1]}`;
+      }
+      return '/tasks';
+    }
+    if (t.includes('campaign') || m.includes('campaign')) {
+      return '/campaigns';
+    }
+    if (t.includes('follow') || m.includes('follow')) {
+      return '/followups';
+    }
+    if (t.includes('report') || m.includes('report')) {
+      return '/reports';
+    }
+    if (t.includes('user') || t.includes('team') || m.includes('user')) {
+      return '/users';
+    }
+    return '/dashboard';
+  };
+
   const getIcon = (type?: string) => {
     switch (type) {
       case 'LEAD': return <UserCheck size={18} className="text-emerald-500" />;
@@ -102,12 +139,14 @@ export default function NotificationsPage() {
       {/* Notifications List */}
       <div className="space-y-3">
         {notifications.map((item) => (
-          <div 
+          <Link
             key={item.id}
-            className={`p-4 rounded-2xl border transition-all flex items-start gap-4 ${
+            to={getNotificationTargetUrl(item.title, item.message || item.desc)}
+            onClick={() => markSingleRead(item.id)}
+            className={`p-4 rounded-2xl border transition-all flex items-start gap-4 block hover:border-theme-primary/60 hover:shadow-md ${
               item.read 
                 ? 'bg-theme-card/50 border-theme-border/40 opacity-75' 
-                : 'bg-theme-card border-theme-primary/30 shadow-sm'
+                : 'bg-theme-card border-theme-primary/30 shadow-sm font-semibold'
             }`}
           >
             <div className="p-2.5 rounded-2xl bg-theme-bg-alt border border-theme-border/60">
@@ -116,7 +155,9 @@ export default function NotificationsPage() {
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <h4 className="text-xs font-bold text-theme-text truncate">{item.title}</h4>
+                <h4 className="text-xs font-bold text-theme-text truncate flex items-center gap-1.5">
+                  {item.title} <ArrowRight size={12} className="text-theme-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                </h4>
                 <span className="text-[10px] font-semibold text-theme-text-muted">
                   {item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (item.time || 'Just now')}
                 </span>
@@ -126,14 +167,18 @@ export default function NotificationsPage() {
 
             {!item.read && (
               <button 
-                onClick={() => markSingleRead(item.id)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  markSingleRead(item.id);
+                }}
                 className="p-1.5 rounded-xl hover:bg-emerald-500/10 text-theme-text-muted hover:text-emerald-500 transition-colors"
                 title="Mark as Read"
               >
                 <Check size={14} />
               </button>
             )}
-          </div>
+          </Link>
         ))}
 
         {notifications.length === 0 && (

@@ -169,7 +169,7 @@ export default function Followups() {
             </span>
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1">
-            Follow-up Reminders & CRM Timeline 🕒
+            Follow-up Reminders & CRM Timeline
           </h1>
           <p className="text-xs text-theme-text-muted mt-0.5">
             Schedule calls, emails, and meetings. Track past engagement histories to convert leads efficiently.

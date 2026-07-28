@@ -52,6 +52,9 @@ const getSavedNavItems = (): string[] => {
         if (!parsed.includes('/my-work')) {
           parsed.splice(1, 0, '/my-work');
         }
+        if (!parsed.includes('/followups')) {
+          parsed.push('/followups');
+        }
         return parsed;
       }
     } catch (e) {

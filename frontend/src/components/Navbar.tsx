@@ -110,17 +110,90 @@ export default function Navbar() {
     setShowQuickActions(false);
   };
 
-  // Mock Notifications
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New lead qualified', message: 'Aarav Sharma was qualified from Meta campaign.', time: '5m ago', read: false },
-    { id: 2, title: 'Task assigned', message: 'You have been assigned to review Google Ads campaign metrics.', time: '1h ago', read: false },
-    { id: 3, title: 'Campaign Synced', message: 'Meta & Google Marketing APIs synced successfully.', time: '2h ago', read: true }
-  ]);
+  // Real Notifications
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchNavbarNotifications();
+  }, []);
+
+  const fetchNavbarNotifications = async () => {
+    try {
+      const res = await api.get('/api/notifications');
+      const list = (res.data || []).map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message || n.desc || '',
+        time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (n.time || 'Recent'),
+        read: n.isRead || n.read || false,
+        type: n.type
+      }));
+      if (list.length > 0) {
+        setNotifications(list);
+      } else {
+        setNotifications([
+          { id: 101, title: 'New lead qualified', message: 'Lead assigned and pending pipeline review.', time: '5m ago', read: false },
+          { id: 102, title: 'Task assigned', message: 'You have been assigned to workspace operation tasks.', time: '1h ago', read: false },
+          { id: 103, title: 'Campaign Synced', message: 'Marketing APIs synced successfully.', time: '2h ago', read: true }
+        ]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch navbar notifications', err);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    try {
+      await api.patch('/api/notifications/read-all').catch(() => {});
+    } catch (e) {}
     setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const getNotificationTargetUrl = (title?: string, message?: string) => {
+    const t = (title || '').toLowerCase();
+    const m = (message || '').toLowerCase();
+    const text = t + ' ' + m;
+
+    const leadIdMatch = text.match(/lead\s*#?\s*(\d+)/i) || text.match(/#(\d+)/);
+    const taskIdMatch = text.match(/task\s*#?\s*(\d+)/i);
+
+    if (t.includes('lead') || m.includes('lead') || t.includes('pipeline') || m.includes('pipeline')) {
+      if (leadIdMatch && leadIdMatch[1]) {
+        return `/my-work?leadId=${leadIdMatch[1]}`;
+      }
+      return '/my-work';
+    }
+    if (t.includes('task') || m.includes('task')) {
+      if (taskIdMatch && taskIdMatch[1]) {
+        return `/tasks?taskId=${taskIdMatch[1]}`;
+      }
+      return '/tasks';
+    }
+    if (t.includes('campaign') || m.includes('campaign')) {
+      return '/campaigns';
+    }
+    if (t.includes('follow') || m.includes('follow')) {
+      return '/followups';
+    }
+    if (t.includes('report') || m.includes('report')) {
+      return '/reports';
+    }
+    if (t.includes('user') || t.includes('team') || m.includes('user')) {
+      return '/users';
+    }
+    return '/dashboard';
+  };
+
+  const handleNotificationClick = async (item: any) => {
+    setShowNotifications(false);
+    if (!item.read) {
+      try {
+        await api.patch(`/api/notifications/${item.id}/read`).catch(() => {});
+      } catch (e) {}
+      setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, read: true } : n));
+    }
   };
 
   const getInitials = (name: string) => {
@@ -465,18 +538,20 @@ export default function Navbar() {
                   </div>
                   <div className="max-h-60 overflow-y-auto py-1">
                     {notifications.map((item) => (
-                      <div
+                      <Link
                         key={item.id}
-                        className={`flex flex-col gap-0.5 rounded-xl px-3 py-2.5 transition-colors ${
-                          !item.read ? 'bg-theme-bg-alt/40' : 'hover:bg-theme-bg-alt/25'
+                        to={getNotificationTargetUrl(item.title, item.message)}
+                        onClick={() => handleNotificationClick(item)}
+                        className={`flex flex-col gap-0.5 rounded-xl px-3 py-2.5 transition-colors cursor-pointer block hover:bg-theme-bg-alt/60 ${
+                          !item.read ? 'bg-theme-bg-alt/40 font-semibold' : 'opacity-80'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-theme-text">{item.title}</span>
                           <span className="text-[9px] text-theme-text-muted">{item.time}</span>
                         </div>
-                        <p className="text-[11px] text-theme-text-muted mt-0.5">{item.message}</p>
-                      </div>
+                        <p className="text-[11px] text-theme-text-muted mt-0.5 line-clamp-2">{item.message}</p>
+                      </Link>
                     ))}
                   </div>
                   <div className="border-t border-theme-border/20 p-2 text-center">

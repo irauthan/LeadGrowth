@@ -2,6 +2,9 @@ package com.leadgrowth.service;
 
 import com.leadgrowth.dto.LeadDto;
 import com.leadgrowth.dto.LeadNoteRequest;
+import com.leadgrowth.dto.AddActivityLogRequest;
+import com.leadgrowth.dto.CompleteStepRequest;
+import com.leadgrowth.dto.SalesActivityLogDto;
 import com.leadgrowth.entity.Campaign;
 import com.leadgrowth.entity.Lead;
 import com.leadgrowth.entity.LeadNote;
@@ -13,6 +16,8 @@ import com.leadgrowth.entity.Workspace;
 import com.leadgrowth.dto.LeadHistoryDto;
 import com.leadgrowth.dto.SalesActivityDto;
 import com.leadgrowth.entity.SalesActivity;
+import com.leadgrowth.entity.SalesActivityLog;
+import com.leadgrowth.entity.FollowupReminder;
 import com.leadgrowth.entity.LeadHistory;
 import com.leadgrowth.repository.*;
 import com.leadgrowth.websocket.WebSocketManager;
@@ -42,6 +47,8 @@ public class LeadService {
     private final NotificationRepository notificationRepository;
     private final SalesActivityRepository salesActivityRepository;
     private final LeadHistoryRepository leadHistoryRepository;
+    private final SalesActivityLogRepository salesActivityLogRepository;
+    private final FollowupRepository followupRepository;
 
     public LeadService(
             LeadRepository leadRepository,
@@ -53,7 +60,9 @@ public class LeadService {
             AssignmentLogRepository assignmentLogRepository,
             NotificationRepository notificationRepository,
             SalesActivityRepository salesActivityRepository,
-            LeadHistoryRepository leadHistoryRepository
+            LeadHistoryRepository leadHistoryRepository,
+            SalesActivityLogRepository salesActivityLogRepository,
+            FollowupRepository followupRepository
     ) {
         this.leadRepository = leadRepository;
         this.leadNoteRepository = leadNoteRepository;
@@ -65,6 +74,8 @@ public class LeadService {
         this.notificationRepository = notificationRepository;
         this.salesActivityRepository = salesActivityRepository;
         this.leadHistoryRepository = leadHistoryRepository;
+        this.salesActivityLogRepository = salesActivityLogRepository;
+        this.followupRepository = followupRepository;
     }
 
     public List<LeadDto> getLeads(String userEmail) {
@@ -238,7 +249,7 @@ public class LeadService {
 
         // Notify
         createAndSendNotification(assignTarget, "New Lead Assigned", 
-                "You have been assigned to lead: \"" + saved.getName() + "\".");
+                "You have been assigned to lead: \"" + saved.getName() + "\" (Lead #" + saved.getId() + ").");
 
         LeadDto resultDto = convertToDto(saved);
         webSocketManager.broadcastLead(user.getWorkspace().getId(), resultDto);
@@ -458,8 +469,9 @@ public class LeadService {
 
         ensureDefaultSalesActivities(lead);
 
-        SalesActivity activity = salesActivityRepository.findByLeadIdAndActivityKey(leadId, activityKey)
-                .orElseGet(() -> new SalesActivity(lead, activityKey, activityKey, "PENDING"));
+        final String normalizedKey = normalizeActivityKey(activityKey);
+        SalesActivity activity = salesActivityRepository.findByLeadIdAndActivityKey(leadId, normalizedKey)
+                .orElseGet(() -> new SalesActivity(lead, normalizedKey, normalizedKey.replace("_", " "), "PENDING"));
 
         String oldStatus = activity.getStatus();
         activity.setStatus(status);
@@ -502,6 +514,219 @@ public class LeadService {
         leadHistoryRepository.save(history);
 
         return convertToDto(lead);
+    }
+
+    @Transactional
+    public LeadDto addStepActivityLog(Long leadId, String activityKey, AddActivityLogRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found: " + leadId));
+
+        ensureDefaultSalesActivities(lead);
+
+        final String normalizedKey = normalizeActivityKey(activityKey);
+        SalesActivity activity = salesActivityRepository.findByLeadIdAndActivityKey(leadId, normalizedKey)
+                .orElseGet(() -> new SalesActivity(lead, normalizedKey, normalizedKey.replace("_", " "), "PENDING"));
+
+        if ("PENDING".equalsIgnoreCase(activity.getStatus())) {
+            activity.setStatus("IN_PROGRESS");
+        }
+        activity = salesActivityRepository.save(activity);
+
+        List<SalesActivityLog> existingLogs = salesActivityLogRepository.findBySalesActivityIdOrderByActivityNumberAsc(activity.getId());
+        int nextActivityNumber = existingLogs.size() + 1;
+
+        SalesActivityLog activityLog = new SalesActivityLog(
+                activity,
+                lead,
+                nextActivityNumber,
+                request.getCommunicationType() != null ? request.getCommunicationType() : "PHONE_CALL",
+                request.getOutcome() != null ? request.getOutcome() : "ATTEMPTED",
+                request.getRemarks(),
+                request.getDuration(),
+                request.getStatus() != null ? request.getStatus() : "ATTEMPTED",
+                request.getNextFollowupDate(),
+                request.getAttachments(),
+                user
+        );
+        salesActivityLogRepository.save(activityLog);
+
+        if (request.getRemarks() != null && !request.getRemarks().isBlank()) {
+            activity.setRemarks(request.getRemarks());
+        }
+        salesActivityRepository.save(activity);
+
+        // Follow-up Integration: Auto-create FollowupReminder if nextFollowupDate is provided
+        if (request.getNextFollowupDate() != null) {
+            User assignedUser = lead.getAssignedTo() != null ? lead.getAssignedTo() : user;
+            Workspace workspace = user.getWorkspace() != null ? user.getWorkspace() : assignedUser.getWorkspace();
+            if (workspace != null) {
+                String followupType = "CALL";
+                if ("WHATSAPP".equalsIgnoreCase(request.getCommunicationType())) followupType = "WHATSAPP";
+                else if ("EMAIL".equalsIgnoreCase(request.getCommunicationType())) followupType = "EMAIL";
+                else if ("GOOGLE_MEET".equalsIgnoreCase(request.getCommunicationType()) || "ZOOM".equalsIgnoreCase(request.getCommunicationType()) || "OFFICE_VISIT".equalsIgnoreCase(request.getCommunicationType())) followupType = "MEETING";
+
+                String notes = "Follow-up created from Workflow Step '" + activity.getTitle() + "' (Attempt #" + nextActivityNumber + "): " + (request.getRemarks() != null ? request.getRemarks() : "Follow-up required");
+                FollowupReminder reminder = new FollowupReminder(lead, assignedUser, workspace, request.getNextFollowupDate(), followupType, notes);
+                followupRepository.save(reminder);
+            }
+        }
+
+        // Timeline Audit History
+        LeadHistory history = new LeadHistory(
+                lead,
+                "ACTIVITY_LOG_ADDED",
+                "Logged Activity #" + nextActivityNumber + " (" + activityLog.getCommunicationType() + " - Outcome: " + activityLog.getOutcome() + ") for step '" + activity.getTitle() + "'" + (request.getRemarks() != null && !request.getRemarks().isBlank() ? ": " + request.getRemarks() : ""),
+                user,
+                activity.getStatus(),
+                activity.getStatus()
+        );
+        leadHistoryRepository.save(history);
+
+        return convertToDto(lead);
+    }
+
+    @Transactional
+    public LeadDto completeWorkflowStep(Long leadId, String activityKey, CompleteStepRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Lead lead = leadRepository.findById(leadId)
+                .orElseThrow(() -> new IllegalArgumentException("Lead not found: " + leadId));
+
+        ensureDefaultSalesActivities(lead);
+
+        final String normalizedKey = normalizeActivityKey(activityKey);
+        SalesActivity activity = salesActivityRepository.findByLeadIdAndActivityKey(leadId, normalizedKey)
+                .orElseGet(() -> new SalesActivity(lead, normalizedKey, normalizedKey.replace("_", " "), "PENDING"));
+
+        String oldStatus = activity.getStatus();
+        activity.setStatus("COMPLETED");
+        activity.setCompletedAt(LocalDateTime.now());
+        activity.setCompletedBy(user);
+        if (request != null && request.getCompletionRemarks() != null && !request.getCompletionRemarks().isBlank()) {
+            activity.setCompletionRemarks(request.getCompletionRemarks());
+            activity.setRemarks(request.getCompletionRemarks());
+        }
+        salesActivityRepository.save(activity);
+
+        // Recalculate Lead Progress %
+        List<SalesActivity> activities = salesActivityRepository.findByLeadIdOrderByIdAsc(leadId);
+        long completedCount = activities.stream().filter(a -> "COMPLETED".equalsIgnoreCase(a.getStatus())).count();
+        int progress = (int) Math.round(((double) completedCount / activities.size()) * 100);
+        lead.setProgressPercentage(progress);
+
+        // Auto-advance stage based on completed step
+        if ("FIRST_CALL".equals(activityKey) && "New".equalsIgnoreCase(lead.getStatus())) {
+            lead.setStatus("Contacted");
+        } else if ("REQUIREMENT_COLLECTION".equals(activityKey)) {
+            lead.setStatus("Interested");
+        } else if ("DEMO_SCHEDULED".equals(activityKey)) {
+            lead.setStatus("Qualified");
+        } else if ("PROPOSAL_SENT".equals(activityKey)) {
+            lead.setStatus("Proposal Sent");
+        } else if ("NEGOTIATION".equals(activityKey)) {
+            lead.setStatus("Negotiation");
+        } else if ("CLOSING".equals(activityKey)) {
+            lead.setStatus("Converted");
+        } else if ("PAYMENT_FOLLOWUP".equals(activityKey)) {
+            lead.setStatus("Payment Completed");
+        }
+        leadRepository.save(lead);
+
+        // Timeline Audit History
+        LeadHistory history = new LeadHistory(
+                lead,
+                "STEP_COMPLETED",
+                "Explicitly marked step '" + activity.getTitle() + "' as COMPLETED" + (activity.getCompletionRemarks() != null ? " (Remark: " + activity.getCompletionRemarks() + ")" : ""),
+                user,
+                oldStatus,
+                "COMPLETED"
+        );
+        leadHistoryRepository.save(history);
+
+        // Send WebSocket Notification to Manager/Workspace
+        if (user.getWorkspace() != null) {
+            Map<String, Object> wsMsg = new HashMap<>();
+            wsMsg.put("type", "WORKFLOW_STEP_COMPLETED");
+            wsMsg.put("leadId", lead.getId());
+            wsMsg.put("leadName", lead.getName());
+            wsMsg.put("stepTitle", activity.getTitle());
+            wsMsg.put("completedByName", user.getFullName());
+            wsMsg.put("timestamp", LocalDateTime.now().toString());
+            webSocketManager.broadcastWorkspaceNotification(user.getWorkspace().getId(), wsMsg);
+        }
+
+        return convertToDto(lead);
+    }
+
+    public List<SalesActivityLogDto> getLeadActivityLogs(Long leadId) {
+        List<SalesActivityLog> logs = salesActivityLogRepository.findByLeadIdOrderByCreatedAtDesc(leadId);
+        return logs.stream().map(log -> new SalesActivityLogDto(
+                log.getId(),
+                log.getSalesActivity() != null ? log.getSalesActivity().getId() : null,
+                log.getLead().getId(),
+                log.getActivityNumber(),
+                log.getCommunicationType(),
+                log.getOutcome(),
+                log.getRemarks(),
+                log.getDuration(),
+                log.getStatus(),
+                log.getNextFollowupDate(),
+                log.getAttachments(),
+                log.getLoggedBy() != null ? log.getLoggedBy().getId() : null,
+                log.getLoggedBy() != null ? log.getLoggedBy().getFullName() : "System",
+                log.getCreatedAt()
+        )).collect(Collectors.toList());
+    }
+
+    public Map<String, Integer> getWorkflowPendingCounts(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Lead> leads;
+        if (user.getRoles().contains("ROLE_ADMIN") || user.getRoles().contains("ROLE_MANAGER")) {
+            leads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(user.getWorkspace().getId());
+        } else {
+            leads = leadRepository.findByAssignedToIdOrderByCreatedAtDesc(user.getId());
+        }
+
+        Map<String, Integer> pendingCounts = new HashMap<>();
+        pendingCounts.put("pendingFirstCalls", 0);
+        pendingCounts.put("pendingRequirementCollection", 0);
+        pendingCounts.put("pendingDemo", 0);
+        pendingCounts.put("pendingProposal", 0);
+        pendingCounts.put("pendingNegotiation", 0);
+        pendingCounts.put("pendingPayment", 0);
+
+        for (Lead lead : leads) {
+            List<SalesActivity> activities = salesActivityRepository.findByLeadIdOrderByIdAsc(lead.getId());
+            for (SalesActivity act : activities) {
+                if (!"COMPLETED".equalsIgnoreCase(act.getStatus())) {
+                    switch (act.getActivityKey()) {
+                        case "FIRST_CALL":
+                            pendingCounts.put("pendingFirstCalls", pendingCounts.get("pendingFirstCalls") + 1);
+                            break;
+                        case "REQUIREMENT_COLLECTION":
+                            pendingCounts.put("pendingRequirementCollection", pendingCounts.get("pendingRequirementCollection") + 1);
+                            break;
+                        case "DEMO_SCHEDULED":
+                            pendingCounts.put("pendingDemo", pendingCounts.get("pendingDemo") + 1);
+                            break;
+                        case "PROPOSAL_SENT":
+                            pendingCounts.put("pendingProposal", pendingCounts.get("pendingProposal") + 1);
+                            break;
+                        case "NEGOTIATION":
+                            pendingCounts.put("pendingNegotiation", pendingCounts.get("pendingNegotiation") + 1);
+                            break;
+                        case "PAYMENT_FOLLOWUP":
+                            pendingCounts.put("pendingPayment", pendingCounts.get("pendingPayment") + 1);
+                            break;
+                    }
+                }
+            }
+        }
+        return pendingCounts;
     }
 
     @Transactional
@@ -555,18 +780,40 @@ public class LeadService {
         ensureDefaultSalesActivities(lead);
 
         List<SalesActivity> activities = salesActivityRepository.findByLeadIdOrderByIdAsc(lead.getId());
-        List<SalesActivityDto> activityDtos = activities.stream().map(a -> new SalesActivityDto(
-                a.getId(),
-                lead.getId(),
-                a.getActivityKey(),
-                a.getTitle(),
-                a.getStatus(),
-                a.getCompletedAt(),
-                a.getCompletedBy() != null ? a.getCompletedBy().getId() : null,
-                a.getCompletedBy() != null ? a.getCompletedBy().getFullName() : null,
-                a.getRemarks(),
-                a.getCreatedAt()
-        )).collect(Collectors.toList());
+        List<SalesActivityDto> activityDtos = activities.stream().map(a -> {
+            List<SalesActivityLog> logs = salesActivityLogRepository.findBySalesActivityIdOrderByActivityNumberAsc(a.getId());
+            List<SalesActivityLogDto> logDtos = logs.stream().map(l -> new SalesActivityLogDto(
+                    l.getId(),
+                    a.getId(),
+                    lead.getId(),
+                    l.getActivityNumber(),
+                    l.getCommunicationType(),
+                    l.getOutcome(),
+                    l.getRemarks(),
+                    l.getDuration(),
+                    l.getStatus(),
+                    l.getNextFollowupDate(),
+                    l.getAttachments(),
+                    l.getLoggedBy() != null ? l.getLoggedBy().getId() : null,
+                    l.getLoggedBy() != null ? l.getLoggedBy().getFullName() : "System",
+                    l.getCreatedAt()
+            )).collect(Collectors.toList());
+
+            return new SalesActivityDto(
+                    a.getId(),
+                    lead.getId(),
+                    a.getActivityKey(),
+                    a.getTitle(),
+                    a.getStatus(),
+                    a.getCompletedAt(),
+                    a.getCompletedBy() != null ? a.getCompletedBy().getId() : null,
+                    a.getCompletedBy() != null ? a.getCompletedBy().getFullName() : null,
+                    a.getCompletionRemarks(),
+                    a.getRemarks(),
+                    a.getCreatedAt(),
+                    logDtos
+            );
+        }).collect(Collectors.toList());
 
         LeadDto dto = new LeadDto();
         dto.setId(lead.getId());
@@ -657,5 +904,18 @@ public class LeadService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         List<Lead> leads = leadRepository.findPendingAssignedLeadsByUserId(user.getId());
         return leads.stream().map(this::convertToDto).collect(Collectors.toList());
+    }
+
+    private String normalizeActivityKey(String key) {
+        if (key == null) return "FIRST_CALL";
+        String normalized = key.toUpperCase().trim().replace(" ", "_");
+        if ("CONTACTED".equals(normalized) || "FIRSTCALL".equals(normalized) || "FIRST_CALL".equals(normalized)) return "FIRST_CALL";
+        if ("REQUIREMENT".equals(normalized) || "REQUIREMENTS".equals(normalized) || "REQUIREMENT_COLLECTION".equals(normalized) || "FOLLOW_UP".equals(normalized) || "FOLLOWUP".equals(normalized)) return "REQUIREMENT_COLLECTION";
+        if ("DEMO".equals(normalized) || "DEMOSCHEDULED".equals(normalized) || "DEMO_SCHEDULED".equals(normalized)) return "DEMO_SCHEDULED";
+        if ("PROPOSAL".equals(normalized) || "PROPOSALSENT".equals(normalized) || "PROPOSAL_SENT".equals(normalized)) return "PROPOSAL_SENT";
+        if ("NEGOTIATION".equals(normalized)) return "NEGOTIATION";
+        if ("CLOSING".equals(normalized) || "CONVERTED".equals(normalized)) return "CLOSING";
+        if ("PAYMENT".equals(normalized) || "PAYMENT_COMPLETED".equals(normalized) || "PAYMENT_FOLLOWUP".equals(normalized)) return "PAYMENT_FOLLOWUP";
+        return normalized;
     }
 }

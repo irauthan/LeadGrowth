@@ -82,7 +82,7 @@ export default function Sidebar() {
 
   const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
   const restrictedPaths = isUserOnly ? ['/billing', '/users', '/activity-logs'] : (!isAdmin ? ['/billing'] : []);
-  const visibleGeneralMenu = generalMenu.filter(item => (enabledNavItems.includes(item.path) || item.path === '/my-work' || item.path === '/dashboard') && !restrictedPaths.includes(item.path));
+  const visibleGeneralMenu = generalMenu.filter(item => (enabledNavItems.includes(item.path) || item.path === '/my-work' || item.path === '/dashboard' || item.path === '/followups') && !restrictedPaths.includes(item.path));
   const visibleAdminMenu = adminMenu.filter(item => enabledNavItems.includes(item.path) && (isAdmin || (!item.adminOnly && isManager)));
 
   const getInitials = (name?: string) => {

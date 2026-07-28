@@ -9,6 +9,7 @@ import com.leadgrowth.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,11 +34,34 @@ public class FollowupService {
         Lead lead = leadRepository.findById(leadId)
                 .orElseThrow(() -> new RuntimeException("Lead not found"));
 
-        LocalDateTime scheduledAt = LocalDateTime.parse(scheduledAtStr);
+        LocalDateTime scheduledAt = parseLocalDateTime(scheduledAtStr);
         FollowupReminder reminder = new FollowupReminder(lead, user, user.getWorkspace(), scheduledAt, type, notes);
         FollowupReminder saved = followupRepository.save(reminder);
 
         return convertToMap(saved);
+    }
+
+    private LocalDateTime parseLocalDateTime(String dateStr) {
+        if (dateStr == null || dateStr.trim().isEmpty()) {
+            return LocalDateTime.now().plusDays(1);
+        }
+        try {
+            return ZonedDateTime.parse(dateStr).toLocalDateTime();
+        } catch (Exception e1) {
+            try {
+                return LocalDateTime.parse(dateStr);
+            } catch (Exception e2) {
+                try {
+                    String cleaned = dateStr.replace("Z", "");
+                    if (cleaned.contains(".")) {
+                        cleaned = cleaned.substring(0, cleaned.indexOf("."));
+                    }
+                    return LocalDateTime.parse(cleaned);
+                } catch (Exception e3) {
+                    return LocalDateTime.now().plusDays(1);
+                }
+            }
+        }
     }
 
     public List<Map<String, Object>> getFollowups(String userEmail) {

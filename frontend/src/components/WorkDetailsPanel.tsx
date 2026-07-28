@@ -8,15 +8,25 @@ import {
   Clock, 
   FileText, 
   History, 
-  Save, 
   DollarSign, 
-  TrendingUp,
-  Plus,
-  Calendar,
-  Download
+  Plus, 
+  Calendar, 
+  Download,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  Video,
+  Building2,
+  Activity,
+  ArrowUpDown,
+  AlertCircle,
+  Eye,
+  Copy,
+  Check
 } from 'lucide-react';
 import api from '../services/api';
 import { downloadSingleLeadPdf } from '../services/reportService';
+import type { SalesActivity, SalesActivityLog } from '../types';
 
 interface WorkDetailsPanelProps {
   leadId: number | null;
@@ -28,12 +38,39 @@ interface WorkDetailsPanelProps {
 export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdated }: WorkDetailsPanelProps) {
   const [lead, setLead] = useState<any>(null);
   const [timeline, setTimeline] = useState<any[]>([]);
+  const [activityLogsHistory, setActivityLogsHistory] = useState<SalesActivityLog[]>([]);
   const [activeTab, setActiveTab] = useState<'activities' | 'notes' | 'timeline' | 'followup'>('activities');
+  const [historySubTab, setHistorySubTab] = useState<'all' | 'attempts'>('all');
+
   const [loading, setLoading] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('');
   const [clientNotes, setClientNotes] = useState('');
   const [proposalAmount, setProposalAmount] = useState<number | string>('');
+
+  // Expandable Step Accordions State
+  const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
+  // Sort order per step (true = Newest First, false = Oldest First)
+  const [newestFirstSort, setNewestFirstSort] = useState<Record<string, boolean>>({});
+
+  // Add Activity Modal State
+  const [addModalStepKey, setAddModalStepKey] = useState<string | null>(null);
+  const [communicationType, setCommunicationType] = useState('PHONE_CALL');
+  const [outcome, setOutcome] = useState('BUSY');
+  const [activityRemarks, setActivityRemarks] = useState('');
+  const [activityDuration, setActivityDuration] = useState('5 mins');
+  const [activityStatus, setActivityStatus] = useState('ATTEMPTED');
+  const [nextFollowupDate, setNextFollowupDate] = useState('');
+  const [submittingActivity, setSubmittingActivity] = useState(false);
+
+  // Complete Step Modal State
+  const [completeModalStepKey, setCompleteModalStepKey] = useState<string | null>(null);
+  const [completionRemarks, setCompletionRemarks] = useState('');
+  const [submittingCompletion, setSubmittingCompletion] = useState(false);
+
+  // Clickable Interaction Detail Modal State
+  const [selectedInteractionDetail, setSelectedInteractionDetail] = useState<any | null>(null);
+  const [copiedRemarks, setCopiedRemarks] = useState(false);
 
   // Followup form state
   const [followupType, setFollowupType] = useState('CALL');
@@ -51,14 +88,32 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
     if (!leadId) return;
     setLoading(true);
     try {
-      const [leadRes, timelineRes] = await Promise.all([
+      const [leadRes, timelineRes, logsRes] = await Promise.all([
         api.get(`/api/leads/${leadId}`),
-        api.get(`/api/leads/${leadId}/timeline`).catch(() => ({ data: [] }))
+        api.get(`/api/leads/${leadId}/timeline`).catch(() => ({ data: [] })),
+        api.get(`/api/leads/${leadId}/activities-history`).catch(() => ({ data: [] }))
       ]);
       setLead(leadRes.data);
       setClientNotes(leadRes.data.clientNotes || '');
       setProposalAmount(leadRes.data.proposalAmount || '');
       setTimeline(timelineRes.data || []);
+      setActivityLogsHistory(logsRes.data || []);
+
+      // Auto-expand first non-completed step or first step
+      if (leadRes.data.activities && leadRes.data.activities.length > 0) {
+        const initialExpand: Record<string, boolean> = {};
+        let expandedOne = false;
+        leadRes.data.activities.forEach((act: SalesActivity) => {
+          if (!expandedOne && act.status !== 'COMPLETED') {
+            initialExpand[act.activityKey] = true;
+            expandedOne = true;
+          }
+        });
+        if (!expandedOne) {
+          initialExpand[leadRes.data.activities[0].activityKey] = true;
+        }
+        setExpandedSteps((prev) => ({ ...initialExpand, ...prev }));
+      }
     } catch (err) {
       console.error('Failed to load lead details', err);
     } finally {
@@ -66,18 +121,68 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
     }
   };
 
-  const handleActivityToggle = async (activityKey: string, currentStatus: string) => {
-    if (!leadId) return;
-    const nextStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+  const toggleStepExpanded = (activityKey: string) => {
+    setExpandedSteps((prev) => ({ ...prev, [activityKey]: !prev[activityKey] }));
+  };
+
+  const toggleStepSort = (activityKey: string) => {
+    setNewestFirstSort((prev) => ({ ...prev, [activityKey]: !(prev[activityKey] ?? true) }));
+  };
+
+  const handleOpenAddModal = (activityKey: string) => {
+    setAddModalStepKey(activityKey);
+    setCommunicationType('PHONE_CALL');
+    setOutcome('BUSY');
+    setActivityRemarks('');
+    setActivityDuration('5 mins');
+    setActivityStatus('ATTEMPTED');
+    setNextFollowupDate('');
+  };
+
+  const handleAddActivitySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!leadId || !addModalStepKey) return;
+    setSubmittingActivity(true);
     try {
-      const res = await api.patch(`/api/leads/${leadId}/activity`, null, {
-        params: { activityKey, status: nextStatus }
-      });
-      setLead(res.data);
+      const payload = {
+        communicationType,
+        outcome,
+        remarks: activityRemarks,
+        duration: activityDuration,
+        status: activityStatus,
+        nextFollowupDate: nextFollowupDate ? (nextFollowupDate.length === 16 ? `${nextFollowupDate}:00` : nextFollowupDate) : null
+      };
+      await api.post(`/api/leads/${leadId}/workflow-steps/${addModalStepKey}/activities`, payload);
+      setAddModalStepKey(null);
       fetchLeadDetails();
       onLeadUpdated();
-    } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to update activity');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to record activity log');
+    } finally {
+      setSubmittingActivity(false);
+    }
+  };
+
+  const handleOpenCompleteModal = (activityKey: string) => {
+    setCompleteModalStepKey(activityKey);
+    setCompletionRemarks('');
+  };
+
+  const handleCompleteStepSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!leadId || !completeModalStepKey) return;
+    setSubmittingCompletion(true);
+    try {
+      await api.post(`/api/leads/${leadId}/workflow-steps/${completeModalStepKey}/complete`, {
+        completionRemarks
+      });
+      setCompleteModalStepKey(null);
+      fetchLeadDetails();
+      onLeadUpdated();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to complete workflow step');
+    } finally {
+      setSubmittingCompletion(false);
     }
   };
 
@@ -118,21 +223,60 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
     if (!leadId || !followupDate) return;
     setSchedulingFollowup(true);
     try {
-      await api.post('/api/followups', {
+      await api.post(`/api/followups`, {
         leadId,
-        scheduledAt: followupDate,
+        scheduledAt: new Date(followupDate).toISOString(),
         type: followupType,
         notes: followupNotes
       });
       alert('Follow-up scheduled successfully!');
-      setFollowupNotes('');
       setFollowupDate('');
+      setFollowupNotes('');
       fetchLeadDetails();
       onLeadUpdated();
-    } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to schedule follow-up');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to schedule follow-up');
     } finally {
       setSchedulingFollowup(false);
+    }
+  };
+
+  const handleCopyRemarks = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedRemarks(true);
+    setTimeout(() => setCopiedRemarks(false), 2500);
+  };
+
+  const getCommIcon = (type: string) => {
+    switch (type) {
+      case 'PHONE_CALL': return <Phone size={13} className="text-blue-400" />;
+      case 'WHATSAPP': return <MessageSquare size={13} className="text-emerald-400" />;
+      case 'EMAIL': return <Mail size={13} className="text-amber-400" />;
+      case 'GOOGLE_MEET':
+      case 'ZOOM':
+      case 'VIDEO_CALL': return <Video size={13} className="text-purple-400" />;
+      case 'OFFICE_VISIT': return <Building2 size={13} className="text-indigo-400" />;
+      default: return <Activity size={13} className="text-theme-primary" />;
+    }
+  };
+
+  const getOutcomeBadgeClass = (out: string) => {
+    switch (out) {
+      case 'CONNECTED':
+      case 'INTERESTED':
+      case 'SUCCESSFUL':
+      case 'CONVERTED':
+      case 'MEETING_SCHEDULED':
+      case 'DEMO_SCHEDULED': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      case 'BUSY':
+      case 'NOT_ANSWERED':
+      case 'REJECTED_CALL':
+      case 'WRONG_NUMBER': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+      case 'NOT_INTERESTED':
+      case 'LOST':
+      case 'CANCELLED': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      default: return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
     }
   };
 
@@ -146,99 +290,89 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="w-full max-w-3xl h-full bg-theme-bg border-l border-theme-border flex flex-col shadow-2xl overflow-y-auto"
+          className="w-full max-w-2xl bg-theme-bg border-l border-theme-border h-full flex flex-col shadow-2xl relative"
         >
           {/* Top Header */}
-          <div className="p-6 border-b border-theme-border/40 bg-theme-card flex items-center justify-between sticky top-0 z-10">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-                  Lead #{leadId}
-                </span>
-                <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
-                  lead?.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                  lead?.status === 'Lost' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
-                  'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                }`}>
-                  Stage: {lead?.status || 'New'}
-                </span>
+          <div className="p-5 border-b border-theme-border flex items-center justify-between bg-theme-card/60 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-sm">
+                {lead?.name?.substring(0, 2).toUpperCase() || 'LD'}
               </div>
-              <h2 className="text-xl font-extrabold text-theme-text mt-1">{lead?.name || 'Loading details...'}</h2>
-              <p className="text-xs text-theme-text-muted">{lead?.company || 'Enterprise Contact'} • {lead?.campaignName || 'Direct Search'}</p>
+              <div>
+                <h2 className="text-base font-extrabold text-theme-text flex items-center gap-2">
+                  {lead?.name || 'Lead Work Container'}
+                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
+                    {lead?.status || 'NEW'}
+                  </span>
+                </h2>
+                <p className="text-xs text-theme-text-muted">
+                  {lead?.company || 'No Company'} • {lead?.email} • {lead?.phone || 'No Phone'}
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {leadId && (
+              {lead && (
                 <button
-                  onClick={() => downloadSingleLeadPdf(leadId)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text hover:bg-theme-card transition-all"
-                  title="Export Branded PDF Dossier"
+                  onClick={() => downloadSingleLeadPdf(lead)}
+                  title="Export Lead PDF"
+                  className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-theme-primary transition-all"
                 >
-                  <Download size={14} className="text-theme-primary" /> PDF Dossier
+                  <Download size={16} />
                 </button>
               )}
               <button
                 onClick={onClose}
-                className="p-2 rounded-2xl bg-theme-bg-alt text-theme-text-muted hover:text-theme-text transition-colors"
+                className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-rose-500 transition-all"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
           </div>
 
+          {/* Quick Metrics Bar */}
+          <div className="px-6 py-3 bg-theme-card/30 border-b border-theme-border flex items-center justify-between text-xs">
+            <div className="flex items-center gap-4">
+              <div>
+                <span className="text-[10px] font-bold text-theme-text-muted block">QUALITY TIER</span>
+                <span className="font-extrabold text-amber-400">{lead?.qualityTier || 'WARM'}</span>
+              </div>
+              <div className="h-6 w-px bg-theme-border" />
+              <div>
+                <span className="text-[10px] font-bold text-theme-text-muted block">WORKFLOW PROGRESS</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-20 h-1.5 rounded-full bg-theme-bg-alt overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-theme-primary to-emerald-400"
+                      style={{ width: `${lead?.progressPercentage || 0}%` }}
+                    />
+                  </div>
+                  <span className="font-extrabold text-theme-text">{lead?.progressPercentage || 0}%</span>
+                </div>
+              </div>
+              <div className="h-6 w-px bg-theme-border" />
+              <div>
+                <span className="text-[10px] font-bold text-theme-text-muted block">ASSIGNED REP</span>
+                <span className="font-bold text-theme-text">{lead?.assignedToName || 'Unassigned'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Body Section */}
           {loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 space-y-3">
-              <Clock size={36} className="animate-spin text-theme-primary" />
-              <span className="text-xs font-bold text-theme-text-muted">Loading Work Workspace Details...</span>
+            <div className="flex-1 flex items-center justify-center space-y-3 flex-col">
+              <div className="w-8 h-8 border-2 border-theme-primary border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs font-bold text-theme-text-muted">Loading Enterprise Multi-Activity Engine...</span>
             </div>
           ) : (
-            <div className="p-6 space-y-6 flex-1">
-
-              {/* Client Info Bar */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 rounded-3xl bg-theme-card border border-theme-border shadow-sm">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Phone & Direct Call</span>
-                  <a href={`tel:${lead?.phone}`} className="flex items-center gap-2 text-xs font-extrabold text-theme-primary hover:underline">
-                    <Phone size={14} /> {lead?.phone || 'N/A'}
-                  </a>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Email Contact</span>
-                  <a href={`mailto:${lead?.email}`} className="flex items-center gap-2 text-xs font-extrabold text-theme-primary hover:underline truncate">
-                    <Mail size={14} /> {lead?.email}
-                  </a>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Priority & Quality</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-amber-400">{lead?.qualityTier} ({lead?.qualityScore} pts)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress Bar Header */}
-              <div className="p-5 rounded-3xl bg-gradient-to-r from-theme-primary/10 via-indigo-500/10 to-purple-500/10 border border-theme-primary/20 space-y-2">
-                <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
-                  <span className="flex items-center gap-2">
-                    <TrendingUp size={16} className="text-theme-primary" /> Sales Execution Progress
-                  </span>
-                  <span className="text-theme-primary">{lead?.progressPercentage || 0}%</span>
-                </div>
-                <div className="w-full bg-theme-bg-alt rounded-full h-3 overflow-hidden border border-theme-border/40 p-0.5">
-                  <div 
-                    className="bg-gradient-to-r from-theme-primary via-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${lead?.progressPercentage || 0}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Tab Navigation */}
-              <div className="flex items-center gap-2 border-b border-theme-border/40 pb-2">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Navigation Tabs */}
+              <div className="grid grid-cols-4 gap-1 p-1 bg-theme-card border border-theme-border rounded-2xl">
                 {[
-                  { id: 'activities', label: 'Sales Activities Checklist', icon: CheckCircle2 },
-                  { id: 'notes', label: 'Notes & Proposal', icon: FileText },
+                  { id: 'activities', label: 'Workflow Stages', icon: CheckCircle2 },
+                  { id: 'notes', label: 'Proposal & Notes', icon: FileText },
                   { id: 'followup', label: 'Schedule Follow-up', icon: Calendar },
-                  { id: 'timeline', label: 'CRM Timeline', icon: History }
+                  { id: 'timeline', label: 'Interaction History', icon: History }
                 ].map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -246,25 +380,30 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all ${
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition-all ${
                         isActive
                           ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20'
                           : 'bg-theme-bg-alt/50 text-theme-text-muted hover:text-theme-text'
                       }`}
                     >
-                      <Icon size={14} /> {tab.label}
+                      <Icon size={14} /> <span className="hidden sm:inline">{tab.label}</span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Tab Content 1: Sales Activities Checklist */}
+              {/* TAB 1: WORKFLOW STAGES (MULTI-ACTIVITY EXPANDABLE CARDS) */}
               {activeTab === 'activities' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">
-                      Required Workflow Steps
-                    </h3>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">
+                        Enterprise Multi-Activity Workflow Container
+                      </h3>
+                      <p className="text-[10px] text-theme-text-muted mt-0.5">
+                        Record unlimited calls, meetings, WhatsApp & remarks. Stage completes ONLY when explicitly completed.
+                      </p>
+                    </div>
                     {autoSaveStatus && (
                       <span className="text-[10px] font-bold text-emerald-400 animate-pulse">
                         {autoSaveStatus}
@@ -272,65 +411,173 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                     )}
                   </div>
 
-                  <div className="space-y-3">
-                    {lead?.activities?.map((act: any) => {
-                      const isDone = act.status === 'COMPLETED';
+                  <div className="space-y-4">
+                    {lead?.activities?.map((act: SalesActivity) => {
+                      const isCompleted = act.status === 'COMPLETED';
+                      const isExpanded = expandedSteps[act.activityKey] ?? false;
+                      const isNewestFirst = newestFirstSort[act.activityKey] ?? true;
+                      const logs = act.logs || [];
+                      const sortedLogs = [...logs].sort((a, b) => 
+                        isNewestFirst 
+                          ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                          : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                      );
+
                       return (
                         <div
                           key={act.id}
-                          className={`p-4 rounded-2xl border transition-all ${
-                            isDone 
+                          className={`rounded-2xl border transition-all overflow-hidden ${
+                            isCompleted 
                               ? 'bg-emerald-500/5 border-emerald-500/30' 
                               : 'bg-theme-card border-theme-border hover:border-theme-primary/40'
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-4">
+                          {/* Step Header */}
+                          <div className="p-4 flex items-center justify-between gap-4 bg-theme-card/80">
                             <div className="flex items-center gap-3">
                               <button
-                                onClick={() => handleActivityToggle(act.activityKey, act.status)}
-                                className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${
-                                  isDone 
-                                    ? 'bg-emerald-500 border-emerald-500 text-white' 
-                                    : 'border-theme-border bg-theme-bg hover:border-theme-primary'
-                                }`}
+                                onClick={() => toggleStepExpanded(act.activityKey)}
+                                className="p-1 rounded-lg hover:bg-theme-bg-alt text-theme-text-muted hover:text-theme-text transition-all"
                               >
-                                {isDone && <CheckCircle2 size={14} />}
+                                {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                               </button>
+
                               <div>
-                                <h4 className={`text-xs font-extrabold ${isDone ? 'line-through text-theme-text-muted' : 'text-theme-text'}`}>
-                                  {act.title}
-                                </h4>
-                                {act.completedAt && (
-                                  <span className="text-[9px] text-emerald-400 font-semibold block">
-                                    Completed by {act.completedByName || 'Sales Rep'} • {new Date(act.completedAt).toLocaleString()}
+                                <div className="flex items-center gap-2">
+                                  <h4 className={`text-xs font-extrabold ${isCompleted ? 'text-emerald-400' : 'text-theme-text'}`}>
+                                    {act.title}
+                                  </h4>
+                                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                                    isCompleted 
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                                      : act.status === 'IN_PROGRESS'
+                                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                      : 'bg-theme-bg-alt text-theme-text-muted border-theme-border'
+                                  }`}>
+                                    {isCompleted ? '✔ COMPLETED' : act.status}
                                   </span>
+                                  <span className="text-[10px] font-bold text-theme-text-muted px-2 py-0.5 rounded-md bg-theme-bg-alt/80 border border-theme-border/40">
+                                    {logs.length} {logs.length === 1 ? 'Activity' : 'Activities'}
+                                  </span>
+                                </div>
+
+                                {isCompleted ? (
+                                  <p className="text-[10px] text-emerald-400/90 font-medium mt-1">
+                                    Completed by <strong className="font-bold">{act.completedByName || 'Sales Rep'}</strong> • {act.completedAt ? new Date(act.completedAt).toLocaleString() : ''}
+                                    {act.completionRemarks && ` — "${act.completionRemarks}"`}
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-theme-text-muted mt-0.5">
+                                    {logs.length > 0 ? `Last activity logged ${new Date(logs[logs.length - 1].createdAt).toLocaleTimeString()}` : 'No activities recorded yet.'}
+                                  </p>
                                 )}
                               </div>
                             </div>
 
-                            <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-xl ${
-                              isDone ? 'bg-emerald-500/10 text-emerald-400' : 'bg-theme-bg-alt text-theme-text-muted'
-                            }`}>
-                              {act.status}
-                            </span>
+                            {/* Header Action Buttons */}
+                            <div className="flex items-center gap-2">
+                              {!isCompleted && (
+                                <button
+                                  onClick={() => handleOpenAddModal(act.activityKey)}
+                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white text-[11px] font-bold shadow-xs transition-all"
+                                >
+                                  <Plus size={13} /> Add Activity
+                                </button>
+                              )}
+
+                              {!isCompleted && (
+                                <button
+                                  onClick={() => handleOpenCompleteModal(act.activityKey)}
+                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-xs transition-all"
+                                >
+                                  <CheckCircle2 size={13} /> Complete Step
+                                </button>
+                              )}
+                            </div>
                           </div>
 
-                          {/* Activity Remarks */}
-                          <div className="mt-3 pt-3 border-t border-theme-border/20">
-                            <input
-                              type="text"
-                              placeholder="Add activity remarks or client response..."
-                              defaultValue={act.remarks || ''}
-                              onBlur={(e) => {
-                                if (e.target.value !== act.remarks) {
-                                  api.patch(`/api/leads/${leadId}/activity`, null, {
-                                    params: { activityKey: act.activityKey, status: act.status, remarks: e.target.value }
-                                  });
-                                }
-                              }}
-                              className="w-full bg-theme-bg-alt/50 border border-theme-border/30 rounded-xl px-3 py-1.5 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
-                            />
-                          </div>
+                          {/* Expandable Activity Timeline Section */}
+                          {isExpanded && (
+                            <div className="p-4 border-t border-theme-border/40 bg-theme-bg/60 space-y-3">
+                              <div className="flex items-center justify-between text-[11px] font-bold text-theme-text-muted border-b border-theme-border/30 pb-2">
+                                <span>Recorded Interaction Logs ({logs.length})</span>
+                                {logs.length > 1 && (
+                                  <button
+                                    onClick={() => toggleStepSort(act.activityKey)}
+                                    className="flex items-center gap-1 text-[10px] text-theme-primary hover:underline font-semibold"
+                                  >
+                                    <ArrowUpDown size={12} /> {isNewestFirst ? 'Newest First' : 'Oldest First'}
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Log Timeline Items */}
+                              {sortedLogs.length > 0 ? (
+                                <div className="space-y-2.5">
+                                  {sortedLogs.map((log: SalesActivityLog) => (
+                                    <div
+                                      key={log.id}
+                                      onClick={() => setSelectedInteractionDetail({ ...log, stepTitle: act.title, typeName: 'Activity Attempt' })}
+                                      className="p-3 rounded-xl bg-theme-card border border-theme-border/60 hover:border-theme-primary hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer space-y-2 group relative"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="w-5 h-5 rounded-md bg-theme-bg-alt border border-theme-border flex items-center justify-center">
+                                            {getCommIcon(log.communicationType)}
+                                          </span>
+                                          <span className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors flex items-center gap-1">
+                                            Attempt #{log.activityNumber} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                          </span>
+                                          <span className="text-[10px] text-theme-text-muted font-medium">
+                                            ({log.communicationType?.replace('_', ' ')})
+                                          </span>
+                                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
+                                            {log.outcome?.replace('_', ' ')}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 text-[10px] text-theme-text-muted">
+                                          {log.duration && (
+                                            <span className="flex items-center gap-1 bg-theme-bg-alt px-2 py-0.5 rounded-md border border-theme-border">
+                                              <Clock size={10} /> {log.duration}
+                                            </span>
+                                          )}
+                                          <span>{new Date(log.createdAt).toLocaleString()}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Remarks */}
+                                      <p className="text-xs text-theme-text/90 bg-theme-bg-alt/40 p-2.5 rounded-lg border border-theme-border/30 italic line-clamp-2">
+                                        "{log.remarks || 'No detailed remark provided.'}"
+                                      </p>
+
+                                      <div className="flex items-center justify-between text-[10px] text-theme-text-muted pt-1">
+                                        <span>Logged by: <strong className="text-theme-text font-bold">{log.loggedByName || 'Sales Executive'}</strong></span>
+                                        {log.nextFollowupDate && (
+                                          <span className="text-amber-400 font-bold flex items-center gap-1">
+                                            <Calendar size={11} /> Next Follow-up: {new Date(log.nextFollowupDate).toLocaleString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-6 bg-theme-card/30 rounded-xl border border-dashed border-theme-border/60 space-y-2">
+                                  <AlertCircle size={24} className="mx-auto text-theme-text-muted" />
+                                  <p className="text-xs text-theme-text-muted">
+                                    No activities recorded for this step yet.
+                                  </p>
+                                  <button
+                                    onClick={() => handleOpenAddModal(act.activityKey)}
+                                    className="px-3 py-1 rounded-lg bg-theme-primary/10 border border-theme-primary/30 text-theme-primary text-xs font-bold hover:bg-theme-primary hover:text-white transition-all"
+                                  >
+                                    + Add First Interaction Attempt
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -338,10 +585,10 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                 </div>
               )}
 
-              {/* Tab Content 2: Notes & Proposal */}
+              {/* TAB 2: PROPOSAL & NOTES */}
               {activeTab === 'notes' && (
                 <div className="space-y-6">
-                  {/* Proposal Section */}
+                  {/* Commercial Proposal Section */}
                   <div className="p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
                       <DollarSign size={16} className="text-emerald-400" /> Commercial Proposal Details
@@ -358,23 +605,24 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                           className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-4 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
                         />
                       </div>
+
                       <div className="flex items-end">
                         <button
                           onClick={handleProposalSave}
                           disabled={savingNotes}
-                          className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white shadow-lg transition-all"
+                          className="w-full py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-2"
                         >
-                          <Save size={14} /> Update Proposal Amount
+                          <DollarSign size={14} /> Update Commercial Proposal
                         </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Auto-Save Notes */}
+                  {/* General Executive Notes */}
                   <div className="p-5 rounded-3xl bg-theme-card border border-theme-border space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                        <FileText size={16} className="text-theme-primary" /> Client Notes & Requirement Collection
+                        <FileText size={16} className="text-theme-primary" /> Executive Workspace Client Notes
                       </h3>
                       {autoSaveStatus && (
                         <span className="text-[10px] font-bold text-emerald-400 animate-pulse">
@@ -385,20 +633,20 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
 
                     <textarea
                       rows={6}
-                      placeholder="Type client meeting notes, requirements, or deal progress details. Auto-saves automatically..."
+                      placeholder="Add key notes, business details, tech stack, budget limits..."
                       value={clientNotes}
                       onChange={(e) => handleAutoSaveNotes(e.target.value)}
-                      className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl p-4 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
+                      className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl p-4 text-xs text-theme-text focus:outline-none focus:border-theme-primary leading-relaxed"
                     />
                   </div>
                 </div>
               )}
 
-              {/* Tab Content 3: Schedule Follow-up */}
+              {/* TAB 3: SCHEDULE FOLLOW-UP */}
               {activeTab === 'followup' && (
                 <form onSubmit={handleScheduleFollowup} className="p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                    <Calendar size={16} className="text-cyan-400" /> Schedule Client Follow-up Call / Email
+                    <Calendar size={16} className="text-theme-primary" /> Schedule Direct Follow-up Task
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -407,23 +655,23 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                       <select
                         value={followupType}
                         onChange={(e) => setFollowupType(e.target.value)}
-                        className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-4 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
                       >
-                        <option value="CALL">Phone Call 📞</option>
-                        <option value="EMAIL">Send Email 📧</option>
-                        <option value="MEETING">Video Meeting 💻</option>
-                        <option value="DEMO">Product Demo 🎯</option>
+                        <option value="CALL">Phone Call</option>
+                        <option value="WHATSAPP">WhatsApp</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="MEETING">Meeting / Demo</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Date & Time</label>
+                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Date & Time</label>
                       <input
                         type="datetime-local"
                         required
                         value={followupDate}
                         onChange={(e) => setFollowupDate(e.target.value)}
-                        className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-4 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
                       />
                     </div>
                   </div>
@@ -449,38 +697,432 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                 </form>
               )}
 
-              {/* Tab Content 4: CRM Timeline */}
+              {/* TAB 4: CLICKABLE CLIENT INTERACTION HISTORY TIMELINE */}
               {activeTab === 'timeline' && (
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                    <History size={16} className="text-theme-primary" /> Complete Client History Timeline
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
+                      <History size={16} className="text-theme-primary" /> Complete Audit Trail & Interactions
+                    </h3>
 
-                  <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-theme-border">
-                    {timeline.map((item: any) => (
-                      <div key={item.id} className="relative group">
-                        <div className="absolute -left-[22px] top-1.5 w-3 h-3 rounded-full bg-theme-primary border-2 border-theme-bg" />
-                        <div className="p-4 rounded-2xl bg-theme-card border border-theme-border shadow-xs space-y-1">
-                          <div className="flex items-center justify-between text-xs font-bold text-theme-text">
-                            <span className="text-theme-primary">{item.action}</span>
-                            <span className="text-[10px] text-theme-text-muted">{new Date(item.timestamp).toLocaleString()}</span>
-                          </div>
-                          <p className="text-xs text-theme-text-muted">{item.description}</p>
-                          <span className="text-[9px] font-semibold text-theme-text-muted block">
-                            By {item.performedByName || 'System'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                    {timeline.length === 0 && (
-                      <p className="text-xs text-theme-text-muted text-center py-6">No historical records logged yet.</p>
-                    )}
+                    {/* Sub-tab toggle */}
+                    <div className="flex items-center gap-1 p-1 bg-theme-card border border-theme-border rounded-xl text-[10px]">
+                      <button
+                        onClick={() => setHistorySubTab('all')}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                          historySubTab === 'all'
+                            ? 'bg-theme-primary text-white'
+                            : 'text-theme-text-muted hover:text-theme-text'
+                        }`}
+                      >
+                        All History ({timeline.length})
+                      </button>
+                      <button
+                        onClick={() => setHistorySubTab('attempts')}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                          historySubTab === 'attempts'
+                            ? 'bg-theme-primary text-white'
+                            : 'text-theme-text-muted hover:text-theme-text'
+                        }`}
+                      >
+                        Call Attempts ({activityLogsHistory.length})
+                      </button>
+                    </div>
                   </div>
+
+                  <p className="text-[10px] text-theme-text-muted">
+                    💡 Click on any interaction record below to open and inspect full discussion notes, duration, and follow-up details.
+                  </p>
+
+                  {/* Sub-tab 1: All System Audit Timeline */}
+                  {historySubTab === 'all' && (
+                    <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-theme-border">
+                      {timeline.map((item: any) => (
+                        <div
+                          key={item.id}
+                          onClick={() => setSelectedInteractionDetail({ ...item, typeName: 'System Audit Event' })}
+                          className="relative group cursor-pointer"
+                        >
+                          <div className="absolute -left-[22px] top-1.5 w-3 h-3 rounded-full bg-theme-primary border-2 border-theme-bg group-hover:scale-125 transition-transform" />
+                          <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all space-y-1.5">
+                            <div className="flex items-center justify-between text-xs font-bold text-theme-text">
+                              <span className="text-theme-primary group-hover:underline flex items-center gap-1.5">
+                                {item.action} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </span>
+                              <span className="text-[10px] text-theme-text-muted">{new Date(item.timestamp).toLocaleString()}</span>
+                            </div>
+                            <p className="text-xs text-theme-text-muted leading-relaxed line-clamp-2">{item.description}</p>
+                            <div className="flex items-center justify-between text-[9px] font-semibold text-theme-text-muted pt-1">
+                              <span>By {item.performedByName || 'System'}</span>
+                              <span className="text-theme-primary font-bold">Click to open detail →</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {timeline.length === 0 && (
+                        <p className="text-xs text-theme-text-muted text-center py-6">No historical audit records logged yet.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab 2: Activity Logs & Call Attempts */}
+                  {historySubTab === 'attempts' && (
+                    <div className="space-y-3">
+                      {activityLogsHistory.map((log: SalesActivityLog) => (
+                        <div
+                          key={log.id}
+                          onClick={() => setSelectedInteractionDetail({ ...log, typeName: 'Activity Call Log' })}
+                          className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer space-y-2.5 group"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-lg bg-theme-bg-alt border border-theme-border flex items-center justify-center">
+                                {getCommIcon(log.communicationType)}
+                              </span>
+                              <span className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors flex items-center gap-1">
+                                Attempt #{log.activityNumber} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </span>
+                              <span className="text-[10px] text-theme-text-muted font-medium">
+                                ({log.communicationType?.replace('_', ' ')})
+                              </span>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
+                                {log.outcome?.replace('_', ' ')}
+                              </span>
+                            </div>
+
+                            <span className="text-[10px] text-theme-text-muted">{new Date(log.createdAt).toLocaleString()}</span>
+                          </div>
+
+                          <p className="text-xs text-theme-text/90 bg-theme-bg-alt/40 p-3 rounded-xl border border-theme-border/30 italic">
+                            "{log.remarks || 'No detailed remark provided.'}"
+                          </p>
+
+                          <div className="flex items-center justify-between text-[10px] text-theme-text-muted">
+                            <span>Logged by: <strong className="text-theme-text font-bold">{log.loggedByName || 'Sales Rep'}</strong></span>
+                            <span className="text-theme-primary font-bold">Click to inspect →</span>
+                          </div>
+                        </div>
+                      ))}
+
+                      {activityLogsHistory.length === 0 && (
+                        <p className="text-xs text-theme-text-muted text-center py-6">No call attempts or interaction logs recorded yet.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
-
             </div>
           )}
+
+          {/* MODAL 1: ADD ACTIVITY LOG MODAL */}
+          {addModalStepKey && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-theme-card border border-theme-border rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5"
+              >
+                <div className="flex items-center justify-between border-b border-theme-border pb-3">
+                  <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+                    <Plus size={16} className="text-theme-primary" /> Log Interaction Attempt
+                  </h3>
+                  <button onClick={() => setAddModalStepKey(null)} className="text-theme-text-muted hover:text-theme-text">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddActivitySubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Communication Type</label>
+                      <select
+                        value={communicationType}
+                        onChange={(e) => setCommunicationType(e.target.value)}
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                      >
+                        <option value="PHONE_CALL">Phone Call</option>
+                        <option value="WHATSAPP">WhatsApp</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="GOOGLE_MEET">Google Meet</option>
+                        <option value="ZOOM">Zoom</option>
+                        <option value="OFFICE_VISIT">Office Visit</option>
+                        <option value="VIDEO_CALL">Video Call</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Call / Interaction Outcome</label>
+                      <select
+                        value={outcome}
+                        onChange={(e) => setOutcome(e.target.value)}
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                      >
+                        <option value="BUSY">Client Busy</option>
+                        <option value="NOT_ANSWERED">No Answer</option>
+                        <option value="REJECTED_CALL">Rejected Call</option>
+                        <option value="WRONG_NUMBER">Wrong Number</option>
+                        <option value="CONNECTED">Connected & Discussed</option>
+                        <option value="INTERESTED">Interested</option>
+                        <option value="NOT_INTERESTED">Not Interested</option>
+                        <option value="CALL_BACK_LATER">Call Back Later</option>
+                        <option value="MEETING_SCHEDULED">Meeting Scheduled</option>
+                        <option value="DEMO_SCHEDULED">Demo Scheduled</option>
+                        <option value="PROPOSAL_REQUESTED">Proposal Requested</option>
+                        <option value="NEGOTIATION_STARTED">Negotiation Started</option>
+                        <option value="CONVERTED">Converted</option>
+                        <option value="LOST">Lost</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Duration</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 10 mins"
+                        value={activityDuration}
+                        onChange={(e) => setActivityDuration(e.target.value)}
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Attempt Status</label>
+                      <select
+                        value={activityStatus}
+                        onChange={(e) => setActivityStatus(e.target.value)}
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                      >
+                        <option value="ATTEMPTED">Attempted</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="WAITING">Waiting</option>
+                        <option value="SCHEDULED">Scheduled</option>
+                        <option value="SUCCESSFUL">Successful</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Detailed Remarks / Discussion Notes</label>
+                    <textarea
+                      required
+                      rows={3}
+                      placeholder="e.g. Client outside office, asked to call back at 6 PM..."
+                      value={activityRemarks}
+                      onChange={(e) => setActivityRemarks(e.target.value)}
+                      className="w-full bg-theme-bg border border-theme-border rounded-xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Optional Next Follow-up Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      value={nextFollowupDate}
+                      onChange={(e) => setNextFollowupDate(e.target.value)}
+                      className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                    />
+                    <span className="text-[9px] text-theme-text-muted mt-1 block">
+                      Setting a date automatically creates a Follow-up Task in your workspace.
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAddModalStepKey(null)}
+                      className="px-4 py-2 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold text-theme-text-muted hover:text-theme-text"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingActivity}
+                      className="px-5 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-bold shadow-md"
+                    >
+                      Save Activity Log
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* MODAL 2: EXPLICITLY COMPLETE STEP MODAL */}
+          {completeModalStepKey && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-theme-card border border-theme-border rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4"
+              >
+                <div className="flex items-center justify-between border-b border-theme-border pb-3">
+                  <h3 className="text-sm font-extrabold text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 size={18} /> Mark Workflow Step Completed
+                  </h3>
+                  <button onClick={() => setCompleteModalStepKey(null)} className="text-theme-text-muted hover:text-theme-text">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <p className="text-xs text-theme-text-muted">
+                  Are you sure you want to complete this stage? This will mark the step completed and advance the lead pipeline stage.
+                </p>
+
+                <form onSubmit={handleCompleteStepSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Final Completion Remark</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Summary of outcome / requirements gathered during this step..."
+                      value={completionRemarks}
+                      onChange={(e) => setCompletionRemarks(e.target.value)}
+                      className="w-full bg-theme-bg border border-theme-border rounded-xl p-3 text-xs text-theme-text focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setCompleteModalStepKey(null)}
+                      className="px-4 py-2 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold text-theme-text-muted hover:text-theme-text"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingCompletion}
+                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md"
+                    >
+                      Complete Step
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          {/* MODAL 3: CLICKABLE INTERACTION DETAIL INSPECTOR MODAL */}
+          {selectedInteractionDetail && (
+            <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="bg-theme-card border border-theme-border rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5"
+              >
+                {/* Modal Top Bar */}
+                <div className="flex items-center justify-between border-b border-theme-border/60 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary">
+                      {selectedInteractionDetail.communicationType ? getCommIcon(selectedInteractionDetail.communicationType) : <History size={16} />}
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-theme-primary uppercase tracking-wider block">
+                        {selectedInteractionDetail.typeName || 'Interaction Detail'}
+                      </span>
+                      <h3 className="text-sm font-extrabold text-theme-text">
+                        {selectedInteractionDetail.action || (selectedInteractionDetail.activityNumber ? `Attempt #${selectedInteractionDetail.activityNumber}` : 'Activity Log')}
+                        {selectedInteractionDetail.stepTitle ? ` • ${selectedInteractionDetail.stepTitle}` : ''}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedInteractionDetail(null)}
+                    className="p-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Badges and Attributes */}
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  {selectedInteractionDetail.communicationType && (
+                    <div className="p-3 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/40 space-y-0.5">
+                      <span className="text-[10px] font-bold text-theme-text-muted block">COMMUNICATION</span>
+                      <span className="font-extrabold text-theme-text flex items-center gap-1.5">
+                        {getCommIcon(selectedInteractionDetail.communicationType)}
+                        {selectedInteractionDetail.communicationType?.replace('_', ' ')}
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedInteractionDetail.outcome && (
+                    <div className="p-3 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/40 space-y-0.5">
+                      <span className="text-[10px] font-bold text-theme-text-muted block">OUTCOME</span>
+                      <span className={`text-[10px] font-extrabold inline-block px-2 py-0.5 rounded-md border ${getOutcomeBadgeClass(selectedInteractionDetail.outcome)}`}>
+                        {selectedInteractionDetail.outcome?.replace('_', ' ')}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="p-3 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/40 space-y-0.5">
+                    <span className="text-[10px] font-bold text-theme-text-muted block">PERFORMED BY</span>
+                    <span className="font-bold text-theme-text">
+                      {selectedInteractionDetail.loggedByName || selectedInteractionDetail.performedByName || 'Sales Rep / System'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/40 space-y-0.5">
+                    <span className="text-[10px] font-bold text-theme-text-muted block">DATE & TIME</span>
+                    <span className="font-bold text-theme-text">
+                      {new Date(selectedInteractionDetail.createdAt || selectedInteractionDetail.timestamp || Date.now()).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Duration & Followup */}
+                {(selectedInteractionDetail.duration || selectedInteractionDetail.nextFollowupDate) && (
+                  <div className="p-3 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/40 flex items-center justify-between text-xs">
+                    {selectedInteractionDetail.duration && (
+                      <div className="flex items-center gap-1.5 font-bold text-theme-text">
+                        <Clock size={14} className="text-theme-primary" /> Duration: {selectedInteractionDetail.duration}
+                      </div>
+                    )}
+                    {selectedInteractionDetail.nextFollowupDate && (
+                      <div className="flex items-center gap-1.5 font-bold text-amber-400">
+                        <Calendar size={14} /> Next Follow-up: {new Date(selectedInteractionDetail.nextFollowupDate).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Detailed Remarks Box */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">
+                      Full Remarks & Discussion Notes
+                    </span>
+                    <button
+                      onClick={() => handleCopyRemarks(selectedInteractionDetail.remarks || selectedInteractionDetail.description || '')}
+                      className="flex items-center gap-1 text-[10px] font-bold text-theme-primary hover:underline"
+                    >
+                      {copiedRemarks ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      {copiedRemarks ? 'Copied!' : 'Copy Notes'}
+                    </button>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-theme-bg-alt border border-theme-border text-xs text-theme-text leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    {selectedInteractionDetail.remarks || selectedInteractionDetail.description || 'No detailed remarks provided.'}
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex items-center justify-end gap-3 border-t border-theme-border/60 pt-4">
+                  <button
+                    onClick={() => setSelectedInteractionDetail(null)}
+                    className="px-5 py-2.5 rounded-xl bg-theme-primary text-white text-xs font-bold shadow-md hover:bg-theme-primary-hover transition-all"
+                  >
+                    Close Inspector
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
         </motion.div>
       </div>
     </AnimatePresence>

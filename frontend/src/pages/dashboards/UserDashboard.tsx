@@ -29,23 +29,36 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [idleMessage, setIdleMessage] = useState('');
 
+  const [workflowPending, setWorkflowPending] = useState<any>({
+    pendingFirstCalls: 0,
+    pendingRequirementCollection: 0,
+    pendingDemo: 0,
+    pendingProposal: 0,
+    pendingNegotiation: 0,
+    pendingPayment: 0
+  });
+
   useEffect(() => {
     fetchUserData();
   }, []);
 
   const fetchUserData = async () => {
     try {
-      const [kpiRes, leadsRes, followupsRes, pendingRes] = await Promise.all([
+      const [kpiRes, leadsRes, followupsRes, pendingRes, workflowRes] = await Promise.all([
         api.get('/api/users/me/dashboard').catch(() => ({ data: null })),
         api.get('/api/leads/pipeline').catch(() => api.get('/api/leads')),
         api.get('/api/followups').catch(() => ({ data: [] })),
-        api.get('/api/leads/pending-assigned').catch(() => ({ data: [] }))
+        api.get('/api/leads/pending-assigned').catch(() => ({ data: [] })),
+        api.get('/api/leads/workflow-pending-counts').catch(() => ({ data: {} }))
       ]);
 
       setKpis(kpiRes.data);
       setMyLeads(leadsRes.data || []);
       setFollowups((followupsRes.data || []).filter((f: any) => f.status !== 'COMPLETED'));
       setPendingLeads(pendingRes.data || []);
+      if (workflowRes.data) {
+        setWorkflowPending(workflowRes.data);
+      }
     } catch (err) {
       console.error('Failed to load User Productivity Hub data', err);
     } finally {
@@ -248,6 +261,45 @@ export default function UserDashboard() {
           </span>
         </Link>
 
+      </div>
+
+      {/* Workflow Stage-wise Pending Breakdown Grid */}
+      <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text flex items-center gap-2">
+            <Briefcase size={16} className="text-theme-primary" /> Workflow Stage Active Containers
+          </h3>
+          <span className="text-[10px] font-bold text-theme-text-muted">
+            Live Pending Action Tasks Across Leads
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: 'Pending First Calls', count: workflowPending.pendingFirstCalls || 0, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+            { label: 'Pending Requirements', count: workflowPending.pendingRequirementCollection || 0, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+            { label: 'Pending Demos', count: workflowPending.pendingDemo || 0, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+            { label: 'Pending Proposals', count: workflowPending.pendingProposal || 0, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+            { label: 'Pending Negotiation', count: workflowPending.pendingNegotiation || 0, color: 'text-rose-400', bg: 'bg-rose-500/10' },
+            { label: 'Pending Payment', count: workflowPending.pendingPayment || 0, color: 'text-emerald-400', bg: 'bg-emerald-500/10' }
+          ].map((item, i) => (
+            <Link
+              key={i}
+              to="/my-work"
+              className="p-3.5 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/60 hover:border-theme-primary/40 hover:bg-theme-bg transition-all group block"
+            >
+              <span className="text-[10px] font-bold text-theme-text-muted block truncate group-hover:text-theme-text">
+                {item.label}
+              </span>
+              <div className="flex items-center justify-between mt-2">
+                <span className={`text-xl font-black ${item.color}`}>
+                  {item.count}
+                </span>
+                <span className={`w-2 h-2 rounded-full ${item.bg}`} />
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Main Grid Content */}

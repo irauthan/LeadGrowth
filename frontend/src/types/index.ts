@@ -44,6 +44,43 @@ export interface Campaign {
   createdAt: string;
 }
 
+export type CommunicationType = 'PHONE_CALL' | 'WHATSAPP' | 'EMAIL' | 'GOOGLE_MEET' | 'ZOOM' | 'OFFICE_VISIT' | 'VIDEO_CALL' | 'OTHER';
+export type OutcomeType = 'BUSY' | 'NOT_ANSWERED' | 'REJECTED_CALL' | 'WRONG_NUMBER' | 'INTERESTED' | 'NOT_INTERESTED' | 'CALL_BACK_LATER' | 'MEETING_SCHEDULED' | 'DEMO_SCHEDULED' | 'PROPOSAL_REQUESTED' | 'NEGOTIATION_STARTED' | 'CONVERTED' | 'LOST' | 'CUSTOM_OUTCOME';
+export type ActivityStatusType = 'ATTEMPTED' | 'IN_PROGRESS' | 'WAITING' | 'SCHEDULED' | 'SUCCESSFUL' | 'COMPLETED' | 'CANCELLED';
+
+export interface SalesActivityLog {
+  id: number;
+  salesActivityId: number;
+  leadId: number;
+  activityNumber: number;
+  communicationType: CommunicationType;
+  outcome: OutcomeType;
+  remarks: string;
+  duration?: string;
+  status: ActivityStatusType;
+  nextFollowupDate?: string;
+  attachments?: string;
+  loggedById: number;
+  loggedByName: string;
+  createdAt: string;
+}
+
+export interface SalesActivity {
+  id: number;
+  leadId: number;
+  activityKey: string;
+  title: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  completedAt?: string;
+  completedById?: number;
+  completedByName?: string;
+  completionRemarks?: string;
+  remarks?: string;
+  createdAt: string;
+  logs?: SalesActivityLog[];
+  totalActivitiesCount?: number;
+}
+
 export interface Lead {
   id: number;
   name: string;
@@ -59,6 +96,14 @@ export interface Lead {
   qualityTier?: string;
   conversionProbability?: number;
   queueStatus?: string;
+  company?: string;
+  location?: string;
+  priority?: string;
+  clientNotes?: string;
+  proposalAmount?: number;
+  proposalStatus?: string;
+  progressPercentage?: number;
+  activities?: SalesActivity[];
   createdAt: string;
 }
 

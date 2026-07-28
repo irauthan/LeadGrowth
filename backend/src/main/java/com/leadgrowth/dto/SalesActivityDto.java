@@ -1,6 +1,8 @@
 package com.leadgrowth.dto;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SalesActivityDto {
     private Long id;
@@ -11,12 +13,28 @@ public class SalesActivityDto {
     private LocalDateTime completedAt;
     private Long completedById;
     private String completedByName;
+    private String completionRemarks;
     private String remarks;
     private LocalDateTime createdAt;
+    private List<SalesActivityLogDto> logs = new ArrayList<>();
+    private int totalActivitiesCount;
 
     public SalesActivityDto() {}
 
-    public SalesActivityDto(Long id, Long leadId, String activityKey, String title, String status, LocalDateTime completedAt, Long completedById, String completedByName, String remarks, LocalDateTime createdAt) {
+    public SalesActivityDto(
+            Long id,
+            Long leadId,
+            String activityKey,
+            String title,
+            String status,
+            LocalDateTime completedAt,
+            Long completedById,
+            String completedByName,
+            String completionRemarks,
+            String remarks,
+            LocalDateTime createdAt,
+            List<SalesActivityLogDto> logs
+    ) {
         this.id = id;
         this.leadId = leadId;
         this.activityKey = activityKey;
@@ -25,8 +43,11 @@ public class SalesActivityDto {
         this.completedAt = completedAt;
         this.completedById = completedById;
         this.completedByName = completedByName;
+        this.completionRemarks = completionRemarks;
         this.remarks = remarks;
         this.createdAt = createdAt;
+        this.logs = logs != null ? logs : new ArrayList<>();
+        this.totalActivitiesCount = this.logs.size();
     }
 
     public Long getId() { return id; }
@@ -53,9 +74,21 @@ public class SalesActivityDto {
     public String getCompletedByName() { return completedByName; }
     public void setCompletedByName(String completedByName) { this.completedByName = completedByName; }
 
+    public String getCompletionRemarks() { return completionRemarks; }
+    public void setCompletionRemarks(String completionRemarks) { this.completionRemarks = completionRemarks; }
+
     public String getRemarks() { return remarks; }
     public void setRemarks(String remarks) { this.remarks = remarks; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public List<SalesActivityLogDto> getLogs() { return logs; }
+    public void setLogs(List<SalesActivityLogDto> logs) {
+        this.logs = logs;
+        this.totalActivitiesCount = logs != null ? logs.size() : 0;
+    }
+
+    public int getTotalActivitiesCount() { return totalActivitiesCount; }
+    public void setTotalActivitiesCount(int totalActivitiesCount) { this.totalActivitiesCount = totalActivitiesCount; }
 }

@@ -1,7 +1,10 @@
 package com.leadgrowth.controller;
 
+import com.leadgrowth.dto.AddActivityLogRequest;
+import com.leadgrowth.dto.CompleteStepRequest;
 import com.leadgrowth.dto.LeadDto;
 import com.leadgrowth.dto.LeadNoteRequest;
+import com.leadgrowth.dto.SalesActivityLogDto;
 import com.leadgrowth.entity.LeadNote;
 import com.leadgrowth.service.LeadService;
 import jakarta.validation.Valid;
@@ -11,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/leads")
@@ -142,6 +146,37 @@ public class LeadController {
     ) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(leadService.updateLeadActivity(id, activityKey, status, remarks, email));
+    }
+
+    @PostMapping("/{id}/workflow-steps/{activityKey}/activities")
+    public ResponseEntity<LeadDto> addStepActivityLog(
+            @PathVariable Long id,
+            @PathVariable String activityKey,
+            @RequestBody AddActivityLogRequest request
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.addStepActivityLog(id, activityKey, request, email));
+    }
+
+    @PostMapping("/{id}/workflow-steps/{activityKey}/complete")
+    public ResponseEntity<LeadDto> completeWorkflowStep(
+            @PathVariable Long id,
+            @PathVariable String activityKey,
+            @RequestBody(required = false) CompleteStepRequest request
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.completeWorkflowStep(id, activityKey, request != null ? request : new CompleteStepRequest(), email));
+    }
+
+    @GetMapping("/{id}/activities-history")
+    public ResponseEntity<List<SalesActivityLogDto>> getLeadActivityHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(leadService.getLeadActivityLogs(id));
+    }
+
+    @GetMapping("/workflow-pending-counts")
+    public ResponseEntity<Map<String, Integer>> getWorkflowPendingCounts() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.getWorkflowPendingCounts(email));
     }
 
     @PatchMapping("/{id}/auto-save")

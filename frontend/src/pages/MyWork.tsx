@@ -11,17 +11,32 @@ import {
   Zap, 
   ChevronRight, 
   Sparkles,
-  Flame,
-  Snowflake,
-  Clock,
   CheckCircle2,
   XCircle,
-  Briefcase
+  Briefcase,
+  PhoneCall,
+  ClipboardList,
+  Send,
+  Scale,
+  MessageSquare,
+  AlertCircle,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import api from '../services/api';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
-const STAGES = [
+const KANBAN_STAGES = [
+  { key: 'New', title: 'New', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10', headerColor: 'from-blue-500/20 to-blue-500/5 text-blue-400', icon: Sparkles },
+  { key: 'Contacted', title: 'Contacted', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-400', icon: PhoneCall },
+  { key: 'Follow-up', title: 'Follow-up', color: 'border-purple-500/40 text-purple-400 bg-purple-500/10', headerColor: 'from-purple-500/20 to-purple-500/5 text-purple-400', icon: ClipboardList },
+  { key: 'Proposal Sent', title: 'Proposal Sent', color: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10', headerColor: 'from-cyan-500/20 to-cyan-500/5 text-cyan-400', icon: Send },
+  { key: 'Negotiation', title: 'Negotiation', color: 'border-amber-500/40 text-amber-500 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-500', icon: Scale },
+  { key: 'Converted', title: 'Converted', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10', headerColor: 'from-emerald-500/20 to-emerald-500/5 text-emerald-400', icon: CheckCircle2 },
+  { key: 'Lost', title: 'Lost', color: 'border-rose-500/40 text-rose-400 bg-rose-500/10', headerColor: 'from-rose-500/20 to-rose-500/5 text-rose-400', icon: XCircle }
+];
+
+const STAGES_TABLE_LIST = [
   'New',
   'Contacted',
   'Follow-up',
@@ -46,6 +61,13 @@ export default function MyWork() {
   const [selectedQuality, setSelectedQuality] = useState('ALL');
   const [quickFilter, setQuickFilter] = useState<'ALL' | 'HOT' | 'WARM' | 'COLD' | 'PENDING' | 'CONVERTED' | 'LOST'>('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'a-z' | 'z-a' | 'priority' | 'progress'>('newest');
+
+  // Collapsed columns state for Kanban
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+
+  // Drag and drop state
+  const [draggedLeadId, setDraggedLeadId] = useState<number | null>(null);
+  const [dragOverStageKey, setDragOverStageKey] = useState<string | null>(null);
 
   // Idle Sweep notification
   const [sweepMessage, setSweepMessage] = useState('');
@@ -97,16 +119,57 @@ export default function MyWork() {
 
   const handleStageChange = async (leadId: number, newStage: string) => {
     try {
-      await api.patch(`/api/leads/${leadId}/status?status=${newStage}`);
+      await api.patch(`/api/leads/${leadId}/status?status=${encodeURIComponent(newStage)}`);
       fetchMyWorkLeads();
     } catch (e: any) {
       alert(e.response?.data?.message || 'Failed to update stage');
     }
   };
 
+  const toggleCollapseColumn = (stageKey: string) => {
+    setCollapsedColumns((prev) => ({ ...prev, [stageKey]: !prev[stageKey] }));
+  };
+
   const openDetails = (id: number) => {
     setSelectedLeadId(id);
     setIsPanelOpen(true);
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, leadId: number) => {
+    e.dataTransfer.setData('text/plain', String(leadId));
+    setDraggedLeadId(leadId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, stageKey: string) => {
+    e.preventDefault();
+    if (dragOverStageKey !== stageKey) {
+      setDragOverStageKey(stageKey);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent, stageKey: string) => {
+    e.preventDefault();
+    if (dragOverStageKey === stageKey) {
+      setDragOverStageKey(null);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStageKey: string) => {
+    e.preventDefault();
+    setDragOverStageKey(null);
+    const leadIdStr = e.dataTransfer.getData('text/plain') || String(draggedLeadId);
+    const targetLeadId = parseInt(leadIdStr);
+    if (isNaN(targetLeadId)) return;
+
+    // Optimistic UI update
+    setLeads((prev) =>
+      prev.map((l) => (l.id === targetLeadId ? { ...l, status: targetStageKey } : l))
+    );
+
+    // Send API update
+    await handleStageChange(targetLeadId, targetStageKey);
+    setDraggedLeadId(null);
   };
 
   // Filter & Search Logic
@@ -127,14 +190,14 @@ export default function MyWork() {
     if (quickFilter === 'HOT') matchesQuick = lead.qualityTier === 'HOT';
     else if (quickFilter === 'WARM') matchesQuick = lead.qualityTier === 'WARM';
     else if (quickFilter === 'COLD') matchesQuick = lead.qualityTier === 'COLD';
-    else if (quickFilter === 'PENDING') matchesQuick = lead.status !== 'Converted' && lead.status !== 'Lost';
-    else if (quickFilter === 'CONVERTED') matchesQuick = lead.status === 'Converted';
-    else if (quickFilter === 'LOST') matchesQuick = lead.status === 'Lost';
+    else if (quickFilter === 'PENDING') matchesQuick = lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Payment Completed';
+    else if (quickFilter === 'CONVERTED') matchesQuick = lead.status === 'Converted' || lead.status === 'Closing' || lead.status === 'Payment Completed';
+    else if (quickFilter === 'LOST') matchesQuick = lead.status === 'Lost' || lead.status === 'Rejected';
 
     return matchesSearch && matchesPriority && matchesQuality && matchesQuick;
   }).sort((a, b) => {
     if (sortBy === 'newest') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-    if (sortBy === 'oldest') return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    if (sortBy === 'oldest') return new Date(a.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     if (sortBy === 'a-z') return (a.name || '').localeCompare(b.name || '');
     if (sortBy === 'z-a') return (b.name || '').localeCompare(a.name || '');
     if (sortBy === 'priority') {
@@ -144,6 +207,20 @@ export default function MyWork() {
     if (sortBy === 'progress') return (b.progressPercentage || 0) - (a.progressPercentage || 0);
     return 0;
   });
+
+  const getStageLeads = (stageKey: string) => {
+    return filteredLeads.filter((l) => {
+      const st = l.status || 'New';
+      if (stageKey === 'New') return st === 'New';
+      if (stageKey === 'Contacted') return st === 'Contacted' || st === 'First Call';
+      if (stageKey === 'Follow-up') return st === 'Follow-up' || st === 'Follow-Up' || st === 'Requirement Collection' || st === 'Interested';
+      if (stageKey === 'Proposal Sent') return st === 'Proposal Sent' || st === 'Proposal' || st === 'Demo Scheduled' || st === 'Qualified';
+      if (stageKey === 'Negotiation') return st === 'Negotiation';
+      if (stageKey === 'Converted') return st === 'Converted' || st === 'Closing' || st === 'Payment' || st === 'Payment Completed';
+      if (stageKey === 'Lost') return st === 'Lost' || st === 'Rejected';
+      return st === stageKey;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -156,11 +233,11 @@ export default function MyWork() {
               Enterprise Sales Workspace
             </span>
             <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-              Unified Lead & Task Engine
+              Unified Multi-Activity Pipeline
             </span>
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1 flex items-center gap-2">
-            <Briefcase size={22} className="text-theme-primary" /> My Work Workspace
+            <Briefcase size={22} className="text-theme-primary" /> My Work Pipeline
           </h1>
           <p className="text-xs text-theme-text-muted mt-0.5">
             Manage assigned leads, execute sales activities, complete client follow-ups, and auto-track progress from one interface.
@@ -184,7 +261,7 @@ export default function MyWork() {
                   : 'text-theme-text-muted hover:text-theme-text'
               }`}
             >
-              <LayoutGrid size={14} /> Kanban
+              <LayoutGrid size={14} /> Kanban Board
             </button>
             <button
               onClick={() => setViewMode('table')}
@@ -194,63 +271,62 @@ export default function MyWork() {
                   : 'text-theme-text-muted hover:text-theme-text'
               }`}
             >
-              <TableIcon size={14} /> Table
+              <TableIcon size={14} /> Table View
             </button>
           </div>
         </div>
       </div>
 
       {sweepMessage && (
-        <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs font-bold text-cyan-400 flex items-center gap-2">
+        <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs font-bold text-cyan-400 flex items-center gap-2 animate-bounce">
           <Sparkles size={16} /> {sweepMessage}
         </div>
       )}
 
-      {/* Quick Filter Pills Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        {[
-          { key: 'ALL', label: 'All Work', icon: null },
-          { key: 'HOT', label: 'Hot Leads', icon: <Flame size={12} className="text-rose-500" /> },
-          { key: 'WARM', label: 'Warm Leads', icon: <Zap size={12} className="text-amber-400" /> },
-          { key: 'COLD', label: 'Cold Leads', icon: <Snowflake size={12} className="text-blue-400" /> },
-          { key: 'PENDING', label: 'Pending Action', icon: <Clock size={12} className="text-amber-500" /> },
-          { key: 'CONVERTED', label: 'Converted', icon: <CheckCircle2 size={12} className="text-emerald-500" /> },
-          { key: 'LOST', label: 'Lost', icon: <XCircle size={12} className="text-rose-500" /> },
-        ].map((pill) => (
-          <button
-            key={pill.key}
-            onClick={() => setQuickFilter(pill.key as any)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${
-              quickFilter === pill.key
-                ? 'bg-theme-primary text-white border-theme-primary shadow-md'
-                : 'bg-theme-card text-theme-text-muted border-theme-border hover:bg-theme-bg-alt hover:text-theme-text'
-            }`}
-          >
-            {pill.icon}
-            <span>{pill.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Quick Filter Pill Badges */}
+      <div className="flex items-center justify-between gap-4 flex-wrap bg-theme-card/60 p-4 rounded-3xl border border-theme-border">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {[
+            { id: 'ALL', label: 'All Contacts', count: leads.length },
+            { id: 'HOT', label: '🔥 HOT Tier', count: leads.filter(l => l.qualityTier === 'HOT').length },
+            { id: 'WARM', label: '⚡ WARM Tier', count: leads.filter(l => l.qualityTier === 'WARM').length },
+            { id: 'COLD', label: '❄️ COLD Tier', count: leads.filter(l => l.qualityTier === 'COLD').length },
+            { id: 'PENDING', label: '⏳ In Progress', count: leads.filter(l => l.status !== 'Converted' && l.status !== 'Lost' && l.status !== 'Payment Completed').length },
+            { id: 'CONVERTED', label: '✔ Converted / Paid', count: leads.filter(l => l.status === 'Converted' || l.status === 'Closing' || l.status === 'Payment Completed').length }
+          ].map((pill) => (
+            <button
+              key={pill.id}
+              onClick={() => setQuickFilter(pill.id as any)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold transition-all ${
+                quickFilter === pill.id
+                  ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20 scale-105'
+                  : 'bg-theme-bg-alt/70 text-theme-text-muted hover:text-theme-text border border-theme-border/40'
+              }`}
+            >
+              {pill.label} <span className="text-[10px] opacity-80">({pill.count})</span>
+            </button>
+          ))}
+        </div>
 
-      {/* Control Bar: Search & Filters */}
-      <div className="p-4 rounded-3xl border border-theme-border bg-theme-card shadow-sm flex flex-col lg:flex-row items-center justify-between gap-4">
-        
-        {/* Search Box */}
-        <div className="relative w-full lg:w-96">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-text-muted" />
+        {/* Search Bar */}
+        <div className="relative flex-1 min-w-[240px] max-w-md">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-text-muted" />
           <input
             type="text"
-            placeholder="Instant Search client name, company, phone, email..."
+            placeholder="Search by Client, Company, Phone, Email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-theme-bg-alt border border-theme-border/60 rounded-2xl pl-10 pr-4 py-2 text-xs font-medium text-theme-text placeholder-theme-text-muted focus:outline-none focus:border-theme-primary"
+            className="w-full bg-theme-bg-alt border border-theme-border/60 rounded-2xl pl-9 pr-4 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
           />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-text-muted hover:text-theme-text text-xs">
+              ×
+            </button>
+          )}
         </div>
 
         {/* Filters */}
         <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto no-scrollbar">
-          
-          {/* Priority Filter */}
           <select
             value={selectedPriority}
             onChange={(e) => setSelectedPriority(e.target.value)}
@@ -262,7 +338,6 @@ export default function MyWork() {
             <option value="LOW">Priority: Low</option>
           </select>
 
-          {/* Quality Tier Filter */}
           <select
             value={selectedQuality}
             onChange={(e) => setSelectedQuality(e.target.value)}
@@ -274,7 +349,6 @@ export default function MyWork() {
             <option value="COLD">COLD Tier</option>
           </select>
 
-          {/* Sort By Filter */}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
@@ -304,94 +378,210 @@ export default function MyWork() {
         </div>
       ) : (
         <>
-          {/* VIEW MODE 1: KANBAN BOARD */}
+          {/* VIEW MODE 1: REDESIGNED ENTERPRISE HORIZONTAL KANBAN BOARD */}
           {viewMode === 'kanban' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 overflow-x-auto pb-4">
-              {STAGES.map((stage) => {
-                const stageLeads = filteredLeads.filter(l => l.status === stage || (stage === 'New' && !l.status));
-                return (
-                  <div key={stage} className="rounded-3xl border border-theme-border bg-theme-card/60 p-4 space-y-4 min-w-[260px] flex flex-col h-full">
-                    {/* Stage Header */}
-                    <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-theme-primary" />
-                        <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text">{stage}</h3>
+            <div className="flex flex-nowrap overflow-x-auto gap-4 pb-6 pt-2 snap-x select-none custom-scrollbar min-h-[calc(100vh-230px)] items-start">
+              {KANBAN_STAGES.map((col) => {
+                const stageLeads = getStageLeads(col.key);
+                const Icon = col.icon;
+                const isCollapsed = collapsedColumns[col.key] ?? false;
+                const isOver = dragOverStageKey === col.key;
+
+                if (isCollapsed) {
+                  return (
+                    <div
+                      key={col.key}
+                      onClick={() => toggleCollapseColumn(col.key)}
+                      className="w-12 min-w-[48px] max-w-[48px] h-[calc(100vh-250px)] rounded-3xl border border-theme-border/80 bg-theme-card/60 flex flex-col items-center justify-between py-6 cursor-pointer hover:border-theme-primary transition-all shadow-md group"
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center border ${col.color}`}>
+                          <Icon size={14} />
+                        </span>
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-theme-bg-alt text-theme-text-muted border border-theme-border/40">
+                          {stageLeads.length}
+                        </span>
                       </div>
-                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-theme-bg-alt text-theme-text-muted border border-theme-border/40">
-                        {stageLeads.length}
-                      </span>
+
+                      <div className="rotate-90 whitespace-nowrap text-xs font-extrabold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">
+                        {col.title}
+                      </div>
+
+                      <button className="text-theme-text-muted group-hover:text-theme-text p-1">
+                        <Maximize2 size={14} />
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={col.key}
+                    onDragOver={(e) => handleDragOver(e, col.key)}
+                    onDragLeave={(e) => handleDragLeave(e, col.key)}
+                    onDrop={(e) => handleDrop(e, col.key)}
+                    className={`w-[310px] min-w-[310px] max-w-[310px] flex-shrink-0 snap-start flex flex-col rounded-3xl border transition-all duration-200 shadow-lg relative ${
+                      isOver 
+                        ? 'border-2 border-dashed border-theme-primary bg-theme-primary/10 shadow-2xl scale-[1.01]' 
+                        : 'border-theme-border/80 bg-theme-card/80 backdrop-blur-md'
+                    }`}
+                  >
+                    {/* Column Header */}
+                    <div className={`p-4 rounded-t-3xl border-b border-theme-border/60 bg-gradient-to-b ${col.headerColor} flex items-center justify-between`}>
+                      <div className="flex items-center gap-2.5">
+                        <span className={`w-7 h-7 rounded-xl flex items-center justify-center border shadow-xs ${col.color}`}>
+                          <Icon size={14} />
+                        </span>
+                        <div>
+                          <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text flex items-center gap-2">
+                            {col.title}
+                          </h3>
+                          <span className="text-[9px] font-bold text-theme-text-muted block">
+                            {stageLeads.length} {stageLeads.length === 1 ? 'Lead' : 'Leads'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-theme-card/90 text-theme-text border border-theme-border/60 shadow-xs">
+                          {stageLeads.length}
+                        </span>
+                        <button
+                          onClick={() => toggleCollapseColumn(col.key)}
+                          title="Collapse Column"
+                          className="p-1 rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt/60 transition-all"
+                        >
+                          <Minimize2 size={13} />
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Cards Container */}
-                    <div className="space-y-3 flex-1 overflow-y-auto max-h-[70vh]">
+                    {/* Column Body Cards Scroll Area */}
+                    <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)] p-3 space-y-3 custom-scrollbar min-h-[220px]">
                       {stageLeads.map((lead) => (
                         <div
                           key={lead.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, lead.id)}
                           onClick={() => openDetails(lead.id)}
-                          className="group p-4 rounded-2xl border border-theme-border bg-theme-card hover:border-theme-primary/60 shadow-xs hover:shadow-lg transition-all cursor-pointer space-y-3"
+                          className="group p-4 rounded-2xl border border-theme-border/80 bg-theme-card/90 hover:border-theme-primary/80 shadow-xs hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-grab active:cursor-grabbing space-y-3 backdrop-blur-xs relative overflow-hidden"
                         >
-                          {/* Top Card Bar */}
+                          {/* Priority and Tier Top Badges */}
                           <div className="flex items-center justify-between gap-2">
-                            <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
-                              lead.priority === 'HIGH' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
-                              lead.priority === 'LOW' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/20' :
-                              'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                            <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${
+                              lead.priority === 'HIGH' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                              lead.priority === 'LOW' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' :
+                              'bg-amber-500/10 text-amber-400 border-amber-500/20'
                             }`}>
                               {lead.priority || 'MEDIUM'}
                             </span>
-                            <span className="text-[9px] font-extrabold text-amber-400">
-                              🔥 {lead.qualityTier || 'HOT'} ({lead.qualityScore || 85}pt)
+
+                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${
+                              lead.qualityTier === 'HOT' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                              lead.qualityTier === 'COLD' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                              'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}>
+                              🔥 {lead.qualityTier || 'WARM'} ({lead.qualityScore || 75}pt)
                             </span>
                           </div>
 
-                          {/* Client & Company */}
-                          <div>
-                            <h4 className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors">
-                              {lead.name}
-                            </h4>
-                            <p className="text-[10px] font-semibold text-theme-text-muted flex items-center gap-1 mt-0.5">
-                              <Building size={11} /> {lead.company || 'Enterprise Client'}
-                            </p>
+                          {/* Client Header Info */}
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex flex-shrink-0 items-center justify-center text-theme-primary font-black text-xs">
+                              {lead.name?.substring(0, 2).toUpperCase() || 'LD'}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors truncate">
+                                {lead.name}
+                              </h4>
+                              <p className="text-[10px] font-semibold text-theme-text-muted flex items-center gap-1 mt-0.5 truncate">
+                                <Building size={11} className="text-theme-text-muted flex-shrink-0" /> {lead.company || 'Enterprise Contact'}
+                              </p>
+                            </div>
                           </div>
 
                           {/* Contact Details */}
-                          <div className="text-[10px] text-theme-text-muted space-y-1 bg-theme-bg-alt/40 p-2 rounded-xl border border-theme-border/20">
-                            <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1"><Phone size={10} /> {lead.phone || 'N/A'}</span>
-                              <span className="text-theme-primary font-bold">{lead.campaignName || 'Organic'}</span>
+                          <div className="text-[10px] text-theme-text-muted space-y-1 bg-theme-bg-alt/40 p-2.5 rounded-xl border border-theme-border/30">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-semibold text-theme-text flex items-center gap-1 truncate">
+                                <Phone size={10} className="text-theme-primary flex-shrink-0" /> {lead.phone || 'N/A'}
+                              </span>
+                              <span className="text-[9px] font-extrabold text-theme-primary px-1.5 py-0.5 rounded bg-theme-primary/10 border border-theme-primary/20 truncate">
+                                {lead.campaignName || lead.sourcePlatform || 'Organic'}
+                              </span>
                             </div>
-                            <div className="truncate"><Mail size={10} className="inline mr-1" /> {lead.email}</div>
+                            <div className="truncate text-theme-text-muted">
+                              <Mail size={10} className="inline mr-1" /> {lead.email}
+                            </div>
                           </div>
 
                           {/* Progress Bar */}
                           <div className="space-y-1">
                             <div className="flex justify-between text-[9px] font-bold text-theme-text-muted">
-                              <span>Work Progress</span>
-                              <span className="text-theme-primary">{lead.progressPercentage || 0}%</span>
+                              <span>Stage Progress</span>
+                              <span className="text-theme-primary font-extrabold">{lead.progressPercentage || 0}%</span>
                             </div>
-                            <div className="w-full bg-theme-bg-alt rounded-full h-1.5 overflow-hidden">
+                            <div className="w-full bg-theme-bg-alt rounded-full h-1.5 overflow-hidden border border-theme-border/30">
                               <div
-                                className="bg-gradient-to-r from-theme-primary to-indigo-500 h-full rounded-full"
+                                className="bg-gradient-to-r from-theme-primary to-emerald-400 h-full rounded-full transition-all duration-500"
                                 style={{ width: `${lead.progressPercentage || 0}%` }}
                               />
                             </div>
                           </div>
 
-                          {/* Quick Stage Changer & Details Action */}
-                          <div className="flex items-center justify-between pt-1 border-t border-theme-border/20">
-                            <span className="text-[9px] text-theme-text-muted font-semibold">
-                              Assigned: {new Date(lead.createdAt).toLocaleDateString()}
-                            </span>
-                            <span className="text-[10px] font-bold text-theme-primary flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                          {/* Bottom Quick Toolbar */}
+                          <div className="flex items-center justify-between pt-2 border-t border-theme-border/30 text-[10px]" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5">
+                              {lead.phone && (
+                                <a
+                                  href={`tel:${lead.phone}`}
+                                  title="Call Client"
+                                  className="p-1.5 rounded-lg bg-theme-bg-alt border border-theme-border/50 text-theme-text-muted hover:text-blue-400 hover:border-blue-400/50 transition-all"
+                                >
+                                  <Phone size={11} />
+                                </a>
+                              )}
+                              {lead.phone && (
+                                <a
+                                  href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="WhatsApp Chat"
+                                  className="p-1.5 rounded-lg bg-theme-bg-alt border border-theme-border/50 text-theme-text-muted hover:text-emerald-400 hover:border-emerald-400/50 transition-all"
+                                >
+                                  <MessageSquare size={11} />
+                                </a>
+                              )}
+                              {lead.email && (
+                                <a
+                                  href={`mailto:${lead.email}`}
+                                  title="Send Email"
+                                  className="p-1.5 rounded-lg bg-theme-bg-alt border border-theme-border/50 text-theme-text-muted hover:text-amber-400 hover:border-amber-400/50 transition-all"
+                                >
+                                  <Mail size={11} />
+                                </a>
+                              )}
+                            </div>
+
+                            <button
+                              onClick={() => openDetails(lead.id)}
+                              className="flex items-center gap-1 text-[10px] font-extrabold text-theme-primary hover:underline group-hover:translate-x-0.5 transition-transform"
+                            >
                               Work Card <ChevronRight size={12} />
-                            </span>
+                            </button>
                           </div>
                         </div>
                       ))}
 
                       {stageLeads.length === 0 && (
-                        <div className="p-6 text-center text-xs text-theme-text-muted border border-dashed border-theme-border/40 rounded-2xl">
-                          No leads in {stage}
+                        <div className="p-8 text-center border-2 border-dashed border-theme-border/50 rounded-2xl bg-theme-card/30 space-y-2">
+                          <div className="w-10 h-10 rounded-2xl bg-theme-bg-alt border border-theme-border flex items-center justify-center mx-auto text-theme-text-muted">
+                            <AlertCircle size={20} />
+                          </div>
+                          <h5 className="text-xs font-bold text-theme-text">No Leads Available</h5>
+                          <p className="text-[10px] text-theme-text-muted">
+                            Drag new contacts here or advance workflow stages.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -401,7 +591,7 @@ export default function MyWork() {
             </div>
           )}
 
-          {/* VIEW MODE 2: TABLE VIEW */}
+          {/* VIEW MODE 2: TABLE VIEW (UNTOUCHED & PRESERVED) */}
           {viewMode === 'table' && (
             <div className="rounded-3xl border border-theme-border bg-theme-card shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
@@ -458,7 +648,7 @@ export default function MyWork() {
                             onChange={(e) => handleStageChange(lead.id, e.target.value)}
                             className="bg-theme-bg-alt border border-theme-border/50 rounded-xl px-2.5 py-1 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
                           >
-                            {STAGES.map((st) => (
+                            {STAGES_TABLE_LIST.map((st) => (
                               <option key={st} value={st}>{st}</option>
                             ))}
                           </select>
@@ -501,7 +691,7 @@ export default function MyWork() {
         </>
       )}
 
-      {/* Full Screen Work Details Side Panel */}
+      {/* Full Screen Work Details Side Panel Drawer */}
       <WorkDetailsPanel
         leadId={selectedLeadId}
         isOpen={isPanelOpen}

@@ -25,20 +25,20 @@ public class FollowupController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createFollowup(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<Map<String, Object>> createFollowup(@RequestBody Map<String, Object> payload) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long leadId = Long.parseLong(payload.get("leadId"));
-        String scheduledAt = payload.get("scheduledAt");
-        String type = payload.getOrDefault("type", "CALL");
-        String notes = payload.getOrDefault("notes", "");
+        Long leadId = Long.parseLong(String.valueOf(payload.get("leadId")));
+        String scheduledAt = String.valueOf(payload.get("scheduledAt"));
+        String type = payload.get("type") != null ? String.valueOf(payload.get("type")) : "CALL";
+        String notes = payload.get("notes") != null ? String.valueOf(payload.get("notes")) : "";
 
         return ResponseEntity.ok(followupService.createFollowup(leadId, email, scheduledAt, type, notes));
     }
 
     @PostMapping("/{id}/complete")
-    public ResponseEntity<Map<String, Object>> completeFollowup(@PathVariable Long id, @RequestBody(required = false) Map<String, String> payload) {
+    public ResponseEntity<Map<String, Object>> completeFollowup(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> payload) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        String notes = payload != null ? payload.get("notes") : "";
+        String notes = (payload != null && payload.get("notes") != null) ? String.valueOf(payload.get("notes")) : "";
         return ResponseEntity.ok(followupService.completeFollowup(id, email, notes));
     }
 }

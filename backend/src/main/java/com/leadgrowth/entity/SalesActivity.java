@@ -2,6 +2,8 @@ package com.leadgrowth.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "sales_activities")
@@ -31,11 +33,18 @@ public class SalesActivity {
     @JoinColumn(name = "completed_by_id")
     private User completedBy;
 
+    @Column(name = "completion_remarks", columnDefinition = "TEXT")
+    private String completionRemarks;
+
     @Column(columnDefinition = "TEXT")
     private String remarks;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "salesActivity", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("activityNumber ASC")
+    private List<SalesActivityLog> logs = new ArrayList<>();
 
     public SalesActivity() {}
 
@@ -78,9 +87,15 @@ public class SalesActivity {
     public User getCompletedBy() { return completedBy; }
     public void setCompletedBy(User completedBy) { this.completedBy = completedBy; }
 
+    public String getCompletionRemarks() { return completionRemarks; }
+    public void setCompletionRemarks(String completionRemarks) { this.completionRemarks = completionRemarks; }
+
     public String getRemarks() { return remarks; }
     public void setRemarks(String remarks) { this.remarks = remarks; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public List<SalesActivityLog> getLogs() { return logs; }
+    public void setLogs(List<SalesActivityLog> logs) { this.logs = logs; }
 }
