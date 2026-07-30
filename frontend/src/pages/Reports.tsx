@@ -79,6 +79,42 @@ export default function Reports() {
     }
   };
 
+  const handleDownloadCallReports = async () => {
+    try {
+      const res = await api.get('/api/calls/reports');
+      const calls = res.data || [];
+      if (calls.length === 0) {
+        alert('No call duration history records found to export.');
+        return;
+      }
+      const headers = ['Session ID', 'Lead ID', 'Lead Name', 'Lead Phone', 'Sales Exec', 'Start Time', 'End Time', 'Duration Seconds', 'Formatted Duration', 'Status', 'Notes'];
+      const rows = calls.map((c: any) => [
+        c.id,
+        c.leadId,
+        `"${c.leadName || ''}"`,
+        `"${c.leadPhone || ''}"`,
+        `"${c.userName || ''}"`,
+        c.startTime,
+        c.endTime || '',
+        c.durationSeconds || 0,
+        `"${c.formattedDuration || ''}"`,
+        c.status,
+        `"${(c.notes || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e: any) => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `call_duration_tracking_report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      alert('Failed to download call report');
+    }
+  };
+
   const handleDailySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -393,6 +429,28 @@ export default function Reports() {
               >
                 {loadingKey === 'leads-pdf' ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
                 <span>PDF Document</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Module 10: Call Duration Tracking & Productivity Report */}
+          <div className="glass-card rounded-3xl border border-rose-500/30 bg-theme-card p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 mb-6">
+                <FileSpreadsheet size={22} />
+              </div>
+              <h3 className="text-lg font-bold text-theme-text">Call Duration Tracking & User Productivity Database</h3>
+              <p className="mt-2 text-xs text-theme-text-muted leading-relaxed">
+                Downloads complete call session audit logs containing Start Call timestamps, End Call timestamps, calculated duration, sales executive effort, and call notes.
+              </p>
+            </div>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                onClick={handleDownloadCallReports}
+                className="flex items-center gap-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white border border-rose-500 px-4 py-2.5 text-xs font-extrabold shadow-md transition-all cursor-pointer"
+              >
+                <Download size={14} />
+                <span>Export Call Duration Audit (CSV)</span>
               </button>
             </div>
           </div>

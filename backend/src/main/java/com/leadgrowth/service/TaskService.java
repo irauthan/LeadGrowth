@@ -654,4 +654,27 @@ public class TaskService {
                 .createdAt(task.getCreatedAt())
                 .build();
     }
+
+    public List<TaskDto> getTodayTasks(String userEmail) {
+        List<TaskDto> all = getTasks(userEmail);
+        java.time.LocalDate today = java.time.LocalDate.now();
+        return all.stream()
+                .filter(t -> t.getDueDate() != null && t.getDueDate().isEqual(today))
+                .collect(Collectors.toList());
+    }
+
+    public List<TaskDto> getCompletedTasks(String userEmail) {
+        List<TaskDto> all = getTasks(userEmail);
+        return all.stream()
+                .filter(t -> "COMPLETED".equalsIgnoreCase(t.getStatus()) || "APPROVED".equalsIgnoreCase(t.getStatus()))
+                .collect(Collectors.toList());
+    }
+
+    public List<TaskDto> getOverdueTasks(String userEmail) {
+        List<TaskDto> all = getTasks(userEmail);
+        java.time.LocalDate today = java.time.LocalDate.now();
+        return all.stream()
+                .filter(t -> t.getDueDate() != null && t.getDueDate().isBefore(today) && !"COMPLETED".equalsIgnoreCase(t.getStatus()) && !"APPROVED".equalsIgnoreCase(t.getStatus()))
+                .collect(Collectors.toList());
+    }
 }

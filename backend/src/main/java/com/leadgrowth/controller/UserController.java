@@ -47,6 +47,12 @@ public class UserController {
         return ResponseEntity.ok(userService.getWorkspaceMembers(email));
     }
 
+    @GetMapping("/assignable")
+    public ResponseEntity<List<User>> getAssignableUsers() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(userService.getAssignableUsers(email));
+    }
+
     @PostMapping("/invite")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Invitation> inviteUser(@Valid @RequestBody UserInviteRequest request) {

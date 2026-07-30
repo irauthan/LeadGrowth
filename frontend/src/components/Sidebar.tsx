@@ -24,6 +24,7 @@ import {
   CreditCard,
   ShieldCheck,
   Briefcase,
+  Zap,
   X
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -59,6 +60,7 @@ export default function Sidebar() {
   const generalMenu = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Pipelines', icon: Briefcase, path: '/my-work' },
+    { name: 'Priority Center', icon: Zap, path: '/priority-center' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Leads', icon: UserCheck, path: '/leads' },
     { name: 'Follow-ups', icon: Clock, path: '/followups' },

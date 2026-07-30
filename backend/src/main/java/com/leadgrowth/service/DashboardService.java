@@ -82,6 +82,16 @@ public class DashboardService {
             totalRevenue = totalRevenue.add(campaign.getRevenue());
         }
 
+        // Add revenue from lead proposals/negotiations
+        double leadProposalTotal = allLeads.stream()
+                .filter(l -> !isUser || (l.getAssignedTo() != null && l.getAssignedTo().getId().equals(user.getId())))
+                .filter(l -> l.getProposalAmount() != null && l.getProposalAmount() > 0)
+                .mapToDouble(Lead::getProposalAmount)
+                .sum();
+        if (leadProposalTotal > 0) {
+            totalRevenue = totalRevenue.add(BigDecimal.valueOf(leadProposalTotal));
+        }
+
         // Ratios
         double roas = totalSpend.compareTo(BigDecimal.ZERO) > 0 
                 ? totalRevenue.divide(totalSpend, 2, RoundingMode.HALF_UP).doubleValue() 
@@ -162,7 +172,7 @@ public class DashboardService {
                 .collect(Collectors.groupingBy(Lead::getStatus, Collectors.counting()));
         Map<String, Long> funnel = new LinkedHashMap<>();
         funnel.put("New", statusCounts.getOrDefault("New", 0L));
-        funnel.put("Contacted", statusCounts.getOrDefault("Contacted", 0L));
+        funnel.put("Interaction", statusCounts.getOrDefault("Interaction", 0L) + statusCounts.getOrDefault("Contacted", 0L));
         funnel.put("Qualified", statusCounts.getOrDefault("Qualified", 0L));
         funnel.put("Converted", statusCounts.getOrDefault("Converted", 0L));
         funnel.put("Rejected", statusCounts.getOrDefault("Rejected", 0L));

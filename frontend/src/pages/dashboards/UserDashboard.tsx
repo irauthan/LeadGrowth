@@ -12,12 +12,14 @@ import {
   TrendingUp, 
   Flame,
   Clock,
-  DollarSign,
+  IndianRupee,
   Zap,
   ChevronRight,
-  Briefcase
+  Briefcase,
+  Eye
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import CallDetailsModal from '../../components/CallDetailsModal';
 
 export default function UserDashboard() {
   const user = useAuthStore((state) => state.user);
@@ -42,14 +44,18 @@ export default function UserDashboard() {
     fetchUserData();
   }, []);
 
+  const [callAnalytics, setCallAnalytics] = useState<any>(null);
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+
   const fetchUserData = async () => {
     try {
-      const [kpiRes, leadsRes, followupsRes, pendingRes, workflowRes] = await Promise.all([
+      const [kpiRes, leadsRes, followupsRes, pendingRes, workflowRes, callRes] = await Promise.all([
         api.get('/api/users/me/dashboard').catch(() => ({ data: null })),
         api.get('/api/leads/pipeline').catch(() => api.get('/api/leads')),
         api.get('/api/followups').catch(() => ({ data: [] })),
         api.get('/api/leads/pending-assigned').catch(() => ({ data: [] })),
-        api.get('/api/leads/workflow-pending-counts').catch(() => ({ data: {} }))
+        api.get('/api/leads/workflow-pending-counts').catch(() => ({ data: {} })),
+        api.get('/api/calls/user').catch(() => ({ data: null }))
       ]);
 
       setKpis(kpiRes.data);
@@ -59,6 +65,7 @@ export default function UserDashboard() {
       if (workflowRes.data) {
         setWorkflowPending(workflowRes.data);
       }
+      setCallAnalytics(callRes.data);
     } catch (err) {
       console.error('Failed to load User Productivity Hub data', err);
     } finally {
@@ -231,9 +238,9 @@ export default function UserDashboard() {
           </span>
         </Link>
 
-        {/* 3. My Conversions -> /my-work */}
+        {/* 3. My Conversions -> /my-work?stage=Converted */}
         <Link
-          to="/my-work"
+          to="/my-work?stage=Converted"
           className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-rose-500/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
@@ -253,7 +260,7 @@ export default function UserDashboard() {
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-emerald-400 transition-colors">Revenue Contribution</span>
-            <DollarSign size={16} className="text-emerald-400 transition-transform group-hover:scale-110" />
+            <IndianRupee size={16} className="text-emerald-400 transition-transform group-hover:scale-110" />
           </div>
           <h3 className="text-lg font-extrabold text-emerald-400">{formatCurrency(personalRevenue)}</h3>
           <span className="text-[9px] font-bold text-emerald-500 flex items-center gap-1">
@@ -262,6 +269,108 @@ export default function UserDashboard() {
         </Link>
 
       </div>
+
+      {/* Call Duration Tracking Productivity Metrics */}
+      <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-extrabold">
+              <Phone size={16} />
+            </span>
+            <div>
+              <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+                Call Duration Tracking & Effort Productivity
+              </h3>
+              <span className="text-[10px] text-theme-text-muted">Realtime effort tracking used by Smart Auto Assignment Engine</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {callAnalytics?.activeCallSession && (
+              <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black animate-pulse flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                Active Call Running
+              </span>
+            )}
+            <button
+              onClick={() => setIsCallModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-bold transition-all shadow-sm"
+            >
+              <Eye size={14} />
+              <span>View Call Details</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <button
+            type="button"
+            onClick={() => setIsCallModalOpen(true)}
+            className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-rose-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Today's Call Time</span>
+              <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-mono font-black text-rose-400">
+              {callAnalytics?.todayCallTimeFormatted || '00:00:00'}
+            </div>
+            <span className="text-[9px] text-theme-text-muted block">Click to view contacts talked to</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsCallModalOpen(true)}
+            className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-cyan-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Today's Calls</span>
+              <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-extrabold text-cyan-400">
+              {callAnalytics?.todayCallsCount || 0}
+            </div>
+            <span className="text-[9px] text-theme-text-muted block">Click to view session log</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsCallModalOpen(true)}
+            className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-emerald-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Avg Duration</span>
+              <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-mono font-extrabold text-emerald-400">
+              {callAnalytics?.avgDurationFormatted || '00:00:00'}
+            </div>
+            <span className="text-[9px] text-theme-text-muted block">Average per session</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsCallModalOpen(true)}
+            className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-amber-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Longest Call</span>
+              <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-xl font-mono font-extrabold text-amber-400">
+              {callAnalytics?.longestCallFormatted || '00:00:00'}
+            </div>
+            <span className="text-[9px] text-theme-text-muted block">Peak session length</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Call Details Modal */}
+      <CallDetailsModal
+        isOpen={isCallModalOpen}
+        onClose={() => setIsCallModalOpen(false)}
+        title="Your Call Activity & Contact Details"
+      />
 
       {/* Workflow Stage-wise Pending Breakdown Grid */}
       <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
@@ -276,16 +385,16 @@ export default function UserDashboard() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { label: 'Pending First Calls', count: workflowPending.pendingFirstCalls || 0, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-            { label: 'Pending Requirements', count: workflowPending.pendingRequirementCollection || 0, color: 'text-purple-400', bg: 'bg-purple-500/10' },
-            { label: 'Pending Demos', count: workflowPending.pendingDemo || 0, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-            { label: 'Pending Proposals', count: workflowPending.pendingProposal || 0, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
-            { label: 'Pending Negotiation', count: workflowPending.pendingNegotiation || 0, color: 'text-rose-400', bg: 'bg-rose-500/10' },
-            { label: 'Pending Payment', count: workflowPending.pendingPayment || 0, color: 'text-emerald-400', bg: 'bg-emerald-500/10' }
+            { label: 'Pending First Calls', count: workflowPending.pendingFirstCalls || 0, color: 'text-blue-400', bg: 'bg-blue-500/10', targetStage: 'Interaction' },
+            { label: 'Pending Requirements', count: workflowPending.pendingRequirementCollection || 0, color: 'text-purple-400', bg: 'bg-purple-500/10', targetStage: 'Interaction' },
+            { label: 'Pending Demos', count: workflowPending.pendingDemo || 0, color: 'text-amber-400', bg: 'bg-amber-500/10', targetStage: 'Follow-up' },
+            { label: 'Pending Proposals', count: workflowPending.pendingProposal || 0, color: 'text-cyan-400', bg: 'bg-cyan-500/10', targetStage: 'Proposal Sent' },
+            { label: 'Pending Negotiation', count: workflowPending.pendingNegotiation || 0, color: 'text-rose-400', bg: 'bg-rose-500/10', targetStage: 'Negotiation' },
+            { label: 'Pending Payment', count: workflowPending.pendingPayment || 0, color: 'text-emerald-400', bg: 'bg-emerald-500/10', targetStage: 'Converted' }
           ].map((item, i) => (
             <Link
               key={i}
-              to="/my-work"
+              to={`/my-work?stage=${encodeURIComponent(item.targetStage)}`}
               className="p-3.5 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/60 hover:border-theme-primary/40 hover:bg-theme-bg transition-all group block"
             >
               <span className="text-[10px] font-bold text-theme-text-muted block truncate group-hover:text-theme-text">

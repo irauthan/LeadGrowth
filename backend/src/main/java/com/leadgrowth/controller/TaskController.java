@@ -26,6 +26,24 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getTasks(email));
     }
 
+    @GetMapping("/today")
+    public ResponseEntity<List<TaskDto>> getTodayTasks() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.getTodayTasks(email));
+    }
+
+    @GetMapping("/completed")
+    public ResponseEntity<List<TaskDto>> getCompletedTasks() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.getCompletedTasks(email));
+    }
+
+    @GetMapping("/overdue")
+    public ResponseEntity<List<TaskDto>> getOverdueTasks() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.getOverdueTasks(email));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<TaskDto> createTask(@Valid @RequestBody TaskDto dto) {

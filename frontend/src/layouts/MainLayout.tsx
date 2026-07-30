@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import MobileBottomNav from '../components/MobileBottomNav';
+import Footer from '../components/Footer';
 import { useLayoutStore } from '../store/layoutStore';
 
 export default function MainLayout() {
@@ -53,6 +54,7 @@ export default function MainLayout() {
         <main className={`flex-1 px-3 sm:px-6 ${getMainContentPadding()}`}>
           <Outlet />
         </main>
+        <Footer />
       </div>
       <MobileBottomNav />
     </div>

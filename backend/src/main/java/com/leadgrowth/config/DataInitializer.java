@@ -304,7 +304,7 @@ public class DataInitializer implements CommandLineRunner {
             List<String> emails = Arrays.asList("aarav@example.com", "priya@example.com", "amit@example.com", "neha@example.com", "rahul@example.com", "ananya@example.com", "vikram@example.com", "siddharth@example.com", "divya@example.com", "kabir@example.com");
             List<String> phones = Arrays.asList("+91 99999 11111", "+91 99999 22222", "+91 99999 33333", "+91 99999 44444", "+91 99999 55555", "+91 99999 66666", "+91 99999 77777", "+91 99999 88888", "+91 99999 99999", "+91 99999 00000");
             List<String> platforms = Arrays.asList("Meta", "Google", "Meta", "Google", "Meta", "Google", "Meta", "Google", "Meta", "Google");
-            List<String> statuses = Arrays.asList("New", "Contacted", "Qualified", "Converted", "Rejected", "New", "Contacted", "Qualified", "Converted", "New");
+            List<String> statuses = Arrays.asList("New", "Interaction", "Follow-up", "Proposal Sent", "Negotiation", "Converted", "Lost", "New", "Interaction", "Follow-up");
             List<Campaign> campaigns = Arrays.asList(c1, c2, c1, c2, c3, c1, c2, c1, c2, c1);
 
             for (int i = 0; i < names.size(); i++) {

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useClickOutside } from '../hooks/useClickOutside';
 import api from '../services/api';
 import type { Lead } from '../types';
+import WorkDetailsPanel from '../components/WorkDetailsPanel';
 import { 
   Clock, 
   CheckCircle, 
@@ -11,22 +12,29 @@ import {
   Loader2, 
   Search,
   History,
-  X
+  X,
+  ChevronRight,
+  Phone,
+  Mail,
+  MessageSquare,
+  Briefcase
 } from 'lucide-react';
 
 export default function Followups() {
   const [followups, setFollowups] = useState<any[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusTab, setStatusTab] = useState<'UPCOMING' | 'TODAY' | 'OVERDUE' | 'COMPLETED' | 'MISSED' | 'CANCELLED'>('UPCOMING');
+  const [statusTab, setStatusTab] = useState<'ALL_PENDING' | 'UPCOMING' | 'TODAY' | 'OVERDUE' | 'COMPLETED' | 'MISSED' | 'CANCELLED'>('ALL_PENDING');
 
   // Multi Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'a-z' | 'z-a'>('newest');
 
-  // Selected Lead for Timeline modal
+  // Selected Lead for Timeline modal & WorkDetailsPanel
   const [timeline, setTimeline] = useState<any[]>([]);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // Create Follow-up Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -90,6 +98,21 @@ export default function Followups() {
     }
   };
 
+  const openWorkPanel = (leadId: number) => {
+    setSelectedLeadId(leadId);
+    setIsPanelOpen(true);
+  };
+
+  const handleWorkOnFollowup = async (followupId: number, leadId: number) => {
+    try {
+      await api.post(`/api/followups/${followupId}/complete`);
+      fetchFollowups();
+    } catch (err) {
+      console.error(err);
+    }
+    openWorkPanel(leadId);
+  };
+
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -126,7 +149,8 @@ export default function Followups() {
     const scheduledTime = f.scheduledAt ? new Date(f.scheduledAt).getTime() : 0;
 
     let matchesTab = true;
-    if (statusTab === 'UPCOMING') matchesTab = f.status !== 'COMPLETED' && scheduledTime >= now;
+    if (statusTab === 'ALL_PENDING') matchesTab = f.status !== 'COMPLETED' && f.status !== 'CANCELLED';
+    else if (statusTab === 'UPCOMING') matchesTab = f.status !== 'COMPLETED' && scheduledTime >= now;
     else if (statusTab === 'TODAY') matchesTab = itemDate === todayStr;
     else if (statusTab === 'OVERDUE') matchesTab = f.status !== 'COMPLETED' && scheduledTime < now;
     else if (statusTab === 'COMPLETED') matchesTab = f.status === 'COMPLETED';
@@ -220,6 +244,7 @@ export default function Followups() {
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
         {[
+          { id: 'ALL_PENDING', label: 'All Pending', icon: <Clock size={12} className="text-cyan-400" /> },
           { id: 'UPCOMING', label: 'Upcoming', icon: null },
           { id: 'TODAY', label: "Today's", icon: null },
           { id: 'OVERDUE', label: 'Overdue', icon: <AlertCircle size={12} className="text-amber-400" /> },
@@ -249,7 +274,12 @@ export default function Followups() {
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h4 className="text-sm font-extrabold text-theme-text">{f.leadName || 'Client Contact'}</h4>
+                  <button
+                    onClick={() => openWorkPanel(f.leadId)}
+                    className="text-sm font-extrabold text-theme-text hover:text-theme-primary transition-colors text-left block"
+                  >
+                    {f.leadName || 'Client Contact'}
+                  </button>
                   <span className="text-[10px] text-theme-text-muted block mt-0.5">{f.leadEmail}</span>
                 </div>
                 <span className={`text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
@@ -264,7 +294,7 @@ export default function Followups() {
               <div className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/30 space-y-2 text-xs">
                 <div className="flex items-center gap-2 text-theme-text font-bold">
                   <Clock size={14} className="text-cyan-400" />
-                  <span>Scheduled: {f.scheduledAt ? new Date(f.scheduledAt).toLocaleString() : 'N/A'}</span>
+                  <span>Scheduled: {f.scheduledAt ? new Date(f.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
                 </div>
                 {f.notes && (
                   <p className="text-[11px] text-theme-text-muted italic pt-1 border-t border-theme-border/20">
@@ -272,22 +302,63 @@ export default function Followups() {
                   </p>
                 )}
               </div>
+
+              {/* Quick Communication & Timeline Bar */}
+              <div className="flex items-center gap-1.5 pt-1">
+                {f.leadPhone && (
+                  <a
+                    href={`tel:${f.leadPhone}`}
+                    title="Call Client"
+                    className="p-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-emerald-400 transition-all text-xs"
+                  >
+                    <Phone size={12} />
+                  </a>
+                )}
+                {f.leadPhone && (
+                  <a
+                    href={`https://wa.me/${f.leadPhone.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="WhatsApp Chat"
+                    className="p-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-emerald-400 transition-all text-xs"
+                  >
+                    <MessageSquare size={12} />
+                  </a>
+                )}
+                {f.leadEmail && (
+                  <a
+                    href={`mailto:${f.leadEmail}`}
+                    title="Email Client"
+                    className="p-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-blue-400 transition-all text-xs"
+                  >
+                    <Mail size={12} />
+                  </a>
+                )}
+                <button
+                  onClick={() => openTimeline(f.leadId)}
+                  className="text-[10px] font-bold text-theme-text-muted hover:text-theme-primary ml-auto flex items-center gap-1"
+                >
+                  <History size={12} /> Timeline
+                </button>
+              </div>
             </div>
 
+            {/* Bottom Actions Bar */}
             <div className="pt-3 border-t border-theme-border/30 flex items-center justify-between gap-2">
               <button
-                onClick={() => openTimeline(f.leadId)}
-                className="text-[10px] font-bold text-theme-primary hover:underline flex items-center gap-1"
+                onClick={() => handleWorkOnFollowup(f.id, f.leadId)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-extrabold shadow-sm transition-all flex-1 justify-center"
               >
-                <History size={12} /> View Client Timeline
+                <Briefcase size={13} /> Work on Lead <ChevronRight size={13} />
               </button>
 
               {f.status !== 'COMPLETED' && (
                 <button
                   onClick={() => handleComplete(f.id)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-sm transition-all"
+                  className="flex items-center gap-1 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white border border-emerald-500/20 text-xs font-bold transition-all"
+                  title="Mark Completed and Remove from Follow-up List"
                 >
-                  <Check size={12} /> Complete
+                  <Check size={13} /> Complete
                 </button>
               )}
             </div>
@@ -424,6 +495,16 @@ export default function Followups() {
           </div>
         </div>
       )}
+
+      {/* Slide-over Work Details Panel */}
+      <WorkDetailsPanel
+        leadId={selectedLeadId}
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        onLeadUpdated={() => {
+          fetchFollowups();
+        }}
+      />
 
     </div>
   );

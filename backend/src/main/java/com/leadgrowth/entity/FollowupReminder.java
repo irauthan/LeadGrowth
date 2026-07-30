@@ -34,6 +34,17 @@ public class FollowupReminder {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(columnDefinition = "TEXT")
+    private String remarks;
+
+    private String outcome;
+
+    private LocalDateTime nextFollowupDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
+
     private LocalDateTime completedAt;
 
     @Column(nullable = false)
@@ -49,6 +60,22 @@ public class FollowupReminder {
         this.status = "UPCOMING";
         this.type = type != null ? type : "CALL";
         this.notes = notes;
+        this.remarks = notes;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public FollowupReminder(Lead lead, User assignedTo, Workspace workspace, LocalDateTime scheduledAt, String type, String notes, String outcome, LocalDateTime nextFollowupDate, User createdBy) {
+        this.lead = lead;
+        this.assignedTo = assignedTo;
+        this.workspace = workspace;
+        this.scheduledAt = scheduledAt;
+        this.status = "UPCOMING";
+        this.type = type != null ? type : "CALL";
+        this.notes = notes;
+        this.remarks = notes;
+        this.outcome = outcome;
+        this.nextFollowupDate = nextFollowupDate;
+        this.createdBy = createdBy;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -85,6 +112,18 @@ public class FollowupReminder {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public String getRemarks() { return remarks; }
+    public void setRemarks(String remarks) { this.remarks = remarks; }
+
+    public String getOutcome() { return outcome; }
+    public void setOutcome(String outcome) { this.outcome = outcome; }
+
+    public LocalDateTime getNextFollowupDate() { return nextFollowupDate; }
+    public void setNextFollowupDate(LocalDateTime nextFollowupDate) { this.nextFollowupDate = nextFollowupDate; }
+
+    public User getCreatedBy() { return createdBy; }
+    public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
 
     public LocalDateTime getCompletedAt() { return completedAt; }
     public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }

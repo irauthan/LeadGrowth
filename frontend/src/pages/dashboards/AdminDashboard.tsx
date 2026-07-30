@@ -3,7 +3,7 @@ import api from '../../services/api';
 import type { DashboardKpis as KpiType } from '../../types';
 import { formatCurrency, formatNumber } from '../../utils';
 import { 
-  DollarSign, 
+  IndianRupee, 
   TrendingUp, 
   Users, 
   Shield, 
@@ -16,9 +16,12 @@ import {
   Plus,
   RefreshCw,
   Zap,
-  Server
+  Server,
+  PhoneCall,
+  Eye
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import CallDetailsModal from '../../components/CallDetailsModal';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -31,6 +34,8 @@ import {
 export default function AdminDashboard() {
   const [data, setData] = useState<KpiType | null>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [teamCalls, setTeamCalls] = useState<any>(null);
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,14 +44,16 @@ export default function AdminDashboard() {
 
   const fetchAdminData = async () => {
     try {
-      const [dashRes, _sysRes, auditRes] = await Promise.all([
+      const [dashRes, _sysRes, auditRes, callsRes] = await Promise.all([
         api.get('/api/dashboard'),
         api.get('/api/admin/system/metrics').catch(() => ({ data: {} })),
-        api.get('/api/admin/audit-logs').catch(() => ({ data: [] }))
+        api.get('/api/admin/audit-logs').catch(() => ({ data: [] })),
+        api.get('/api/calls/team').catch(() => ({ data: null }))
       ]);
 
       setData(dashRes.data);
       setAuditLogs(auditRes.data || []);
+      setTeamCalls(callsRes.data);
     } catch (err) {
       console.error('Failed to load Admin Command Center data', err);
     } finally {
@@ -108,7 +115,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Revenue</span>
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500">
-              <DollarSign size={18} />
+              <IndianRupee size={18} />
             </div>
           </div>
           <h3 className="text-2xl font-extrabold text-theme-text">{formatCurrency(data.totalRevenue)}</h3>
@@ -163,6 +170,30 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+      </div>
+
+      {/* Workspace Call Duration Audit & Effort Analytics Banner */}
+      <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+            <PhoneCall size={24} />
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+              Workspace Call Activity & Effort Audit Logs
+            </h3>
+            <p className="text-xs text-theme-text-muted">
+              Total Team Call Time Today: <span className="font-mono font-bold text-rose-400">{teamCalls?.totalTeamCallTimeFormatted || '00:00:00'}</span> ({teamCalls?.totalTeamCallsToday || 0} completed sessions)
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setIsCallModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-extrabold transition-all cursor-pointer shadow-sm"
+        >
+          <Eye size={14} /> View All Workspace Call Logs
+        </button>
       </div>
 
       {/* System Monitoring Cards for Admin */}
@@ -295,6 +326,13 @@ export default function AdminDashboard() {
         </div>
 
       </div>
+
+      {/* Call Details Modal for Admin */}
+      <CallDetailsModal
+        isOpen={isCallModalOpen}
+        onClose={() => setIsCallModalOpen(false)}
+        title="Workspace Call Activity & Contact Details"
+      />
 
     </div>
   );

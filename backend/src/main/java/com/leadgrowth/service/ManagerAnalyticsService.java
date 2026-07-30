@@ -104,13 +104,13 @@ public class ManagerAnalyticsService {
 
         Map<String, Long> statusDistribution = new HashMap<>();
         statusDistribution.put("New", teamLeads.stream().filter(l -> "New".equalsIgnoreCase(l.getStatus())).count());
-        statusDistribution.put("Contacted", teamLeads.stream().filter(l -> "Contacted".equalsIgnoreCase(l.getStatus())).count());
+        statusDistribution.put("Interaction", teamLeads.stream().filter(l -> "Interaction".equalsIgnoreCase(l.getStatus()) || "Contacted".equalsIgnoreCase(l.getStatus())).count());
         statusDistribution.put("Qualified", teamLeads.stream().filter(l -> "Qualified".equalsIgnoreCase(l.getStatus())).count());
         statusDistribution.put("Converted", teamLeads.stream().filter(l -> "Converted".equalsIgnoreCase(l.getStatus())).count());
 
         List<Map<String, Object>> funnel = new ArrayList<>();
         funnel.add(createFunnelStage("Total Team Leads", teamLeads.size()));
-        funnel.add(createFunnelStage("Contacted", statusDistribution.get("Contacted") + statusDistribution.get("Qualified") + statusDistribution.get("Converted")));
+        funnel.add(createFunnelStage("Interaction", statusDistribution.get("Interaction") + statusDistribution.get("Qualified") + statusDistribution.get("Converted")));
         funnel.add(createFunnelStage("Qualified", statusDistribution.get("Qualified") + statusDistribution.get("Converted")));
         funnel.add(createFunnelStage("Converted", statusDistribution.get("Converted")));
 

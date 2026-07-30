@@ -13,4 +13,5 @@ public interface FollowupRepository extends JpaRepository<FollowupReminder, Long
     List<FollowupReminder> findByAssignedToIdOrderByScheduledAtAsc(Long userId);
     List<FollowupReminder> findByWorkspaceIdAndStatus(Long workspaceId, String status);
     List<FollowupReminder> findByAssignedToIdAndScheduledAtBeforeAndStatus(Long userId, LocalDateTime now, String status);
+    List<FollowupReminder> findByLeadIdOrderByScheduledAtDesc(Long leadId);
 }

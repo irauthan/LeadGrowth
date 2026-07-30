@@ -61,7 +61,13 @@ public class UserAnalyticsService {
                 .filter(f -> f.getLead() != null && userId.equals(f.getLead().getAssignedToId()) && !"COMPLETED".equalsIgnoreCase(f.getStatus()))
                 .count();
 
-        double personalRevenue = conversionsCount * 2500.0;
+        double personalRevenue = myLeads.stream()
+                .filter(l -> l.getProposalAmount() != null && l.getProposalAmount() > 0)
+                .mapToDouble(Lead::getProposalAmount)
+                .sum();
+        if (personalRevenue == 0.0) {
+            personalRevenue = conversionsCount * 2500.0;
+        }
         double conversionRate = assignedLeadsCount > 0 ? (conversionsCount * 100.0 / assignedLeadsCount) : 0.0;
         double taskCompletionRate = (myTasks.size() > 0) ? (completedTasksCount * 100.0 / myTasks.size()) : 100.0;
 
@@ -96,21 +102,21 @@ public class UserAnalyticsService {
         // Status counts safely
         Map<String, Long> statusDistribution = new HashMap<>();
         statusDistribution.put("New", myLeads.stream().filter(l -> "New".equalsIgnoreCase(l.getStatus())).count());
-        statusDistribution.put("Contacted", myLeads.stream().filter(l -> "Contacted".equalsIgnoreCase(l.getStatus())).count());
+        statusDistribution.put("Interaction", myLeads.stream().filter(l -> "Interaction".equalsIgnoreCase(l.getStatus()) || "Contacted".equalsIgnoreCase(l.getStatus())).count());
         statusDistribution.put("Interested", myLeads.stream().filter(l -> "Interested".equalsIgnoreCase(l.getStatus())).count());
-        statusDistribution.put("Follow-Up", myLeads.stream().filter(l -> "Follow-Up".equalsIgnoreCase(l.getStatus())).count());
+        statusDistribution.put("Follow-Up", myLeads.stream().filter(l -> "Follow-Up".equalsIgnoreCase(l.getStatus()) || "Follow-up".equalsIgnoreCase(l.getStatus())).count());
         statusDistribution.put("Qualified", myLeads.stream().filter(l -> "Qualified".equalsIgnoreCase(l.getStatus())).count());
         statusDistribution.put("Converted", myLeads.stream().filter(l -> "Converted".equalsIgnoreCase(l.getStatus())).count());
         statusDistribution.put("Lost", myLeads.stream().filter(l -> "Lost".equalsIgnoreCase(l.getStatus()) || "Rejected".equalsIgnoreCase(l.getStatus())).count());
 
         long assignedCount = myLeads.size();
-        long contactedCount = statusDistribution.getOrDefault("Contacted", 0L) + statusDistribution.getOrDefault("Interested", 0L) + statusDistribution.getOrDefault("Follow-Up", 0L) + statusDistribution.getOrDefault("Qualified", 0L) + statusDistribution.getOrDefault("Converted", 0L);
+        long contactedCount = statusDistribution.getOrDefault("Interaction", 0L) + statusDistribution.getOrDefault("Interested", 0L) + statusDistribution.getOrDefault("Follow-Up", 0L) + statusDistribution.getOrDefault("Qualified", 0L) + statusDistribution.getOrDefault("Converted", 0L);
         long qualifiedCount = statusDistribution.getOrDefault("Qualified", 0L) + statusDistribution.getOrDefault("Converted", 0L);
         long convertedCount = statusDistribution.getOrDefault("Converted", 0L);
 
         List<Map<String, Object>> funnel = new ArrayList<>();
         funnel.add(createFunnelStage("Assigned Leads", assignedCount));
-        funnel.add(createFunnelStage("Contacted", contactedCount));
+        funnel.add(createFunnelStage("Interaction", contactedCount));
         funnel.add(createFunnelStage("Qualified", qualifiedCount));
         funnel.add(createFunnelStage("Converted", convertedCount));
 

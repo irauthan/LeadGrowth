@@ -87,6 +87,20 @@ public class UserService {
         return userRepository.findByWorkspaceId(user.getWorkspace().getId());
     }
 
+    public List<User> getAssignableUsers(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        if (user.getWorkspace() == null) {
+            throw new IllegalStateException("User does not belong to a workspace");
+        }
+        List<User> members = userRepository.findByWorkspaceId(user.getWorkspace().getId());
+        return members.stream()
+                .filter(u -> !"SUSPENDED".equalsIgnoreCase(u.getStatus()))
+                .filter(u -> u.getRoles().stream().anyMatch(r -> "ROLE_USER".equalsIgnoreCase(r.getName()) || "USER".equalsIgnoreCase(r.getName())))
+                .filter(u -> u.getRoles().stream().noneMatch(r -> "ROLE_ADMIN".equalsIgnoreCase(r.getName()) || "ADMIN".equalsIgnoreCase(r.getName()) || "ROLE_MANAGER".equalsIgnoreCase(r.getName()) || "MANAGER".equalsIgnoreCase(r.getName())))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     @Transactional
     public Invitation inviteUser(UserInviteRequest request, String inviterEmail) {
         User inviter = userRepository.findByEmail(inviterEmail)

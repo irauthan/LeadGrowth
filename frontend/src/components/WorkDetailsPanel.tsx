@@ -8,7 +8,7 @@ import {
   Clock, 
   FileText, 
   History, 
-  DollarSign, 
+  IndianRupee, 
   Plus, 
   Calendar, 
   Download,
@@ -27,6 +27,8 @@ import {
 import api from '../services/api';
 import { downloadSingleLeadPdf } from '../services/reportService';
 import type { SalesActivity, SalesActivityLog } from '../types';
+import CallTimerWidget from './CallTimerWidget';
+import CallHistoryLog from './CallHistoryLog';
 
 interface WorkDetailsPanelProps {
   leadId: number | null;
@@ -301,9 +303,29 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
               <div>
                 <h2 className="text-base font-extrabold text-theme-text flex items-center gap-2">
                   {lead?.name || 'Lead Work Container'}
-                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-                    {lead?.status || 'NEW'}
-                  </span>
+                  <select
+                    value={lead?.status || 'New'}
+                    onChange={async (e) => {
+                      const newStatus = e.target.value;
+                      if (!lead?.id) return;
+                      try {
+                        await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
+                        fetchLeadDetails();
+                        onLeadUpdated();
+                      } catch (err) {
+                        console.error('Failed to update stage', err);
+                      }
+                    }}
+                    className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-primary focus:outline-none focus:border-theme-primary cursor-pointer shadow-xs"
+                  >
+                    <option value="New">NEW</option>
+                    <option value="Interaction">INTERACTION</option>
+                    <option value="Follow-up">FOLLOW-UP</option>
+                    <option value="Proposal Sent">PROPOSAL SENT</option>
+                    <option value="Negotiation">NEGOTIATION</option>
+                    <option value="Converted">CONVERTED</option>
+                    <option value="Lost">🔴 LOST (DROP LEAD)</option>
+                  </select>
                 </h2>
                 <p className="text-xs text-theme-text-muted">
                   {lead?.company || 'No Company'} • {lead?.email} • {lead?.phone || 'No Phone'}
@@ -366,6 +388,19 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Call Duration Tracking Widget */}
+              {lead && (
+                <CallTimerWidget
+                  leadId={lead.id}
+                  leadName={lead.name}
+                  assignedToId={lead.assignedToId}
+                  onCallEnded={() => {
+                    fetchLeadDetails();
+                    onLeadUpdated();
+                  }}
+                />
+              )}
+
               {/* Navigation Tabs */}
               <div className="grid grid-cols-4 gap-1 p-1 bg-theme-card border border-theme-border rounded-2xl">
                 {[
@@ -499,6 +534,39 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                           {/* Expandable Activity Timeline Section */}
                           {isExpanded && (
                             <div className="p-4 border-t border-theme-border/40 bg-theme-bg/60 space-y-3">
+                              {(act.activityKey === 'NEGOTIATION' || act.activityKey === 'PROPOSAL_SENT') && (
+                                <div className="p-3.5 rounded-2xl bg-theme-card border border-theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                                  <div className="space-y-0.5">
+                                    <span className="text-[11px] font-extrabold uppercase text-theme-primary flex items-center gap-1">
+                                      <IndianRupee size={13} className="text-emerald-500" /> Negotiated Deal Revenue (₹)
+                                    </span>
+                                    <p className="text-[10px] text-theme-text-muted">
+                                      Enter agreed deal value during negotiation to calculate dashboard lead revenue.
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-emerald-500">₹</span>
+                                      <input
+                                        type="number"
+                                        placeholder="e.g. 50000"
+                                        value={proposalAmount}
+                                        onChange={(e) => setProposalAmount(e.target.value)}
+                                        className="w-36 bg-theme-bg-alt border border-theme-border rounded-xl pl-7 pr-3 py-1.5 text-xs font-extrabold text-theme-text focus:outline-none focus:border-theme-primary"
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={handleProposalSave}
+                                      disabled={savingNotes}
+                                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all flex items-center gap-1"
+                                    >
+                                      {savingNotes ? 'Saving...' : 'Save Revenue'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
                               <div className="flex items-center justify-between text-[11px] font-bold text-theme-text-muted border-b border-theme-border/30 pb-2">
                                 <span>Recorded Interaction Logs ({logs.length})</span>
                                 {logs.length > 1 && (
@@ -591,12 +659,12 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                   {/* Commercial Proposal Section */}
                   <div className="p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                      <DollarSign size={16} className="text-emerald-400" /> Commercial Proposal Details
+                      <IndianRupee size={16} className="text-emerald-400" /> Commercial Proposal Details
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Proposal Amount ($)</label>
+                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Proposal Amount (₹)</label>
                         <input
                           type="number"
                           placeholder="e.g. 5000"
@@ -612,7 +680,7 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                           disabled={savingNotes}
                           className="w-full py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-2"
                         >
-                          <DollarSign size={14} /> Update Commercial Proposal
+                          <IndianRupee size={14} /> Update Commercial Proposal
                         </button>
                       </div>
                     </div>
@@ -733,6 +801,9 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                   <p className="text-[10px] text-theme-text-muted">
                     💡 Click on any interaction record below to open and inspect full discussion notes, duration, and follow-up details.
                   </p>
+
+                  {/* Call History Duration Logs */}
+                  {lead && <CallHistoryLog leadId={lead.id} />}
 
                   {/* Sub-tab 1: All System Audit Timeline */}
                   {historySubTab === 'all' && (

@@ -32,4 +32,9 @@ public class WebSocketManager {
         String destination = "/topic/workspace/" + workspaceId + "/notifications";
         messagingTemplate.convertAndSend(destination, notificationDto);
     }
+
+    public void broadcastCallSession(Long workspaceId, Object callSessionDto) {
+        String destination = "/topic/workspace/" + workspaceId + "/calls";
+        messagingTemplate.convertAndSend(destination, callSessionDto);
+    }
 }

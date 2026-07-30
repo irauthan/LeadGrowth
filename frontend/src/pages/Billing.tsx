@@ -72,7 +72,7 @@ export default function Billing() {
   const plans = [
     {
       name: 'FREE',
-      price: '$0',
+      price: '₹0',
       period: 'Forever free',
       users: 5,
       leads: 1000,
@@ -81,7 +81,7 @@ export default function Billing() {
     },
     {
       name: 'PROFESSIONAL',
-      price: '$99',
+      price: '₹7,999',
       period: 'Per month',
       users: 25,
       leads: 10000,
@@ -90,7 +90,7 @@ export default function Billing() {
     },
     {
       name: 'ENTERPRISE',
-      price: '$299',
+      price: '₹24,999',
       period: 'Per month',
       users: 100,
       leads: 100000,

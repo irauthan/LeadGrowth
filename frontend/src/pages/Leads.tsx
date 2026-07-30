@@ -76,10 +76,21 @@ export default function Leads() {
 
   const fetchMembers = async () => {
     try {
-      const res = await api.get('/api/users/members');
+      const res = await api.get('/api/users/assignable');
       setMembers(res.data);
     } catch (e) {
-      console.error(e);
+      try {
+        const res2 = await api.get('/api/users/members');
+        const salesExecs = (res2.data || []).filter((m: any) => {
+          const roleNames = (m.roles || []).map((r: any) => (r.name || r || '').toUpperCase());
+          const hasUser = roleNames.includes('ROLE_USER') || roleNames.includes('USER');
+          const hasAdminOrManager = roleNames.includes('ROLE_ADMIN') || roleNames.includes('ADMIN') || roleNames.includes('ROLE_MANAGER') || roleNames.includes('MANAGER');
+          return hasUser && !hasAdminOrManager;
+        });
+        setMembers(salesExecs);
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -333,7 +344,7 @@ export default function Leads() {
               >
                 <option value="All">All Statuses</option>
                 <option value="New">New</option>
-                <option value="Contacted">Contacted</option>
+                <option value="Interaction">Interaction</option>
                 <option value="Qualified">Qualified</option>
                 <option value="Converted">Converted</option>
                 <option value="Rejected">Rejected</option>
@@ -406,10 +417,10 @@ export default function Leads() {
                     onChange={(e) => handleStatusChange(e.target.value)}
                     className="rounded-2xl border border-theme-border bg-theme-bg-alt px-4 py-2 text-sm font-semibold outline-none text-theme-text focus:border-theme-primary"
                   >
-                    <option value="New">New</option>
-                    <option value="Contacted">Contacted</option>
-                    <option value="Interested">Interested</option>
-                    <option value="Follow-Up">Follow-Up</option>
+                <option value="New">New</option>
+                <option value="Interaction">Interaction</option>
+                <option value="Interested">Interested</option>
+                <option value="Follow-Up">Follow-Up</option>
                     <option value="Qualified">Qualified</option>
                     <option value="Converted">Converted</option>
                     <option value="Lost">Lost</option>

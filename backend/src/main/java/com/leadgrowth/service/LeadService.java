@@ -1,5 +1,6 @@
 package com.leadgrowth.service;
 
+import com.leadgrowth.dto.ContactRepoDto;
 import com.leadgrowth.dto.LeadDto;
 import com.leadgrowth.dto.LeadNoteRequest;
 import com.leadgrowth.dto.AddActivityLogRequest;
@@ -10,6 +11,7 @@ import com.leadgrowth.entity.Lead;
 import com.leadgrowth.entity.LeadNote;
 import com.leadgrowth.entity.User;
 import com.leadgrowth.entity.LeadAssignment;
+import com.leadgrowth.entity.LeadAssignmentHistory;
 import com.leadgrowth.entity.AssignmentLog;
 import com.leadgrowth.entity.Notification;
 import com.leadgrowth.entity.Workspace;
@@ -49,6 +51,7 @@ public class LeadService {
     private final LeadHistoryRepository leadHistoryRepository;
     private final SalesActivityLogRepository salesActivityLogRepository;
     private final FollowupRepository followupRepository;
+    private final LeadAssignmentHistoryRepository leadAssignmentHistoryRepository;
 
     public LeadService(
             LeadRepository leadRepository,
@@ -62,7 +65,8 @@ public class LeadService {
             SalesActivityRepository salesActivityRepository,
             LeadHistoryRepository leadHistoryRepository,
             SalesActivityLogRepository salesActivityLogRepository,
-            FollowupRepository followupRepository
+            FollowupRepository followupRepository,
+            LeadAssignmentHistoryRepository leadAssignmentHistoryRepository
     ) {
         this.leadRepository = leadRepository;
         this.leadNoteRepository = leadNoteRepository;
@@ -76,6 +80,7 @@ public class LeadService {
         this.leadHistoryRepository = leadHistoryRepository;
         this.salesActivityLogRepository = salesActivityLogRepository;
         this.followupRepository = followupRepository;
+        this.leadAssignmentHistoryRepository = leadAssignmentHistoryRepository;
     }
 
     public List<LeadDto> getLeads(String userEmail) {
@@ -127,6 +132,7 @@ public class LeadService {
             }
         } else if (dto.getAssignedToId() != null && dto.getAssignedToId() > 0) {
             assignedTo = userRepository.findById(dto.getAssignedToId()).orElse(null);
+            validateLeadAssigneeRole(assignedTo);
             algorithmDetails = "Assigned manually by Creator.";
         }
 
@@ -224,9 +230,11 @@ public class LeadService {
         } else {
             assignTarget = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("Target user not found"));
+            validateLeadAssigneeRole(assignTarget);
             algorithmDetails = "Assigned manually by Administrator.";
         }
 
+        User oldOwner = lead.getAssignedTo();
         lead.setAssignedTo(assignTarget);
         if (assignTarget != null && assignTarget.getId().equals(user.getId())) {
             lead.setQueueStatus("IN_PIPELINE");
@@ -241,18 +249,36 @@ public class LeadService {
         assignTarget.setLastAssignedAt(LocalDateTime.now());
         userRepository.save(assignTarget);
 
-        // Log assignment
+        // Log assignment & audit history
         leadAssignmentRepository.save(new LeadAssignment(saved, assignTarget));
+        leadAssignmentHistoryRepository.save(new LeadAssignmentHistory(saved, oldOwner, assignTarget, user, algorithmDetails));
         assignmentLogRepository.save(new AssignmentLog(
                 user.getWorkspace(), "LEAD", saved.getId(), assignTarget, algorithmDetails
         ));
 
-        // Notify
+        // Real-Time Notifications
         createAndSendNotification(assignTarget, "New Lead Assigned", 
-                "You have been assigned to lead: \"" + saved.getName() + "\" (Lead #" + saved.getId() + ").");
+                "You are now the sole active owner of lead: \"" + saved.getName() + "\" (Lead #" + saved.getId() + ").");
+
+        if (oldOwner != null && !oldOwner.getId().equals(assignTarget.getId())) {
+            createAndSendNotification(oldOwner, "Lead Reassigned", 
+                    "Lead \"" + saved.getName() + "\" (Lead #" + saved.getId() + ") has been reassigned to " + assignTarget.getFullName() + ".");
+            try {
+                Map<String, Object> wsMsg = new HashMap<>();
+                wsMsg.put("type", "LEAD_REMOVED");
+                wsMsg.put("leadId", saved.getId());
+                webSocketManager.broadcastNotification(oldOwner.getId(), wsMsg);
+            } catch (Exception ignored) {}
+        }
 
         LeadDto resultDto = convertToDto(saved);
         webSocketManager.broadcastLead(user.getWorkspace().getId(), resultDto);
+        try {
+            Map<String, Object> wsAssignMsg = new HashMap<>();
+            wsAssignMsg.put("type", "LEAD_ASSIGNED");
+            wsAssignMsg.put("lead", resultDto);
+            webSocketManager.broadcastNotification(assignTarget.getId(), wsAssignMsg);
+        } catch (Exception ignored) {}
         return resultDto;
     }
 
@@ -357,10 +383,22 @@ public class LeadService {
         return convertToDto(lead);
     }
 
+    private void validateLeadAssigneeRole(User targetUser) {
+        if (targetUser == null) return;
+        boolean isAdminOrManager = targetUser.getRoles().stream().anyMatch(r -> 
+            "ROLE_ADMIN".equalsIgnoreCase(r.getName()) || "ADMIN".equalsIgnoreCase(r.getName()) || 
+            "ROLE_MANAGER".equalsIgnoreCase(r.getName()) || "MANAGER".equalsIgnoreCase(r.getName()));
+        if (isAdminOrManager) {
+            throw new IllegalArgumentException("Leads can only be assigned to Sales Executives (ROLE_USER). Admin and Manager accounts cannot be assigned leads.");
+        }
+    }
+
     public User findBestLeadAssignee(Workspace workspace) {
         List<User> members = userRepository.findByWorkspaceId(workspace.getId());
         List<User> activeMembers = members.stream()
                 .filter(u -> !"SUSPENDED".equalsIgnoreCase(u.getStatus()))
+                .filter(u -> u.getRoles().stream().anyMatch(r -> "ROLE_USER".equalsIgnoreCase(r.getName()) || "USER".equalsIgnoreCase(r.getName())))
+                .filter(u -> u.getRoles().stream().noneMatch(r -> "ROLE_ADMIN".equalsIgnoreCase(r.getName()) || "ADMIN".equalsIgnoreCase(r.getName()) || "ROLE_MANAGER".equalsIgnoreCase(r.getName()) || "MANAGER".equalsIgnoreCase(r.getName())))
                 .collect(Collectors.toList());
 
         if (activeMembers.isEmpty()) {
@@ -376,7 +414,7 @@ public class LeadService {
             } else if ("BUSY".equalsIgnoreCase(avail)) {
                 // Workload threshold for leads: max 10 active leads
                 long activeLeads = leadRepository.countByAssignedToAndStatusIn(u, 
-                        List.of("New", "Contacted", "Qualified", "NEW", "CONTACTED", "QUALIFIED"));
+                        List.of("New", "Interaction", "Contacted", "Qualified", "NEW", "INTERACTION", "CONTACTED", "QUALIFIED"));
                 if (activeLeads < 10) {
                     eligibleUsers.add(u);
                 }
@@ -393,7 +431,7 @@ public class LeadService {
 
         for (User u : eligibleUsers) {
             long workload = leadRepository.countByAssignedToAndStatusIn(u, 
-                    List.of("New", "Contacted", "Qualified", "NEW", "CONTACTED", "QUALIFIED"));
+                    List.of("New", "Interaction", "Contacted", "Qualified", "NEW", "INTERACTION", "CONTACTED", "QUALIFIED"));
             if (workload < minWorkload) {
                 minWorkload = workload;
                 minWorkloadUsers.clear();
@@ -444,6 +482,46 @@ public class LeadService {
         webSocketManager.broadcastWorkspaceNotification(recipient.getWorkspace().getId(), wsMsg);
     }
 
+    public void recalculateLeadProgress(Lead lead) {
+        if (lead == null || lead.getId() == null) return;
+
+        List<SalesActivity> activities = salesActivityRepository.findByLeadIdOrderByIdAsc(lead.getId());
+        List<SalesActivity> activeActivities = activities.stream()
+                .filter(a -> !"LEAD_LOST".equalsIgnoreCase(a.getActivityKey()) && !"LOST".equalsIgnoreCase(a.getActivityKey()))
+                .collect(Collectors.toList());
+
+        long completedActiveCount = activeActivities.stream()
+                .filter(a -> "COMPLETED".equalsIgnoreCase(a.getStatus()))
+                .count();
+
+        int progress = 20;
+        if (!activeActivities.isEmpty()) {
+            progress = (int) Math.round(((double) completedActiveCount / activeActivities.size()) * 100);
+        }
+
+        String st = lead.getStatus() != null ? lead.getStatus() : "";
+        if ("Converted".equalsIgnoreCase(st) || "Closed Won".equalsIgnoreCase(st) || "Negotiation".equalsIgnoreCase(st)) {
+            progress = Math.max(progress, 100);
+        } else if ("Proposal Sent".equalsIgnoreCase(st) || "Proposal".equalsIgnoreCase(st)) {
+            progress = Math.max(progress, 80);
+        } else if ("Qualified".equalsIgnoreCase(st) || "Demo Scheduled".equalsIgnoreCase(st) || "Interested".equalsIgnoreCase(st)) {
+            progress = Math.max(progress, 60);
+        } else if ("Contacted".equalsIgnoreCase(st) || "Interaction".equalsIgnoreCase(st) || "Follow-up".equalsIgnoreCase(st)) {
+            progress = Math.max(progress, 40);
+        } else if ("New".equalsIgnoreCase(st)) {
+            progress = Math.max(progress, 20);
+        }
+
+        if ("Lost".equalsIgnoreCase(st) || "Rejected".equalsIgnoreCase(st)) {
+            Integer existingProgress = lead.getProgressPercentage();
+            if (existingProgress != null && existingProgress > 0) {
+                progress = Math.max(progress, existingProgress);
+            }
+        }
+
+        lead.setProgressPercentage(Math.min(100, Math.max(20, progress)));
+    }
+
     public void ensureDefaultSalesActivities(Lead lead) {
         List<SalesActivity> existing = salesActivityRepository.findByLeadIdOrderByIdAsc(lead.getId());
         if (existing.isEmpty()) {
@@ -454,9 +532,15 @@ public class LeadService {
                 new SalesActivity(lead, "PROPOSAL_SENT", "Proposal Sent", "PENDING"),
                 new SalesActivity(lead, "NEGOTIATION", "Negotiation", "PENDING"),
                 new SalesActivity(lead, "CLOSING", "Closing", "PENDING"),
-                new SalesActivity(lead, "PAYMENT_FOLLOWUP", "Payment Follow-up", "PENDING")
+                new SalesActivity(lead, "PAYMENT_FOLLOWUP", "Payment Follow-up", "PENDING"),
+                new SalesActivity(lead, "LEAD_LOST", "Lead Lost / Dropped", "PENDING")
             );
             salesActivityRepository.saveAll(defaults);
+        } else {
+            boolean hasLostStep = existing.stream().anyMatch(a -> "LEAD_LOST".equalsIgnoreCase(a.getActivityKey()) || "LOST".equalsIgnoreCase(a.getActivityKey()));
+            if (!hasLostStep) {
+                salesActivityRepository.save(new SalesActivity(lead, "LEAD_LOST", "Lead Lost / Dropped", "PENDING"));
+            }
         }
     }
 
@@ -485,20 +569,19 @@ public class LeadService {
         salesActivityRepository.save(activity);
 
         // Recalculate Lead Progress %
-        List<SalesActivity> activities = salesActivityRepository.findByLeadIdOrderByIdAsc(leadId);
-        long completedCount = activities.stream().filter(a -> "COMPLETED".equalsIgnoreCase(a.getStatus())).count();
-        int progress = (int) Math.round(((double) completedCount / activities.size()) * 100);
-        lead.setProgressPercentage(progress);
+        recalculateLeadProgress(lead);
 
         // Auto-advance stage based on activity progress
-        if ("FIRST_CALL".equals(activityKey) && "COMPLETED".equals(status) && "New".equalsIgnoreCase(lead.getStatus())) {
-            lead.setStatus("Contacted");
+        if ("FIRST_CALL".equals(activityKey) && "COMPLETED".equals(status) && ("New".equalsIgnoreCase(lead.getStatus()) || "Contacted".equalsIgnoreCase(lead.getStatus()))) {
+            lead.setStatus("Interaction");
         } else if ("PROPOSAL_SENT".equals(activityKey) && "COMPLETED".equals(status)) {
             lead.setStatus("Proposal Sent");
         } else if ("NEGOTIATION".equals(activityKey) && "COMPLETED".equals(status)) {
             lead.setStatus("Negotiation");
         } else if ("CLOSING".equals(activityKey) && "COMPLETED".equals(status)) {
             lead.setStatus("Converted");
+        } else if (("LEAD_LOST".equals(activityKey) || "LOST".equals(activityKey)) && "COMPLETED".equals(status)) {
+            lead.setStatus("Lost");
         }
         leadRepository.save(lead);
 
@@ -552,6 +635,11 @@ public class LeadService {
         );
         salesActivityLogRepository.save(activityLog);
 
+        if ("New".equalsIgnoreCase(lead.getStatus()) || "Contacted".equalsIgnoreCase(lead.getStatus())) {
+            lead.setStatus("Interaction");
+            leadRepository.save(lead);
+        }
+
         if (request.getRemarks() != null && !request.getRemarks().isBlank()) {
             activity.setRemarks(request.getRemarks());
         }
@@ -568,7 +656,7 @@ public class LeadService {
                 else if ("GOOGLE_MEET".equalsIgnoreCase(request.getCommunicationType()) || "ZOOM".equalsIgnoreCase(request.getCommunicationType()) || "OFFICE_VISIT".equalsIgnoreCase(request.getCommunicationType())) followupType = "MEETING";
 
                 String notes = "Follow-up created from Workflow Step '" + activity.getTitle() + "' (Attempt #" + nextActivityNumber + "): " + (request.getRemarks() != null ? request.getRemarks() : "Follow-up required");
-                FollowupReminder reminder = new FollowupReminder(lead, assignedUser, workspace, request.getNextFollowupDate(), followupType, notes);
+                FollowupReminder reminder = new FollowupReminder(lead, assignedUser, workspace, request.getNextFollowupDate(), followupType, notes, request.getOutcome(), request.getNextFollowupDate(), user);
                 followupRepository.save(reminder);
             }
         }
@@ -611,14 +699,11 @@ public class LeadService {
         salesActivityRepository.save(activity);
 
         // Recalculate Lead Progress %
-        List<SalesActivity> activities = salesActivityRepository.findByLeadIdOrderByIdAsc(leadId);
-        long completedCount = activities.stream().filter(a -> "COMPLETED".equalsIgnoreCase(a.getStatus())).count();
-        int progress = (int) Math.round(((double) completedCount / activities.size()) * 100);
-        lead.setProgressPercentage(progress);
+        recalculateLeadProgress(lead);
 
         // Auto-advance stage based on completed step
-        if ("FIRST_CALL".equals(activityKey) && "New".equalsIgnoreCase(lead.getStatus())) {
-            lead.setStatus("Contacted");
+        if ("FIRST_CALL".equals(activityKey) && ("New".equalsIgnoreCase(lead.getStatus()) || "Contacted".equalsIgnoreCase(lead.getStatus()))) {
+            lead.setStatus("Interaction");
         } else if ("REQUIREMENT_COLLECTION".equals(activityKey)) {
             lead.setStatus("Interested");
         } else if ("DEMO_SCHEDULED".equals(activityKey)) {
@@ -631,6 +716,8 @@ public class LeadService {
             lead.setStatus("Converted");
         } else if ("PAYMENT_FOLLOWUP".equals(activityKey)) {
             lead.setStatus("Payment Completed");
+        } else if ("LEAD_LOST".equalsIgnoreCase(activityKey) || "LOST".equalsIgnoreCase(activityKey)) {
+            lead.setStatus("Lost");
         }
         leadRepository.save(lead);
 
@@ -845,6 +932,24 @@ public class LeadService {
         dto.setActivities(activityDtos);
         dto.setCreatedAt(lead.getCreatedAt());
 
+        // Synchronize Follow-up Details for Pipeline Cards & Views
+        List<FollowupReminder> followups = followupRepository.findByLeadIdOrderByScheduledAtDesc(lead.getId());
+        if (followups != null && !followups.isEmpty()) {
+            FollowupReminder latestOrUpcoming = followups.stream()
+                    .filter(f -> "UPCOMING".equalsIgnoreCase(f.getStatus()) || "PENDING".equalsIgnoreCase(f.getStatus()))
+                    .findFirst()
+                    .orElse(followups.get(0));
+
+            LocalDateTime followupTime = latestOrUpcoming.getScheduledAt() != null ? latestOrUpcoming.getScheduledAt() : latestOrUpcoming.getNextFollowupDate();
+            dto.setNextFollowupDate(followupTime);
+            dto.setFollowupNotes(latestOrUpcoming.getNotes() != null ? latestOrUpcoming.getNotes() : latestOrUpcoming.getRemarks());
+            dto.setFollowupType(latestOrUpcoming.getType() != null ? latestOrUpcoming.getType() : "CALL");
+            dto.setFollowupStatus(latestOrUpcoming.getStatus());
+            if (dto.getLastFollowupDate() == null) {
+                dto.setLastFollowupDate(followupTime);
+            }
+        }
+
         return dto;
     }
 
@@ -906,16 +1011,127 @@ public class LeadService {
         return leads.stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
+    public List<ContactRepoDto> getContactsRepository(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        
+        List<Lead> leads;
+        if (isUserOnly(user)) {
+            leads = leadRepository.findByAssignedToIdOrderByCreatedAtDesc(user.getId());
+        } else {
+            leads = user.getWorkspace() != null 
+                    ? leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(user.getWorkspace().getId())
+                    : leadRepository.findByAssignedToIdOrderByCreatedAtDesc(user.getId());
+        }
+
+        List<ContactRepoDto> contactList = new ArrayList<>();
+
+        for (Lead lead : leads) {
+            List<SalesActivityLog> logs = salesActivityLogRepository.findByLeadIdOrderByCreatedAtDesc(lead.getId());
+
+            long calls = 0;
+            long emails = 0;
+            long whatsapp = 0;
+            LocalDateTime firstContactDate = lead.getCreatedAt();
+            LocalDateTime lastContactDate = lead.getCreatedAt();
+
+            for (SalesActivityLog l : logs) {
+                if (l.getCreatedAt() != null) {
+                    if (firstContactDate == null || l.getCreatedAt().isBefore(firstContactDate)) {
+                        firstContactDate = l.getCreatedAt();
+                    }
+                    if (lastContactDate == null || l.getCreatedAt().isAfter(lastContactDate)) {
+                        lastContactDate = l.getCreatedAt();
+                    }
+                }
+
+                String type = l.getCommunicationType() != null ? l.getCommunicationType().toUpperCase() : "";
+                if (type.contains("CALL") || type.contains("PHONE")) {
+                    calls++;
+                } else if (type.contains("EMAIL")) {
+                    emails++;
+                } else if (type.contains("WHATSAPP")) {
+                    whatsapp++;
+                }
+            }
+
+            SalesActivityLog latest = !logs.isEmpty() ? logs.get(0) : null;
+            String lastActivityDesc = latest != null 
+                    ? (latest.getCommunicationType() != null ? latest.getCommunicationType() : "Interaction") + " (" + (latest.getOutcome() != null ? latest.getOutcome() : "Logged") + ")"
+                    : "Pipeline Lead (" + (lead.getStatus() != null ? lead.getStatus() : "New") + ")";
+
+            ContactRepoDto dto = new ContactRepoDto();
+            dto.setLeadId(lead.getId());
+            dto.setName(lead.getName());
+            dto.setCompany(lead.getCompany() != null ? lead.getCompany() : "N/A");
+            dto.setEmail(lead.getEmail());
+            dto.setPhone(lead.getPhone());
+            dto.setSourcePlatform(lead.getSourcePlatform());
+            dto.setCurrentStage(lead.getStatus() != null ? lead.getStatus() : "New");
+            if (lead.getAssignedTo() != null) {
+                dto.setAssignedToId(lead.getAssignedTo().getId());
+                dto.setAssignedToName(lead.getAssignedTo().getFullName());
+            }
+            dto.setQualityScore(lead.getQualityScore() != null ? lead.getQualityScore() : 75);
+            dto.setQualityTier(lead.getQualityTier() != null ? lead.getQualityTier() : "WARM");
+            dto.setConversionProbability(lead.getConversionProbability() != null ? lead.getConversionProbability() : 75.0);
+
+            dto.setFirstContactDate(firstContactDate);
+            dto.setLastContactDate(lastContactDate);
+            dto.setTotalCalls(calls);
+            dto.setTotalEmails(emails);
+            dto.setTotalWhatsApp(whatsapp);
+            dto.setTotalInteractionsCount(logs.size());
+            dto.setLastActivityDescription(lastActivityDesc);
+            dto.setCreatedAt(lead.getCreatedAt());
+
+            contactList.add(dto);
+        }
+
+        return contactList;
+    }
+
     private String normalizeActivityKey(String key) {
         if (key == null) return "FIRST_CALL";
         String normalized = key.toUpperCase().trim().replace(" ", "_");
-        if ("CONTACTED".equals(normalized) || "FIRSTCALL".equals(normalized) || "FIRST_CALL".equals(normalized)) return "FIRST_CALL";
+        if ("INTERACTION".equals(normalized) || "CONTACTED".equals(normalized) || "FIRSTCALL".equals(normalized) || "FIRST_CALL".equals(normalized)) return "FIRST_CALL";
         if ("REQUIREMENT".equals(normalized) || "REQUIREMENTS".equals(normalized) || "REQUIREMENT_COLLECTION".equals(normalized) || "FOLLOW_UP".equals(normalized) || "FOLLOWUP".equals(normalized)) return "REQUIREMENT_COLLECTION";
         if ("DEMO".equals(normalized) || "DEMOSCHEDULED".equals(normalized) || "DEMO_SCHEDULED".equals(normalized)) return "DEMO_SCHEDULED";
         if ("PROPOSAL".equals(normalized) || "PROPOSALSENT".equals(normalized) || "PROPOSAL_SENT".equals(normalized)) return "PROPOSAL_SENT";
         if ("NEGOTIATION".equals(normalized)) return "NEGOTIATION";
         if ("CLOSING".equals(normalized) || "CONVERTED".equals(normalized)) return "CLOSING";
         if ("PAYMENT".equals(normalized) || "PAYMENT_COMPLETED".equals(normalized) || "PAYMENT_FOLLOWUP".equals(normalized)) return "PAYMENT_FOLLOWUP";
+        if ("LEAD_LOST".equals(normalized) || "LOST".equals(normalized) || "DROP".equals(normalized) || "DROPPED".equals(normalized)) return "LEAD_LOST";
         return normalized;
+    }
+
+    private boolean isUserOnly(User user) {
+        if (user == null || user.getRoles() == null || user.getRoles().isEmpty()) return true;
+        return user.getRoles().stream().noneMatch(r -> {
+            String name = r.getName() != null ? r.getName().toUpperCase() : "";
+            return name.contains("ADMIN") || name.contains("MANAGER");
+        });
+    }
+
+    public List<LeadDto> getHighPriorityLeads(String userEmail) {
+        List<LeadDto> all = getLeads(userEmail);
+        return all.stream()
+                .filter(l -> "HIGH".equalsIgnoreCase(l.getPriority()) || "URGENT".equalsIgnoreCase(l.getPriority()) || "HOT".equalsIgnoreCase(l.getPriority()) || "P1_OVERDUE_FOLLOWUP".equalsIgnoreCase(l.getPriority()) || "P2_TODAY_NEGOTIATION".equalsIgnoreCase(l.getPriority()))
+                .collect(Collectors.toList());
+    }
+
+    public List<LeadDto> getNewLeadsToday(String userEmail) {
+        List<LeadDto> all = getLeads(userEmail);
+        LocalDateTime startOfDay = LocalDateTime.now().with(java.time.LocalTime.MIN);
+        return all.stream()
+                .filter(l -> "New".equalsIgnoreCase(l.getStatus()) || (l.getCreatedAt() != null && l.getCreatedAt().isAfter(startOfDay)))
+                .collect(Collectors.toList());
+    }
+
+    public List<LeadDto> getNegotiationLeads(String userEmail) {
+        List<LeadDto> all = getLeads(userEmail);
+        return all.stream()
+                .filter(l -> "Negotiation".equalsIgnoreCase(l.getStatus()))
+                .collect(Collectors.toList());
     }
 }

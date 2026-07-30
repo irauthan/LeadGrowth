@@ -27,6 +27,10 @@ public class LeadDto {
     private LocalDateTime assignedDate;
     private Integer progressPercentage;
     private LocalDateTime lastFollowupDate;
+    private LocalDateTime nextFollowupDate;
+    private String followupNotes;
+    private String followupType;
+    private String followupStatus;
     private LocalDateTime dueDate;
     private String clientNotes;
     private Double proposalAmount;
@@ -131,6 +135,18 @@ public class LeadDto {
 
     public List<SalesActivityDto> getActivities() { return activities; }
     public void setActivities(List<SalesActivityDto> activities) { this.activities = activities; }
+
+    public LocalDateTime getNextFollowupDate() { return nextFollowupDate; }
+    public void setNextFollowupDate(LocalDateTime nextFollowupDate) { this.nextFollowupDate = nextFollowupDate; }
+
+    public String getFollowupNotes() { return followupNotes; }
+    public void setFollowupNotes(String followupNotes) { this.followupNotes = followupNotes; }
+
+    public String getFollowupType() { return followupType; }
+    public void setFollowupType(String followupType) { this.followupType = followupType; }
+
+    public String getFollowupStatus() { return followupStatus; }
+    public void setFollowupStatus(String followupStatus) { this.followupStatus = followupStatus; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -2,6 +2,7 @@ package com.leadgrowth.controller;
 
 import com.leadgrowth.dto.AddActivityLogRequest;
 import com.leadgrowth.dto.CompleteStepRequest;
+import com.leadgrowth.dto.ContactRepoDto;
 import com.leadgrowth.dto.LeadDto;
 import com.leadgrowth.dto.LeadNoteRequest;
 import com.leadgrowth.dto.SalesActivityLogDto;
@@ -26,10 +27,34 @@ public class LeadController {
         this.leadService = leadService;
     }
 
+    @GetMapping("/contacts")
+    public ResponseEntity<List<ContactRepoDto>> getContactsRepository() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.getContactsRepository(email));
+    }
+
     @GetMapping
     public ResponseEntity<List<LeadDto>> getLeads() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(leadService.getLeads(email));
+    }
+
+    @GetMapping("/high-priority")
+    public ResponseEntity<List<LeadDto>> getHighPriorityLeads() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.getHighPriorityLeads(email));
+    }
+
+    @GetMapping("/new")
+    public ResponseEntity<List<LeadDto>> getNewLeadsToday() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.getNewLeadsToday(email));
+    }
+
+    @GetMapping("/negotiation")
+    public ResponseEntity<List<LeadDto>> getNegotiationLeads() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(leadService.getNegotiationLeads(email));
     }
 
     @PostMapping

@@ -1,0 +1,145 @@
+# Implementation Plan - LeadGrowth Enterprise CRM V3.2
+## Call Duration Tracking, Productivity Analytics & Smart Auto Assignment Foundation
+
+Upgrade LeadGrowth Enterprise CRM by implementing a production-ready, user-driven **Call Duration Tracking System** (Start Call / End Call workflow), live resumable timers, call history logs, multi-tier productivity analytics (User, Manager, Admin dashboards), report exports, WebSocket notifications, and the backend foundation for **Smart Lead Auto Assignment Engine** (Workload Score calculation).
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> - **Productivity Tracking Model**: This is a user-driven productivity tracking workflow using Start Call / End Call timestamps. No third-party telecom APIs (Twilio/Exotel) are required.
+> - **Timer State Persistence**: If a user refreshes the browser or navigates between pages while a call is active, the frontend checks `/api/calls/active` on mount and seamlessly resumes the timer from `startTime` without resetting.
+> - **Validation Rules**:
+>   1. Only assigned users can start a call on a lead.
+>   2. A user can have at most ONE active call session at a time across the entire workspace.
+>   3. Completed call history is immutable and cannot be edited or deleted.
+
+---
+
+## Proposed Changes
+
+### Database Layer
+
+#### [NEW] [CallHistory.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/entity/CallHistory.java)
+Create `call_history` table entity mapping:
+- `id` (Long, PK, Auto Increment)
+- `lead` (ManyToOne -> Lead)
+- `user` (ManyToOne -> User)
+- `workspace` (ManyToOne -> Workspace)
+- `startTime` (LocalDateTime, nullable = false)
+- `endTime` (LocalDateTime, nullable = true)
+- `durationSeconds` (Long, nullable = true)
+- `durationMinutes` (Double, nullable = true)
+- `formattedDuration` (String, e.g. "00:18:42")
+- `status` (String: `"ACTIVE"`, `"COMPLETED"`, `"CANCELLED"`)
+- `notes` (String, columnDefinition = "TEXT")
+- `createdAt` (LocalDateTime, nullable = false)
+- `updatedAt` (LocalDateTime)
+
+---
+
+### Backend Layer (Spring Boot)
+
+#### [NEW] [CallHistoryRepository.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/repository/CallHistoryRepository.java)
+Repository with query methods:
+- `findFirstByUserIdAndStatus(Long userId, String status)`
+- `findFirstByLeadIdAndStatus(Long leadId, String status)`
+- `findByLeadIdOrderByStartTimeDesc(Long leadId)`
+- `findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(Long userId, LocalDateTime start, LocalDateTime end)`
+- `findByWorkspaceIdAndStartTimeBetween(Long workspaceId, LocalDateTime start, LocalDateTime end)`
+- `sumDurationSecondsByUserIdAndDate(Long userId, LocalDateTime start, LocalDateTime end)`
+
+#### [NEW] [CallSessionDto.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/dto/CallSessionDto.java)
+DTO for call sessions (id, leadId, leadName, userId, userName, startTime, endTime, durationSeconds, durationMinutes, formattedDuration, status, notes, createdAt).
+
+#### [NEW] [CallAnalyticsDto.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/dto/CallAnalyticsDto.java)
+DTO for dashboard KPI metrics (todayCallTimeSeconds, todayCallsCount, avgDurationSeconds, longestCallSeconds, activeCall, weeklyCallTimeSeconds, monthlyCallTimeSeconds, dailyCallTimeChart, userProductivityLeaderboard).
+
+#### [NEW] [WorkloadScoreDto.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/dto/WorkloadScoreDto.java)
+DTO for Smart Auto Assignment Engine foundation (userId, userName, activeLeads, pendingFollowups, todayActiveTasks, todayCallTimeSeconds, overdueTasks, workloadScore, preferredForAutoAssignment).
+
+#### [NEW] [CallService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/CallService.java) & [CallServiceImpl.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/impl/CallServiceImpl.java)
+Implement core call tracking business logic:
+- `startCall(Long leadId, String userEmail)`: Validates ownership and single active call constraint; creates `CallHistory` record with `ACTIVE` status; broadcasts WebSocket notification (`CALL_STARTED`).
+- `endCall(Long callId, String userEmail, String notes)`: Sets `endTime`, calculates `durationSeconds`, formats `"HH:mm:ss"`, updates status to `COMPLETED`; broadcasts WebSocket notification (`CALL_ENDED`).
+- `getActiveCall(String userEmail)`: Fetches active call session for logged-in user.
+- `getCallHistoryForLead(Long leadId)`: Fetches complete call history for a lead.
+- `getUserCallAnalytics(String userEmail)`: Computes user productivity stats & charts.
+- `getTeamCallAnalytics(String managerEmail)`: Computes team productivity & leaderboard.
+- `getAdminCallAnalytics(String adminEmail)`: Computes org-wide call analytics.
+- `getCallReports(String userEmail, String startDate, String endDate)`: Generates report dataset.
+
+#### [NEW] [SmartAssignmentService.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/service/SmartAssignmentService.java)
+Implement workload score engine foundation:
+$$\text{Workload Score} = \text{Active Leads} + \text{Pending Follow-ups} + \text{Today's Tasks} + \left(\frac{\text{Today Call Seconds}}{1800}\right) + \text{Overdue Tasks}$$
+Calculates scores across workspace members to determine optimal lead assignment candidates.
+
+#### [NEW] [CallController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/CallController.java)
+Expose REST APIs:
+- `POST /api/calls/start`
+- `POST /api/calls/end`
+- `GET /api/calls/active`
+- `GET /api/calls/history/{leadId}`
+- `GET /api/calls/user`
+- `GET /api/calls/team`
+- `GET /api/calls/dashboard`
+- `GET /api/calls/analytics`
+- `GET /api/calls/reports`
+
+#### [NEW] [SmartAssignmentController.java](file:///e:/WEB/LeadGrowth/backend/src/main/java/com/leadgrowth/controller/SmartAssignmentController.java)
+Expose REST API:
+- `GET /api/assignments/workload-scores`
+
+---
+
+### Frontend Layer (React TypeScript)
+
+#### [MODIFY] [frontend/src/types/index.ts](file:///e:/WEB/LeadGrowth/frontend/src/types/index.ts)
+Add `CallSession`, `CallAnalytics`, `WorkloadScore` interfaces to global TypeScript types.
+
+#### [NEW] [CallTimerWidget.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/CallTimerWidget.tsx)
+Live call widget with Start Call / End Call workflow:
+- **Start Call Button**: Emits start call request.
+- **Active Call Banner**: Displays `🟢 Call In Progress` with live incrementing timer (`00:18:42`) updating every second.
+- **Resumable Timer**: On mount, queries `/api/calls/active` and resumes timer from server `startTime`.
+- **End Call Modal**: Prompts for call notes and submits `POST /api/calls/end`.
+
+#### [MODIFY] [WorkDetailsPanel.tsx](file:///e:/WEB/LeadGrowth/frontend/src/components/WorkDetailsPanel.tsx)
+Embed `CallTimerWidget` and `CallHistoryLog` inside the lead slide-over drawer so sales executives can trigger calls and inspect historical call sessions directly.
+
+#### [MODIFY] [UserDashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/dashboards/UserDashboard.tsx)
+Add Productivity KPI Cards:
+- Today's Call Time
+- Total Calls Today
+- Avg Call Duration
+- Longest Call Session
+- Daily Call Duration Chart (Recharts)
+
+#### [MODIFY] [ManagerDashboard.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/dashboards/ManagerDashboard.tsx)
+Add Team Productivity Monitoring:
+- Total Team Call Time
+- Top Calling Sales Executive
+- Least Active Sales Executive
+- Team Call Leaderboard
+- Workload Score Distribution Table (Smart Auto Assignment Foundation)
+
+#### [MODIFY] [Analytics.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Analytics.tsx) & [Reports.tsx](file:///e:/WEB/LeadGrowth/frontend/src/pages/Reports.tsx)
+Integrate Call Duration analytics charts and CSV/PDF export capability.
+
+---
+
+## Verification Plan
+
+### Automated Build Verification
+1. **Backend Compile & Run**:
+   `./mvnw clean compile` in `backend` to ensure zero Java compilation errors.
+2. **Frontend Production Build**:
+   `npm --prefix frontend run build` to ensure zero TypeScript or Vite bundle errors.
+
+### Functional Verification
+1. **Start Call Workflow**: Click "Start Call" on an assigned lead -> Verify backend creates active call session -> Verify live timer starts (`00:00:01`).
+2. **Timer Resume on Refresh**: Refresh page while call is running -> Verify timer queries `/api/calls/active` and resumes cleanly without resetting.
+3. **End Call Workflow**: Click "End Call" -> Enter call notes -> Verify duration is calculated and stored in `call_history` -> Verify call history list updates immediately.
+4. **Dashboard Analytics**: Check User, Manager, and Admin dashboards -> Verify Today's Call Time, Avg Duration, and Team Leaderboard reflect real call sessions.
+5. **Workload Score Foundation**: Verify `GET /api/assignments/workload-scores` computes workload scores accurately.

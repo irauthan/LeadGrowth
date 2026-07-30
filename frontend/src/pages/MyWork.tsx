@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   LayoutGrid, 
   Table as TableIcon, 
@@ -21,14 +21,15 @@ import {
   MessageSquare,
   AlertCircle,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Users
 } from 'lucide-react';
 import api from '../services/api';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
 const KANBAN_STAGES = [
   { key: 'New', title: 'New', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10', headerColor: 'from-blue-500/20 to-blue-500/5 text-blue-400', icon: Sparkles },
-  { key: 'Contacted', title: 'Contacted', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-400', icon: PhoneCall },
+  { key: 'Interaction', title: 'Interaction', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-400', icon: PhoneCall },
   { key: 'Follow-up', title: 'Follow-up', color: 'border-purple-500/40 text-purple-400 bg-purple-500/10', headerColor: 'from-purple-500/20 to-purple-500/5 text-purple-400', icon: ClipboardList },
   { key: 'Proposal Sent', title: 'Proposal Sent', color: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10', headerColor: 'from-cyan-500/20 to-cyan-500/5 text-cyan-400', icon: Send },
   { key: 'Negotiation', title: 'Negotiation', color: 'border-amber-500/40 text-amber-500 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-500', icon: Scale },
@@ -38,7 +39,7 @@ const KANBAN_STAGES = [
 
 const STAGES_TABLE_LIST = [
   'New',
-  'Contacted',
+  'Interaction',
   'Follow-up',
   'Proposal Sent',
   'Negotiation',
@@ -47,9 +48,15 @@ const STAGES_TABLE_LIST = [
 ];
 
 export default function MyWork() {
+  const navigate = useNavigate();
   const [leads, setLeads] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+
+  // Contacts Section collapse & full-width toggle state
+  const [isContactsCollapsed, setIsContactsCollapsed] = useState(false);
+  const [isContactsFullWidth, setIsContactsFullWidth] = useState(false);
 
   // Selected lead for work details side panel
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
@@ -59,7 +66,7 @@ export default function MyWork() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('ALL');
   const [selectedQuality, setSelectedQuality] = useState('ALL');
-  const [quickFilter, setQuickFilter] = useState<'ALL' | 'HOT' | 'WARM' | 'COLD' | 'PENDING' | 'CONVERTED' | 'LOST'>('ALL');
+  const [quickFilter, setQuickFilter] = useState<'ALL' | 'HOT' | 'WARM' | 'COLD' | 'PENDING' | 'CONVERTED' | 'LOST' | 'INTERACTION' | 'FOLLOW_UP' | 'PROPOSAL_SENT' | 'NEGOTIATION'>('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'a-z' | 'z-a' | 'priority' | 'progress'>('newest');
 
   // Collapsed columns state for Kanban
@@ -87,13 +94,29 @@ export default function MyWork() {
         setIsPanelOpen(true);
       }
     }
+
+    const paramStage = searchParams.get('stage');
+    if (paramStage) {
+      const upper = paramStage.toUpperCase().replace(/[\s-]+/g, '_');
+      if (upper === 'CONVERTED') setQuickFilter('CONVERTED');
+      else if (upper === 'LOST') setQuickFilter('LOST');
+      else if (upper === 'INTERACTION' || upper === 'FIRST_CALL') setQuickFilter('INTERACTION');
+      else if (upper === 'FOLLOW_UP' || upper === 'FOLLOWUP' || upper === 'DEMO') setQuickFilter('FOLLOW_UP');
+      else if (upper === 'PROPOSAL_SENT' || upper === 'PROPOSAL') setQuickFilter('PROPOSAL_SENT');
+      else if (upper === 'NEGOTIATION') setQuickFilter('NEGOTIATION');
+      else setSearchTerm(paramStage);
+    }
   }, [searchParams, leads]);
 
   const fetchMyWorkLeads = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/leads/pipeline');
-      setLeads(res.data || []);
+      const [leadsRes, contactsRes] = await Promise.all([
+        api.get('/api/leads/pipeline'),
+        api.get('/api/leads/contacts').catch(() => ({ data: [] }))
+      ]);
+      setLeads(leadsRes.data || []);
+      setContacts(contactsRes.data || []);
     } catch (err) {
       console.error('Failed to load My Work workspace leads', err);
     } finally {
@@ -181,6 +204,7 @@ export default function MyWork() {
       lead.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.campaignName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(lead.id).includes(searchTerm);
 
     const matchesPriority = selectedPriority === 'ALL' || lead.priority === selectedPriority;
@@ -193,6 +217,10 @@ export default function MyWork() {
     else if (quickFilter === 'PENDING') matchesQuick = lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Payment Completed';
     else if (quickFilter === 'CONVERTED') matchesQuick = lead.status === 'Converted' || lead.status === 'Closing' || lead.status === 'Payment Completed';
     else if (quickFilter === 'LOST') matchesQuick = lead.status === 'Lost' || lead.status === 'Rejected';
+    else if (quickFilter === 'INTERACTION') matchesQuick = lead.status === 'Interaction' || lead.status === 'Contacted' || lead.status === 'First Call' || lead.status === 'New';
+    else if (quickFilter === 'FOLLOW_UP') matchesQuick = lead.status === 'Follow-up' || lead.status === 'Follow-Up' || lead.status === 'Requirement Collection' || lead.status === 'Interested';
+    else if (quickFilter === 'PROPOSAL_SENT') matchesQuick = lead.status === 'Proposal Sent' || lead.status === 'Proposal' || lead.status === 'Demo Scheduled' || lead.status === 'Qualified';
+    else if (quickFilter === 'NEGOTIATION') matchesQuick = lead.status === 'Negotiation';
 
     return matchesSearch && matchesPriority && matchesQuality && matchesQuick;
   }).sort((a, b) => {
@@ -211,9 +239,22 @@ export default function MyWork() {
   const getStageLeads = (stageKey: string) => {
     return filteredLeads.filter((l) => {
       const st = l.status || 'New';
-      if (stageKey === 'New') return st === 'New';
-      if (stageKey === 'Contacted') return st === 'Contacted' || st === 'First Call';
-      if (stageKey === 'Follow-up') return st === 'Follow-up' || st === 'Follow-Up' || st === 'Requirement Collection' || st === 'Interested';
+      const hasScheduledFollowup = !!l.nextFollowupDate;
+
+      if (stageKey === 'New') {
+        return st === 'New' && !hasScheduledFollowup;
+      }
+      if (stageKey === 'Interaction') {
+        if (hasScheduledFollowup) return false;
+        return st === 'Interaction' || st === 'Contacted' || st === 'First Call';
+      }
+      if (stageKey === 'Follow-up') {
+        if (st === 'Follow-up' || st === 'Follow-Up' || st === 'Requirement Collection' || st === 'Interested') return true;
+        if (hasScheduledFollowup && st !== 'Proposal Sent' && st !== 'Proposal' && st !== 'Negotiation' && st !== 'Converted' && st !== 'Lost' && st !== 'Rejected') {
+          return true;
+        }
+        return false;
+      }
       if (stageKey === 'Proposal Sent') return st === 'Proposal Sent' || st === 'Proposal' || st === 'Demo Scheduled' || st === 'Qualified';
       if (stageKey === 'Negotiation') return st === 'Negotiation';
       if (stageKey === 'Converted') return st === 'Converted' || st === 'Closing' || st === 'Payment' || st === 'Payment Completed';
@@ -246,10 +287,17 @@ export default function MyWork() {
 
         <div className="flex items-center gap-3 flex-wrap">
           <button
+            onClick={() => navigate('/priority-center')}
+            className="flex items-center gap-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700/80 px-4 py-2.5 text-xs font-bold text-slate-100 shadow-md transition-all"
+          >
+            <Zap size={15} className="text-amber-400" /> Priority Center
+          </button>
+
+          <button
             onClick={handleIdleSweep}
             className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-theme-primary to-blue-600 hover:from-theme-primary-hover hover:to-blue-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-theme-primary/20 transition-all"
           >
-            <Zap size={14} /> Ready For Next Lead
+            Ready For Next Lead
           </button>
 
           <div className="flex items-center rounded-2xl bg-theme-bg-alt p-1 border border-theme-border/50">
@@ -291,8 +339,12 @@ export default function MyWork() {
             { id: 'HOT', label: '🔥 HOT Tier', count: leads.filter(l => l.qualityTier === 'HOT').length },
             { id: 'WARM', label: '⚡ WARM Tier', count: leads.filter(l => l.qualityTier === 'WARM').length },
             { id: 'COLD', label: '❄️ COLD Tier', count: leads.filter(l => l.qualityTier === 'COLD').length },
-            { id: 'PENDING', label: '⏳ In Progress', count: leads.filter(l => l.status !== 'Converted' && l.status !== 'Lost' && l.status !== 'Payment Completed').length },
-            { id: 'CONVERTED', label: '✔ Converted / Paid', count: leads.filter(l => l.status === 'Converted' || l.status === 'Closing' || l.status === 'Payment Completed').length }
+            { id: 'INTERACTION', label: '📞 Interaction', count: leads.filter(l => l.status === 'Interaction' || l.status === 'Contacted' || l.status === 'First Call').length },
+            { id: 'FOLLOW_UP', label: '⏳ Follow-Up', count: leads.filter(l => l.status === 'Follow-up' || l.status === 'Follow-Up' || l.status === 'Requirement Collection' || l.status === 'Interested').length },
+            { id: 'PROPOSAL_SENT', label: '📄 Proposal Sent', count: leads.filter(l => l.status === 'Proposal Sent' || l.status === 'Proposal' || l.status === 'Demo Scheduled' || l.status === 'Qualified').length },
+            { id: 'NEGOTIATION', label: '🤝 Negotiation', count: leads.filter(l => l.status === 'Negotiation').length },
+            { id: 'CONVERTED', label: '✔ Converted / Paid', count: leads.filter(l => l.status === 'Converted' || l.status === 'Closing' || l.status === 'Payment Completed').length },
+            { id: 'LOST', label: '🔴 Lost / Dropped', count: leads.filter(l => l.status === 'Lost' || l.status === 'Rejected').length }
           ].map((pill) => (
             <button
               key={pill.id}
@@ -515,6 +567,34 @@ export default function MyWork() {
                             </div>
                           </div>
 
+                          {/* Scheduled / Latest Follow-Up Badge Box (ONLY for Follow-up column/status) */}
+                          {(col.key === 'Follow-up' || lead.status === 'Follow-up' || lead.status === 'Follow-Up') && (lead.nextFollowupDate || lead.lastFollowupDate || lead.followupNotes) && (
+                            <div className="bg-purple-500/10 border border-purple-500/30 p-2.5 rounded-xl text-[10px] space-y-1">
+                              <div className="flex items-center justify-between font-extrabold text-purple-400">
+                                <span className="flex items-center gap-1">
+                                  <ClipboardList size={11} className="text-purple-400" />
+                                  {lead.nextFollowupDate ? 'Scheduled Follow-up:' : 'Follow-up Info:'}
+                                </span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-extrabold uppercase">
+                                  {lead.followupType || 'CALL'}
+                                </span>
+                              </div>
+                              <div className="font-extrabold text-theme-text flex items-center gap-1">
+                                <PhoneCall size={10} className="text-purple-400 flex-shrink-0" />
+                                {lead.nextFollowupDate 
+                                  ? new Date(lead.nextFollowupDate).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                                  : lead.lastFollowupDate 
+                                    ? new Date(lead.lastFollowupDate).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                                    : 'Pending Schedule'}
+                              </div>
+                              {(lead.followupNotes || lead.clientNotes) && (
+                                <p className="text-theme-text-muted text-[9px] line-clamp-1 italic">
+                                  "{lead.followupNotes || lead.clientNotes}"
+                                </p>
+                              )}
+                            </div>
+                          )}
+
                           {/* Progress Bar */}
                           <div className="space-y-1">
                             <div className="flex justify-between text-[9px] font-bold text-theme-text-muted">
@@ -588,6 +668,152 @@ export default function MyWork() {
                   </div>
                 );
               })}
+
+              {/* CRM CONTACTS REPOSITORY SECTION (AUTOMATICALLY SYNCHRONIZED AFTER LOST) */}
+              <div
+                className={`transition-all duration-300 flex-shrink-0 snap-start flex flex-col rounded-3xl border border-theme-border bg-theme-card shadow-xl relative backdrop-blur-md ${
+                  isContactsFullWidth ? 'w-full min-w-full' : isContactsCollapsed ? 'w-[80px] min-w-[80px]' : 'w-[340px] min-w-[340px] max-w-[340px]'
+                }`}
+              >
+                {/* Contacts Header */}
+                <div className="p-4 rounded-t-3xl border-b border-theme-border bg-gradient-to-r from-theme-primary/10 via-theme-bg-alt to-theme-card flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-xl flex items-center justify-center border border-theme-primary/40 text-theme-primary bg-theme-primary/10 shadow-xs">
+                      <Users size={14} />
+                    </span>
+                    {!isContactsCollapsed && (
+                      <div>
+                        <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-primary flex items-center gap-1.5">
+                          CONTACTS <span className="text-[9px] font-semibold text-theme-text-muted font-mono">(Repository)</span>
+                        </h3>
+                        <span className="text-[9px] font-bold text-theme-text-muted block">
+                          {contacts.length} Synchronized Contacts
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    {!isContactsCollapsed && (
+                      <button
+                        onClick={() => setIsContactsFullWidth(!isContactsFullWidth)}
+                        title={isContactsFullWidth ? "Standard Column View" : "Full Width View"}
+                        className="p-1 rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-all"
+                      >
+                        {isContactsFullWidth ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setIsContactsCollapsed(!isContactsCollapsed);
+                        if (isContactsFullWidth) setIsContactsFullWidth(false);
+                      }}
+                      title={isContactsCollapsed ? "Expand Contacts" : "Collapse Contacts"}
+                      className="p-1 rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-all"
+                    >
+                      {isContactsCollapsed ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Contacts Body */}
+                {!isContactsCollapsed && (
+                  <div className={`flex-1 overflow-y-auto max-h-[calc(100vh-280px)] p-3 space-y-3 custom-scrollbar min-h-[220px] ${
+                    isContactsFullWidth ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 space-y-0' : ''
+                  }`}>
+                    {contacts.map((contact) => (
+                      <div
+                        key={contact.leadId}
+                        onClick={() => openDetails(contact.leadId)}
+                        className="group p-4 rounded-2xl border border-theme-border/80 hover:border-theme-primary/80 bg-theme-bg-alt/60 hover:bg-theme-card shadow-xs hover:shadow-xl transition-all cursor-pointer space-y-3 relative overflow-hidden"
+                      >
+                        {/* Header Badge */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
+                            {contact.currentStage || 'Contact'}
+                          </span>
+
+                          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            🔥 {contact.qualityTier || 'WARM'} ({contact.qualityScore || 75}pt)
+                          </span>
+                        </div>
+
+                        {/* Name & Company */}
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex flex-shrink-0 items-center justify-center text-theme-primary font-black text-xs">
+                            {contact.name?.substring(0, 2).toUpperCase() || 'CT'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors truncate">
+                              {contact.name}
+                            </h4>
+                            <p className="text-[10px] font-semibold text-theme-text-muted flex items-center gap-1 mt-0.5 truncate">
+                              <Building size={11} className="text-theme-text-muted flex-shrink-0" /> {contact.company || 'Enterprise Contact'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Interaction Statistics Grid */}
+                        <div className="grid grid-cols-3 gap-1 bg-theme-card p-2 rounded-xl border border-theme-border/60 text-center">
+                          <div>
+                            <div className="text-[9px] text-theme-text-muted font-semibold">Calls</div>
+                            <div className="text-xs font-extrabold text-emerald-500">{contact.totalCalls || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] text-theme-text-muted font-semibold">Emails</div>
+                            <div className="text-xs font-extrabold text-theme-primary">{contact.totalEmails || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] text-theme-text-muted font-semibold">WhatsApp</div>
+                            <div className="text-xs font-extrabold text-amber-500">{contact.totalWhatsApp || 0}</div>
+                          </div>
+                        </div>
+
+                        {/* Dates & Owner */}
+                        <div className="text-[10px] text-theme-text-muted space-y-1 bg-theme-card/60 p-2.5 rounded-xl border border-theme-border/40">
+                          <div className="flex items-center justify-between">
+                            <span>First Contact:</span>
+                            <span className="text-theme-text font-semibold">{contact.firstContactDate ? new Date(contact.firstContactDate).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Last Contact:</span>
+                            <span className="text-theme-text font-semibold">{contact.lastContactDate ? new Date(contact.lastContactDate).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                          {contact.assignedToName && (
+                            <div className="flex items-center justify-between pt-0.5 border-t border-theme-border/60">
+                              <span>Owner:</span>
+                              <span className="text-theme-primary font-bold">{contact.assignedToName}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer Action */}
+                        <div className="flex items-center justify-between pt-1 border-t border-theme-border/60 text-[10px]">
+                          <span className="text-[9px] text-theme-text-muted truncate max-w-[170px]">
+                            {contact.lastActivityDescription || 'Interaction recorded'}
+                          </span>
+                          <button
+                            onClick={() => openDetails(contact.leadId)}
+                            className="flex items-center gap-1 text-[10px] font-extrabold text-theme-primary hover:underline"
+                          >
+                            Timeline <ChevronRight size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {contacts.length === 0 && (
+                      <div className="p-8 text-center border-2 border-dashed border-theme-border/60 rounded-2xl bg-theme-card/40 space-y-2">
+                        <Users size={20} className="mx-auto text-theme-text-muted" />
+                        <h5 className="text-xs font-bold text-theme-text">No Contacts In Repository</h5>
+                        <p className="text-[10px] text-theme-text-muted">
+                          Leads automatically sync here upon their first successful interaction.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -603,6 +829,7 @@ export default function MyWork() {
                       <th className="p-4">Source / Campaign</th>
                       <th className="p-4">Priority & Quality</th>
                       <th className="p-4">Stage Status</th>
+                      <th className="p-4">Follow-up Schedule</th>
                       <th className="p-4">Progress %</th>
                       <th className="p-4 text-right">Action</th>
                     </tr>
@@ -652,6 +879,21 @@ export default function MyWork() {
                               <option key={st} value={st}>{st}</option>
                             ))}
                           </select>
+                        </td>
+
+                        <td className="p-4">
+                          {lead.nextFollowupDate && (lead.status === 'Follow-up' || lead.status === 'Follow-Up' || lead.status === 'New' || lead.status === 'Interaction' || lead.status === 'Contacted') ? (
+                            <div className="space-y-0.5">
+                              <div className="font-bold text-purple-400 flex items-center gap-1 text-xs">
+                                <ClipboardList size={11} /> {new Date(lead.nextFollowupDate).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                              <div className="text-[10px] text-theme-text-muted">
+                                <span className="font-semibold text-purple-300 uppercase px-1 rounded bg-purple-500/10 border border-purple-500/20">{lead.followupType || 'CALL'}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-theme-text-muted italic">N/A</span>
+                          )}
                         </td>
 
                         <td className="p-4 w-36">

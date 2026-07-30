@@ -89,7 +89,7 @@ export interface Lead {
   sourcePlatform: string;
   campaignName: string;
   campaignId?: number;
-  status: 'New' | 'Contacted' | 'Interested' | 'Follow-Up' | 'Qualified' | 'Converted' | 'Rejected' | 'Lost';
+  status: 'New' | 'Interaction' | 'Contacted' | 'Interested' | 'Follow-Up' | 'Follow-up' | 'Proposal Sent' | 'Negotiation' | 'Qualified' | 'Converted' | 'Rejected' | 'Lost';
   assignedToId?: number;
   assignedToName?: string;
   qualityScore?: number;
@@ -103,8 +103,69 @@ export interface Lead {
   proposalAmount?: number;
   proposalStatus?: string;
   progressPercentage?: number;
+  lastFollowupDate?: string;
+  nextFollowupDate?: string;
+  followupNotes?: string;
+  followupType?: string;
+  followupStatus?: string;
   activities?: SalesActivity[];
   createdAt: string;
+}
+
+export interface ContactRepoItem {
+  leadId: number;
+  name: string;
+  company?: string;
+  email: string;
+  phone?: string;
+  sourcePlatform: string;
+  currentStage: string;
+  assignedToId?: number;
+  assignedToName?: string;
+  qualityScore?: number;
+  qualityTier?: string;
+  conversionProbability?: number;
+  firstContactDate?: string;
+  lastContactDate?: string;
+  totalCalls: number;
+  totalEmails: number;
+  totalWhatsApp: number;
+  totalInteractionsCount: number;
+  lastActivityDescription?: string;
+  createdAt: string;
+}
+
+export interface PriorityItem {
+  leadId: number;
+  name: string;
+  company?: string;
+  email: string;
+  phone?: string;
+  sourcePlatform: string;
+  currentStage: string;
+  qualityScore?: number;
+  qualityTier?: string;
+  conversionProbability?: number;
+  priorityLevel: string;
+  priorityLabel: string;
+  dueDate?: string;
+  dueTime?: string;
+  urgencyReason: string;
+  assignedToId?: number;
+  assignedToName?: string;
+  createdAt: string;
+  lastActivityAt?: string;
+  lastActivityDescription?: string;
+}
+
+export interface PriorityStats {
+  todaysWorkCount: number;
+  overdueCount: number;
+  highPriorityCount: number;
+  todaysFollowupsCount: number;
+  negotiationsCount: number;
+  newLeadsCount: number;
+  completedTodayCount: number;
 }
 
 export interface LeadNote {
@@ -198,3 +259,87 @@ export interface DashboardKpis {
   teamActivities: TeamActivity[];
   workspaceStats: WorkspaceStat[];
 }
+
+export interface FollowupReminder {
+  id: number;
+  leadId: number;
+  leadName?: string;
+  leadEmail?: string;
+  leadPhone?: string;
+  assignedToId?: number;
+  assignedToName?: string;
+  scheduledAt: string;
+  nextFollowupDate?: string;
+  status: 'UPCOMING' | 'PENDING' | 'COMPLETED' | 'MISSED' | string;
+  type: 'CALL' | 'EMAIL' | 'MEETING' | 'DEMO' | 'WHATSAPP' | string;
+  notes?: string;
+  remarks?: string;
+  outcome?: string;
+  createdByName?: string;
+  completedAt?: string;
+  createdAt?: string;
+}
+
+export interface CallSession {
+  id: number;
+  leadId: number;
+  leadName?: string;
+  leadPhone?: string;
+  leadCompany?: string;
+  userId: number;
+  userName?: string;
+  userEmail?: string;
+  startTime: string;
+  endTime?: string;
+  durationSeconds?: number;
+  durationMinutes?: number;
+  formattedDuration?: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CallAnalytics {
+  todayCallTimeSeconds: number;
+  todayCallTimeFormatted: string;
+  todayCallsCount: number;
+  avgDurationSeconds: number;
+  avgDurationFormatted: string;
+  longestCallSeconds: number;
+  longestCallFormatted: string;
+  activeCallSession?: CallSession;
+  weeklyCallTimeSeconds?: number;
+  weeklyCallTimeFormatted?: string;
+  monthlyCallTimeSeconds?: number;
+  monthlyCallTimeFormatted?: string;
+  totalTeamCallsToday?: number;
+  totalTeamCallTimeSeconds?: number;
+  totalTeamCallTimeFormatted?: string;
+  topCallingUser?: string;
+  leastActiveUser?: string;
+  dailyCallDurationChart?: Array<{ date: string; minutes: number; seconds: number }>;
+  userProductivityLeaderboard?: Array<{
+    rank: number;
+    userId: number;
+    userName: string;
+    callsCount: number;
+    callTimeSeconds: number;
+    callTimeFormatted: string;
+    avgDurationFormatted: string;
+  }>;
+}
+
+export interface WorkloadScore {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  activeLeads: number;
+  pendingFollowups: number;
+  todayActiveTasks: number;
+  todayCallTimeSeconds: number;
+  todayCallTimeFormatted: string;
+  overdueTasks: number;
+  workloadScore: number;
+  preferredForAutoAssignment: boolean;
+}
+

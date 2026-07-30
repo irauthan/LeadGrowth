@@ -95,7 +95,7 @@ public class ProductivityService {
         long completedLeads = leadRepository.countByAssignedToAndStatusIn(u, List.of("Converted", "CONVERTED"));
         
         // total leads count
-        long totalLeads = leadRepository.countByAssignedToAndStatusIn(u, List.of("New", "Contacted", "Qualified", "Converted", "Rejected", "NEW", "CONTACTED", "QUALIFIED", "CONVERTED", "REJECTED"));
+        long totalLeads = leadRepository.countByAssignedToAndStatusIn(u, List.of("New", "Interaction", "Contacted", "Qualified", "Converted", "Rejected", "NEW", "INTERACTION", "CONTACTED", "QUALIFIED", "CONVERTED", "REJECTED"));
 
         double conversionRate = totalLeads > 0 ? (double) completedLeads / totalLeads : 0.0;
         

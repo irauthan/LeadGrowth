@@ -9,8 +9,9 @@ import {
   Sparkles,
   Target,
   TrendingUp,
-  Users,
+  Users
 } from 'lucide-react';
+import Footer from '../components/Footer';
 
 export default function Welcome() {
   const containerVariants = {
@@ -199,7 +200,7 @@ export default function Welcome() {
                   label: "Conversion Tracking",
                 },
                 {
-                  value: "$2.5M",
+                  value: "₹2.5M",
                   label: "Revenue Managed",
                 },
                 {
@@ -264,7 +265,7 @@ export default function Welcome() {
                     </p>
 
                     <h2 className="mt-3 text-4xl font-black text-emerald-500">
-                      $42.5K
+                      ₹42.5K
                     </h2>
 
                     <div className="mt-6 h-2 rounded-full bg-slate-200 dark:bg-slate-800">
@@ -347,9 +348,9 @@ export default function Welcome() {
                   </div>
 
                   {[
-                    ["Summer Sale", "Meta Ads", "Running", "$12,500"],
-                    ["Google Search", "Google", "Active", "$9,200"],
-                    ["Retargeting", "Instagram", "Completed", "$6,850"],
+                    ["Summer Sale", "Meta Ads", "Running", "₹12,500"],
+                    ["Google Search", "Google", "Active", "₹9,200"],
+                    ["Retargeting", "Instagram", "Completed", "₹6,850"],
                   ].map((row, i) => (
                     <div
                       key={i}
@@ -443,6 +444,7 @@ export default function Welcome() {
 
         </main>
 
+        <Footer variant="public" />
       </div>
 
     </div>
