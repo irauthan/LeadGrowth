@@ -16,7 +16,7 @@ export default function MobileBottomNav() {
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
-    { name: 'Leads', icon: UserCheck, path: '/leads' },
+    { name: 'Workspace', icon: UserCheck, path: '/leads' },
     { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
   ];
 

@@ -2,23 +2,15 @@ import { create } from 'zustand';
 
 export type SidebarPosition = 'left' | 'right' | 'top' | 'bottom';
 
-const ALL_DEFAULT_ITEMS = [
+const DEFAULT_NAV_ITEMS = [
   '/dashboard',
-  '/my-work',
-  '/campaigns',
   '/leads',
-  '/followups',
+  '/my-work',
   '/analytics',
+  '/campaigns',
   '/reports',
-  '/users',
-  '/activity-logs',
   '/notifications-page',
-  '/settings',
-  '/admin/users',
-  '/admin/workspace',
-  '/admin/api',
-  '/admin/system',
-  '/admin/audit-logs'
+  '/settings'
 ];
 
 interface LayoutState {
@@ -44,24 +36,18 @@ const getSavedPosition = (): SidebarPosition => {
 };
 
 const getSavedNavItems = (): string[] => {
-  const saved = localStorage.getItem('leadgrowth_enabled_nav_items');
+  const saved = localStorage.getItem('leadgrowth_enabled_nav_items_v4');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        if (!parsed.includes('/my-work')) {
-          parsed.splice(1, 0, '/my-work');
-        }
-        if (!parsed.includes('/followups')) {
-          parsed.push('/followups');
-        }
         return parsed;
       }
     } catch (e) {
       console.error(e);
     }
   }
-  return ALL_DEFAULT_ITEMS;
+  return DEFAULT_NAV_ITEMS;
 };
 
 export const useLayoutStore = create<LayoutState>((set) => ({
@@ -81,19 +67,18 @@ export const useLayoutStore = create<LayoutState>((set) => ({
     set((state) => {
       let updated: string[];
       if (state.enabledNavItems.includes(path)) {
-        // Prevent removing everything (at least keep dashboard)
         if (state.enabledNavItems.length <= 1) return state;
         updated = state.enabledNavItems.filter((p) => p !== path);
       } else {
         updated = [...state.enabledNavItems, path];
       }
-      localStorage.setItem('leadgrowth_enabled_nav_items', JSON.stringify(updated));
+      localStorage.setItem('leadgrowth_enabled_nav_items_v4', JSON.stringify(updated));
       return { enabledNavItems: updated };
     });
   },
   resetNavItems: () => {
-    localStorage.setItem('leadgrowth_enabled_nav_items', JSON.stringify(ALL_DEFAULT_ITEMS));
-    set({ enabledNavItems: ALL_DEFAULT_ITEMS });
+    localStorage.setItem('leadgrowth_enabled_nav_items_v4', JSON.stringify(DEFAULT_NAV_ITEMS));
+    set({ enabledNavItems: DEFAULT_NAV_ITEMS });
   },
 }));
 

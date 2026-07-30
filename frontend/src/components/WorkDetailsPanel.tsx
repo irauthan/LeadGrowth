@@ -22,7 +22,9 @@ import {
   AlertCircle,
   Eye,
   Copy,
-  Check
+  Check,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import api from '../services/api';
 import { downloadSingleLeadPdf } from '../services/reportService';
@@ -35,9 +37,24 @@ interface WorkDetailsPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onLeadUpdated: () => void;
+  inline?: boolean;
+  isMaximized?: boolean;
+  onToggleMaximize?: () => void;
 }
 
-export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdated }: WorkDetailsPanelProps) {
+export default function WorkDetailsPanel({ 
+  leadId, 
+  isOpen, 
+  onClose, 
+  onLeadUpdated,
+  inline = false,
+  isMaximized,
+  onToggleMaximize
+}: WorkDetailsPanelProps) {
+  const [internalMaximized, setInternalMaximized] = useState(false);
+  const maximized = isMaximized !== undefined ? isMaximized : internalMaximized;
+  const toggleMaximize = onToggleMaximize || (() => setInternalMaximized(!internalMaximized));
+
   const [lead, setLead] = useState<any>(null);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [activityLogsHistory, setActivityLogsHistory] = useState<SalesActivityLog[]>([]);
@@ -284,73 +301,81 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
 
   if (!isOpen) return null;
 
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex justify-end">
-        <motion.div
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="w-full max-w-2xl bg-theme-bg border-l border-theme-border h-full flex flex-col shadow-2xl relative"
-        >
-          {/* Top Header */}
-          <div className="p-5 border-b border-theme-border flex items-center justify-between bg-theme-card/60 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-sm">
-                {lead?.name?.substring(0, 2).toUpperCase() || 'LD'}
-              </div>
-              <div>
-                <h2 className="text-base font-extrabold text-theme-text flex items-center gap-2">
-                  {lead?.name || 'Lead Work Container'}
-                  <select
-                    value={lead?.status || 'New'}
-                    onChange={async (e) => {
-                      const newStatus = e.target.value;
-                      if (!lead?.id) return;
-                      try {
-                        await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
-                        fetchLeadDetails();
-                        onLeadUpdated();
-                      } catch (err) {
-                        console.error('Failed to update stage', err);
-                      }
-                    }}
-                    className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-primary focus:outline-none focus:border-theme-primary cursor-pointer shadow-xs"
-                  >
-                    <option value="New">NEW</option>
-                    <option value="Interaction">INTERACTION</option>
-                    <option value="Follow-up">FOLLOW-UP</option>
-                    <option value="Proposal Sent">PROPOSAL SENT</option>
-                    <option value="Negotiation">NEGOTIATION</option>
-                    <option value="Converted">CONVERTED</option>
-                    <option value="Lost">🔴 LOST (DROP LEAD)</option>
-                  </select>
-                </h2>
-                <p className="text-xs text-theme-text-muted">
-                  {lead?.company || 'No Company'} • {lead?.email} • {lead?.phone || 'No Phone'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {lead && (
-                <button
-                  onClick={() => downloadSingleLeadPdf(lead)}
-                  title="Export Lead PDF"
-                  className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-theme-primary transition-all"
-                >
-                  <Download size={16} />
-                </button>
-              )}
-              <button
-                onClick={onClose}
-                className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-rose-500 transition-all"
-              >
-                <X size={18} />
-              </button>
-            </div>
+  const panelInner = (
+    <div className={`bg-theme-card border border-theme-border flex flex-col shadow-xl relative w-full h-full ${
+      inline ? 'rounded-3xl overflow-hidden min-h-[680px]' : `border-l ${maximized ? 'max-w-6xl w-[94vw]' : 'max-w-2xl w-full'}`
+    }`}>
+      {/* Top Header */}
+      <div className="p-5 border-b border-theme-border flex items-center justify-between bg-theme-card/80 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-sm">
+            {lead?.name?.substring(0, 2).toUpperCase() || 'LD'}
           </div>
+          <div>
+            <h2 className="text-base font-extrabold text-theme-text flex items-center gap-2">
+              {lead?.name || 'Lead Work Container'}
+              <select
+                value={lead?.status || 'New'}
+                onChange={async (e) => {
+                  const newStatus = e.target.value;
+                  if (!lead?.id) return;
+                  try {
+                    await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
+                    fetchLeadDetails();
+                    onLeadUpdated();
+                  } catch (err) {
+                    console.error('Failed to update stage', err);
+                  }
+                }}
+                className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-primary focus:outline-none focus:border-theme-primary cursor-pointer shadow-xs"
+              >
+                <option value="New">NEW</option>
+                <option value="Interaction">INTERACTION</option>
+                <option value="Follow-up">FOLLOW-UP</option>
+                <option value="Proposal Sent">PROPOSAL SENT</option>
+                <option value="Negotiation">NEGOTIATION</option>
+                <option value="Converted">CONVERTED</option>
+                <option value="Lost">🔴 LOST (DROP LEAD)</option>
+              </select>
+            </h2>
+            <p className="text-xs text-theme-text-muted">
+              {lead?.company || 'No Company'} • {lead?.email} • {lead?.phone || 'No Phone'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Maximize / Minimize Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleMaximize}
+            title={maximized ? "Minimize Container" : "Maximize Container"}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-primary hover:border-theme-primary transition-all text-xs font-bold shadow-xs"
+          >
+            {maximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            <span className="hidden sm:inline text-[11px]">{maximized ? 'Minimize' : 'Maximize'}</span>
+          </button>
+
+          {lead && (
+            <button
+              onClick={() => downloadSingleLeadPdf(lead)}
+              title="Export Lead PDF"
+              className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-theme-primary transition-all"
+            >
+              <Download size={16} />
+            </button>
+          )}
+
+          {!inline && (
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-rose-500 transition-all"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+      </div>
 
           {/* Quick Metrics Bar */}
           <div className="px-6 py-3 bg-theme-card/30 border-b border-theme-border flex items-center justify-between text-xs">
@@ -451,6 +476,11 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                       const isCompleted = act.status === 'COMPLETED';
                       const isExpanded = expandedSteps[act.activityKey] ?? false;
                       const isNewestFirst = newestFirstSort[act.activityKey] ?? true;
+                      const isLostStep = act.activityKey === 'LEAD_LOST' || 
+                                         act.activityKey === 'DROP_LEAD' || 
+                                         act.title?.toLowerCase().includes('lost') || 
+                                         act.title?.toLowerCase().includes('drop');
+
                       const logs = act.logs || [];
                       const sortedLogs = [...logs].sort((a, b) => 
                         isNewestFirst 
@@ -462,13 +492,17 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                         <div
                           key={act.id}
                           className={`rounded-2xl border transition-all overflow-hidden ${
-                            isCompleted 
+                            isLostStep
+                              ? isCompleted
+                                ? 'bg-rose-500/15 border-rose-500/50 ring-1 ring-rose-500/30 shadow-md shadow-rose-500/5'
+                                : 'bg-rose-500/5 border-rose-500/30 hover:border-rose-500/60'
+                              : isCompleted 
                               ? 'bg-emerald-500/5 border-emerald-500/30' 
                               : 'bg-theme-card border-theme-border hover:border-theme-primary/40'
                           }`}
                         >
                           {/* Step Header */}
-                          <div className="p-4 flex items-center justify-between gap-4 bg-theme-card/80">
+                          <div className={`p-4 flex items-center justify-between gap-4 ${isLostStep ? 'bg-rose-500/5' : 'bg-theme-card/80'}`}>
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={() => toggleStepExpanded(act.activityKey)}
@@ -479,17 +513,28 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
 
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <h4 className={`text-xs font-extrabold ${isCompleted ? 'text-emerald-400' : 'text-theme-text'}`}>
-                                    {act.title}
+                                  <h4 className={`text-xs font-extrabold flex items-center gap-1.5 ${
+                                    isLostStep 
+                                      ? 'text-rose-400' 
+                                      : isCompleted 
+                                      ? 'text-emerald-400' 
+                                      : 'text-theme-text'
+                                  }`}>
+                                    {isLostStep && <AlertCircle size={14} className="text-rose-400 flex-shrink-0 animate-pulse" />}
+                                    <span>{act.title}</span>
                                   </h4>
                                   <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
-                                    isCompleted 
+                                    isLostStep
+                                      ? isCompleted
+                                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                        : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                      : isCompleted 
                                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
                                       : act.status === 'IN_PROGRESS'
                                       ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                                       : 'bg-theme-bg-alt text-theme-text-muted border-theme-border'
                                   }`}>
-                                    {isCompleted ? '✔ COMPLETED' : act.status}
+                                    {isLostStep ? (isCompleted ? '🔴 LEAD LOST / DROPPED' : '🔴 DROP LEAD STAGE') : (isCompleted ? '✔ COMPLETED' : act.status)}
                                   </span>
                                   <span className="text-[10px] font-bold text-theme-text-muted px-2 py-0.5 rounded-md bg-theme-bg-alt/80 border border-theme-border/40">
                                     {logs.length} {logs.length === 1 ? 'Activity' : 'Activities'}
@@ -497,8 +542,8 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                                 </div>
 
                                 {isCompleted ? (
-                                  <p className="text-[10px] text-emerald-400/90 font-medium mt-1">
-                                    Completed by <strong className="font-bold">{act.completedByName || 'Sales Rep'}</strong> • {act.completedAt ? new Date(act.completedAt).toLocaleString() : ''}
+                                  <p className={`text-[10px] font-medium mt-1 ${isLostStep ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
+                                    {isLostStep ? '🔴 Lead marked Lost / Dropped by' : 'Completed by'} <strong className="font-bold">{act.completedByName || 'Sales Rep'}</strong> • {act.completedAt ? new Date(act.completedAt).toLocaleString() : ''}
                                     {act.completionRemarks && ` — "${act.completionRemarks}"`}
                                   </p>
                                 ) : (
@@ -523,9 +568,14 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
                               {!isCompleted && (
                                 <button
                                   onClick={() => handleOpenCompleteModal(act.activityKey)}
-                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-xs transition-all"
+                                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-white text-[11px] font-bold shadow-xs transition-all ${
+                                    isLostStep
+                                      ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/20'
+                                      : 'bg-emerald-600 hover:bg-emerald-500'
+                                  }`}
                                 >
-                                  <CheckCircle2 size={13} /> Complete Step
+                                  {isLostStep ? <AlertCircle size={13} /> : <CheckCircle2 size={13} />}
+                                  <span>{isLostStep ? 'Mark Lost / Drop' : 'Complete Step'}</span>
                                 </button>
                               )}
                             </div>
@@ -1193,7 +1243,26 @@ export default function WorkDetailsPanel({ leadId, isOpen, onClose, onLeadUpdate
               </motion.div>
             </div>
           )}
+        </div>
+      );
 
+  if (inline) {
+    return panelInner;
+  }
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex justify-end">
+        <motion.div
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className={`h-full flex flex-col shadow-2xl relative transition-all duration-300 ${
+            maximized ? 'max-w-6xl w-[94vw]' : 'max-w-2xl w-full'
+          }`}
+        >
+          {panelInner}
         </motion.div>
       </div>
     </AnimatePresence>

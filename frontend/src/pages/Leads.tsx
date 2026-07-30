@@ -15,9 +15,13 @@ import {
   Mail,
   User as UserIcon,
   Briefcase,
-  UserCheck
+  UserCheck,
+  Activity,
+  Eye,
+  Sparkles
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
+import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
 export default function Leads() {
   const user = useAuthStore((state) => state.user);
@@ -31,6 +35,11 @@ export default function Leads() {
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
+
+  // WorkDetailsPanel Modal state
+  const [workDetailsLeadId, setWorkDetailsLeadId] = useState<number | null>(null);
+  const [isWorkDetailsOpen, setIsWorkDetailsOpen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   // Search & Filter state
   const [search, setSearch] = useState('');
@@ -52,6 +61,7 @@ export default function Leads() {
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
   const isManager = user?.roles.includes('ROLE_MANAGER');
+  const canManage = isAdmin || isManager;
 
   useEffect(() => {
     fetchLeads();
@@ -306,260 +316,123 @@ export default function Leads() {
         </div>
       </div>
 
-      {/* Main Grid Panel */}
+      {/* Main Split Panel with Maximize/Minimize capability */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Side Pane: Leads Feed list */}
-        <div className="flex flex-col gap-4 rounded-3xl border border-theme-border bg-theme-card p-4 shadow-sm lg:col-span-1">
-          {/* List filters */}
-          <div className="space-y-3">
-            <div className="relative">
-              <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
-                <Search size={16} />
-              </span>
-              <input
-                type="text"
-                placeholder="Search leads..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2 pl-9 pr-4 text-xs outline-none focus:border-theme-primary text-theme-text"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={platformFilter}
-                onChange={(e) => setPlatformFilter(e.target.value)}
-                className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary"
-              >
-                <option value="All">All Platforms</option>
-                <option value="Meta">Meta</option>
-                <option value="Google">Google</option>
-                <option value="Direct">Direct</option>
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary"
-              >
-                <option value="All">All Statuses</option>
-                <option value="New">New</option>
-                <option value="Interaction">Interaction</option>
-                <option value="Qualified">Qualified</option>
-                <option value="Converted">Converted</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Feed List Items */}
-          <div className="max-h-[600px] space-y-2.5 overflow-y-auto pr-1">
-            {filteredLeads.map((lead) => {
-              const isSelected = selectedLead?.id === lead.id;
-              return (
-                <button
-                  key={lead.id}
-                  onClick={() => handleLeadSelect(lead)}
-                  className={`w-full rounded-2xl border p-4 text-left transition-all ${
-                    isSelected
-                      ? 'border-theme-primary bg-theme-primary/10 shadow-md ring-1 ring-theme-primary'
-                      : 'border-theme-border/60 bg-theme-bg-alt/40 hover:bg-theme-bg-alt'
-                  }`}
+        {/* Left Side Pane: Leads Feed list (Hidden when user maximizes Workflow Container) */}
+        {!isMaximized && (
+          <div className="flex flex-col gap-4 rounded-3xl border border-theme-border bg-theme-card p-4 shadow-sm lg:col-span-1">
+            {/* List filters */}
+            <div className="space-y-3">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
+                  <Search size={16} />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search leads..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2 pl-9 pr-4 text-xs outline-none focus:border-theme-primary text-theme-text"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={platformFilter}
+                  onChange={(e) => setPlatformFilter(e.target.value)}
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-theme-text">{lead.name}</span>
-                    <span className="text-[10px] text-theme-text-muted">{formatShortDate(lead.createdAt)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-theme-text-muted truncate">{lead.email}</p>
-                  
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                      lead.sourcePlatform === 'Meta' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
-                    }`}>
-                      {lead.sourcePlatform}
-                    </span>
-                    <span className="rounded bg-theme-primary/10 px-2 py-0.5 text-[9px] font-bold text-theme-primary">
-                      {lead.status}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-            {filteredLeads.length === 0 && (
-              <p className="text-center text-xs text-theme-text-muted py-10">No leads match filters.</p>
-            )}
-          </div>
-        </div>
+                  <option value="All">All Platforms</option>
+                  <option value="Meta">Meta</option>
+                  <option value="Google">Google</option>
+                  <option value="Direct">Direct</option>
+                </select>
 
-        {/* Right Side Pane: Selected Lead details view */}
-        <div className="lg:col-span-2">
-          {selectedLead ? (
-            <div className="glass-card flex flex-col gap-6 rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
-              {/* Top Summary header */}
-              <div className="flex flex-col gap-4 border-b border-theme-border pb-6 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-2xl font-extrabold text-theme-text">{selectedLead.name}</h2>
-                  <p className="text-xs text-theme-text-muted mt-1">Captured via {selectedLead.campaignName || 'Direct Intake'}</p>
-                </div>
-
-                {/* Status selector & Actions */}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleAddToPipeline}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover text-xs font-bold text-white shadow transition-all"
-                  >
-                    <Briefcase size={14} /> Add To Pipelines
-                  </button>
-
-                  <span className="text-xs font-bold text-theme-text-muted uppercase tracking-wider">Status:</span>
-                  <select
-                    value={selectedLead.status}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className="rounded-2xl border border-theme-border bg-theme-bg-alt px-4 py-2 text-sm font-semibold outline-none text-theme-text focus:border-theme-primary"
-                  >
-                <option value="New">New</option>
-                <option value="Interaction">Interaction</option>
-                <option value="Interested">Interested</option>
-                <option value="Follow-Up">Follow-Up</option>
-                    <option value="Qualified">Qualified</option>
-                    <option value="Converted">Converted</option>
-                    <option value="Lost">Lost</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Lead Details fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">Contact Details</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 text-theme-text">
-                      <Mail size={16} className="text-theme-text-muted" />
-                      <span className="text-sm">{selectedLead.email}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-theme-text">
-                      <Phone size={16} className="text-theme-text-muted" />
-                      <span className="text-sm">{selectedLead.phone || 'No phone recorded'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3 rounded-2xl border border-theme-border/60 bg-theme-bg-alt/50 p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">Lead Assignment</h3>
-                    <span className="rounded-full bg-theme-primary/10 px-2.5 py-0.5 text-[10px] font-extrabold text-theme-primary">
-                      {selectedLead.assignedToName || 'Unassigned'}
-                    </span>
-                  </div>
-
-                  {!(isAdmin || isManager) ? (
-                    <div className="flex items-center gap-2 text-sm font-semibold text-theme-text pt-1">
-                      <UserIcon size={16} className="text-theme-primary" />
-                      <span>{selectedLead.assignedToName || 'Unassigned'}</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5 pt-1">
-                      <div className="flex items-center gap-2">
-                        <UserIcon size={16} className="text-theme-text-muted flex-shrink-0" />
-                        <select
-                          value={selectedAssignUserId}
-                          onChange={(e) => setSelectedAssignUserId(e.target.value)}
-                          className="w-full rounded-xl border border-theme-border bg-theme-card px-3 py-2 text-xs font-semibold outline-none text-theme-text focus:border-theme-primary shadow-xs"
-                        >
-                          <option value="">-- Select Team Member --</option>
-                          <option value="-1">Auto-Assign via Engine</option>
-                          {members.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.fullName} ({m.designation || 'Staff'})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!selectedAssignUserId) {
-                            alert('Please select a team member first');
-                            return;
-                          }
-                          handleAssignChange(parseInt(selectedAssignUserId));
-                        }}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-theme-primary to-blue-600 hover:from-theme-primary-hover hover:to-blue-500 px-4 py-2 text-xs font-bold text-white shadow-md transition-all active:scale-[0.99]"
-                      >
-                        <UserCheck size={15} /> Assign Lead Now
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Notes timeline logs */}
-              <div className="border-t border-theme-border pt-6 space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">Activity & Note Logs</h3>
-                
-                {/* Add Note textarea */}
-                <form onSubmit={handleAddNoteSubmit} className="relative mt-2">
-                  <textarea
-                    rows={3}
-                    placeholder="Add notes about calls, client requests, pricing negotiation..."
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-4 pr-12 text-sm outline-none transition-all placeholder:text-theme-text-muted focus:border-theme-primary text-theme-text"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white shadow transition-transform"
-                  >
-                    <Send size={14} />
-                  </button>
-                </form>
-
-                {/* Timeline & Notes Activity History */}
-                <div className="space-y-4 pt-2">
-                  {timeline.length > 0 ? (
-                    timeline.map((item: any) => (
-                      <div key={item.id} className="flex gap-3">
-                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs font-extrabold text-cyan-400">
-                          {item.actorName ? item.actorName[0].toUpperCase() : 'S'}
-                        </div>
-                        <div className="rounded-2xl bg-theme-bg-alt/50 p-4 border border-theme-border flex-1">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-bold text-theme-text">{item.title}</span>
-                            <span className="text-[10px] font-mono text-theme-text-muted">{item.createdAt ? formatDate(item.createdAt) : 'Recent'}</span>
-                          </div>
-                          <p className="text-xs text-theme-text-muted leading-normal">{item.description}</p>
-                          <span className="text-[9px] text-theme-text-muted mt-1 block">By {item.actorName}</span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    notes.map((note) => (
-                      <div key={note.id} className="flex gap-3">
-                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text-muted">
-                          {note.user?.fullName ? note.user.fullName[0].toUpperCase() : 'U'}
-                        </div>
-                        <div className="rounded-2xl bg-theme-bg-alt/50 p-4 border border-theme-border flex-1">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-bold text-theme-text">{note.user?.fullName}</span>
-                            <span className="text-[10px] text-theme-text-muted">{formatDate(note.createdAt)}</span>
-                          </div>
-                          <p className="text-xs text-theme-text-muted leading-normal">{note.note}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  {timeline.length === 0 && notes.length === 0 && (
-                    <p className="text-center text-xs text-theme-text-muted py-6">No activity history recorded yet. Add notes to update team timeline.</p>
-                  )}
-                </div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="New">New</option>
+                  <option value="Interaction">Interaction</option>
+                  <option value="Qualified">Qualified</option>
+                  <option value="Converted">Converted</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
               </div>
             </div>
+
+            {/* Feed List Items */}
+            <div className="max-h-[650px] space-y-2.5 overflow-y-auto pr-1">
+              {filteredLeads.map((lead) => {
+                const isSelected = selectedLead?.id === lead.id;
+                const isLostLead = lead.status === 'Lost' || lead.status === 'Rejected';
+                return (
+                  <button
+                    key={lead.id}
+                    onClick={() => handleLeadSelect(lead)}
+                    className={`w-full rounded-2xl border p-4 text-left transition-all ${
+                      isSelected
+                        ? 'border-theme-primary bg-theme-primary/10 shadow-md ring-1 ring-theme-primary'
+                        : isLostLead
+                        ? 'border-rose-500/40 bg-rose-500/5 hover:bg-rose-500/10'
+                        : 'border-theme-border/60 bg-theme-bg-alt/40 hover:bg-theme-bg-alt'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-bold ${isLostLead ? 'text-rose-400' : 'text-theme-text'}`}>
+                        {lead.name}
+                      </span>
+                      <span className="text-[10px] text-theme-text-muted">{formatShortDate(lead.createdAt)}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-theme-text-muted truncate">{lead.email}</p>
+                    
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                        lead.sourcePlatform === 'Meta' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
+                      }`}>
+                        {lead.sourcePlatform}
+                      </span>
+                      <span className={`rounded px-2 py-0.5 text-[9px] font-extrabold ${
+                        isLostLead 
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          : 'bg-theme-primary/10 text-theme-primary'
+                      }`}>
+                        {isLostLead ? `🔴 ${lead.status.toUpperCase()}` : lead.status}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredLeads.length === 0 && (
+                <p className="text-center text-xs text-theme-text-muted py-10">No leads match filters.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Right Side Pane: Enterprise Multi-Activity Workflow Container */}
+        <div className={isMaximized ? "lg:col-span-3" : "lg:col-span-2"}>
+          {selectedLead ? (
+            <WorkDetailsPanel
+              leadId={selectedLead.id}
+              isOpen={true}
+              inline={true}
+              isMaximized={isMaximized}
+              onToggleMaximize={() => setIsMaximized(!isMaximized)}
+              onClose={() => setSelectedLead(null)}
+              onLeadUpdated={fetchLeads}
+            />
           ) : (
-            <div className="glass-card flex h-96 flex-col items-center justify-center rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm">
-              <MessageSquare size={48} className="text-theme-text-muted mb-3 opacity-50" />
-              <p className="text-theme-text-muted font-semibold">Select a lead to view details and update notes.</p>
+            <div className="glass-card flex h-[650px] flex-col items-center justify-center rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm text-center space-y-3">
+              <MessageSquare size={48} className="text-theme-text-muted opacity-40 mx-auto" />
+              <div>
+                <h4 className="text-sm font-extrabold text-theme-text">Select a Lead from Workspace Feed</h4>
+                <p className="text-xs text-theme-text-muted mt-1 max-w-sm">
+                  Click any lead in your workspace feed to open the Enterprise Multi-Activity Workflow Container.
+                </p>
+              </div>
             </div>
           )}
         </div>

@@ -31,15 +31,17 @@ export default function Settings() {
 
   const allNavItemsList = [
     { id: '/dashboard', label: 'Dashboard', category: 'General' },
-    { id: '/campaigns', label: 'Campaigns', category: 'General' },
-    { id: '/leads', label: 'Leads', category: 'General' },
+    { id: '/leads', label: 'Workspace', category: 'General' },
+    { id: '/my-work', label: 'Pipelines', category: 'General' },
     { id: '/analytics', label: 'Analytics', category: 'General' },
+    { id: '/campaigns', label: 'Campaigns', category: 'General' },
     { id: '/reports', label: 'Reports', category: 'General' },
-    { id: '/tasks', label: 'Tasks', category: 'General' },
-    { id: '/users', label: 'Team Management', category: 'General' },
-    { id: '/activity-logs', label: 'Activity Logs', category: 'General' },
     { id: '/notifications-page', label: 'Notifications', category: 'General' },
     { id: '/settings', label: 'Settings', category: 'General' },
+    { id: '/followups', label: 'Follow-ups', category: 'General' },
+    { id: '/users', label: 'Team Management', category: 'General' },
+    { id: '/activity-logs', label: 'Activity Logs', category: 'General' },
+    { id: '/billing', label: 'SaaS Billing', category: 'General' },
     { id: '/admin/users', label: 'User Management', category: 'Admin' },
     { id: '/admin/workspace', label: 'Workspace Control', category: 'Admin' },
     { id: '/admin/api', label: 'API Management', category: 'Admin' },
@@ -305,26 +307,27 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Navbar Items Customization Section - Admin Only */}
-              {isAdmin && (
-                <div className="pt-6 border-t border-theme-border/40 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-bold text-theme-text">Navbar & Sidebar Items Customization (Admin Control)</h4>
-                      <p className="text-xs text-theme-text-muted">Select which items to show or hide in your navigation menu.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={resetNavItems}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-semibold text-theme-text hover:bg-theme-border/20 transition-all self-start sm:self-auto"
-                    >
-                      <RotateCcw size={14} />
-                      Reset Default
-                    </button>
+              {/* Navbar & Sidebar Items Customization Section */}
+              <div className="pt-6 border-t border-theme-border/40 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-bold text-theme-text">Navbar & Sidebar Items Customization</h4>
+                    <p className="text-xs text-theme-text-muted">Select which items to show or hide in your navigation menu.</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={resetNavItems}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-semibold text-theme-text hover:bg-theme-border/20 transition-all self-start sm:self-auto"
+                  >
+                    <RotateCcw size={14} />
+                    Reset Default
+                  </button>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {allNavItemsList.map((item) => {
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {allNavItemsList
+                    .filter(item => item.category === 'General' || isAdmin)
+                    .map((item) => {
                       const isEnabled = enabledNavItems.includes(item.id);
                       return (
                         <button
@@ -352,9 +355,8 @@ export default function Settings() {
                         </button>
                       );
                     })}
-                  </div>
                 </div>
-              )}
+              </div>
             </motion.div>
           )}
 

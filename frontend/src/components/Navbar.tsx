@@ -211,7 +211,7 @@ export default function Navbar() {
       if (seg === 'dashboard') label = 'Dashboard';
       else if (seg === 'my-work') label = 'Pipelines';
       else if (seg === 'campaigns') label = 'Campaigns';
-      else if (seg === 'leads') label = 'Leads';
+      else if (seg === 'leads') label = 'Workspace';
       else if (seg === 'followups') label = 'Follow-ups';
       else if (seg === 'analytics') label = 'Analytics';
       else if (seg === 'reports') label = 'Reports';

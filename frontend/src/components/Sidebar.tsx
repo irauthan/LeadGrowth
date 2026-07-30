@@ -59,18 +59,18 @@ export default function Sidebar() {
 
   const generalMenu = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { name: 'Workspace', icon: UserCheck, path: '/leads' },
     { name: 'Pipelines', icon: Briefcase, path: '/my-work' },
-    { name: 'Priority Center', icon: Zap, path: '/priority-center' },
-    { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
-    { name: 'Leads', icon: UserCheck, path: '/leads' },
-    { name: 'Follow-ups', icon: Clock, path: '/followups' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
+    { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
+    { name: 'Notifications', icon: Bell, path: '/notifications-page' },
+    { name: 'Settings', icon: Settings, path: '/settings' },
+    { name: 'Priority Center', icon: Zap, path: '/priority-center' },
+    { name: 'Follow-ups', icon: Clock, path: '/followups' },
     { name: 'Team Management', icon: Users, path: '/users' },
     { name: 'Activity Logs', icon: History, path: '/activity-logs' },
-    { name: 'Notifications', icon: Bell, path: '/notifications-page' },
     { name: 'SaaS Billing', icon: CreditCard, path: '/billing' },
-    { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
   const adminMenu = [
@@ -84,7 +84,14 @@ export default function Sidebar() {
 
   const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
   const restrictedPaths = isUserOnly ? ['/billing', '/users', '/activity-logs'] : (!isAdmin ? ['/billing'] : []);
-  const visibleGeneralMenu = generalMenu.filter(item => (enabledNavItems.includes(item.path) || item.path === '/my-work' || item.path === '/dashboard' || item.path === '/followups') && !restrictedPaths.includes(item.path));
+  const visibleGeneralMenu = generalMenu
+    .filter(item => enabledNavItems.includes(item.path) && !restrictedPaths.includes(item.path))
+    .sort((a, b) => {
+      const indexA = enabledNavItems.indexOf(a.path);
+      const indexB = enabledNavItems.indexOf(b.path);
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      return 0;
+    });
   const visibleAdminMenu = adminMenu.filter(item => enabledNavItems.includes(item.path) && (isAdmin || (!item.adminOnly && isManager)));
 
   const getInitials = (name?: string) => {
