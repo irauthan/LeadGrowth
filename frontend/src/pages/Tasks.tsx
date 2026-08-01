@@ -15,6 +15,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import TaskRescheduleModal from '../components/TaskRescheduleModal';
+
 export default function Tasks() {
   const user = useAuthStore((state) => state.user);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -22,6 +24,9 @@ export default function Tasks() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Reschedule state
+  const [rescheduleTaskTarget, setRescheduleTaskTarget] = useState<Task | null>(null);
 
   // Task creation state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -300,6 +305,18 @@ export default function Tasks() {
                 </button>
               )}
 
+              {/* Reschedule Option */}
+              {task.status !== 'Completed' && task.status !== 'COMPLETED' && (
+                <button
+                  onClick={() => setRescheduleTaskTarget(task)}
+                  className="rounded-xl bg-theme-primary/10 border border-theme-primary/30 text-theme-primary hover:bg-theme-primary/20 text-[10px] font-bold px-2 py-1 transition-all flex items-center gap-1"
+                  title="Reschedule Task Date & Alert"
+                >
+                  <Calendar size={10} />
+                  <span>Reschedule</span>
+                </button>
+              )}
+
               {/* Active -> submit for review */}
               {isTaskActive && (
                 <button
@@ -543,8 +560,20 @@ export default function Tasks() {
                 </button>
               </div>
             </form>
-          </div>
         </div>
+      )}
+
+      {rescheduleTaskTarget && (
+        <TaskRescheduleModal
+          task={rescheduleTaskTarget}
+          isOpen={!!rescheduleTaskTarget}
+          onClose={() => setRescheduleTaskTarget(null)}
+          onSuccess={(updatedTask) => {
+            setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+            setSuccessMsg(`Task #${updatedTask.id} rescheduled to ${updatedTask.dueDate}.`);
+            setTimeout(() => setSuccessMsg(''), 4000);
+          }}
+        />
       )}
     </div>
   );

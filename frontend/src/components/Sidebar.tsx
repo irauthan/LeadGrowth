@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Briefcase,
   Zap,
+  Calendar,
   X
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -62,6 +63,7 @@ export default function Sidebar() {
     { name: 'Workspace', icon: UserCheck, path: '/leads' },
     { name: 'Pipelines', icon: Briefcase, path: '/my-work' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
+    { name: 'Calendar', icon: Calendar, path: '/calendar' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
     { name: 'Notifications', icon: Bell, path: '/notifications-page' },

@@ -22,14 +22,22 @@ public class ManagerAnalyticsController {
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<Map<String, Object>> getDashboardData() {
+    public ResponseEntity<Map<String, Object>> getDashboardData(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String period,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate
+    ) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(managerAnalyticsService.getManagerDashboardData(email));
+        return ResponseEntity.ok(managerAnalyticsService.getManagerDashboardData(email, period, startDate, endDate));
     }
 
     @GetMapping("/analytics")
-    public ResponseEntity<Map<String, Object>> getAnalyticsData() {
+    public ResponseEntity<Map<String, Object>> getAnalyticsData(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String period,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate
+    ) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(managerAnalyticsService.getManagerAnalytics(email));
+        return ResponseEntity.ok(managerAnalyticsService.getManagerAnalytics(email, period, startDate, endDate));
     }
 }

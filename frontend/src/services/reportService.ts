@@ -2,11 +2,20 @@ import api from './api';
 
 export const downloadReport = async (
   type: 'campaigns' | 'leads',
-  format: 'csv' | 'excel' | 'pdf'
+  format: 'csv' | 'excel' | 'pdf',
+  period?: string,
+  startDate?: string,
+  endDate?: string
 ): Promise<void> => {
   try {
+    const params: any = {};
+    if (period) params.period = period;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
     const response = await api.get(`/api/reports/${type}/${format}`, {
       responseType: 'blob',
+      params,
     });
 
     const fileExtension = format === 'excel' ? 'xlsx' : format;

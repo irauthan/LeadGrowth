@@ -81,11 +81,20 @@ public class ReportController {
     // --- Campaign Report Endpoints ---
 
     @GetMapping("/campaigns/csv")
-    public ResponseEntity<byte[]> downloadCampaignsCsv() {
+    public ResponseEntity<byte[]> downloadCampaignsCsv(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElse(null);
         List<Campaign> campaigns = campaignService.getCampaigns(email);
         byte[] data = exportService.exportCampaignsToCsv(campaigns);
-        
+
+        if (user != null && user.getWorkspace() != null) {
+            reportService.logReportExport(user.getWorkspace(), user, period, startDate, endDate, "CSV", "CAMPAIGN_SUMMARY", "campaigns.csv", "Count: " + campaigns.size());
+        }
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=campaigns.csv")
                 .contentType(MediaType.parseMediaType("text/csv"))
@@ -93,11 +102,20 @@ public class ReportController {
     }
 
     @GetMapping("/campaigns/excel")
-    public ResponseEntity<byte[]> downloadCampaignsExcel() throws Exception {
+    public ResponseEntity<byte[]> downloadCampaignsExcel(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) throws Exception {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElse(null);
         List<Campaign> campaigns = campaignService.getCampaigns(email);
         byte[] data = exportService.exportCampaignsToExcel(campaigns);
-        
+
+        if (user != null && user.getWorkspace() != null) {
+            reportService.logReportExport(user.getWorkspace(), user, period, startDate, endDate, "EXCEL", "CAMPAIGN_SUMMARY", "campaigns.xlsx", "Count: " + campaigns.size());
+        }
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=campaigns.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
@@ -105,12 +123,21 @@ public class ReportController {
     }
 
     @GetMapping("/campaigns/pdf")
-    public ResponseEntity<byte[]> downloadCampaignsPdf() throws Exception {
+    public ResponseEntity<byte[]> downloadCampaignsPdf(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) throws Exception {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElse(null);
         List<Campaign> campaigns = campaignService.getCampaigns(email);
         String wsName = getWorkspaceName(email);
         byte[] data = exportService.exportCampaignsToPdf(campaigns, wsName);
-        
+
+        if (user != null && user.getWorkspace() != null) {
+            reportService.logReportExport(user.getWorkspace(), user, period, startDate, endDate, "PDF", "CAMPAIGN_SUMMARY", "campaigns.pdf", "Count: " + campaigns.size());
+        }
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=campaigns.pdf")
                 .contentType(MediaType.APPLICATION_PDF)
@@ -120,11 +147,21 @@ public class ReportController {
     // --- Lead Report Endpoints ---
 
     @GetMapping("/leads/csv")
-    public ResponseEntity<byte[]> downloadLeadsCsv() {
+    public ResponseEntity<byte[]> downloadLeadsCsv(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElse(null);
         List<LeadDto> leads = leadService.getLeads(email);
+
         byte[] data = exportService.exportLeadsToCsv(leads);
-        
+
+        if (user != null && user.getWorkspace() != null) {
+            reportService.logReportExport(user.getWorkspace(), user, period, startDate, endDate, "CSV", "LEAD_SUMMARY", "leads.csv", "Count: " + leads.size());
+        }
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=leads.csv")
                 .contentType(MediaType.parseMediaType("text/csv"))
@@ -132,11 +169,21 @@ public class ReportController {
     }
 
     @GetMapping("/leads/excel")
-    public ResponseEntity<byte[]> downloadLeadsExcel() throws Exception {
+    public ResponseEntity<byte[]> downloadLeadsExcel(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) throws Exception {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElse(null);
         List<LeadDto> leads = leadService.getLeads(email);
+
         byte[] data = exportService.exportLeadsToExcel(leads);
-        
+
+        if (user != null && user.getWorkspace() != null) {
+            reportService.logReportExport(user.getWorkspace(), user, period, startDate, endDate, "EXCEL", "LEAD_SUMMARY", "leads.xlsx", "Count: " + leads.size());
+        }
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=leads.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
@@ -144,12 +191,22 @@ public class ReportController {
     }
 
     @GetMapping("/leads/pdf")
-    public ResponseEntity<byte[]> downloadLeadsPdf() throws Exception {
+    public ResponseEntity<byte[]> downloadLeadsPdf(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) throws Exception {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElse(null);
         List<LeadDto> leads = leadService.getLeads(email);
+
         String wsName = getWorkspaceName(email);
         byte[] data = exportService.exportLeadsToPdf(leads, wsName);
-        
+
+        if (user != null && user.getWorkspace() != null) {
+            reportService.logReportExport(user.getWorkspace(), user, period, startDate, endDate, "PDF", "LEAD_SUMMARY", "leads.pdf", "Count: " + leads.size());
+        }
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=leads.pdf")
                 .contentType(MediaType.APPLICATION_PDF)

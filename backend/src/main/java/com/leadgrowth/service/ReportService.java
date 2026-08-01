@@ -10,6 +10,7 @@ import com.leadgrowth.repository.FollowupRepository;
 import com.leadgrowth.repository.LeadRepository;
 import com.leadgrowth.repository.NotificationRepository;
 import com.leadgrowth.repository.ReportRepository;
+import com.leadgrowth.repository.ReportHistoryRepository;
 import com.leadgrowth.repository.UserRepository;
 import com.leadgrowth.websocket.WebSocketManager;
 import org.springframework.context.annotation.Lazy;
@@ -31,6 +32,7 @@ public class ReportService {
     private final LeadRepository leadRepository;
     private final FollowupRepository followupRepository;
     private final NotificationRepository notificationRepository;
+    private final ReportHistoryRepository reportHistoryRepository;
     private final WebSocketManager webSocketManager;
 
     public ReportService(
@@ -39,6 +41,7 @@ public class ReportService {
             LeadRepository leadRepository,
             FollowupRepository followupRepository,
             NotificationRepository notificationRepository,
+            ReportHistoryRepository reportHistoryRepository,
             @Lazy WebSocketManager webSocketManager
     ) {
         this.reportRepository = reportRepository;
@@ -46,6 +49,7 @@ public class ReportService {
         this.leadRepository = leadRepository;
         this.followupRepository = followupRepository;
         this.notificationRepository = notificationRepository;
+        this.reportHistoryRepository = reportHistoryRepository;
         this.webSocketManager = webSocketManager;
     }
 
@@ -164,6 +168,22 @@ public class ReportService {
         }
 
         return convertToDto(updated);
+    }
+
+    @Transactional
+    public void logReportExport(com.leadgrowth.entity.Workspace workspace, User user, String period, String startDate, String endDate, String format, String category, String fileName, String summaryJson) {
+        com.leadgrowth.entity.ReportHistory history = com.leadgrowth.entity.ReportHistory.builder()
+                .workspace(workspace)
+                .generatedBy(user)
+                .periodFilter(period != null ? period : "all")
+                .startDate(startDate)
+                .endDate(endDate)
+                .exportFormat(format)
+                .reportCategory(category)
+                .fileName(fileName)
+                .kpiSummaryJson(summaryJson)
+                .build();
+        reportHistoryRepository.save(history);
     }
 
     private ReportDto convertToDto(Report report) {

@@ -855,33 +855,51 @@ export default function WorkDetailsPanel({
                   {/* Call History Duration Logs */}
                   {lead && <CallHistoryLog leadId={lead.id} />}
 
-                  {/* Sub-tab 1: All System Audit Timeline */}
+                  {/* Sub-tab 1: All System Audit & Multi-Activity Timeline */}
                   {historySubTab === 'all' && (
                     <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-theme-border">
                       {timeline.map((item: any) => (
                         <div
                           key={item.id}
-                          onClick={() => setSelectedInteractionDetail({ ...item, typeName: 'System Audit Event' })}
+                          onClick={() => setSelectedInteractionDetail({ ...item, typeName: item.activityType || 'Activity Event' })}
                           className="relative group cursor-pointer"
                         >
-                          <div className="absolute -left-[22px] top-1.5 w-3 h-3 rounded-full bg-theme-primary border-2 border-theme-bg group-hover:scale-125 transition-transform" />
-                          <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all space-y-1.5">
-                            <div className="flex items-center justify-between text-xs font-bold text-theme-text">
-                              <span className="text-theme-primary group-hover:underline flex items-center gap-1.5">
-                                {item.action} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </span>
-                              <span className="text-[10px] text-theme-text-muted">{new Date(item.timestamp).toLocaleString()}</span>
+                          <div className="absolute -left-[22px] top-1.5 w-3.5 h-3.5 rounded-full bg-theme-primary border-2 border-theme-bg group-hover:scale-125 transition-transform" />
+                          <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all space-y-2">
+                            <div className="flex items-center justify-between text-xs font-bold text-theme-text flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-theme-primary/10 border border-theme-primary/20 text-theme-primary text-[10px] font-extrabold uppercase">
+                                  {item.activityType || 'EVENT'}
+                                </span>
+                                <span className="text-theme-primary font-extrabold group-hover:underline flex items-center gap-1">
+                                  {item.action} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-[10px] text-theme-text-muted">
+                                {item.duration && (
+                                  <span className="px-2 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border font-bold text-amber-400">
+                                    ⏱️ {item.duration}
+                                  </span>
+                                )}
+                                <span className="font-semibold">{item.date || new Date(item.timestamp).toLocaleDateString()} at {item.time || new Date(item.timestamp).toLocaleTimeString()}</span>
+                              </div>
                             </div>
-                            <p className="text-xs text-theme-text-muted leading-relaxed line-clamp-2">{item.description}</p>
-                            <div className="flex items-center justify-between text-[9px] font-semibold text-theme-text-muted pt-1">
-                              <span>By {item.performedByName || 'System'}</span>
-                              <span className="text-theme-primary font-bold">Click to open detail →</span>
+
+                            {/* Remarks / Description */}
+                            <p className="text-xs text-theme-text-muted leading-relaxed line-clamp-2 italic bg-theme-bg-alt/40 p-2.5 rounded-xl border border-theme-border/30">
+                              "{item.remarks || item.description || 'No detailed remark provided.'}"
+                            </p>
+
+                            <div className="flex items-center justify-between text-[10px] text-theme-text-muted pt-1 border-t border-theme-border/20">
+                              <span>User: <strong className="text-theme-text font-bold">{item.performedByName || 'System'}</strong></span>
+                              <span className="font-bold text-emerald-400">Stage: {item.leadStage || lead?.status || 'New Lead'}</span>
                             </div>
                           </div>
                         </div>
                       ))}
                       {timeline.length === 0 && (
-                        <p className="text-xs text-theme-text-muted text-center py-6">No historical audit records logged yet.</p>
+                        <p className="text-xs text-theme-text-muted text-center py-6">No historical activity records logged yet.</p>
                       )}
                     </div>
                   )}

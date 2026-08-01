@@ -20,14 +20,22 @@ public class UserAnalyticsController {
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<Map<String, Object>> getDashboardKpis() {
+    public ResponseEntity<Map<String, Object>> getDashboardKpis(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String period,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate
+    ) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(userAnalyticsService.getUserDashboardKpis(email));
+        return ResponseEntity.ok(userAnalyticsService.getUserDashboardKpis(email, period, startDate, endDate));
     }
 
     @GetMapping("/analytics")
-    public ResponseEntity<Map<String, Object>> getAnalytics() {
+    public ResponseEntity<Map<String, Object>> getAnalytics(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String period,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate
+    ) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(userAnalyticsService.getUserAnalytics(email));
+        return ResponseEntity.ok(userAnalyticsService.getUserAnalytics(email, period, startDate, endDate));
     }
 }

@@ -140,4 +140,13 @@ public class TaskController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(taskService.reassignTask(id, userId, email));
     }
+
+    @PostMapping("/{id}/reschedule")
+    public ResponseEntity<TaskDto> rescheduleTask(
+            @PathVariable Long id,
+            @Valid @RequestBody com.leadgrowth.dto.RescheduleTaskRequest request
+    ) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(taskService.rescheduleTask(id, request, email));
+    }
 }

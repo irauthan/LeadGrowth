@@ -21,6 +21,8 @@ import {
 import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
 
+import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
+
 export default function UserDashboard() {
   const user = useAuthStore((state) => state.user);
 
@@ -30,6 +32,7 @@ export default function UserDashboard() {
   const [pendingLeads, setPendingLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [idleMessage, setIdleMessage] = useState('');
+  const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
 
   const [workflowPending, setWorkflowPending] = useState<any>({
     pendingFirstCalls: 0,
@@ -42,15 +45,20 @@ export default function UserDashboard() {
 
   useEffect(() => {
     fetchUserData();
-  }, []);
+  }, [timeFilter]);
 
   const [callAnalytics, setCallAnalytics] = useState<any>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
 
   const fetchUserData = async () => {
+    setLoading(true);
     try {
+      const params: any = { period: timeFilter.period };
+      if (timeFilter.startDate) params.startDate = timeFilter.startDate;
+      if (timeFilter.endDate) params.endDate = timeFilter.endDate;
+
       const [kpiRes, leadsRes, followupsRes, pendingRes, workflowRes, callRes] = await Promise.all([
-        api.get('/api/users/me/dashboard').catch(() => ({ data: null })),
+        api.get('/api/users/me/dashboard', { params }).catch(() => ({ data: null })),
         api.get('/api/leads/pipeline').catch(() => api.get('/api/leads')),
         api.get('/api/followups').catch(() => ({ data: [] })),
         api.get('/api/leads/pending-assigned').catch(() => ({ data: [] })),
@@ -137,7 +145,8 @@ export default function UserDashboard() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
           <Link
             to="/my-work"
             className="flex items-center gap-2 rounded-2xl bg-theme-bg-alt border border-theme-border hover:bg-theme-card px-4 py-2.5 text-xs font-bold text-theme-text transition-all"

@@ -22,17 +22,20 @@ public class FollowupService {
     private final LeadRepository leadRepository;
     private final UserRepository userRepository;
     private final LeadService leadService;
+    private final CalendarService calendarService;
 
     public FollowupService(
             FollowupRepository followupRepository,
             LeadRepository leadRepository,
             UserRepository userRepository,
-            @org.springframework.context.annotation.Lazy LeadService leadService
+            @org.springframework.context.annotation.Lazy LeadService leadService,
+            CalendarService calendarService
     ) {
         this.followupRepository = followupRepository;
         this.leadRepository = leadRepository;
         this.userRepository = userRepository;
         this.leadService = leadService;
+        this.calendarService = calendarService;
     }
 
     public Map<String, Object> createFollowup(Long leadId, String userEmail, String scheduledAtStr, String type, String notes) {
@@ -56,6 +59,11 @@ public class FollowupService {
             reminder.setRemarks(remarks);
         }
         FollowupReminder saved = followupRepository.save(reminder);
+
+        // Auto Sync with Calendar
+        if (calendarService != null) {
+            calendarService.syncFollowupToCalendar(saved);
+        }
 
         // Transition Lead status to 'Follow-up' if currently in 'New', 'Interaction', 'Contacted', or 'First Call'
         String currentStatus = lead.getStatus();

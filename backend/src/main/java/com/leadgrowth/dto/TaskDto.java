@@ -15,6 +15,10 @@ public class TaskDto {
     private Long assignedById;
     private String assignedByName;
     private LocalDate dueDate;
+    private String dueTime;
+    private Integer reminderMinutes;
+    private Integer rescheduleCount;
+    private String rescheduleNotes;
     private String priority; // Low, Medium, High, Urgent
     private String status; // Pending, In_Progress, Completed, Rejected
     private LocalDateTime createdAt;
@@ -59,6 +63,18 @@ public class TaskDto {
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
 
+    public String getDueTime() { return dueTime; }
+    public void setDueTime(String dueTime) { this.dueTime = dueTime; }
+
+    public Integer getReminderMinutes() { return reminderMinutes; }
+    public void setReminderMinutes(Integer reminderMinutes) { this.reminderMinutes = reminderMinutes; }
+
+    public Integer getRescheduleCount() { return rescheduleCount; }
+    public void setRescheduleCount(Integer rescheduleCount) { this.rescheduleCount = rescheduleCount; }
+
+    public String getRescheduleNotes() { return rescheduleNotes; }
+    public void setRescheduleNotes(String rescheduleNotes) { this.rescheduleNotes = rescheduleNotes; }
+
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
 
@@ -82,6 +98,10 @@ public class TaskDto {
         private Long assignedById;
         private String assignedByName;
         private LocalDate dueDate;
+        private String dueTime;
+        private Integer reminderMinutes;
+        private Integer rescheduleCount;
+        private String rescheduleNotes;
         private String priority;
         private String status;
         private LocalDateTime createdAt;
@@ -96,12 +116,21 @@ public class TaskDto {
         public TaskDtoBuilder assignedById(Long assignedById) { this.assignedById = assignedById; return this; }
         public TaskDtoBuilder assignedByName(String assignedByName) { this.assignedByName = assignedByName; return this; }
         public TaskDtoBuilder dueDate(LocalDate dueDate) { this.dueDate = dueDate; return this; }
+        public TaskDtoBuilder dueTime(String dueTime) { this.dueTime = dueTime; return this; }
+        public TaskDtoBuilder reminderMinutes(Integer reminderMinutes) { this.reminderMinutes = reminderMinutes; return this; }
+        public TaskDtoBuilder rescheduleCount(Integer rescheduleCount) { this.rescheduleCount = rescheduleCount; return this; }
+        public TaskDtoBuilder rescheduleNotes(String rescheduleNotes) { this.rescheduleNotes = rescheduleNotes; return this; }
         public TaskDtoBuilder priority(String priority) { this.priority = priority; return this; }
         public TaskDtoBuilder status(String status) { this.status = status; return this; }
         public TaskDtoBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public TaskDto build() {
-            return new TaskDto(id, title, description, assignedToId, assignedToName, assignedById, assignedByName, dueDate, priority, status, createdAt);
+            TaskDto dto = new TaskDto(id, title, description, assignedToId, assignedToName, assignedById, assignedByName, dueDate, priority, status, createdAt);
+            dto.setDueTime(dueTime);
+            dto.setReminderMinutes(reminderMinutes);
+            dto.setRescheduleCount(rescheduleCount);
+            dto.setRescheduleNotes(rescheduleNotes);
+            return dto;
         }
     }
 }

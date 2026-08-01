@@ -29,7 +29,7 @@ import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
 const KANBAN_STAGES = [
   { key: 'New', title: 'New', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10', headerColor: 'from-blue-500/20 to-blue-500/5 text-blue-400', icon: Sparkles },
-  { key: 'Interaction', title: 'Interaction', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-400', icon: PhoneCall },
+  { key: 'Interaction', title: 'Interaction', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-400', icon: MessageSquare },
   { key: 'Follow-up', title: 'Follow-up', color: 'border-purple-500/40 text-purple-400 bg-purple-500/10', headerColor: 'from-purple-500/20 to-purple-500/5 text-purple-400', icon: ClipboardList },
   { key: 'Proposal Sent', title: 'Proposal Sent', color: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10', headerColor: 'from-cyan-500/20 to-cyan-500/5 text-cyan-400', icon: Send },
   { key: 'Negotiation', title: 'Negotiation', color: 'border-amber-500/40 text-amber-500 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-500', icon: Scale },
@@ -62,11 +62,10 @@ export default function MyWork() {
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  // Filters & Search
+  // Business-Critical Filters & Search (E4 Filter Streamlining)
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('ALL');
   const [selectedQuality, setSelectedQuality] = useState('ALL');
-  const [quickFilter, setQuickFilter] = useState<'ALL' | 'HOT' | 'WARM' | 'COLD' | 'PENDING' | 'CONVERTED' | 'LOST' | 'INTERACTION' | 'FOLLOW_UP' | 'PROPOSAL_SENT' | 'NEGOTIATION'>('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'a-z' | 'z-a' | 'priority' | 'progress'>('newest');
 
   // Collapsed columns state for Kanban
@@ -97,14 +96,7 @@ export default function MyWork() {
 
     const paramStage = searchParams.get('stage');
     if (paramStage) {
-      const upper = paramStage.toUpperCase().replace(/[\s-]+/g, '_');
-      if (upper === 'CONVERTED') setQuickFilter('CONVERTED');
-      else if (upper === 'LOST') setQuickFilter('LOST');
-      else if (upper === 'INTERACTION' || upper === 'FIRST_CALL') setQuickFilter('INTERACTION');
-      else if (upper === 'FOLLOW_UP' || upper === 'FOLLOWUP' || upper === 'DEMO') setQuickFilter('FOLLOW_UP');
-      else if (upper === 'PROPOSAL_SENT' || upper === 'PROPOSAL') setQuickFilter('PROPOSAL_SENT');
-      else if (upper === 'NEGOTIATION') setQuickFilter('NEGOTIATION');
-      else setSearchTerm(paramStage);
+      setSearchTerm(paramStage);
     }
   }, [searchParams, leads]);
 
@@ -210,19 +202,7 @@ export default function MyWork() {
     const matchesPriority = selectedPriority === 'ALL' || lead.priority === selectedPriority;
     const matchesQuality = selectedQuality === 'ALL' || lead.qualityTier === selectedQuality;
 
-    let matchesQuick = true;
-    if (quickFilter === 'HOT') matchesQuick = lead.qualityTier === 'HOT';
-    else if (quickFilter === 'WARM') matchesQuick = lead.qualityTier === 'WARM';
-    else if (quickFilter === 'COLD') matchesQuick = lead.qualityTier === 'COLD';
-    else if (quickFilter === 'PENDING') matchesQuick = lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Payment Completed';
-    else if (quickFilter === 'CONVERTED') matchesQuick = lead.status === 'Converted' || lead.status === 'Closing' || lead.status === 'Payment Completed';
-    else if (quickFilter === 'LOST') matchesQuick = lead.status === 'Lost' || lead.status === 'Rejected';
-    else if (quickFilter === 'INTERACTION') matchesQuick = lead.status === 'Interaction' || lead.status === 'Contacted' || lead.status === 'First Call' || lead.status === 'New';
-    else if (quickFilter === 'FOLLOW_UP') matchesQuick = lead.status === 'Follow-up' || lead.status === 'Follow-Up' || lead.status === 'Requirement Collection' || lead.status === 'Interested';
-    else if (quickFilter === 'PROPOSAL_SENT') matchesQuick = lead.status === 'Proposal Sent' || lead.status === 'Proposal' || lead.status === 'Demo Scheduled' || lead.status === 'Qualified';
-    else if (quickFilter === 'NEGOTIATION') matchesQuick = lead.status === 'Negotiation';
-
-    return matchesSearch && matchesPriority && matchesQuality && matchesQuick;
+    return matchesSearch && matchesPriority && matchesQuality;
   }).sort((a, b) => {
     if (sortBy === 'newest') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     if (sortBy === 'oldest') return new Date(a.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
@@ -331,35 +311,8 @@ export default function MyWork() {
         </div>
       )}
 
-      {/* Quick Filter Pill Badges */}
+      {/* Search and Filters Bar */}
       <div className="flex items-center justify-between gap-4 flex-wrap bg-theme-card/60 p-4 rounded-3xl border border-theme-border">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {[
-            { id: 'ALL', label: 'All Contacts', count: leads.length },
-            { id: 'HOT', label: '🔥 HOT Tier', count: leads.filter(l => l.qualityTier === 'HOT').length },
-            { id: 'WARM', label: '⚡ WARM Tier', count: leads.filter(l => l.qualityTier === 'WARM').length },
-            { id: 'COLD', label: '❄️ COLD Tier', count: leads.filter(l => l.qualityTier === 'COLD').length },
-            { id: 'INTERACTION', label: '📞 Interaction', count: leads.filter(l => l.status === 'Interaction' || l.status === 'Contacted' || l.status === 'First Call').length },
-            { id: 'FOLLOW_UP', label: '⏳ Follow-Up', count: leads.filter(l => l.status === 'Follow-up' || l.status === 'Follow-Up' || l.status === 'Requirement Collection' || l.status === 'Interested').length },
-            { id: 'PROPOSAL_SENT', label: '📄 Proposal Sent', count: leads.filter(l => l.status === 'Proposal Sent' || l.status === 'Proposal' || l.status === 'Demo Scheduled' || l.status === 'Qualified').length },
-            { id: 'NEGOTIATION', label: '🤝 Negotiation', count: leads.filter(l => l.status === 'Negotiation').length },
-            { id: 'CONVERTED', label: '✔ Converted / Paid', count: leads.filter(l => l.status === 'Converted' || l.status === 'Closing' || l.status === 'Payment Completed').length },
-            { id: 'LOST', label: '🔴 Lost / Dropped', count: leads.filter(l => l.status === 'Lost' || l.status === 'Rejected').length }
-          ].map((pill) => (
-            <button
-              key={pill.id}
-              onClick={() => setQuickFilter(pill.id as any)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold transition-all ${
-                quickFilter === pill.id
-                  ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20 scale-105'
-                  : 'bg-theme-bg-alt/70 text-theme-text-muted hover:text-theme-text border border-theme-border/40'
-              }`}
-            >
-              {pill.label} <span className="text-[10px] opacity-80">({pill.count})</span>
-            </button>
-          ))}
-        </div>
-
         {/* Search Bar */}
         <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-text-muted" />

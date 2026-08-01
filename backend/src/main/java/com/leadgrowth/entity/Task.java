@@ -33,6 +33,18 @@ public class Task {
     @Column(name = "due_date")
     private LocalDate dueDate;
 
+    @Column(name = "due_time", length = 20)
+    private String dueTime;
+
+    @Column(name = "reminder_minutes")
+    private Integer reminderMinutes;
+
+    @Column(name = "reschedule_count")
+    private Integer rescheduleCount = 0;
+
+    @Column(name = "reschedule_notes", columnDefinition = "TEXT")
+    private String rescheduleNotes;
+
     @Column(length = 20)
     private String priority; // Low, Medium, High, Urgent
 
@@ -89,6 +101,18 @@ public class Task {
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
 
+    public String getDueTime() { return dueTime; }
+    public void setDueTime(String dueTime) { this.dueTime = dueTime; }
+
+    public Integer getReminderMinutes() { return reminderMinutes; }
+    public void setReminderMinutes(Integer reminderMinutes) { this.reminderMinutes = reminderMinutes; }
+
+    public Integer getRescheduleCount() { return rescheduleCount; }
+    public void setRescheduleCount(Integer rescheduleCount) { this.rescheduleCount = rescheduleCount; }
+
+    public String getRescheduleNotes() { return rescheduleNotes; }
+    public void setRescheduleNotes(String rescheduleNotes) { this.rescheduleNotes = rescheduleNotes; }
+
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
 
@@ -114,6 +138,10 @@ public class Task {
         private User assignedTo;
         private User assignedBy;
         private LocalDate dueDate;
+        private String dueTime;
+        private Integer reminderMinutes;
+        private Integer rescheduleCount = 0;
+        private String rescheduleNotes;
         private String priority;
         private String status;
         private LocalDateTime assignedAt;
@@ -128,13 +156,22 @@ public class Task {
         public TaskBuilder assignedTo(User assignedTo) { this.assignedTo = assignedTo; return this; }
         public TaskBuilder assignedBy(User assignedBy) { this.assignedBy = assignedBy; return this; }
         public TaskBuilder dueDate(LocalDate dueDate) { this.dueDate = dueDate; return this; }
+        public TaskBuilder dueTime(String dueTime) { this.dueTime = dueTime; return this; }
+        public TaskBuilder reminderMinutes(Integer reminderMinutes) { this.reminderMinutes = reminderMinutes; return this; }
+        public TaskBuilder rescheduleCount(Integer rescheduleCount) { this.rescheduleCount = rescheduleCount; return this; }
+        public TaskBuilder rescheduleNotes(String rescheduleNotes) { this.rescheduleNotes = rescheduleNotes; return this; }
         public TaskBuilder priority(String priority) { this.priority = priority; return this; }
         public TaskBuilder status(String status) { this.status = status; return this; }
         public TaskBuilder assignedAt(LocalDateTime assignedAt) { this.assignedAt = assignedAt; return this; }
         public TaskBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public Task build() {
-            return new Task(id, workspace, title, description, assignedTo, assignedBy, dueDate, priority, status, assignedAt, createdAt);
+            Task task = new Task(id, workspace, title, description, assignedTo, assignedBy, dueDate, priority, status, assignedAt, createdAt);
+            task.setDueTime(dueTime);
+            task.setReminderMinutes(reminderMinutes);
+            task.setRescheduleCount(rescheduleCount != null ? rescheduleCount : 0);
+            task.setRescheduleNotes(rescheduleNotes);
+            return task;
         }
     }
 }

@@ -33,13 +33,29 @@ public class ManagerAnalyticsService {
     }
 
     public Map<String, Object> getManagerDashboardData(String email) {
+        return getManagerDashboardData(email, null, null, null);
+    }
+
+    public Map<String, Object> getManagerDashboardData(String email, String period, String startDate, String endDate) {
         User manager = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Long workspaceId = manager.getWorkspace().getId();
 
-        List<Lead> teamLeads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
-        List<Task> teamTasks = taskRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
+        java.time.LocalDateTime[] range = parsePeriodRange(period, startDate, endDate);
+        java.time.LocalDateTime rangeStart = range[0];
+        java.time.LocalDateTime rangeEnd = range[1];
+
+        List<Lead> teamLeadsRaw = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
+        List<Task> teamTasksRaw = taskRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
         List<User> teamMembers = userRepository.findByWorkspaceId(workspaceId);
+
+        List<Lead> teamLeads = (period != null && !period.isEmpty()) ? teamLeadsRaw.stream()
+                .filter(l -> l.getCreatedAt() != null && !l.getCreatedAt().isBefore(rangeStart) && !l.getCreatedAt().isAfter(rangeEnd))
+                .collect(Collectors.toList()) : teamLeadsRaw;
+
+        List<Task> teamTasks = (period != null && !period.isEmpty()) ? teamTasksRaw.stream()
+                .filter(t -> t.getCreatedAt() != null && !t.getCreatedAt().isBefore(rangeStart) && !t.getCreatedAt().isAfter(rangeEnd))
+                .collect(Collectors.toList()) : teamTasksRaw;
 
         long totalLeads = teamLeads.size();
         long activeLeads = teamLeads.stream().filter(l -> !"Converted".equalsIgnoreCase(l.getStatus()) && !"Lost".equalsIgnoreCase(l.getStatus())).count();
@@ -95,12 +111,24 @@ public class ManagerAnalyticsService {
     }
 
     public Map<String, Object> getManagerAnalytics(String email) {
+        return getManagerAnalytics(email, null, null, null);
+    }
+
+    public Map<String, Object> getManagerAnalytics(String email, String period, String startDate, String endDate) {
         User manager = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Long workspaceId = manager.getWorkspace().getId();
 
-        List<Lead> teamLeads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
-        List<Task> teamTasks = taskRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
+        java.time.LocalDateTime[] range = parsePeriodRange(period, startDate, endDate);
+        java.time.LocalDateTime rangeStart = range[0];
+        java.time.LocalDateTime rangeEnd = range[1];
+
+        List<Lead> teamLeadsRaw = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
+        List<Task> teamTasksRaw = taskRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
+
+        List<Lead> teamLeads = (period != null && !period.isEmpty()) ? teamLeadsRaw.stream()
+                .filter(l -> l.getCreatedAt() != null && !l.getCreatedAt().isBefore(rangeStart) && !l.getCreatedAt().isAfter(rangeEnd))
+                .collect(Collectors.toList()) : teamLeadsRaw;
 
         Map<String, Long> statusDistribution = new HashMap<>();
         statusDistribution.put("New", teamLeads.stream().filter(l -> "New".equalsIgnoreCase(l.getStatus())).count());
@@ -115,10 +143,62 @@ public class ManagerAnalyticsService {
         funnel.add(createFunnelStage("Converted", statusDistribution.get("Converted")));
 
         Map<String, Object> map = new HashMap<>();
-        map.put("kpis", getManagerDashboardData(email));
+        map.put("kpis", getManagerDashboardData(email, period, startDate, endDate));
         map.put("statusDistribution", statusDistribution);
         map.put("funnel", funnel);
         return map;
+    }
+
+    private java.time.LocalDateTime[] parsePeriodRange(String period, String startDate, String endDate) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime start;
+        java.time.LocalDateTime end = now;
+
+        if (period == null || period.trim().isEmpty() || "all".equalsIgnoreCase(period)) {
+            start = java.time.LocalDateTime.of(2000, 1, 1, 0, 0);
+            return new java.time.LocalDateTime[]{start, end};
+        }
+
+        switch (period.toLowerCase()) {
+            case "daily":
+            case "today":
+                start = java.time.LocalDate.now().atStartOfDay();
+                end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+                break;
+            case "weekly":
+            case "this week":
+            case "this_week":
+                start = java.time.LocalDate.now().with(java.time.DayOfWeek.MONDAY).atStartOfDay();
+                end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+                break;
+            case "monthly":
+            case "this month":
+            case "this_month":
+                start = java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay();
+                end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+                break;
+            case "yearly":
+            case "this year":
+            case "this_year":
+                start = java.time.LocalDate.now().withDayOfYear(1).atStartOfDay();
+                end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+                break;
+            case "custom":
+                if (startDate != null && !startDate.trim().isEmpty()) {
+                    try { start = java.time.LocalDate.parse(startDate.trim()).atStartOfDay(); }
+                    catch (Exception e) { start = java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay(); }
+                } else { start = java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay(); }
+                if (endDate != null && !endDate.trim().isEmpty()) {
+                    try { end = java.time.LocalDate.parse(endDate.trim()).atTime(java.time.LocalTime.MAX); }
+                    catch (Exception e) { end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX); }
+                } else { end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX); }
+                break;
+            default:
+                start = java.time.LocalDateTime.of(2000, 1, 1, 0, 0);
+                break;
+        }
+
+        return new java.time.LocalDateTime[]{start, end};
     }
 
     private Map<String, Object> createFunnelStage(String stage, long count) {

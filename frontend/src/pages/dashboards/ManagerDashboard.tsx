@@ -10,17 +10,19 @@ import {
   Clock, 
   Sparkles, 
   Zap,
-  Eye,
-  PhoneCall
+  Eye
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
+
+import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
 
 export default function ManagerDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [leadQueue, setLeadQueue] = useState<Lead[]>([]);
   const [members, setMembers] = useState<MemberType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
 
   // Quick Task Creation form
   const [taskForm, setTaskForm] = useState({ title: '', description: '', assignedToId: '', priority: 'Medium', dueDate: '' });
@@ -30,7 +32,7 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     fetchManagerData();
-  }, []);
+  }, [timeFilter]);
 
   const [teamAnalytics, setTeamAnalytics] = useState<any>(null);
   const [workloadScores, setWorkloadScores] = useState<any[]>([]);
@@ -38,7 +40,12 @@ export default function ManagerDashboard() {
   const [selectedUserFilter, setSelectedUserFilter] = useState<{ userId?: number; userName?: string }>({});
 
   const fetchManagerData = async () => {
+    setLoading(true);
     try {
+      const params: any = { period: timeFilter.period };
+      if (timeFilter.startDate) params.startDate = timeFilter.startDate;
+      if (timeFilter.endDate) params.endDate = timeFilter.endDate;
+
       const [tasksRes, queueRes, membersRes, callsRes, workloadRes] = await Promise.all([
         api.get('/api/tasks'),
         api.get('/api/leads/queue').catch(() => ({ data: [] })),
@@ -162,7 +169,8 @@ export default function ManagerDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
           <Link
             to="/admin/users"
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-text hover:bg-theme-border/20 transition-all"

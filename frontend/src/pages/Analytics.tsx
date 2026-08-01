@@ -20,6 +20,8 @@ import {
 } from 'recharts';
 import { Loader2 } from 'lucide-react';
 
+import TimeFilterDropdown, { type TimeFilterState } from '../components/TimeFilterDropdown';
+
 export default function Analytics() {
   const user = useAuthStore((state) => state.user);
   const isUserOnly = user?.roles.includes('ROLE_USER') && !user?.roles.includes('ROLE_ADMIN') && !user?.roles.includes('ROLE_MANAGER');
@@ -27,18 +29,24 @@ export default function Analytics() {
   const [data, setData] = useState<DashboardKpis | null>(null);
   const [userAnalytics, setUserAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, []);
+  }, [timeFilter]);
 
   const fetchAnalyticsData = async () => {
+    setLoading(true);
     try {
+      const params: any = { period: timeFilter.period };
+      if (timeFilter.startDate) params.startDate = timeFilter.startDate;
+      if (timeFilter.endDate) params.endDate = timeFilter.endDate;
+
       if (isUserOnly) {
-        const res = await api.get('/api/users/me/analytics');
+        const res = await api.get('/api/users/me/analytics', { params });
         setUserAnalytics(res.data);
       } else {
-        const res = await api.get('/api/dashboard');
+        const res = await api.get('/api/dashboard', { params });
         setData(res.data);
       }
     } catch (e) {
@@ -95,6 +103,7 @@ export default function Analytics() {
               Individual metrics, lead conversion funnel, task fulfillment, and productivity benchmarks.
             </p>
           </div>
+          <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
         </div>
 
         {/* Personal KPI Cards */}
@@ -223,6 +232,7 @@ export default function Analytics() {
           <h1 className="text-2xl font-extrabold tracking-tight text-theme-text">Analytics & Performance Overview</h1>
           <p className="text-xs text-theme-text-muted mt-1">Cross-platform campaign attribution, lead intake funnel, and revenue metrics.</p>
         </div>
+        <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
       </div>
 
       {/* Main Grid */}

@@ -53,6 +53,8 @@ public class LeadService {
     private final FollowupRepository followupRepository;
     private final LeadAssignmentHistoryRepository leadAssignmentHistoryRepository;
 
+    private final LeadActivityRepository leadActivityRepository;
+
     public LeadService(
             LeadRepository leadRepository,
             LeadNoteRepository leadNoteRepository,
@@ -66,7 +68,8 @@ public class LeadService {
             LeadHistoryRepository leadHistoryRepository,
             SalesActivityLogRepository salesActivityLogRepository,
             FollowupRepository followupRepository,
-            LeadAssignmentHistoryRepository leadAssignmentHistoryRepository
+            LeadAssignmentHistoryRepository leadAssignmentHistoryRepository,
+            LeadActivityRepository leadActivityRepository
     ) {
         this.leadRepository = leadRepository;
         this.leadNoteRepository = leadNoteRepository;
@@ -81,6 +84,7 @@ public class LeadService {
         this.salesActivityLogRepository = salesActivityLogRepository;
         this.followupRepository = followupRepository;
         this.leadAssignmentHistoryRepository = leadAssignmentHistoryRepository;
+        this.leadActivityRepository = leadActivityRepository;
     }
 
     public List<LeadDto> getLeads(String userEmail) {
@@ -180,6 +184,39 @@ public class LeadService {
         return resultDto;
     }
 
+    private int calculateProgressPercentage(String status) {
+        if (status == null) return 10;
+        switch (status.trim().toLowerCase()) {
+            case "new":
+            case "new lead":
+                return 10;
+            case "interaction":
+            case "contacted":
+                return 25;
+            case "qualified":
+                return 50;
+            case "meeting scheduled":
+            case "demo scheduled":
+                return 65;
+            case "proposal sent":
+            case "proposal":
+                return 80;
+            case "negotiation":
+            case "negotiation started":
+                return 90;
+            case "converted":
+            case "closed won":
+            case "won":
+                return 100;
+            case "rejected":
+            case "closed lost":
+            case "lost":
+                return 0;
+            default:
+                return 25;
+        }
+    }
+
     @Transactional
     public LeadDto updateStatus(Long leadId, String status, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
@@ -188,23 +225,34 @@ public class LeadService {
                 .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
 
         boolean isUserOnly = user.getRoles().stream()
-                .anyMatch(r -> r.getName().equals("ROLE_USER")) &&
-                user.getRoles().stream().noneMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_MANAGER"));
+                .anyMatch(r -> r.getName().equalsIgnoreCase("ROLE_USER") || r.getName().equalsIgnoreCase("USER")) &&
+                user.getRoles().stream().noneMatch(r -> r.getName().equalsIgnoreCase("ROLE_ADMIN") || r.getName().equalsIgnoreCase("ADMIN") || r.getName().equalsIgnoreCase("ROLE_MANAGER") || r.getName().equalsIgnoreCase("MANAGER"));
 
         if (isUserOnly && (lead.getAssignedTo() == null || !lead.getAssignedTo().getId().equals(user.getId()))) {
             throw new IllegalStateException("You are not authorized to update this lead's status");
         }
 
+        String oldStatus = lead.getStatus() != null ? lead.getStatus() : "New Lead";
         String targetStatus = status;
         lead.setStatus(targetStatus);
+        lead.setProgressPercentage(calculateProgressPercentage(targetStatus));
         
-        if ("Converted".equalsIgnoreCase(targetStatus) && lead.getCampaign() != null) {
+        if (("Converted".equalsIgnoreCase(targetStatus) || "Closed Won".equalsIgnoreCase(targetStatus)) && lead.getCampaign() != null) {
             Campaign c = lead.getCampaign();
             c.setConversions(c.getConversions() + 1);
             campaignRepository.save(c);
         }
 
         Lead saved = leadRepository.save(lead);
+
+        // Record history & timeline activity
+        try {
+            leadHistoryRepository.save(new LeadHistory(saved, "STAGE_CHANGE", "Stage updated from '" + oldStatus + "' to '" + targetStatus + "'", user, oldStatus, targetStatus));
+            leadActivityRepository.save(new com.leadgrowth.entity.LeadActivity(saved, user, user.getWorkspace(), "STAGE_CHANGE", "Stage Changed to " + targetStatus, "Moved stage from '" + oldStatus + "' to '" + targetStatus + "'"));
+        } catch (Exception e) {
+            // Ignore non-fatal logging exceptions
+        }
+
         LeadDto resultDto = convertToDto(saved);
         webSocketManager.broadcastLead(user.getWorkspace().getId(), resultDto);
         return resultDto;

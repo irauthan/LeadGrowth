@@ -1,6 +1,7 @@
 package com.leadgrowth.service;
 
 import com.leadgrowth.dto.TaskDto;
+import com.leadgrowth.dto.RescheduleTaskRequest;
 import com.leadgrowth.entity.Task;
 import com.leadgrowth.entity.Lead;
 import com.leadgrowth.entity.User;
@@ -8,6 +9,7 @@ import com.leadgrowth.entity.TaskAssignment;
 import com.leadgrowth.entity.AssignmentLog;
 import com.leadgrowth.entity.Notification;
 import com.leadgrowth.entity.Workspace;
+import com.leadgrowth.entity.TaskRescheduleHistory;
 import com.leadgrowth.repository.*;
 import com.leadgrowth.websocket.WebSocketManager;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -31,6 +33,8 @@ public class TaskService {
     private final NotificationRepository notificationRepository;
     private final LeadRepository leadRepository;
     private final WebSocketManager webSocketManager;
+    private final TaskRescheduleHistoryRepository taskRescheduleHistoryRepository;
+    private final CalendarService calendarService;
 
     public TaskService(
             TaskRepository taskRepository,
@@ -39,7 +43,9 @@ public class TaskService {
             AssignmentLogRepository assignmentLogRepository,
             NotificationRepository notificationRepository,
             LeadRepository leadRepository,
-            WebSocketManager webSocketManager
+            WebSocketManager webSocketManager,
+            TaskRescheduleHistoryRepository taskRescheduleHistoryRepository,
+            CalendarService calendarService
     ) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
@@ -48,6 +54,8 @@ public class TaskService {
         this.notificationRepository = notificationRepository;
         this.leadRepository = leadRepository;
         this.webSocketManager = webSocketManager;
+        this.taskRescheduleHistoryRepository = taskRescheduleHistoryRepository;
+        this.calendarService = calendarService;
     }
 
     public List<TaskDto> getTasks(String userEmail) {
@@ -639,6 +647,68 @@ public class TaskService {
         return dto;
     }
 
+    @Transactional
+    public TaskDto rescheduleTask(Long taskId, RescheduleTaskRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found with ID: " + taskId));
+
+        // Audit Reschedule History
+        TaskRescheduleHistory history = TaskRescheduleHistory.builder()
+                .workspace(task.getWorkspace())
+                .task(task)
+                .oldDueDate(task.getDueDate())
+                .newDueDate(request.getNewDate())
+                .oldDueTime(task.getDueTime())
+                .newDueTime(request.getNewTime())
+                .oldPriority(task.getPriority())
+                .newPriority(request.getPriority() != null ? request.getPriority() : task.getPriority())
+                .reminderMinutes(request.getReminderMinutes())
+                .notes(request.getNotes())
+                .rescheduledBy(user)
+                .build();
+        taskRescheduleHistoryRepository.save(history);
+
+        // Update Task Fields
+        task.setDueDate(request.getNewDate());
+        if (request.getNewTime() != null) task.setDueTime(request.getNewTime());
+        if (request.getPriority() != null) task.setPriority(request.getPriority());
+        if (request.getReminderMinutes() != null) task.setReminderMinutes(request.getReminderMinutes());
+        if (request.getNotes() != null) task.setRescheduleNotes(request.getNotes());
+        task.setRescheduleCount((task.getRescheduleCount() != null ? task.getRescheduleCount() : 0) + 1);
+
+        Task saved = taskRepository.save(task);
+
+        // Auto Sync with Calendar
+        calendarService.syncTaskToCalendar(saved);
+
+        // Notify Assigned User
+        if (saved.getAssignedTo() != null && !saved.getAssignedTo().getId().equals(user.getId())) {
+            notificationRepository.save(Notification.builder()
+                    .user(saved.getAssignedTo())
+                    .title("Task Rescheduled")
+                    .message(String.format("Task '%s' due date updated to %s by %s.", saved.getTitle(), saved.getDueDate(), user.getFullName()))
+                    .isRead(false)
+                    .build());
+        }
+
+        // Notify Manager / Creator if different
+        if (saved.getAssignedBy() != null && !saved.getAssignedBy().getId().equals(user.getId())) {
+            notificationRepository.save(Notification.builder()
+                    .user(saved.getAssignedBy())
+                    .title("Task Rescheduled by Team Member")
+                    .message(String.format("Task '%s' was rescheduled to %s by %s.", saved.getTitle(), saved.getDueDate(), user.getFullName()))
+                    .isRead(false)
+                    .build());
+        }
+
+        TaskDto dto = convertToDto(saved);
+        webSocketManager.broadcastTask(user.getWorkspace().getId(), dto);
+        return dto;
+    }
+
     private TaskDto convertToDto(Task task) {
         return TaskDto.builder()
                 .id(task.getId())
@@ -649,6 +719,10 @@ public class TaskService {
                 .assignedById(task.getAssignedBy() != null ? task.getAssignedBy().getId() : null)
                 .assignedByName(task.getAssignedBy() != null ? task.getAssignedBy().getFullName() : "System")
                 .dueDate(task.getDueDate())
+                .dueTime(task.getDueTime())
+                .reminderMinutes(task.getReminderMinutes())
+                .rescheduleCount(task.getRescheduleCount())
+                .rescheduleNotes(task.getRescheduleNotes())
                 .priority(task.getPriority())
                 .status(task.getStatus())
                 .createdAt(task.getCreatedAt())

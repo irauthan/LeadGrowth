@@ -7,6 +7,7 @@ const DEFAULT_NAV_ITEMS = [
   '/leads',
   '/my-work',
   '/analytics',
+  '/calendar',
   '/campaigns',
   '/reports',
   '/notifications-page',

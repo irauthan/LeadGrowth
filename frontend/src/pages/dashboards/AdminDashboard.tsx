@@ -31,21 +31,29 @@ import {
   Tooltip
 } from 'recharts';
 
+import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
+
 export default function AdminDashboard() {
   const [data, setData] = useState<KpiType | null>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [teamCalls, setTeamCalls] = useState<any>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
 
   useEffect(() => {
     fetchAdminData();
-  }, []);
+  }, [timeFilter]);
 
   const fetchAdminData = async () => {
+    setLoading(true);
     try {
+      const params: any = { period: timeFilter.period };
+      if (timeFilter.startDate) params.startDate = timeFilter.startDate;
+      if (timeFilter.endDate) params.endDate = timeFilter.endDate;
+
       const [dashRes, _sysRes, auditRes, callsRes] = await Promise.all([
-        api.get('/api/dashboard'),
+        api.get('/api/dashboard', { params }),
         api.get('/api/admin/system/metrics').catch(() => ({ data: {} })),
         api.get('/api/admin/audit-logs').catch(() => ({ data: [] })),
         api.get('/api/calls/team').catch(() => ({ data: null }))
@@ -91,7 +99,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
           <Link
             to="/settings"
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-text hover:bg-theme-border/20 transition-all"

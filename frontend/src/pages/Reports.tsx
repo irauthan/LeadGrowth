@@ -15,12 +15,17 @@ import { downloadReport } from '../services/reportService';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
+import TimeFilterDropdown, { type TimeFilterState } from '../components/TimeFilterDropdown';
+
 export default function Reports() {
   const user = useAuthStore((state) => state.user);
   const isManagerOrAdmin = user?.roles.some(r => r === 'ROLE_ADMIN' || r === 'ROLE_MANAGER');
 
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'my-reports' | 'review' | 'exports'>('my-reports');
+
+  // E1 & E3 Time Filter State
+  const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
 
   const [myReports, setMyReports] = useState<any[]>([]);
   const [workspaceReports, setWorkspaceReports] = useState<any[]>([]);
@@ -47,16 +52,16 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReports();
-  }, [activeTab]);
+  }, [activeTab, timeFilter]);
 
   const fetchReports = async () => {
     setLoadingReports(true);
     try {
       if (activeTab === 'my-reports') {
-        const res = await api.get('/api/reports/my-reports');
+        const res = await api.get('/api/reports/my');
         setMyReports(res.data || []);
-      } else if (activeTab === 'review' && isManagerOrAdmin) {
-        const res = await api.get('/api/reports/workspace-reports');
+      } else if (activeTab === 'review') {
+        const res = await api.get('/api/reports/workspace');
         setWorkspaceReports(res.data || []);
       }
     } catch (err) {
@@ -70,7 +75,7 @@ export default function Reports() {
     const key = `${type}-${format}`;
     try {
       setLoadingKey(key);
-      await downloadReport(type, format);
+      await downloadReport(type, format, timeFilter.period, timeFilter.startDate, timeFilter.endDate);
     } catch (err) {
       console.error(err);
       alert(`Failed to download ${type} ${format.toUpperCase()} report.`);
@@ -190,6 +195,19 @@ export default function Reports() {
           <CheckCircle2 size={16} /> {successMsg}
         </div>
       )}
+
+      {/* Time-Based Advanced Report Filter Engine (Epic E1 & E3) */}
+      <div className="p-5 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-extrabold uppercase tracking-wider text-theme-primary flex items-center gap-1.5">
+            <TrendingUp size={16} /> Advanced Time-Based Report Filter Engine
+          </span>
+          <p className="text-[10px] text-theme-text-muted font-semibold mt-0.5">
+            All report metrics, export logs, and downloadable files update dynamically for selected period
+          </p>
+        </div>
+        <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
+      </div>
 
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-theme-border/40 pb-2">

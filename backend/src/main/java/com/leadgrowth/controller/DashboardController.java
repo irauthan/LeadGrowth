@@ -23,9 +23,13 @@ public class DashboardController {
     }
 
     @GetMapping
-    public ResponseEntity<DashboardKpis> getDashboardData() {
+    public ResponseEntity<DashboardKpis> getDashboardData(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok(dashboardService.getDashboardData(email));
+        return ResponseEntity.ok(dashboardService.getDashboardData(email, period, startDate, endDate));
     }
 
     @GetMapping("/search")

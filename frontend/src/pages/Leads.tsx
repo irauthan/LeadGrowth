@@ -1,24 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
-import type { Lead, LeadNote, User } from '../types';
-import { formatDate, formatShortDate } from '../utils';
+import type { Lead, User } from '../types';
+import { formatShortDate } from '../utils';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { 
   Search, 
   Download, 
   MessageSquare, 
-  Send, 
   Plus,
-  Loader2,
-  Phone,
-  Mail,
-  User as UserIcon,
-  Briefcase,
-  UserCheck,
-  Activity,
-  Eye,
-  Sparkles
+  Loader2
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
@@ -31,14 +22,8 @@ export default function Leads() {
 
   // Selected Lead state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [selectedAssignUserId, setSelectedAssignUserId] = useState<string>('');
-  const [notes, setNotes] = useState<LeadNote[]>([]);
-  const [timeline, setTimeline] = useState<any[]>([]);
-  const [newNote, setNewNote] = useState('');
 
   // WorkDetailsPanel Modal state
-  const [workDetailsLeadId, setWorkDetailsLeadId] = useState<number | null>(null);
-  const [isWorkDetailsOpen, setIsWorkDetailsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
 
   // Search & Filter state
@@ -59,10 +44,6 @@ export default function Leads() {
     assignedToId: '',
   });
 
-  const isAdmin = user?.roles.includes('ROLE_ADMIN');
-  const isManager = user?.roles.includes('ROLE_MANAGER');
-  const canManage = isAdmin || isManager;
-
   useEffect(() => {
     fetchLeads();
     fetchMembers();
@@ -75,7 +56,6 @@ export default function Leads() {
       setLeads(res.data);
       if (res.data.length > 0) {
         setSelectedLead(res.data[0]);
-        fetchNotes(res.data[0].id);
       }
     } catch (e) {
       console.error(e);
@@ -113,18 +93,7 @@ export default function Leads() {
     }
   };
 
-  const fetchNotes = async (leadId: number) => {
-    try {
-      const [notesRes, timelineRes] = await Promise.all([
-        api.get(`/api/leads/${leadId}/notes`),
-        api.get(`/api/leads/${leadId}/timeline`).catch(() => ({ data: [] }))
-      ]);
-      setNotes(notesRes.data);
-      setTimeline(timelineRes.data || []);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+
 
   // Live Real-Time WebSocket Alerts
   useWebSocket({
@@ -150,7 +119,6 @@ export default function Leads() {
       // If no lead was selected before, select the new live lead
       setSelectedLead((prev) => {
         if (!prev) {
-          fetchNotes(newLead.id);
           return newLead;
         }
         return prev;
@@ -160,67 +128,6 @@ export default function Leads() {
 
   const handleLeadSelect = (lead: Lead) => {
     setSelectedLead(lead);
-    setSelectedAssignUserId(lead.assignedToId ? String(lead.assignedToId) : '');
-    fetchNotes(lead.id);
-  };
-
-  const handleStatusChange = async (status: string) => {
-    if (!selectedLead) return;
-    try {
-      const res = await api.patch(`/api/leads/${selectedLead.id}/status?status=${status}`);
-      const updated = res.data;
-      
-      // Update local state
-      setLeads(leads.map((l) => (l.id === updated.id ? updated : l)));
-      setSelectedLead(updated);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleAssignChange = async (memberId: number) => {
-    if (!selectedLead) return;
-    try {
-      const res = await api.patch(`/api/leads/${selectedLead.id}/assign?userId=${memberId}`);
-      const updated = res.data;
-      
-      // Update local state
-      setLeads(leads.map((l) => (l.id === updated.id ? updated : l)));
-      setSelectedLead(updated);
-      alert(`Lead "${updated.name}" successfully assigned to ${updated.assignedToName || 'team member'}!`);
-    } catch (e: any) {
-      console.error(e);
-      alert(e.response?.data?.message || 'Failed to assign lead.');
-    }
-  };
-
-  const handleAddNoteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedLead || !newNote.trim()) return;
-
-    try {
-      await api.post(`/api/leads/${selectedLead.id}/notes`, { note: newNote });
-      await api.post(`/api/leads/${selectedLead.id}/timeline/notes`, { title: 'Activity Note Added', description: newNote }).catch(() => {});
-      setNewNote('');
-      fetchNotes(selectedLead.id);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleAddToPipeline = async () => {
-    if (!selectedLead || !user) return;
-    try {
-      const res = await api.post(`/api/leads/${selectedLead.id}/add-to-pipeline`).catch(() =>
-        api.patch(`/api/leads/${selectedLead.id}/assign?userId=${user.id}`)
-      );
-      alert(`Lead "${selectedLead.name}" has been added to your Pipelines!`);
-      const updatedLead = res.data;
-      setSelectedLead(updatedLead);
-      setLeads((prev) => prev.map((l) => (l.id === selectedLead.id ? updatedLead : l)));
-    } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to add lead to Pipelines.');
-    }
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {

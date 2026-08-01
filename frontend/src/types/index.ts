@@ -187,9 +187,64 @@ export interface Task {
   assignedToName?: string;
   assignedByName?: string;
   dueDate: string;
+  dueTime?: string;
+  reminderMinutes?: number;
+  rescheduleCount?: number;
+  rescheduleNotes?: string;
   priority: 'Low' | 'Medium' | 'High' | 'Urgent' | 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   status: 'Pending' | 'In_Progress' | 'In Progress' | 'Completed' | 'Rejected' | 'PENDING' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'Pending_Review' | 'APPROVED' | 'Approved' | 'REJECTED' | 'Rejected' | 'COMPLETED' | 'SUSPENDED' | 'Suspended';
   createdAt: string;
+}
+
+export type EventType = 'FOLLOW_UP' | 'MEETING' | 'PERSONAL_REMINDER' | 'TASK' | 'CALL_REMINDER' | 'DEADLINE' | 'LEAD_REMINDER';
+
+export interface CalendarEvent {
+  id: number;
+  workspaceId: number;
+  title: string;
+  description?: string;
+  eventType: EventType;
+  startTime: string;
+  endTime: string;
+  allDay?: boolean;
+  leadId?: number;
+  leadName?: string;
+  leadStage?: string;
+  assignedUserId?: number;
+  assignedUserName?: string;
+  priority?: string;
+  reminderMinutes?: number;
+  reminderSent?: boolean;
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED' | string;
+  sourceType?: string;
+  sourceId?: number;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateCalendarEventRequest {
+  title: string;
+  description?: string;
+  eventType: EventType;
+  startTime: string;
+  endTime?: string;
+  allDay?: boolean;
+  leadId?: number;
+  leadName?: string;
+  leadStage?: string;
+  assignedUserId?: number;
+  priority?: string;
+  reminderMinutes?: number;
+  notes?: string;
+}
+
+export interface RescheduleTaskRequest {
+  newDate: string;
+  newTime?: string;
+  priority?: string;
+  reminderMinutes?: number;
+  notes?: string;
 }
 
 export interface PlatformShare {

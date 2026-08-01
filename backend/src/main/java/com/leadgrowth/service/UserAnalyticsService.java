@@ -33,18 +33,34 @@ public class UserAnalyticsService {
     }
 
     public Map<String, Object> getUserDashboardKpis(String email) {
+        return getUserDashboardKpis(email, null, null, null);
+    }
+
+    public Map<String, Object> getUserDashboardKpis(String email, String period, String startDate, String endDate) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Long userId = user.getId();
         Long workspaceId = user.getWorkspace().getId();
 
-        List<Lead> myLeads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
+        java.time.LocalDateTime[] range = parsePeriodRange(period, startDate, endDate);
+        java.time.LocalDateTime rangeStart = range[0];
+        java.time.LocalDateTime rangeEnd = range[1];
+
+        List<Lead> myLeadsRaw = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
                 .filter(l -> userId.equals(l.getAssignedToId()))
                 .collect(Collectors.toList());
 
-        List<Task> myTasks = taskRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
+        List<Task> myTasksRaw = taskRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
                 .filter(t -> t.getAssignedTo() != null && userId.equals(t.getAssignedTo().getId()))
                 .collect(Collectors.toList());
+
+        List<Lead> myLeads = (period != null && !period.isEmpty()) ? myLeadsRaw.stream()
+                .filter(l -> l.getCreatedAt() != null && !l.getCreatedAt().isBefore(rangeStart) && !l.getCreatedAt().isAfter(rangeEnd))
+                .collect(Collectors.toList()) : myLeadsRaw;
+
+        List<Task> myTasks = (period != null && !period.isEmpty()) ? myTasksRaw.stream()
+                .filter(t -> t.getCreatedAt() != null && !t.getCreatedAt().isBefore(rangeStart) && !t.getCreatedAt().isAfter(rangeEnd))
+                .collect(Collectors.toList()) : myTasksRaw;
 
         long assignedLeadsCount = myLeads.size();
         
@@ -86,18 +102,34 @@ public class UserAnalyticsService {
     }
 
     public Map<String, Object> getUserAnalytics(String email) {
+        return getUserAnalytics(email, null, null, null);
+    }
+
+    public Map<String, Object> getUserAnalytics(String email, String period, String startDate, String endDate) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Long userId = user.getId();
         Long workspaceId = user.getWorkspace().getId();
 
-        List<Lead> myLeads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
+        java.time.LocalDateTime[] range = parsePeriodRange(period, startDate, endDate);
+        java.time.LocalDateTime rangeStart = range[0];
+        java.time.LocalDateTime rangeEnd = range[1];
+
+        List<Lead> myLeadsRaw = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
                 .filter(l -> userId.equals(l.getAssignedToId()))
                 .collect(Collectors.toList());
 
-        List<Task> myTasks = taskRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
+        List<Task> myTasksRaw = taskRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
                 .filter(t -> t.getAssignedTo() != null && userId.equals(t.getAssignedTo().getId()))
                 .collect(Collectors.toList());
+
+        List<Lead> myLeads = (period != null && !period.isEmpty()) ? myLeadsRaw.stream()
+                .filter(l -> l.getCreatedAt() != null && !l.getCreatedAt().isBefore(rangeStart) && !l.getCreatedAt().isAfter(rangeEnd))
+                .collect(Collectors.toList()) : myLeadsRaw;
+
+        List<Task> myTasks = (period != null && !period.isEmpty()) ? myTasksRaw.stream()
+                .filter(t -> t.getCreatedAt() != null && !t.getCreatedAt().isBefore(rangeStart) && !t.getCreatedAt().isAfter(rangeEnd))
+                .collect(Collectors.toList()) : myTasksRaw;
 
         // Status counts safely
         Map<String, Long> statusDistribution = new HashMap<>();
@@ -130,11 +162,63 @@ public class UserAnalyticsService {
         taskAnalytics.put("Pending Tasks", myTasks.stream().filter(t -> "Pending".equalsIgnoreCase(t.getStatus())).count());
 
         Map<String, Object> map = new HashMap<>();
-        map.put("kpis", getUserDashboardKpis(email));
+        map.put("kpis", getUserDashboardKpis(email, period, startDate, endDate));
         map.put("statusDistribution", statusDistribution);
         map.put("funnel", funnel);
         map.put("taskAnalytics", taskAnalytics);
         return map;
+    }
+
+    private java.time.LocalDateTime[] parsePeriodRange(String period, String startDate, String endDate) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime start;
+        java.time.LocalDateTime end = now;
+
+        if (period == null || period.trim().isEmpty() || "all".equalsIgnoreCase(period)) {
+            start = java.time.LocalDateTime.of(2000, 1, 1, 0, 0);
+            return new java.time.LocalDateTime[]{start, end};
+        }
+
+        switch (period.toLowerCase()) {
+            case "daily":
+            case "today":
+                start = java.time.LocalDate.now().atStartOfDay();
+                end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+                break;
+            case "weekly":
+            case "this week":
+            case "this_week":
+                start = java.time.LocalDate.now().with(java.time.DayOfWeek.MONDAY).atStartOfDay();
+                end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+                break;
+            case "monthly":
+            case "this month":
+            case "this_month":
+                start = java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay();
+                end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+                break;
+            case "yearly":
+            case "this year":
+            case "this_year":
+                start = java.time.LocalDate.now().withDayOfYear(1).atStartOfDay();
+                end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+                break;
+            case "custom":
+                if (startDate != null && !startDate.trim().isEmpty()) {
+                    try { start = java.time.LocalDate.parse(startDate.trim()).atStartOfDay(); }
+                    catch (Exception e) { start = java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay(); }
+                } else { start = java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay(); }
+                if (endDate != null && !endDate.trim().isEmpty()) {
+                    try { end = java.time.LocalDate.parse(endDate.trim()).atTime(java.time.LocalTime.MAX); }
+                    catch (Exception e) { end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX); }
+                } else { end = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX); }
+                break;
+            default:
+                start = java.time.LocalDateTime.of(2000, 1, 1, 0, 0);
+                break;
+        }
+
+        return new java.time.LocalDateTime[]{start, end};
     }
 
     private Map<String, Object> createFunnelStage(String stage, long count) {
