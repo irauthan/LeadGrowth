@@ -1,19 +1,78 @@
-# React + TypeScript + Vite
+# LeadGrowth Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This project is the frontend for the LeadGrowth application. It is built with React, TypeScript, and Vite to provide a fast development experience with hot module replacement (HMR) and modern build tooling.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 18+ with functional components and hooks
+- TypeScript support for type-safe development
+- Vite for fast build and development server
+- ESLint / Oxlint support for code quality
+- Optimized build output for production
 
-## React Compiler
+## Project structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `src/` - application source code
+- `src/main.tsx` - application entry point
+- `src/App.tsx` - main application component
+- `src/index.css` - global styles
+- `public/` - static assets
+- `vite.config.ts` - Vite configuration
 
-## Expanding the Oxlint configuration
+## Requirements
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- Node.js 18 or later
+- npm, Yarn, or pnpm
+
+## Installation
+
+1. Open a terminal in the `frontend` folder.
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+or
+
+```bash
+yarn install
+```
+
+## Available scripts
+
+- `npm run dev` - start the development server
+- `npm run build` - create a production build
+- `npm run preview` - preview the production build locally
+- `npm run lint` - run linter checks (if configured)
+
+## Running locally
+
+Start the development server and open the app in your browser:
+
+```bash
+npm run dev
+```
+
+The default URL is usually `http://localhost:5173`.
+
+## Building for production
+
+Create an optimized production bundle:
+
+```bash
+npm run build
+```
+
+Preview the built application locally:
+
+```bash
+npm run preview
+```
+
+## Linting and code style
+
+This template can use Rust-based Oxc / Oxlint or regular ESLint configuration. To enable type-aware linting with Oxlint, add or update `.oxlintrc.json`:
 
 ```json
 {
@@ -29,4 +88,13 @@ If you are developing a production application, we recommend enabling type-aware
 }
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Notes
+
+- If you want to use the React compiler, follow the official React Compiler installation guide.
+- Adjust linting and formatting rules to match your team preferences.
+
+## License
+
+This project is available under the terms of your chosen license.
+
+

@@ -2,90 +2,246 @@
 
 > **Tagline:** "One Dashboard. Every Lead. Complete Growth."
 
-**Lead Growth** is an enterprise-grade SaaS dashboard built specifically for performance marketing teams and digital marketing agencies. It delivers multi-tenant campaign management, WebSocket-based live lead alerts, role-based access control (RBAC), simulated Meta/Google Marketing API sync runs, and interactive reports (CSV, Excel, PDF).
+**Lead Growth** is an enterprise-grade SaaS dashboard built for performance marketing teams, digital agencies, and growth operations teams. The platform centralizes campaign analytics, lead intake, agency workflows, and real-time alerting into a modern single-pane view.
+
+Key capabilities:
+- Multi-tenant workspace management
+- WebSocket live lead alerts and activity feed
+- Role-based access control (RBAC)
+- Simulated Meta/Google campaign sync and spend tracking
+- Lead lifecycle automation and task management
+- Exportable reporting (CSV, Excel, PDF)
+- Admin integrations, audit logs, and custom dashboards
 
 ---
 
-## Technical Stack
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Option 1: Docker Compose](#option-1-docker-compose-recommended)
+  - [Option 2: Local Development](#option-2-local-development)
+- [Configuration](#configuration)
+- [Seed Accounts](#seed-accounts)
+- [Project Structure](#project-structure)
+- [Common Workflows](#common-workflows)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Features
+
+- User authentication with JWT and secure role-based access control
+- Multi-tenant agency workspace model with invite codes
+- Campaign dashboard showing spend, leads, conversions, and ROI estimates
+- Live lead stream using STOMP over WebSocket
+- Lead management: assign owners, change status, add notes, create follow-up tasks
+- Simulated integration sync for Meta and Google Marketing APIs
+- Scheduled hourly sync engine with manual sync override
+- Export reporting to CSV, XLSX, and PDF with Apache POI / iText
+- Responsive admin portal including billing, API keys, and workspace settings
+- Audit trail and operational logs for lead actions
+- Rich visualizations with area, bar, pie, and funnel charts
+
+---
+
+## Tech Stack
 
 ### Frontend
-- **Framework:** React.js, TypeScript, Vite
-- **Styling:** Tailwind CSS (Vanilla CSS & custom glassmorphism effects)
-- **Routing:** React Router DOM
-- **State Management:** Zustand (Persisted)
-- **Charts:** Recharts (Area, Bar, Pie, Funnel visualizations)
-- **Icons:** Lucide Icons
-- **Animations:** Framer Motion
+- React.js + TypeScript
+- Vite build tooling
+- Tailwind CSS with custom glassmorphism styling
+- React Router DOM for client routing
+- Zustand for persisted state management
+- Recharts for analytics visualizations
+- Lucide Icons for UI clarity
+- Framer Motion for UI animations
 
 ### Backend
-- **Framework:** Java Spring Boot 3.3.x (Maven)
-- **Security:** Spring Security & JWT Token Authentication
-- **ORM:** Spring Data JPA & Hibernate
-- **Database:** MySQL
-- **Real-Time Feed:** Spring WebSocket Simple Broker (STOMP protocol)
-- **Scheduler:** JSR-380 Cron Sync Scheduler
-- **Reporting:** Apache POI (Excel, CSV) & iText (PDF)
+- Java Spring Boot 3.3.x with Maven
+- Spring Security with JWT authentication
+- Spring Data JPA + Hibernate ORM
+- MySQL database
+- Spring WebSocket + STOMP broker for event streaming
+- Scheduled tasks using Spring Scheduler / cron expressions
+- Apache POI for Excel and CSV exports
+- iText for PDF rendering
+
+---
+
+## Architecture
+
+Lead Growth is designed as a decoupled multi-tier application:
+
+- Frontend: SPA client delivering dashboards, lead boards, and admin panels.
+- Backend: REST API and WebSocket server handling business logic, security, sync tasks, and reports.
+- Database: persistent MySQL storage for users, leads, workspaces, campaigns, and activity logs.
+- Realtime Layer: WebSocket STOMP endpoint exposes live lead feed and notification events.
+
+The backend seeds initial demo data on startup, including users and a workspace, so the system is ready to test immediately.
 
 ---
 
 ## Getting Started
 
-### 💡 Sample Login Credentials
-The system initializes with preset seed accounts sharing a default workspace (**Demo Agency Workspace**, invite code: `LEAD-GROWTH-2026`).
+### Prerequisites
 
-| Role | Email | Password | Allowed Access |
-|---|---|---|---|
-| **ROLE_ADMIN** | `admin@leadgrowth.com` | `Admin@123` | Full Access, Billings, API Keys, Manual Sync |
-| **ROLE_MANAGER** | `manager@leadgrowth.com` | `Manager@123` | Leads management, Task assignment, View Campaigns |
-| **ROLE_USER** | `user@leadgrowth.com` | `User@123` | View Assigned Leads, Update Status, Add Notes, Tasks |
+- Docker & Docker Compose (recommended)
+- Java 17+ (if running backend locally)
+- Node.js 18+ / npm 9+ (if running frontend locally)
+- MySQL 8+ (local development mode)
 
 ---
 
-## How to Run
+### Option 1: Docker Compose (Recommended)
 
-### Option 1: Running with Docker Compose (Recommended)
-Make sure you have Docker installed. From the root directory:
+From the repository root, run:
 
 ```bash
 docker-compose up --build
 ```
 
-- **Frontend Application:** Access at [http://localhost:3000](http://localhost:3000)
-- **Backend API:** Connects at [http://localhost:8080](http://localhost:8080)
-- **Database:** Hosted on port 3306
+Services:
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8080
+- MySQL: localhost:3306
+
+Stop the stack with:
+
+```bash
+docker-compose down
+```
 
 ---
 
-### Option 2: Running Locally (Development Mode)
+### Option 2: Local Development
 
-#### 1. Setup MySQL Database
-Create a database named `leadgrowth` in your local MySQL instance:
+#### 1. Configure MySQL
+Create the database and user if needed:
+
 ```sql
 CREATE DATABASE leadgrowth;
 ```
-Configure database credentials inside `backend/src/main/resources/application.properties` (or set env variables `DATABASE_USER` and `DATABASE_PASSWORD`).
 
-#### 2. Start Java Spring Boot Backend
-Navigate into the `backend/` directory and compile:
+Update backend database settings in `backend/src/main/resources/application.properties` or set environment variables used by the Spring Boot app.
+
+#### 2. Start Backend
+
 ```bash
 cd backend
+mvn clean package
 mvn spring-boot:run
 ```
-The server starts at [http://localhost:8080](http://localhost:8080). Tables and seed credentials will be auto-generated.
 
-#### 3. Start React Frontend
-Navigate into the `frontend/` directory and spin up the Vite development server:
+Default backend URL: http://localhost:8080
+
+#### 3. Start Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Access the application at [http://localhost:5173](http://localhost:5173).
+
+Default frontend URL: http://localhost:5173
 
 ---
 
-## Platform Highlights
+## Configuration
 
-1. **WebSocket Live Feed:** Connects via a lightweight STOMP interface over raw browser WebSockets to `/ws-leads`. Automatically triggers notification alerts and timeline updates upon sync intake.
-2. **Cron Sync Scheduler:** Automatically fetches simulated campaign spends, clicks, impressions, and conversions every hour. Admins can manually trigger this in the **Integrations** tab.
-3. **Flexible Exporters:** Report generator supports on-the-fly CSV printing, Apache POI xlsx rendering, and iText horizontal PDF page matrices.
+### Backend Environment Variables
+
+- `SERVER_PORT` - Backend HTTP port (default: 8080)
+- `DATABASE_HOST` - MySQL host
+- `DATABASE_PORT` - MySQL port
+- `DATABASE_NAME` - MySQL database name
+- `DATABASE_USER` - MySQL username
+- `DATABASE_PASSWORD` - MySQL password
+- `JWT_SECRET` - Secret key for JWT signing
+- `JWT_EXPIRATION_MS` - Token expiration time in milliseconds
+
+### Frontend Environment Variables
+
+- `VITE_API_BASE_URL` - Backend API URL
+- `VITE_WS_BASE_URL` - WebSocket URL if separate from API host
+
+If using Docker Compose, these values are managed in `docker-compose.yml`.
+
+---
+
+## Seed Accounts
+
+The application ships with demo accounts and a default workspace:
+
+| Role | Email | Password | Permissions |
+|---|---|---|---|
+| Admin | `admin@leadgrowth.com` | `Admin@123` | Full access, billing, API keys, manual sync |
+| Manager | `manager@leadgrowth.com` | `Manager@123` | Leads, tasks, campaign views |
+| User | `user@leadgrowth.com` | `User@123` | Assigned leads, status updates, notes, tasks |
+
+Demo workspace invite code: `LEAD-GROWTH-2026`
+
+---
+
+## Project Structure
+
+- `backend/`
+  - Spring Boot API and services
+  - `src/main/java` - application code
+  - `src/main/resources/application.properties` - backend config
+- `frontend/`
+  - React TypeScript SPA
+  - `src/` - UI components, stores, routes
+  - `vite.config.ts` - Vite configuration
+- `docker-compose.yml`
+  - orchestrates frontend, backend, and database
+- `README.md`
+  - project documentation
+
+---
+
+## Common Workflows
+
+- Login as Admin and verify workspace settings
+- Create or import campaigns and assign team members
+- Watch live leads arrive on the feed via WebSocket
+- Open the Integrations page to manually run a sync
+- Export lead and campaign reports to CSV, XLSX, or PDF
+- Use manager and user accounts to validate RBAC workflows
+
+---
+
+## Troubleshooting
+
+- Backend fails to start:
+  - Confirm MySQL is running and credentials match
+  - Check `application.properties` for correct datasource settings
+  - Inspect Spring boot logs for port or dependency errors
+- Frontend does not connect:
+  - Ensure `VITE_API_BASE_URL` points to the backend URL
+  - Check browser console for WebSocket or CORS issues
+- Seed data missing:
+  - Verify backend started with an empty database
+  - Restart backend after clearing the database
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit changes with clear messages
+4. Open a pull request and describe the behavior
+
+Please keep changes scoped to a single feature or fix, and include any frontend/backend testing notes.
+
+---
+
+## License
+
+This project is provided for demonstration and internal use. Update the license section to match your licensing requirements.

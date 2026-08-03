@@ -157,7 +157,6 @@ public class WorkspaceService {
         user.setWorkspace(workspace);
         user.getRoles().add(userRole);
         userRepository.save(user);
-
         // Regenerate JWT token because user now has a role
         var userDetails = new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
@@ -251,7 +250,7 @@ public class WorkspaceService {
             throw new IllegalStateException("User does not belong to a workspace");
         }
 
-        Long workspaceId = workspace.getId();
+        Long workspaceId = workspace.getId(); 
 
         // 1. Delete all tasks in the workspace
         taskRepository.deleteByWorkspaceId(workspaceId);
