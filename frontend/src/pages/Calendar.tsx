@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { calendarService } from '../services/calendarService';
-import type { CalendarEvent, CreateCalendarEventRequest, EventType } from '../types';
+import type { CalendarEvent, CreateCalendarEventRequest, EventType, ViewMode } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { 
   ChevronLeft, 
@@ -17,11 +17,8 @@ import {
   Settings,
   HelpCircle,
   Menu,
-  Check,
   ChevronDown,
-  ChevronUp,
-  Tag,
-  Calendar as CalendarIcon
+  Tag
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -81,7 +78,6 @@ export default function Calendar() {
   // Layout & Dropdown Toggles
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
-  const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
   const [peopleSearch, setPeopleSearch] = useState('');
 
   // Filter Checkboxes (Same as Google Calendar "My Calendars")

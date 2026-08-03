@@ -2,13 +2,9 @@ import { useState, useEffect } from 'react';
 import { followUpService, type ConflictCheckResult, type FollowUp } from '../services/followUpService';
 import { 
   X, 
-  Calendar as CalendarIcon, 
   Clock, 
   AlertTriangle, 
   Zap, 
-  CheckCircle2, 
-  Tag, 
-  User, 
   Loader2,
   AlertCircle
 } from 'lucide-react';

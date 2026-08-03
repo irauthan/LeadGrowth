@@ -196,6 +196,7 @@ export interface Task {
   createdAt: string;
 }
 
+export type ViewMode = 'day' | 'week' | 'month' | 'year' | 'schedule';
 export type EventType = 'FOLLOW_UP' | 'MEETING' | 'PERSONAL_REMINDER' | 'TASK' | 'CALL_REMINDER' | 'DEADLINE' | 'LEAD_REMINDER';
 
 export interface CalendarEvent {

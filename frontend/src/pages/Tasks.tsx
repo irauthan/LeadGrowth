@@ -560,6 +560,7 @@ export default function Tasks() {
                 </button>
               </div>
             </form>
+          </div>
         </div>
       )}
 

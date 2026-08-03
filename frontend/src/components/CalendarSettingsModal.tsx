@@ -5,11 +5,8 @@ import {
   Settings, 
   Trash2, 
   Plus, 
-  Check, 
   Sliders, 
   Palette, 
-  AlertCircle, 
-  Calendar as CalendarIcon,
   Search,
   CheckCircle
 } from 'lucide-react';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { calendarService } from '../services/calendarService';
 import type { CalendarEvent } from '../types';
-import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, Plus, Loader2, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 
 interface Props {
   selectedDate?: string;
