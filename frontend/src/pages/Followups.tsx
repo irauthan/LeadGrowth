@@ -68,7 +68,7 @@ export default function Followups() {
 
   const fetchLeads = async () => {
     try {
-      const res = await api.get('/leads');
+      const res = await api.get('/api/leads');
       setLeads(res.data || []);
     } catch (err) {
       console.error(err);

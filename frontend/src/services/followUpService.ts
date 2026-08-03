@@ -43,54 +43,54 @@ export interface ConflictCheckResult {
 
 export const followUpService = {
   getFollowups: async (): Promise<FollowUp[]> => {
-    const response = await api.get('/followups');
+    const response = await api.get('/api/followups');
     return response.data;
   },
 
   getTodayFollowups: async (): Promise<FollowUp[]> => {
-    const response = await api.get('/followups/today');
+    const response = await api.get('/api/followups/today');
     return response.data;
   },
 
   checkConflict: async (userId: number, scheduledAt: string, excludeId?: number): Promise<ConflictCheckResult> => {
-    const response = await api.get('/followups/check-conflict', {
+    const response = await api.get('/api/followups/check-conflict', {
       params: { userId, scheduledAt, excludeId }
     });
     return response.data;
   },
 
   createFollowup: async (payload: CreateFollowUpPayload): Promise<FollowUp> => {
-    const response = await api.post('/followups', payload);
+    const response = await api.post('/api/followups', payload);
     return response.data;
   },
 
   autoSchedule: async (leadId: number, type: string = 'CALL', notes?: string): Promise<FollowUp> => {
-    const response = await api.post('/followups/auto-schedule', { leadId, type, notes });
+    const response = await api.post('/api/followups/auto-schedule', { leadId, type, notes });
     return response.data;
   },
 
   bulkAutoSchedule: async (leadIds: number[]): Promise<FollowUp[]> => {
-    const response = await api.post('/followups/bulk-auto-schedule', { leadIds });
+    const response = await api.post('/api/followups/bulk-auto-schedule', { leadIds });
     return response.data;
   },
 
   reschedule: async (id: number, scheduledAt: string, autoScheduleIfConflict: boolean = false): Promise<FollowUp> => {
-    const response = await api.post(`/followups/${id}/reschedule`, { scheduledAt, autoScheduleIfConflict });
+    const response = await api.post(`/api/followups/${id}/reschedule`, { scheduledAt, autoScheduleIfConflict });
     return response.data;
   },
 
   cancel: async (id: number, reason?: string): Promise<FollowUp> => {
-    const response = await api.post(`/followups/${id}/cancel`, { reason });
+    const response = await api.post(`/api/followups/${id}/cancel`, { reason });
     return response.data;
   },
 
   reassign: async (id: number, newUserId: number, scheduledAt?: string): Promise<FollowUp> => {
-    const response = await api.post(`/followups/${id}/reassign`, { newUserId, scheduledAt });
+    const response = await api.post(`/api/followups/${id}/reassign`, { newUserId, scheduledAt });
     return response.data;
   },
 
   complete: async (id: number, notes?: string): Promise<FollowUp> => {
-    const response = await api.post(`/followups/${id}/complete`, { notes });
+    const response = await api.post(`/api/followups/${id}/complete`, { notes });
     return response.data;
   }
 };

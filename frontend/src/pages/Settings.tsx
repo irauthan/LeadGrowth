@@ -15,7 +15,12 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  LayoutGrid,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -26,7 +31,17 @@ export default function Settings() {
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const { theme, setTheme } = useThemeStore();
-  const { sidebarPosition, setSidebarPosition, enabledNavItems, toggleNavItem, resetNavItems } = useLayoutStore();
+  const { 
+    sidebarPosition, 
+    setSidebarPosition, 
+    enabledNavItems, 
+    toggleNavItem, 
+    resetNavItems,
+    dashboardCards,
+    toggleDashboardCard,
+    moveDashboardCard,
+    resetDashboardCards
+  } = useLayoutStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'security' | 'notifications' | 'workspace'>('profile');
 
   const allNavItemsList = [
@@ -355,6 +370,91 @@ export default function Settings() {
                         </button>
                       );
                     })}
+                </div>
+              </div>
+
+              {/* Dashboard Cards Customization & Editable Layout Section */}
+              <div className="pt-6 border-t border-theme-border/40 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-bold text-theme-text flex items-center gap-2">
+                      <LayoutGrid size={16} className="text-theme-primary" /> Dashboard Cards Customization & Layout Reordering
+                    </h4>
+                    <p className="text-xs text-theme-text-muted">Customize, reorder, show or hide individual widgets & cards on your Dashboard.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={resetDashboardCards}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-semibold text-theme-text hover:bg-theme-border/20 transition-all self-start sm:self-auto"
+                  >
+                    <RotateCcw size={14} />
+                    Reset Cards Layout
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {dashboardCards.map((card, idx) => (
+                    <div
+                      key={card.id}
+                      className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                        card.enabled
+                          ? 'border-theme-primary/30 bg-theme-card shadow-sm'
+                          : 'border-theme-border/30 bg-theme-bg-alt/30 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleDashboardCard(card.id)}
+                          className={`p-2 rounded-xl transition-all ${
+                            card.enabled
+                              ? 'bg-theme-primary/10 text-theme-primary hover:bg-theme-primary/20'
+                              : 'bg-slate-500/10 text-slate-400 hover:bg-slate-500/20'
+                          }`}
+                          title={card.enabled ? 'Click to Hide Card' : 'Click to Show Card'}
+                        >
+                          {card.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
+                        </button>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-theme-text">{card.label}</span>
+                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase bg-theme-bg-alt text-theme-text-muted border border-theme-border/40">
+                              {card.category}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-theme-text-muted mt-0.5">{card.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => moveDashboardCard(card.id, 'up')}
+                          className="p-1.5 rounded-lg border border-theme-border/50 bg-theme-bg-alt/50 text-theme-text disabled:opacity-30 disabled:cursor-not-allowed hover:bg-theme-border/30 transition-all"
+                          title="Move Card Up"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === dashboardCards.length - 1}
+                          onClick={() => moveDashboardCard(card.id, 'down')}
+                          className="p-1.5 rounded-lg border border-theme-border/50 bg-theme-bg-alt/50 text-theme-text disabled:opacity-30 disabled:cursor-not-allowed hover:bg-theme-border/30 transition-all"
+                          title="Move Card Down"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                        <span
+                          className={`ml-2 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase ${
+                            card.enabled ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-400'
+                          }`}
+                        >
+                          {card.enabled ? 'Active' : 'Disabled'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </motion.div>

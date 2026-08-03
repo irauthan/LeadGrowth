@@ -304,6 +304,7 @@ export interface DashboardKpis {
   totalConversions: number;
   totalSpend: number;
   totalRevenue: number;
+  conversionRate?: number;
   roas: number;
   ctr: number;
   cpc: number;

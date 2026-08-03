@@ -9,22 +9,29 @@ import {
   Award, 
   Sparkles, 
   RefreshCw, 
-  TrendingUp, 
   Flame,
   Clock,
   IndianRupee,
   Zap,
   ChevronRight,
   Briefcase,
-  Eye
+  Eye,
+  LayoutGrid
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
+import { useLayoutStore } from '../../store/layoutStore';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
 
 export default function UserDashboard() {
   const user = useAuthStore((state) => state.user);
+  const { dashboardCards } = useLayoutStore();
+
+  const isCardEnabled = (id: string) => {
+    const card = dashboardCards.find((c) => c.id === id);
+    return card ? card.enabled : true;
+  };
 
   const [kpis, setKpis] = useState<any>(null);
   const [myLeads, setMyLeads] = useState<any[]>([]);
@@ -148,6 +155,13 @@ export default function UserDashboard() {
         <div className="flex items-center gap-3 flex-wrap">
           <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
           <Link
+            to="/settings"
+            className="flex items-center gap-2 rounded-2xl bg-theme-bg-alt border border-theme-border hover:bg-theme-card px-3 py-2.5 text-xs font-bold text-theme-text transition-all"
+            title="Edit and customize Dashboard Cards layout in Settings"
+          >
+            <LayoutGrid size={14} className="text-theme-primary" /> Edit Cards
+          </Link>
+          <Link
             to="/my-work"
             className="flex items-center gap-2 rounded-2xl bg-theme-bg-alt border border-theme-border hover:bg-theme-card px-4 py-2.5 text-xs font-bold text-theme-text transition-all"
           >
@@ -169,7 +183,7 @@ export default function UserDashboard() {
       )}
 
       {/* Newly Assigned Leads - Pending Pipeline Acceptance Card */}
-      {pendingLeads.length > 0 && (
+      {isCardEnabled('pending_leads') && pendingLeads.length > 0 && (
         <div className="p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent shadow-lg space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -215,7 +229,8 @@ export default function UserDashboard() {
       )}
 
       {/* Personal KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {isCardEnabled('kpis_summary') && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         
         {/* 1. My Assigned Leads -> /my-work */}
         <Link
@@ -278,101 +293,104 @@ export default function UserDashboard() {
         </Link>
 
       </div>
+      )}
 
       {/* Call Duration Tracking Productivity Metrics */}
-      <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-extrabold">
-              <Phone size={16} />
-            </span>
-            <div>
-              <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
-                Call Duration Tracking & Effort Productivity
-              </h3>
-              <span className="text-[10px] text-theme-text-muted">Realtime effort tracking used by Smart Auto Assignment Engine</span>
+      {isCardEnabled('call_metrics') && (
+        <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-extrabold">
+                <Phone size={16} />
+              </span>
+              <div>
+                <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+                  Call Duration Tracking & Effort Productivity
+                </h3>
+                <span className="text-[10px] text-theme-text-muted">Realtime effort tracking used by Smart Auto Assignment Engine</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {callAnalytics?.activeCallSession && (
+                <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black animate-pulse flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                  Active Call Running
+                </span>
+              )}
+              <button
+                onClick={() => setIsCallModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-bold transition-all shadow-sm"
+              >
+                <Eye size={14} />
+                <span>View Call Details</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {callAnalytics?.activeCallSession && (
-              <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black animate-pulse flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                Active Call Running
-              </span>
-            )}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button
+              type="button"
               onClick={() => setIsCallModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-bold transition-all shadow-sm"
+              className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-rose-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
             >
-              <Eye size={14} />
-              <span>View Call Details</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Today's Call Time</span>
+                <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <div className="text-xl font-mono font-black text-rose-400">
+                {callAnalytics?.todayCallTimeFormatted || '00:00:00'}
+              </div>
+              <span className="text-[9px] text-theme-text-muted block">Click to view contacts talked to</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsCallModalOpen(true)}
+              className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-cyan-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Today's Calls</span>
+                <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <div className="text-xl font-extrabold text-cyan-400">
+                {callAnalytics?.todayCallsCount || 0}
+              </div>
+              <span className="text-[9px] text-theme-text-muted block">Click to view session log</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsCallModalOpen(true)}
+              className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-emerald-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Avg Duration</span>
+                <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <div className="text-xl font-mono font-extrabold text-emerald-400">
+                {callAnalytics?.avgDurationFormatted || '00:00:00'}
+              </div>
+              <span className="text-[9px] text-theme-text-muted block">Average per session</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsCallModalOpen(true)}
+              className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-amber-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Longest Call</span>
+                <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <div className="text-xl font-mono font-extrabold text-amber-400">
+                {callAnalytics?.longestCallFormatted || '00:00:00'}
+              </div>
+              <span className="text-[9px] text-theme-text-muted block">Peak session length</span>
             </button>
           </div>
         </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button
-            type="button"
-            onClick={() => setIsCallModalOpen(true)}
-            className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-rose-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Today's Call Time</span>
-              <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="text-xl font-mono font-black text-rose-400">
-              {callAnalytics?.todayCallTimeFormatted || '00:00:00'}
-            </div>
-            <span className="text-[9px] text-theme-text-muted block">Click to view contacts talked to</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsCallModalOpen(true)}
-            className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-cyan-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Today's Calls</span>
-              <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="text-xl font-extrabold text-cyan-400">
-              {callAnalytics?.todayCallsCount || 0}
-            </div>
-            <span className="text-[9px] text-theme-text-muted block">Click to view session log</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsCallModalOpen(true)}
-            className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-emerald-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Avg Duration</span>
-              <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="text-xl font-mono font-extrabold text-emerald-400">
-              {callAnalytics?.avgDurationFormatted || '00:00:00'}
-            </div>
-            <span className="text-[9px] text-theme-text-muted block">Average per session</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsCallModalOpen(true)}
-            className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-amber-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Longest Call</span>
-              <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="text-xl font-mono font-extrabold text-amber-400">
-              {callAnalytics?.longestCallFormatted || '00:00:00'}
-            </div>
-            <span className="text-[9px] text-theme-text-muted block">Peak session length</span>
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Call Details Modal */}
       <CallDetailsModal
@@ -382,51 +400,53 @@ export default function UserDashboard() {
       />
 
       {/* Workflow Stage-wise Pending Breakdown Grid */}
-      <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text flex items-center gap-2">
-            <Briefcase size={16} className="text-theme-primary" /> Workflow Stage Active Containers
-          </h3>
-          <span className="text-[10px] font-bold text-theme-text-muted">
-            Live Pending Action Tasks Across Leads
-          </span>
-        </div>
+      {isCardEnabled('workflow_queue') && (
+        <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text flex items-center gap-2">
+              <Briefcase size={16} className="text-theme-primary" /> Workflow Stage Active Containers
+            </h3>
+            <span className="text-[10px] font-bold text-theme-text-muted">
+              Live Pending Action Tasks Across Leads
+            </span>
+          </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { label: 'Pending First Calls', count: workflowPending.pendingFirstCalls || 0, color: 'text-blue-400', bg: 'bg-blue-500/10', targetStage: 'Interaction' },
-            { label: 'Pending Requirements', count: workflowPending.pendingRequirementCollection || 0, color: 'text-purple-400', bg: 'bg-purple-500/10', targetStage: 'Interaction' },
-            { label: 'Pending Demos', count: workflowPending.pendingDemo || 0, color: 'text-amber-400', bg: 'bg-amber-500/10', targetStage: 'Follow-up' },
-            { label: 'Pending Proposals', count: workflowPending.pendingProposal || 0, color: 'text-cyan-400', bg: 'bg-cyan-500/10', targetStage: 'Proposal Sent' },
-            { label: 'Pending Negotiation', count: workflowPending.pendingNegotiation || 0, color: 'text-rose-400', bg: 'bg-rose-500/10', targetStage: 'Negotiation' },
-            { label: 'Pending Payment', count: workflowPending.pendingPayment || 0, color: 'text-emerald-400', bg: 'bg-emerald-500/10', targetStage: 'Converted' }
-          ].map((item, i) => (
-            <Link
-              key={i}
-              to={`/my-work?stage=${encodeURIComponent(item.targetStage)}`}
-              className="p-3.5 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/60 hover:border-theme-primary/40 hover:bg-theme-bg transition-all group block"
-            >
-              <span className="text-[10px] font-bold text-theme-text-muted block truncate group-hover:text-theme-text">
-                {item.label}
-              </span>
-              <div className="flex items-center justify-between mt-2">
-                <span className={`text-xl font-black ${item.color}`}>
-                  {item.count}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: 'Pending First Calls', count: workflowPending.pendingFirstCalls || 0, color: 'text-blue-400', bg: 'bg-blue-500/10', targetStage: 'Interaction' },
+              { label: 'Pending Requirements', count: workflowPending.pendingRequirementCollection || 0, color: 'text-purple-400', bg: 'bg-purple-500/10', targetStage: 'Interaction' },
+              { label: 'Pending Demos', count: workflowPending.pendingDemo || 0, color: 'text-amber-400', bg: 'bg-amber-500/10', targetStage: 'Follow-up' },
+              { label: 'Pending Proposals', count: workflowPending.pendingProposal || 0, color: 'text-cyan-400', bg: 'bg-cyan-500/10', targetStage: 'Proposal Sent' },
+              { label: 'Pending Negotiation', count: workflowPending.pendingNegotiation || 0, color: 'text-rose-400', bg: 'bg-rose-500/10', targetStage: 'Negotiation' },
+              { label: 'Pending Payment', count: workflowPending.pendingPayment || 0, color: 'text-emerald-400', bg: 'bg-emerald-500/10', targetStage: 'Converted' }
+            ].map((item, i) => (
+              <Link
+                key={i}
+                to={`/my-work?stage=${encodeURIComponent(item.targetStage)}`}
+                className="p-3.5 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/60 hover:border-theme-primary/40 hover:bg-theme-bg transition-all group block"
+              >
+                <span className="text-[10px] font-bold text-theme-text-muted block truncate group-hover:text-theme-text">
+                  {item.label}
                 </span>
-                <span className={`w-2 h-2 rounded-full ${item.bg}`} />
-              </div>
-            </Link>
-          ))}
+                <div className="flex items-center justify-between mt-2">
+                  <span className={`text-xl font-black ${item.color}`}>
+                    {item.count}
+                  </span>
+                  <span className={`w-2 h-2 rounded-full ${item.bg}`} />
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Grid Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
         {/* Left Column: My Pipeline Active Leads */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 flex flex-col space-y-6">
 
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
+          <div className="h-full flex flex-col justify-between rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
                 <UserCheck size={16} className="text-theme-primary" /> Active Pipeline Contacts
@@ -436,7 +456,7 @@ export default function UserDashboard() {
               </Link>
             </div>
 
-            <div className="overflow-x-auto max-h-[380px] overflow-y-auto rounded-2xl border border-theme-border/40">
+            <div className="flex-1 overflow-x-auto max-h-[420px] min-h-[380px] overflow-y-auto rounded-2xl border border-theme-border/40">
               <table className="w-full text-left text-xs">
                 <thead className="bg-theme-bg-alt border-b border-theme-border text-theme-text-muted font-bold sticky top-0 z-10 backdrop-blur-md">
                   <tr>
@@ -503,58 +523,38 @@ export default function UserDashboard() {
         </div>
 
         {/* Right Column: Scheduled Reminders & Productivity Summary */}
-        <div className="space-y-6">
+        <div className="flex flex-col space-y-6">
 
           {/* Upcoming Reminders */}
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-              <Clock size={16} className="text-cyan-400" /> Follow-up Schedule
-            </h3>
+          {isCardEnabled('today_followups') && (
+            <div className="h-full flex flex-col justify-between rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
+                <Clock size={16} className="text-cyan-400" /> Follow-up Schedule
+              </h3>
 
-            <div className="space-y-3">
-              {followups.slice(0, 5).map((f: any, idx: number) => (
-                <Link 
-                  key={idx}
-                  to={`/my-work?leadId=${f.leadId || ''}`}
-                  className="block p-3.5 rounded-2xl border border-theme-border/40 bg-theme-bg-alt/30 hover:bg-theme-bg-alt hover:border-theme-primary/40 transition-all group space-y-1"
-                >
-                  <div className="flex items-center justify-between text-xs font-bold text-theme-text">
-                    <span className="group-hover:text-theme-primary transition-colors flex items-center gap-1">
-                      {f.leadName || 'Client Touchpoint'}
-                      <ChevronRight size={12} className="text-theme-primary transition-transform group-hover:translate-x-0.5" />
-                    </span>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 uppercase">{f.type || 'CALL'}</span>
-                  </div>
-                  <p className="text-[10px] text-theme-text-muted truncate">{f.notes || 'Requirement collection & proposal follow-up'}</p>
-                </Link>
-              ))}
-              {followups.length === 0 && (
-                <p className="text-center text-xs text-theme-text-muted py-6">No pending follow-up reminders scheduled.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Performance Summary */}
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-              <TrendingUp size={16} className="text-emerald-500" /> Performance Summary
-            </h3>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center py-2 border-b border-theme-border/30">
-                <span className="text-theme-text-muted font-semibold">Lead Conversion Rate:</span>
-                <span className="font-extrabold text-emerald-500">{kpis?.conversionRate || 22.4}%</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-theme-border/30">
-                <span className="text-theme-text-muted font-semibold">Workflow SLA Adherence:</span>
-                <span className="font-extrabold text-theme-primary">96.8%</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-theme-text-muted font-semibold">Avg. Contact Speed:</span>
-                <span className="font-extrabold text-cyan-400">1.2 Hours</span>
+              <div className="flex-1 space-y-3 max-h-[420px] min-h-[380px] overflow-y-auto pr-1">
+                {followups.slice(0, 8).map((f: any, idx: number) => (
+                  <Link 
+                    key={idx}
+                    to={`/my-work?leadId=${f.leadId || ''}`}
+                    className="block p-3.5 rounded-2xl border border-theme-border/40 bg-theme-bg-alt/30 hover:bg-theme-bg-alt hover:border-theme-primary/40 transition-all group space-y-1"
+                  >
+                    <div className="flex items-center justify-between text-xs font-bold text-theme-text">
+                      <span className="group-hover:text-theme-primary transition-colors flex items-center gap-1">
+                        {f.leadName || 'Client Touchpoint'}
+                        <ChevronRight size={12} className="text-theme-primary transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 uppercase">{f.type || 'CALL'}</span>
+                    </div>
+                    <p className="text-[10px] text-theme-text-muted truncate">{f.notes || 'Requirement collection & proposal follow-up'}</p>
+                  </Link>
+                ))}
+                {followups.length === 0 && (
+                  <p className="text-center text-xs text-theme-text-muted py-6">No pending follow-up reminders scheduled.</p>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
         </div>
 
