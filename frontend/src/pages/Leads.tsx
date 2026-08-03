@@ -9,7 +9,13 @@ import {
   Download, 
   MessageSquare, 
   Plus,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  Flame,
+  Zap,
+  Briefcase,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
@@ -167,14 +173,60 @@ export default function Leads() {
     }
   };
 
+  // Priority Engine Helper: Check if lead has an ACTIVE overdue follow-up
+  const isLeadOverdue = (l: Lead): boolean => {
+    const st = (l.status || '').toLowerCase();
+    if (st === 'converted' || st === 'lost' || st === 'rejected' || st === 'completed') {
+      return false;
+    }
+    const fs = (l.followupStatus || '').toUpperCase();
+    if (fs === 'COMPLETED' || fs === 'CANCELLED') {
+      return false;
+    }
+    if (fs === 'OVERDUE') {
+      return true;
+    }
+    if (!l.nextFollowupDate) return false;
+    return new Date(l.nextFollowupDate).getTime() < Date.now();
+  };
+
+  // Priority Engine Counters
+  const overdueCount = leads.filter(isLeadOverdue).length;
+  const highPriorityCount = leads.filter((l) => l.priority === 'HIGH' || l.qualityTier === 'HOT').length;
+  const newLeadsCount = leads.filter((l) => l.status === 'New').length;
+
   // Filtered Leads
   const filteredLeads = leads.filter((l) => {
-    const matchesSearch = l.name.toLowerCase().includes(search.toLowerCase()) || 
-                          l.email.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = 
+      !search ||
+      l.name?.toLowerCase().includes(search.toLowerCase()) || 
+      l.email?.toLowerCase().includes(search.toLowerCase()) ||
+      (l.phone && l.phone.includes(search));
     const matchesPlatform = platformFilter === 'All' || l.sourcePlatform === platformFilter;
-    const matchesStatus = statusFilter === 'All' || l.status === statusFilter;
+    
+    let matchesStatus = true;
+    if (statusFilter === 'Overdue') {
+      matchesStatus = isLeadOverdue(l);
+    } else if (statusFilter === 'HIGH') {
+      matchesStatus = l.priority === 'HIGH' || l.qualityTier === 'HOT';
+    } else if (statusFilter !== 'All') {
+      matchesStatus = l.status === statusFilter;
+    }
+
     return matchesSearch && matchesPlatform && matchesStatus;
   });
+
+  // Sync selectedLead when filters change
+  useEffect(() => {
+    if (selectedLead) {
+      const stillExists = filteredLeads.some((l) => l.id === selectedLead.id);
+      if (!stillExists) {
+        setSelectedLead(filteredLeads.length > 0 ? filteredLeads[0] : null);
+      }
+    } else if (filteredLeads.length > 0 && !selectedLead) {
+      setSelectedLead(filteredLeads[0]);
+    }
+  }, [search, platformFilter, statusFilter, leads]);
 
   if (loading) {
     return (
@@ -190,12 +242,12 @@ export default function Leads() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight text-theme-text">Live Lead Tracker</h1>
-            <span className="flex h-2.5 w-2.5 rounded-full bg-red-500 animate-ping" />
-            <span className="rounded bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-500">LIVE NOW</span>
+            <h1 className="text-3xl font-extrabold tracking-tight text-theme-text">Lead Management Console</h1>
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+            <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">ACTIVE PIPELINE</span>
           </div>
           <p className="mt-1 text-sm text-theme-text-muted">
-            Qualify incoming customer contacts and assign follow-up tasks to team members.
+            Intelligently ranked workspace pipeline sorted by urgency, due date, and conversion impact.
           </p>
         </div>
 
@@ -221,6 +273,89 @@ export default function Leads() {
             <span>Add Lead</span>
           </button>
         </div>
+      </div>
+
+      {/* Smart Priority Engine KPI Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'Overdue' ? 'All' : 'Overdue')}
+          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+            statusFilter === 'Overdue'
+              ? 'bg-rose-500/20 border-rose-500 ring-2 ring-rose-500/50 shadow-md'
+              : 'bg-rose-500/5 hover:bg-rose-500/10 border-rose-500/20'
+          }`}
+        >
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-500 flex items-center gap-1">
+              <AlertTriangle size={12} /> Overdue Tasks
+            </span>
+            <div className="text-xl font-extrabold text-rose-500 mt-0.5">{overdueCount}</div>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${overdueCount > 0 ? 'bg-rose-500/20 text-rose-500 animate-pulse' : 'bg-emerald-500/10 text-emerald-500'}`}>
+            {overdueCount > 0 ? 'Action Req' : 'Clean'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'HIGH' ? 'All' : 'HIGH')}
+          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+            statusFilter === 'HIGH'
+              ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-500/50 shadow-md'
+              : 'bg-amber-500/5 hover:bg-amber-500/10 border-amber-500/20'
+          }`}
+        >
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-500 flex items-center gap-1">
+              <Flame size={12} /> High Focus
+            </span>
+            <div className="text-xl font-extrabold text-amber-500 mt-0.5">{highPriorityCount}</div>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 text-[10px] font-extrabold">
+            Hot Tier
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'New' ? 'All' : 'New')}
+          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+            statusFilter === 'New'
+              ? 'bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/50 shadow-md'
+              : 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/20'
+          }`}
+        >
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-500 flex items-center gap-1">
+              <Zap size={12} /> Fresh Leads
+            </span>
+            <div className="text-xl font-extrabold text-emerald-500 mt-0.5">{newLeadsCount}</div>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 text-[10px] font-extrabold">
+            Inbound
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter('All')}
+          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+            statusFilter === 'All'
+              ? 'bg-theme-primary/10 border-theme-primary ring-2 ring-theme-primary/50 shadow-md'
+              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border'
+          }`}
+        >
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-1">
+              <Briefcase size={12} /> All Pipeline
+            </span>
+            <div className="text-xl font-extrabold text-theme-text mt-0.5">{leads.length}</div>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-theme-primary/20 text-theme-primary text-[10px] font-extrabold">
+            Total
+          </span>
+        </button>
       </div>
 
       {/* Main Split Panel with Maximize/Minimize capability */}
@@ -258,14 +393,16 @@ export default function Leads() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary"
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary font-bold"
                 >
-                  <option value="All">All Statuses</option>
+                  <option value="All">All Status</option>
                   <option value="New">New</option>
                   <option value="Interaction">Interaction</option>
                   <option value="Qualified">Qualified</option>
                   <option value="Converted">Converted</option>
                   <option value="Rejected">Rejected</option>
+                  <option value="Overdue">Overdue</option>
+                  <option value="HIGH">High Priority</option>
                 </select>
               </div>
             </div>
@@ -275,6 +412,8 @@ export default function Leads() {
               {filteredLeads.map((lead) => {
                 const isSelected = selectedLead?.id === lead.id;
                 const isLostLead = lead.status === 'Lost' || lead.status === 'Rejected';
+                const isOverdue = isLeadOverdue(lead);
+
                 return (
                   <button
                     key={lead.id}
@@ -282,18 +421,26 @@ export default function Leads() {
                     className={`w-full rounded-2xl border p-4 text-left transition-all ${
                       isSelected
                         ? 'border-theme-primary bg-theme-primary/10 shadow-md ring-1 ring-theme-primary'
+                        : isOverdue
+                        ? 'border-rose-500/50 bg-rose-500/5 hover:bg-rose-500/10'
                         : isLostLead
                         ? 'border-rose-500/40 bg-rose-500/5 hover:bg-rose-500/10'
                         : 'border-theme-border/60 bg-theme-bg-alt/40 hover:bg-theme-bg-alt'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`font-bold ${isLostLead ? 'text-rose-400' : 'text-theme-text'}`}>
+                      <span className={`font-bold ${isOverdue ? 'text-rose-500 font-extrabold' : isLostLead ? 'text-rose-400' : 'text-theme-text'}`}>
                         {lead.name}
                       </span>
                       <span className="text-[10px] text-theme-text-muted">{formatShortDate(lead.createdAt)}</span>
                     </div>
                     <p className="mt-1 text-xs text-theme-text-muted truncate">{lead.email}</p>
+
+                    {isOverdue && (
+                      <div className="mt-2 flex items-center gap-1 text-[10px] font-extrabold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-lg border border-rose-500/20 w-max">
+                        <AlertTriangle size={11} /> Overdue Follow-up
+                      </div>
+                    )}
                     
                     <div className="mt-3 flex items-center justify-between">
                       <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
@@ -302,18 +449,28 @@ export default function Leads() {
                         {lead.sourcePlatform}
                       </span>
                       <span className={`rounded px-2 py-0.5 text-[9px] font-extrabold ${
-                        isLostLead 
+                        isOverdue
+                          ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30'
+                          : isLostLead 
                           ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                           : 'bg-theme-primary/10 text-theme-primary'
                       }`}>
-                        {isLostLead ? `🔴 ${lead.status.toUpperCase()}` : lead.status}
+                        {isOverdue ? 'OVERDUE' : isLostLead ? `🔴 ${lead.status.toUpperCase()}` : lead.status}
                       </span>
                     </div>
                   </button>
                 );
               })}
               {filteredLeads.length === 0 && (
-                <p className="text-center text-xs text-theme-text-muted py-10">No leads match filters.</p>
+                <div className="p-8 text-center space-y-2 border border-dashed border-theme-border/60 rounded-2xl bg-theme-bg-alt/30 my-4">
+                  <AlertCircle size={28} className="text-theme-text-muted opacity-40 mx-auto" />
+                  <p className="text-xs font-bold text-theme-text">No leads found</p>
+                  <p className="text-[10px] text-theme-text-muted">
+                    {statusFilter === 'Overdue' 
+                      ? 'Great! There are no overdue follow-ups or pending actions right now.'
+                      : 'No leads match the selected filter criteria.'}
+                  </p>
+                </div>
               )}
             </div>
           </div>

@@ -69,9 +69,21 @@ public class CalendarService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Workspace workspace = user.getWorkspace();
+        if (workspace == null) {
+            throw new IllegalStateException("User does not belong to a workspace");
+        }
 
-        LocalDateTime start = req.getStartTime();
-        LocalDateTime end = req.getEndTime() != null ? req.getEndTime() : start.plusHours(1);
+        LocalDateTime start = req.getStartTime() != null ? req.getStartTime() : LocalDateTime.now();
+        if (start.isBefore(LocalDateTime.now().minusMinutes(5))) {
+            throw new IllegalArgumentException("Event time cannot be in the past. Please select a current or future time.");
+        }
+        LocalDateTime end = req.getEndTime();
+        if (end == null || !end.isAfter(start)) {
+            end = start.plusHours(1);
+        }
+
+        String eventType = req.getEventType() != null && !req.getEventType().trim().isEmpty()
+                ? req.getEventType().trim() : "MEETING";
 
         String assignedName = null;
         Long assignedId = req.getAssignedUserId();
@@ -87,7 +99,7 @@ public class CalendarService {
                 .workspace(workspace)
                 .title(req.getTitle())
                 .description(req.getDescription())
-                .eventType(req.getEventType())
+                .eventType(eventType)
                 .startTime(start)
                 .endTime(end)
                 .allDay(req.getAllDay() != null ? req.getAllDay() : false)

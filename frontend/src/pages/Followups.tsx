@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useClickOutside } from '../hooks/useClickOutside';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import type { Lead } from '../types';
+import { followUpService, type FollowUp } from '../services/followUpService';
+import FollowUpModal from '../components/FollowUpModal';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
+import type { Lead } from '../types';
 import { 
   Clock, 
-  CheckCircle, 
+  CheckCircle2, 
   AlertCircle, 
   Plus, 
   Check, 
@@ -13,44 +14,40 @@ import {
   Search,
   History,
   X,
-  ChevronRight,
   Phone,
   Mail,
-  MessageSquare,
-  Briefcase
+  Zap,
+  Tag,
+  User as UserIcon,
+  Calendar,
+  AlertTriangle,
+  RefreshCw,
+  Ban,
+  TrendingUp,
+  Filter
 } from 'lucide-react';
 
 export default function Followups() {
-  const [followups, setFollowups] = useState<any[]>([]);
+  const [followups, setFollowups] = useState<FollowUp[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusTab, setStatusTab] = useState<'ALL_PENDING' | 'UPCOMING' | 'TODAY' | 'OVERDUE' | 'COMPLETED' | 'MISSED' | 'CANCELLED'>('ALL_PENDING');
+  const [statusTab, setStatusTab] = useState<'ALL' | 'UPCOMING' | 'OVERDUE' | 'COMPLETED' | 'CANCELLED'>('ALL');
 
-  // Multi Filters & Search
+  // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'a-z' | 'z-a'>('newest');
+  const [stageFilter, setStageFilter] = useState('ALL');
 
-  // Selected Lead for Timeline modal & WorkDetailsPanel
-  const [timeline, setTimeline] = useState<any[]>([]);
-  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  // Selected Lead Modal / Panel
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  // Create Follow-up Modal State
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    leadId: '',
-    scheduledAt: '',
-    type: 'CALL',
-    notes: ''
-  });
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  // Follow-up Scheduling Modal State
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [modalLead, setModalLead] = useState<{ id: number; name: string; stage?: string; assignedUserId?: number } | null>(null);
+  const [activeFollowupToReschedule, setActiveFollowupToReschedule] = useState<FollowUp | null>(null);
 
-  const modalRef = useRef<HTMLDivElement>(null);
-  useClickOutside(modalRef, () => {
-    if (showCreateModal) setShowCreateModal(false);
-  });
+  const [bulkScheduling, setBulkScheduling] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     fetchFollowups();
@@ -58,9 +55,10 @@ export default function Followups() {
   }, []);
 
   const fetchFollowups = async () => {
+    setLoading(true);
     try {
-      const res = await api.get('/api/followups');
-      setFollowups(res.data || []);
+      const data = await followUpService.getFollowups();
+      setFollowups(data || []);
     } catch (err) {
       console.error('Failed to fetch followups', err);
     } finally {
@@ -70,7 +68,7 @@ export default function Followups() {
 
   const fetchLeads = async () => {
     try {
-      const res = await api.get('/api/leads');
+      const res = await api.get('/leads');
       setLeads(res.data || []);
     } catch (err) {
       console.error(err);
@@ -79,7 +77,7 @@ export default function Followups() {
 
   const handleComplete = async (id: number) => {
     try {
-      await api.post(`/api/followups/${id}/complete`);
+      await followUpService.complete(id);
       setSuccessMsg('Follow-up marked as completed!');
       fetchFollowups();
       setTimeout(() => setSuccessMsg(''), 3000);
@@ -88,422 +86,382 @@ export default function Followups() {
     }
   };
 
-  const openTimeline = async (leadId: number) => {
+  const handleCancel = async (id: number) => {
+    const reason = window.prompt('Enter reason for cancelling this follow-up (optional):');
     try {
-      const res = await api.get(`/api/leads/${leadId}/timeline`);
-      setTimeline(res.data || []);
-      setShowTimelineModal(true);
-    } catch (e) {
-      alert('Failed to load client history timeline.');
-    }
-  };
-
-  const openWorkPanel = (leadId: number) => {
-    setSelectedLeadId(leadId);
-    setIsPanelOpen(true);
-  };
-
-  const handleWorkOnFollowup = async (followupId: number, leadId: number) => {
-    try {
-      await api.post(`/api/followups/${followupId}/complete`);
-      fetchFollowups();
-    } catch (err) {
-      console.error(err);
-    }
-    openWorkPanel(leadId);
-  };
-
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    if (!createForm.leadId || !createForm.scheduledAt) {
-      setErrorMsg('Please select a lead and date/time.');
-      return;
-    }
-
-    try {
-      await api.post('/api/followups', {
-        leadId: createForm.leadId,
-        scheduledAt: createForm.scheduledAt,
-        type: createForm.type,
-        notes: createForm.notes
-      });
-
-      setShowCreateModal(false);
-      setCreateForm({ leadId: '', scheduledAt: '', type: 'CALL', notes: '' });
-      setSuccessMsg('Follow-up scheduled successfully!');
+      await followUpService.cancel(id, reason || undefined);
+      setSuccessMsg('Follow-up cancelled. Time slot freed for Auto Schedule.');
       fetchFollowups();
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to schedule follow-up.');
+      alert(err.response?.data?.message || 'Failed to cancel follow-up');
     }
   };
 
-  // Filter & Search Logic
+  const handleSingleAutoSchedule = async (leadId: number, leadName: string) => {
+    try {
+      await followUpService.autoSchedule(leadId);
+      setSuccessMsg(`Auto-scheduled next available slot for ${leadName}!`);
+      fetchFollowups();
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Auto-schedule failed');
+    }
+  };
+
+  const handleBulkAutoSchedule = async () => {
+    const pendingLeads = followups
+      .filter((f) => f.status === 'UPCOMING' || f.status === 'PENDING' || f.status === 'OVERDUE')
+      .map((f) => f.leadId);
+
+    const uniqueLeadIds = Array.from(new Set(pendingLeads));
+    if (uniqueLeadIds.length === 0) {
+      alert('No pending or overdue leads found to auto-schedule.');
+      return;
+    }
+
+    if (!window.confirm(`Auto-schedule ${uniqueLeadIds.length} pending/overdue leads to nearest available working hour slots?`)) return;
+
+    setBulkScheduling(true);
+    try {
+      await followUpService.bulkAutoSchedule(uniqueLeadIds);
+      setSuccessMsg(`Successfully auto-scheduled ${uniqueLeadIds.length} leads without conflicts!`);
+      fetchFollowups();
+      setTimeout(() => setSuccessMsg(''), 3500);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Bulk auto schedule failed.');
+    } finally {
+      setBulkScheduling(false);
+    }
+  };
+
+  const openScheduleModalForLead = (leadId: number, leadName: string, stage?: string, assignedUserId?: number) => {
+    setActiveFollowupToReschedule(null);
+    setModalLead({ id: leadId, name: leadName, stage, assignedUserId });
+    setShowScheduleModal(true);
+  };
+
+  const openRescheduleModalForFollowup = (f: FollowUp) => {
+    setActiveFollowupToReschedule(f);
+    setModalLead({ id: f.leadId, name: f.leadName, stage: f.leadStage, assignedUserId: f.assignedToId });
+    setShowScheduleModal(true);
+  };
+
+  // Filtered Follow-ups Logic
   const filteredFollowups = followups.filter((f) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const itemDate = f.scheduledAt ? f.scheduledAt.split('T')[0] : '';
-    const now = new Date().getTime();
-    const scheduledTime = f.scheduledAt ? new Date(f.scheduledAt).getTime() : 0;
+    // 1. Status Filter
+    if (statusTab === 'UPCOMING' && !(f.status === 'UPCOMING' || f.status === 'PENDING' || f.status === 'SCHEDULED')) return false;
+    if (statusTab === 'OVERDUE' && !(f.status === 'OVERDUE' || f.status === 'MISSED' || f.isOverdue)) return false;
+    if (statusTab === 'COMPLETED' && f.status !== 'COMPLETED') return false;
+    if (statusTab === 'CANCELLED' && f.status !== 'CANCELLED') return false;
 
-    let matchesTab = true;
-    if (statusTab === 'ALL_PENDING') matchesTab = f.status !== 'COMPLETED' && f.status !== 'CANCELLED';
-    else if (statusTab === 'UPCOMING') matchesTab = f.status !== 'COMPLETED' && scheduledTime >= now;
-    else if (statusTab === 'TODAY') matchesTab = itemDate === todayStr;
-    else if (statusTab === 'OVERDUE') matchesTab = f.status !== 'COMPLETED' && scheduledTime < now;
-    else if (statusTab === 'COMPLETED') matchesTab = f.status === 'COMPLETED';
-    else if (statusTab === 'MISSED') matchesTab = f.status === 'MISSED';
-    else if (statusTab === 'CANCELLED') matchesTab = f.status === 'CANCELLED';
+    // 2. Stage Filter
+    if (stageFilter !== 'ALL' && f.leadStage !== stageFilter) return false;
 
-    const matchesSearch = 
-      !searchTerm ||
-      f.leadName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.leadEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+    // 3. Search Filter
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      const matchName = f.leadName?.toLowerCase().includes(q);
+      const matchType = f.type?.toLowerCase().includes(q);
+      const matchStage = f.leadStage?.toLowerCase().includes(q);
+      const matchNotes = f.notes?.toLowerCase().includes(q);
+      if (!matchName && !matchType && !matchStage && !matchNotes) return false;
+    }
 
-    return matchesTab && matchesSearch;
-  }).sort((a, b) => {
-    if (sortBy === 'newest') return new Date(b.createdAt || b.scheduledAt || 0).getTime() - new Date(a.createdAt || a.scheduledAt || 0).getTime();
-    if (sortBy === 'oldest') return new Date(a.createdAt || a.scheduledAt || 0).getTime() - new Date(b.createdAt || b.scheduledAt || 0).getTime();
-    if (sortBy === 'a-z') return (a.leadName || '').localeCompare(b.leadName || '');
-    if (sortBy === 'z-a') return (b.leadName || '').localeCompare(a.leadName || '');
-    return 0;
+    return true;
   });
 
-  if (loading) {
+  const getStatusBadge = (status: string, isOverdue?: boolean) => {
+    if (isOverdue || status === 'OVERDUE' || status === 'MISSED') {
+      return (
+        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1">
+          <AlertCircle size={12} /> Overdue
+        </span>
+      );
+    }
+    if (status === 'COMPLETED') {
+      return (
+        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+          <CheckCircle2 size={12} /> Completed
+        </span>
+      );
+    }
+    if (status === 'CANCELLED') {
+      return (
+        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-gray-500/10 text-gray-500 border border-gray-500/20 flex items-center gap-1">
+          <Ban size={12} /> Cancelled
+        </span>
+      );
+    }
     return (
-      <div className="flex h-96 items-center justify-center space-y-3 flex-col">
-        <Loader2 size={36} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-bold text-theme-text-muted">Loading Enterprise Follow-up Engine...</span>
-      </div>
+      <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
+        <Clock size={12} /> Scheduled
+      </span>
     );
-  }
+  };
 
   return (
     <div className="space-y-6">
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
+      
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-theme-card p-6 rounded-3xl border border-theme-border shadow-md">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              Client Engagement Hub
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 text-[10px] font-extrabold uppercase border border-blue-500/20">
+              Enterprise Scheduling Module
             </span>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1">
-            Follow-up Reminders & CRM Timeline
-          </h1>
+          <h1 className="text-2xl font-extrabold text-theme-text mt-1">Lead Follow-up & Scheduling</h1>
           <p className="text-xs text-theme-text-muted mt-0.5">
-            Schedule calls, emails, and meetings. Track past engagement histories to convert leads efficiently.
+            Stage-independent follow-ups with conflict detection, 9 AM – 7 PM working hours enforcement, and smart auto-scheduling.
           </p>
         </div>
 
-        <button
-          onClick={() => { setShowCreateModal(true); setErrorMsg(''); setSuccessMsg(''); }}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-theme-primary/20 transition-all"
-        >
-          <Plus size={16} /> Schedule Follow-up
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={handleBulkAutoSchedule}
+            disabled={bulkScheduling}
+            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50"
+          >
+            {bulkScheduling ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+            <span>Bulk Auto Schedule</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (leads.length > 0) {
+                openScheduleModalForLead(leads[0].id, leads[0].name, leads[0].status, leads[0].assignedToId);
+              } else {
+                alert('No leads available to schedule.');
+              }
+            }}
+            className="flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all"
+          >
+            <Plus size={16} /> New Schedule
+          </button>
+        </div>
       </div>
 
       {successMsg && (
         <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-xs font-bold text-emerald-500 flex items-center gap-2">
-          <CheckCircle size={16} /> {successMsg}
+          <CheckCircle2 size={16} /> {successMsg}
         </div>
       )}
 
-      {/* Control Bar: Search & Sorting */}
-      <div className="p-4 rounded-3xl border border-theme-border bg-theme-card shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-96">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-text-muted" />
-          <input
-            type="text"
-            placeholder="Search by client name, email, notes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-theme-bg-alt border border-theme-border/60 rounded-2xl pl-10 pr-4 py-2 text-xs font-medium text-theme-text focus:outline-none focus:border-theme-primary"
-          />
+      {/* Filter Toolbar & Status Tabs */}
+      <div className="p-4 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
+        
+        {/* Status Tabs */}
+        <div className="flex items-center gap-2 flex-wrap border-b border-theme-border/40 pb-3">
+          {[
+            { key: 'ALL', label: 'All Follow-ups' },
+            { key: 'UPCOMING', label: 'Scheduled / Upcoming' },
+            { key: 'OVERDUE', label: 'Overdue' },
+            { key: 'COMPLETED', label: 'Completed' },
+            { key: 'CANCELLED', label: 'Cancelled' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setStatusTab(tab.key as any)}
+              className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all ${
+                statusTab === tab.key
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-theme-bg-alt text-theme-text-muted hover:text-theme-text'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-          >
-            <option value="newest">Sort: Newest</option>
-            <option value="oldest">Sort: Oldest</option>
-            <option value="a-z">Sort: Client A-Z</option>
-            <option value="z-a">Sort: Client Z-A</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-        {[
-          { id: 'ALL_PENDING', label: 'All Pending', icon: <Clock size={12} className="text-cyan-400" /> },
-          { id: 'UPCOMING', label: 'Upcoming', icon: null },
-          { id: 'TODAY', label: "Today's", icon: null },
-          { id: 'OVERDUE', label: 'Overdue', icon: <AlertCircle size={12} className="text-amber-400" /> },
-          { id: 'COMPLETED', label: 'Completed', icon: <CheckCircle size={12} className="text-emerald-400" /> },
-          { id: 'MISSED', label: 'Missed', icon: null },
-          { id: 'CANCELLED', label: 'Cancelled', icon: null }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setStatusTab(tab.id as any)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all uppercase whitespace-nowrap ${
-              statusTab === tab.id
-                ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20'
-                : 'bg-theme-card border border-theme-border text-theme-text-muted hover:bg-theme-bg-alt'
-            }`}
-          >
-            {tab.icon}
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Follow-up Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredFollowups.map((f) => (
-          <div key={f.id} className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-4 flex flex-col justify-between hover:border-theme-primary/40 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <button
-                    onClick={() => openWorkPanel(f.leadId)}
-                    className="text-sm font-extrabold text-theme-text hover:text-theme-primary transition-colors text-left block"
-                  >
-                    {f.leadName || 'Client Contact'}
-                  </button>
-                  <span className="text-[10px] text-theme-text-muted block mt-0.5">{f.leadEmail}</span>
-                </div>
-                <span className={`text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
-                  f.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                  f.status === 'MISSED' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
-                  'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-                }`}>
-                  {f.type || 'CALL'} • {f.status}
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/30 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-theme-text font-bold">
-                  <Clock size={14} className="text-cyan-400" />
-                  <span>Scheduled: {f.scheduledAt ? new Date(f.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
-                </div>
-                {f.notes && (
-                  <p className="text-[11px] text-theme-text-muted italic pt-1 border-t border-theme-border/20">
-                    "{f.notes}"
-                  </p>
-                )}
-              </div>
-
-              {/* Quick Communication & Timeline Bar */}
-              <div className="flex items-center gap-1.5 pt-1">
-                {f.leadPhone && (
-                  <a
-                    href={`tel:${f.leadPhone}`}
-                    title="Call Client"
-                    className="p-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-emerald-400 transition-all text-xs"
-                  >
-                    <Phone size={12} />
-                  </a>
-                )}
-                {f.leadPhone && (
-                  <a
-                    href={`https://wa.me/${f.leadPhone.replace(/[^0-9]/g, '')}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="WhatsApp Chat"
-                    className="p-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-emerald-400 transition-all text-xs"
-                  >
-                    <MessageSquare size={12} />
-                  </a>
-                )}
-                {f.leadEmail && (
-                  <a
-                    href={`mailto:${f.leadEmail}`}
-                    title="Email Client"
-                    className="p-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-blue-400 transition-all text-xs"
-                  >
-                    <Mail size={12} />
-                  </a>
-                )}
-                <button
-                  onClick={() => openTimeline(f.leadId)}
-                  className="text-[10px] font-bold text-theme-text-muted hover:text-theme-primary ml-auto flex items-center gap-1"
-                >
-                  <History size={12} /> Timeline
-                </button>
-              </div>
-            </div>
-
-            {/* Bottom Actions Bar */}
-            <div className="pt-3 border-t border-theme-border/30 flex items-center justify-between gap-2">
-              <button
-                onClick={() => handleWorkOnFollowup(f.id, f.leadId)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-extrabold shadow-sm transition-all flex-1 justify-center"
-              >
-                <Briefcase size={13} /> Work on Lead <ChevronRight size={13} />
-              </button>
-
-              {f.status !== 'COMPLETED' && (
-                <button
-                  onClick={() => handleComplete(f.id)}
-                  className="flex items-center gap-1 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white border border-emerald-500/20 text-xs font-bold transition-all"
-                  title="Mark Completed and Remove from Follow-up List"
-                >
-                  <Check size={13} /> Complete
-                </button>
-              )}
-            </div>
+        {/* Search & Stage Filters */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search size={14} className="absolute left-3.5 top-3 text-theme-text-muted" />
+            <input
+              type="text"
+              placeholder="Search by lead name, stage, follow-up type, or notes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-2xl bg-theme-bg-alt pl-9 pr-3 py-2 text-xs font-semibold text-theme-text outline-none border border-theme-border/60 focus:border-blue-500"
+            />
           </div>
-        ))}
-        {filteredFollowups.length === 0 && (
-          <div className="col-span-full p-12 text-center rounded-3xl border border-theme-border bg-theme-card text-xs text-theme-text-muted italic">
-            No follow-up reminders found under "{statusTab}".
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-theme-text-muted flex items-center gap-1">
+              <Filter size={14} /> Stage:
+            </span>
+            <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value)}
+              className="rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-2 text-xs font-bold text-theme-text outline-none focus:border-blue-500"
+            >
+              <option value="ALL">All Lead Stages</option>
+              <option value="New Lead">New Lead</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Qualified">Qualified</option>
+              <option value="Proposal">Proposal</option>
+              <option value="Negotiation">Negotiation</option>
+              <option value="Won">Won</option>
+              <option value="Lost">Lost</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Follow-ups List Table / Cards */}
+      <div className="rounded-3xl border border-theme-border bg-theme-card shadow-md overflow-hidden">
+        {loading ? (
+          <div className="flex h-64 items-center justify-center space-y-2 flex-col">
+            <Loader2 size={36} className="animate-spin text-blue-600" />
+            <span className="text-xs font-bold text-theme-text-muted">Loading follow-ups & schedules...</span>
+          </div>
+        ) : filteredFollowups.length === 0 ? (
+          <div className="p-12 text-center text-theme-text-muted space-y-2">
+            <Calendar size={40} className="mx-auto text-theme-text-muted opacity-40" />
+            <h3 className="text-sm font-extrabold text-theme-text">No Follow-ups Found</h3>
+            <p className="text-xs">No scheduled follow-ups match your current tab or search filters.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-theme-border/50">
+            {filteredFollowups.map((f) => {
+              const isDone = f.status === 'COMPLETED';
+              const isOverdue = f.isOverdue || f.status === 'OVERDUE' || f.status === 'MISSED';
+
+              return (
+                <div
+                  key={f.id}
+                  className={`p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:bg-theme-bg-alt/30 ${
+                    isOverdue ? 'bg-rose-500/5' : ''
+                  }`}
+                >
+                  {/* Left Details */}
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3
+                        onClick={() => {
+                          setSelectedLeadId(f.leadId);
+                          setIsPanelOpen(true);
+                        }}
+                        className="text-sm font-extrabold text-theme-text cursor-pointer hover:text-blue-600 hover:underline"
+                      >
+                        {f.leadName}
+                      </h3>
+
+                      {/* Stage Badge (Rule 7: Works across every lead stage) */}
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-theme-bg-alt border text-theme-text border-theme-border/60">
+                        Stage: {f.leadStage || 'New Lead'}
+                      </span>
+
+                      {/* Status Badge */}
+                      {getStatusBadge(f.status, f.isOverdue)}
+
+                      {/* High Priority Badge if escalated */}
+                      {f.leadPriority === 'High' && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                          High Priority
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-4 text-xs font-semibold text-theme-text-muted flex-wrap">
+                      <span className="flex items-center gap-1 font-mono text-blue-600 font-bold">
+                        <Clock size={14} /> {f.scheduledAt ? new Date(f.scheduledAt).toLocaleString() : 'N/A'}
+                      </span>
+
+                      <span className="flex items-center gap-1">
+                        <Tag size={14} /> {f.type}
+                      </span>
+
+                      {f.assignedToName && (
+                        <span className="flex items-center gap-1">
+                          <UserIcon size={14} /> Assigned: {f.assignedToName}
+                        </span>
+                      )}
+                    </div>
+
+                    {f.notes && (
+                      <p className="text-xs text-theme-text-muted bg-theme-bg-alt/40 p-2 rounded-xl border border-theme-border/30 max-w-2xl">
+                        {f.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right Action Buttons */}
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {f.status !== 'COMPLETED' && f.status !== 'CANCELLED' && (
+                      <>
+                        <button
+                          onClick={() => handleComplete(f.id)}
+                          className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow flex items-center gap-1 transition-all"
+                        >
+                          <CheckCircle2 size={14} /> Complete
+                        </button>
+
+                        <button
+                          onClick={() => openRescheduleModalForFollowup(f)}
+                          className="px-3 py-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-card border border-theme-border font-bold text-xs text-theme-text flex items-center gap-1 transition-all"
+                        >
+                          <RefreshCw size={14} /> Reschedule
+                        </button>
+
+                        <button
+                          onClick={() => handleSingleAutoSchedule(f.leadId, f.leadName)}
+                          className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs border border-amber-500/20 flex items-center gap-1 transition-all"
+                          title="Auto-schedule next free slot"
+                        >
+                          <Zap size={14} /> Auto
+                        </button>
+
+                        <button
+                          onClick={() => handleCancel(f.id)}
+                          className="p-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors"
+                          title="Cancel Follow-up (frees slot)"
+                        >
+                          <Ban size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Schedule Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-3 py-6 backdrop-blur-sm overflow-y-auto">
-          <div ref={modalRef} className="w-full max-w-lg rounded-3xl bg-theme-card border border-theme-border p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-theme-text">Schedule Client Follow-up</h3>
-            <p className="text-xs text-theme-text-muted">Set up a reminder for a call, email, or demo.</p>
-
-            {errorMsg && (
-              <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-3 text-xs font-bold text-rose-500 flex items-center gap-2">
-                <AlertCircle size={14} /> {errorMsg}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateSubmit} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Select Lead *</label>
-                <select
-                  required
-                  value={createForm.leadId}
-                  onChange={(e) => setCreateForm({ ...createForm, leadId: e.target.value })}
-                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-xs font-medium text-theme-text outline-none focus:border-theme-primary"
-                >
-                  <option value="">Select Lead...</option>
-                  {leads.map((l) => (
-                    <option key={l.id} value={l.id}>{l.name} ({l.email})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Scheduled Date & Time *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={createForm.scheduledAt}
-                    onChange={(e) => setCreateForm({ ...createForm, scheduledAt: e.target.value })}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-xs font-medium text-theme-text outline-none focus:border-theme-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Type</label>
-                  <select
-                    value={createForm.type}
-                    onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-xs font-medium text-theme-text outline-none focus:border-theme-primary"
-                  >
-                    <option value="CALL">Phone Call</option>
-                    <option value="EMAIL">Email Followup</option>
-                    <option value="MEETING">Meeting</option>
-                    <option value="DEMO">Product Demo</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Notes / Objectives</label>
-                <textarea
-                  rows={3}
-                  placeholder="State meeting objectives..."
-                  value={createForm.notes}
-                  onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
-                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-xs font-medium text-theme-text outline-none focus:border-theme-primary"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="rounded-2xl border border-theme-border bg-theme-bg-alt px-5 py-2.5 text-xs font-semibold text-theme-text-muted hover:bg-theme-bg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-5 py-2.5 text-xs font-bold text-white shadow-lg transition-all"
-                >
-                  Schedule Follow-up
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Follow-up Scheduling Modal */}
+      {modalLead && (
+        <FollowUpModal
+          isOpen={showScheduleModal}
+          onClose={() => {
+            setShowScheduleModal(false);
+            setModalLead(null);
+            setActiveFollowupToReschedule(null);
+          }}
+          leadId={modalLead.id}
+          leadName={modalLead.name}
+          leadStage={modalLead.stage}
+          assignedUserId={modalLead.assignedUserId}
+          existingFollowup={activeFollowupToReschedule}
+          onSuccess={() => {
+            fetchFollowups();
+            setSuccessMsg('Follow-up schedule updated successfully!');
+            setTimeout(() => setSuccessMsg(''), 3000);
+          }}
+        />
       )}
 
-      {/* Timeline Modal */}
-      {showTimelineModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-3 py-6 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-xl rounded-3xl bg-theme-card border border-theme-border p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
-              <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
-                <History size={18} className="text-theme-primary" /> Client CRM History Timeline
-              </h3>
-              <button
-                onClick={() => setShowTimelineModal(false)}
-                className="p-1.5 rounded-xl bg-theme-bg-alt text-theme-text-muted hover:text-theme-text"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="relative pl-6 space-y-4 max-h-[60vh] overflow-y-auto before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-theme-border">
-              {timeline.map((item: any) => (
-                <div key={item.id} className="relative">
-                  <div className="absolute -left-[22px] top-1.5 w-3 h-3 rounded-full bg-theme-primary border-2 border-theme-bg" />
-                  <div className="p-3.5 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/30 space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold text-theme-text">
-                      <span>{item.action}</span>
-                      <span className="text-[10px] text-theme-text-muted">{new Date(item.timestamp).toLocaleString()}</span>
-                    </div>
-                    <p className="text-xs text-theme-text-muted">{item.description}</p>
-                    <span className="text-[9px] font-semibold text-theme-text-muted block">By {item.performedByName || 'System'}</span>
-                  </div>
-                </div>
-              ))}
-              {timeline.length === 0 && (
-                <p className="text-center text-xs text-theme-text-muted py-6">No historical records logged yet for this lead.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Slide-over Work Details Panel */}
+      {/* WorkDetailsPanel */}
       <WorkDetailsPanel
-        leadId={selectedLeadId}
         isOpen={isPanelOpen}
-        onClose={() => setIsPanelOpen(false)}
-        onLeadUpdated={() => {
-          fetchFollowups();
+        onClose={() => {
+          setIsPanelOpen(false);
+          setSelectedLeadId(null);
         }}
+        leadId={selectedLeadId}
+        onLeadUpdated={fetchFollowups}
       />
 
     </div>

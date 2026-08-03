@@ -24,13 +24,51 @@ import {
   Copy,
   Check,
   Maximize2,
-  Minimize2
+  Minimize2,
+  UserCheck,
+  UserPlus,
+  Loader2
 } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { downloadSingleLeadPdf } from '../services/reportService';
 import type { SalesActivity, SalesActivityLog } from '../types';
 import CallTimerWidget from './CallTimerWidget';
 import CallHistoryLog from './CallHistoryLog';
+import SchedulePreviewSidePanel from './SchedulePreviewSidePanel';
+
+const formatLocalDateOnly = (val?: string | Date): string => {
+  if (!val) {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  if (typeof val === 'string') {
+    const match = val.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${val.getFullYear()}-${pad(val.getMonth() + 1)}-${pad(val.getDate())}`;
+};
+
+const formatTimeDisplay = (timeStr?: string): string => {
+  if (!timeStr) return '10:00 AM';
+  let t = timeStr;
+  if (t.includes('T')) {
+    t = t.split('T')[1];
+  }
+  const parts = t.split(':');
+  const h = parseInt(parts[0], 10);
+  if (isNaN(h)) return '10:00 AM';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const m = parts[1] ? parts[1].slice(0, 2) : '00';
+  return `${h12}:${m} ${ampm}`;
+};
 
 interface WorkDetailsPanelProps {
   leadId: number | null;
@@ -55,11 +93,22 @@ export default function WorkDetailsPanel({
   const maximized = isMaximized !== undefined ? isMaximized : internalMaximized;
   const toggleMaximize = onToggleMaximize || (() => setInternalMaximized(!internalMaximized));
 
+  const currentUser = useAuthStore((state) => state.user);
+  const isAdmin = currentUser?.roles?.includes('ROLE_ADMIN');
+  const isManager = currentUser?.roles?.includes('ROLE_MANAGER');
+  const isManagementUser = isAdmin || isManager;
+
   const [lead, setLead] = useState<any>(null);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [activityLogsHistory, setActivityLogsHistory] = useState<SalesActivityLog[]>([]);
   const [activeTab, setActiveTab] = useState<'activities' | 'notes' | 'timeline' | 'followup'>('activities');
   const [historySubTab, setHistorySubTab] = useState<'all' | 'attempts'>('all');
+
+  // Management Assignee State
+  const [members, setMembers] = useState<any[]>([]);
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>('');
+  const [assigningLead, setAssigningLead] = useState<boolean>(false);
+  const [assignSuccessMsg, setAssignSuccessMsg] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
@@ -100,8 +149,51 @@ export default function WorkDetailsPanel({
   useEffect(() => {
     if (leadId && isOpen) {
       fetchLeadDetails();
+      if (isManagementUser) {
+        fetchMembers();
+      }
     }
-  }, [leadId, isOpen]);
+  }, [leadId, isOpen, isManagementUser]);
+
+  const fetchMembers = async () => {
+    try {
+      const res = await api.get('/api/users/assignable');
+      setMembers(res.data || []);
+    } catch (e) {
+      try {
+        const res2 = await api.get('/api/users/members');
+        const salesExecs = (res2.data || []).filter((m: any) => {
+          const roleNames = (m.roles || []).map((r: any) => (r.name || r || '').toUpperCase());
+          const hasUser = roleNames.includes('ROLE_USER') || roleNames.includes('USER');
+          const hasAdminOrManager = roleNames.includes('ROLE_ADMIN') || roleNames.includes('ADMIN') || roleNames.includes('ROLE_MANAGER') || roleNames.includes('MANAGER');
+          return hasUser && !hasAdminOrManager;
+        });
+        setMembers(salesExecs);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!leadId || !selectedAssigneeId) return;
+    setAssigningLead(true);
+    try {
+      await api.patch(`/api/leads/${leadId}/assign`, null, {
+        params: { userId: parseInt(selectedAssigneeId, 10) }
+      });
+      setAssignSuccessMsg('Lead successfully assigned!');
+      setTimeout(() => setAssignSuccessMsg(''), 4000);
+      fetchLeadDetails();
+      onLeadUpdated();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to assign lead.');
+    } finally {
+      setAssigningLead(false);
+    }
+  };
 
   const fetchLeadDetails = async () => {
     if (!leadId) return;
@@ -244,7 +336,7 @@ export default function WorkDetailsPanel({
     try {
       await api.post(`/api/followups`, {
         leadId,
-        scheduledAt: new Date(followupDate).toISOString(),
+        scheduledAt: followupDate,
         type: followupType,
         notes: followupNotes
       });
@@ -301,10 +393,12 @@ export default function WorkDetailsPanel({
 
   if (!isOpen) return null;
 
+  const containerClass = inline
+    ? 'rounded-3xl overflow-hidden min-h-[680px]'
+    : `border-l ${maximized ? 'max-w-6xl w-[94vw]' : 'max-w-2xl w-full'}`;
+
   const panelInner = (
-    <div className={`bg-theme-card border border-theme-border flex flex-col shadow-xl relative w-full h-full ${
-      inline ? 'rounded-3xl overflow-hidden min-h-[680px]' : `border-l ${maximized ? 'max-w-6xl w-[94vw]' : 'max-w-2xl w-full'}`
-    }`}>
+    <div className={`bg-theme-card border border-theme-border flex flex-col shadow-xl relative w-full h-full ${containerClass}`}>
       {/* Top Header */}
       <div className="p-5 border-b border-theme-border flex items-center justify-between bg-theme-card/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
@@ -413,8 +507,8 @@ export default function WorkDetailsPanel({
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Call Duration Tracking Widget */}
-              {lead && (
+              {/* Call Duration Tracking Widget (Sales Reps Only) */}
+              {lead && !isManagementUser && (
                 <CallTimerWidget
                   leadId={lead.id}
                   leadName={lead.name}
@@ -426,12 +520,42 @@ export default function WorkDetailsPanel({
                 />
               )}
 
+              {/* Overdue Action Banner */}
+              {lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-extrabold flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle size={18} className="shrink-0 mt-0.5 animate-bounce" />
+                    <div>
+                      <p className="font-extrabold uppercase tracking-wide">🔴 OVERDUE ACTION REQUIRED FOR THIS LEAD!</p>
+                      <p className="text-[11px] font-semibold text-rose-400 mt-0.5">
+                        Scheduled follow-up ({new Date(lead.nextFollowupDate).toLocaleString()}) was missed.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('followup')}
+                    className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] shadow shrink-0 self-start sm:self-auto transition-all"
+                  >
+                    Reschedule / View Slot
+                  </button>
+                </div>
+              )}
+
               {/* Navigation Tabs */}
               <div className="grid grid-cols-4 gap-1 p-1 bg-theme-card border border-theme-border rounded-2xl">
                 {[
-                  { id: 'activities', label: 'Workflow Stages', icon: CheckCircle2 },
+                  { 
+                    id: 'activities', 
+                    label: isManagementUser ? 'Lead Assignment' : 'Workflow Stages', 
+                    icon: isManagementUser ? UserCheck : CheckCircle2 
+                  },
                   { id: 'notes', label: 'Proposal & Notes', icon: FileText },
-                  { id: 'followup', label: 'Schedule Follow-up', icon: Calendar },
+                  { 
+                    id: 'followup', 
+                    label: 'Schedule Follow-up', 
+                    icon: Calendar,
+                    hasAlert: Boolean(lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED')
+                  },
                   { id: 'timeline', label: 'Interaction History', icon: History }
                 ].map((tab) => {
                   const Icon = tab.icon;
@@ -440,36 +564,172 @@ export default function WorkDetailsPanel({
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition-all ${
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition-all relative ${
                         isActive
                           ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20'
+                          : tab.hasAlert
+                          ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40'
                           : 'bg-theme-bg-alt/50 text-theme-text-muted hover:text-theme-text'
                       }`}
                     >
-                      <Icon size={14} /> <span className="hidden sm:inline">{tab.label}</span>
+                      <Icon size={14} /> 
+                      <span className="hidden sm:inline">{tab.label}</span>
+                      {tab.hasAlert && (
+                        <span className="text-[9px] font-extrabold bg-rose-500 text-white px-1.5 py-0.2 rounded-full animate-pulse">
+                          OVERDUE
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
 
-              {/* TAB 1: WORKFLOW STAGES (MULTI-ACTIVITY EXPANDABLE CARDS) */}
+              {/* TAB 1: LEAD ASSIGNMENT (ADMIN/MANAGER) OR WORKFLOW STAGES (SALES REPS) */}
               {activeTab === 'activities' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">
-                        Enterprise Multi-Activity Workflow Container
-                      </h3>
-                      <p className="text-[10px] text-theme-text-muted mt-0.5">
-                        Record unlimited calls, meetings, WhatsApp & remarks. Stage completes ONLY when explicitly completed.
-                      </p>
+                  {isManagementUser ? (
+                    <div className="space-y-5">
+                      {/* Lead Assignment Card */}
+                      <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between border-b border-theme-border pb-4">
+                          <div>
+                            <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+                              <UserCheck size={18} className="text-theme-primary" />
+                              <span>Lead Assignment & Ownership Controls</span>
+                            </h3>
+                            <p className="text-xs text-theme-text-muted mt-0.5">
+                              Assign or re-allocate this lead to an active sales executive for client follow-up.
+                            </p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-extrabold">
+                            MANAGEMENT CONSOLE
+                          </span>
+                        </div>
+
+                        {assignSuccessMsg && (
+                          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                            <Check size={16} />
+                            <span>{assignSuccessMsg}</span>
+                          </div>
+                        )}
+
+                        <form onSubmit={handleAssignSubmit} className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
+                                CURRENT ASSIGNED EXECUTIVE
+                              </label>
+                              <div className="p-3 rounded-2xl border border-theme-border bg-theme-bg-alt/50 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-theme-primary/20 text-theme-primary font-extrabold text-xs flex items-center justify-center">
+                                  {lead?.assignedToName ? lead.assignedToName.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <div>
+                                  <span className="font-bold text-xs text-theme-text block">
+                                    {lead?.assignedToName || 'Unassigned Lead'}
+                                  </span>
+                                  <span className="text-[10px] text-theme-text-muted">
+                                    {lead?.assignedToName ? 'Active Owner' : 'Needs Assignment'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
+                                SELECT SALES EXECUTIVE TO ASSIGN
+                              </label>
+                              <select
+                                value={selectedAssigneeId}
+                                onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                                className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-3 text-xs outline-none focus:border-theme-primary text-theme-text font-bold"
+                              >
+                                <option value="">-- Select Sales Executive --</option>
+                                {members.map((m: any) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.fullName || m.name} ({m.email})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-3 pt-2">
+                            <button
+                              type="submit"
+                              disabled={assigningLead || !selectedAssigneeId}
+                              className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-5 py-2.5 text-xs font-bold text-white shadow-md disabled:opacity-50 transition-all cursor-pointer"
+                            >
+                              {assigningLead ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
+                              <span>Assign Lead to Executive</span>
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+
+                      {/* Manager Lead Status & Control Card */}
+                      <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
+                        <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted">
+                          Supervisory Controls & Pipeline Status
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Pipeline Status</label>
+                            <select
+                              value={lead?.status || 'New'}
+                              onChange={async (e) => {
+                                const newStatus = e.target.value;
+                                try {
+                                  await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
+                                  fetchLeadDetails();
+                                  onLeadUpdated();
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }}
+                              className="w-full rounded-xl border border-theme-border bg-theme-bg-alt p-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
+                            >
+                              <option value="New">New</option>
+                              <option value="Interaction">Interaction</option>
+                              <option value="Qualified">Qualified</option>
+                              <option value="Converted">Converted</option>
+                              <option value="Rejected">Rejected</option>
+                              <option value="Lost">Lost</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Quality Tier</label>
+                            <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-extrabold text-amber-400">
+                              {lead?.qualityTier || 'WARM'}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Source Platform</label>
+                            <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-text">
+                              {lead?.sourcePlatform || 'Direct'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    {autoSaveStatus && (
-                      <span className="text-[10px] font-bold text-emerald-400 animate-pulse">
-                        {autoSaveStatus}
-                      </span>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">
+                            Enterprise Multi-Activity Workflow Container
+                          </h3>
+                          <p className="text-[10px] text-theme-text-muted mt-0.5">
+                            Record unlimited calls, meetings, WhatsApp & remarks. Stage completes ONLY when explicitly completed.
+                          </p>
+                        </div>
+                        {autoSaveStatus && (
+                          <span className="text-[10px] font-bold text-emerald-400 animate-pulse">
+                            {autoSaveStatus}
+                          </span>
+                        )}
+                      </div>
 
                   <div className="space-y-4">
                     {lead?.activities?.map((act: SalesActivity) => {
@@ -536,6 +796,11 @@ export default function WorkDetailsPanel({
                                   }`}>
                                     {isLostStep ? (isCompleted ? '🔴 LEAD LOST / DROPPED' : '🔴 DROP LEAD STAGE') : (isCompleted ? '✔ COMPLETED' : act.status)}
                                   </span>
+                                  {!isCompleted && lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
+                                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-500 border border-rose-500/40 animate-pulse flex items-center gap-1">
+                                      <AlertCircle size={10} /> OVERDUE ACTION PENDING
+                                    </span>
+                                  )}
                                   <span className="text-[10px] font-bold text-theme-text-muted px-2 py-0.5 rounded-md bg-theme-bg-alt/80 border border-theme-border/40">
                                     {logs.length} {logs.length === 1 ? 'Activity' : 'Activities'}
                                   </span>
@@ -702,6 +967,8 @@ export default function WorkDetailsPanel({
                   </div>
                 </div>
               )}
+            </div>
+          )}
 
               {/* TAB 2: PROPOSAL & NOTES */}
               {activeTab === 'notes' && (
@@ -762,57 +1029,78 @@ export default function WorkDetailsPanel({
 
               {/* TAB 3: SCHEDULE FOLLOW-UP */}
               {activeTab === 'followup' && (
-                <form onSubmit={handleScheduleFollowup} className="p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                    <Calendar size={16} className="text-theme-primary" /> Schedule Direct Follow-up Task
-                  </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                  <form onSubmit={handleScheduleFollowup} className="lg:col-span-7 p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
+                      <Calendar size={16} className="text-theme-primary" /> Schedule Direct Follow-up Task
+                    </h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Type</label>
-                      <select
-                        value={followupType}
-                        onChange={(e) => setFollowupType(e.target.value)}
-                        className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-                      >
-                        <option value="CALL">Phone Call</option>
-                        <option value="WHATSAPP">WhatsApp</option>
-                        <option value="EMAIL">Email</option>
-                        <option value="MEETING">Meeting / Demo</option>
-                      </select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Type</label>
+                        <select
+                          value={followupType}
+                          onChange={(e) => setFollowupType(e.target.value)}
+                          className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        >
+                          <option value="CALL">Phone Call</option>
+                          <option value="WHATSAPP">WhatsApp</option>
+                          <option value="EMAIL">Email</option>
+                          <option value="MEETING">Meeting / Demo</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Date *</label>
+                        <input
+                          type="date"
+                          required
+                          value={formatLocalDateOnly(followupDate || new Date())}
+                          min={formatLocalDateOnly(new Date())}
+                          onChange={(e) => {
+                            const dateVal = e.target.value;
+                            if (!dateVal) return;
+                            const timePart = followupDate && followupDate.includes('T') ? followupDate.split('T')[1] : '10:00';
+                            setFollowupDate(`${dateVal}T${timePart}`);
+                          }}
+                          className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        />
+                        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl w-max">
+                          <Clock size={13} />
+                          <span>Selected Time: {formatTimeDisplay(followupDate)}</span>
+                        </div>
+                      </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Date & Time</label>
-                      <input
-                        type="datetime-local"
-                        required
-                        value={followupDate}
-                        onChange={(e) => setFollowupDate(e.target.value)}
-                        className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Objectives / Remarks</label>
+                      <textarea
+                        rows={3}
+                        placeholder="Key topics to discuss in the upcoming call..."
+                        value={followupNotes}
+                        onChange={(e) => setFollowupNotes(e.target.value)}
+                        className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Objectives / Remarks</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Key topics to discuss in the upcoming call..."
-                      value={followupNotes}
-                      onChange={(e) => setFollowupNotes(e.target.value)}
-                      className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
+                    <button
+                      type="submit"
+                      disabled={schedulingFollowup}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition-all"
+                    >
+                      <Plus size={16} /> Schedule Reminder
+                    </button>
+                  </form>
+
+                  <div className="lg:col-span-5 w-full">
+                    <SchedulePreviewSidePanel
+                      selectedDate={followupDate || formatLocalDateOnly(new Date())}
+                      onSelectSlot={(slotTime) => setFollowupDate(slotTime)}
+                      title="Day's Schedule & Free Slots"
+                      compact={true}
                     />
                   </div>
-
-                  <button
-                    type="submit"
-                    disabled={schedulingFollowup}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition-all"
-                  >
-                    <Plus size={16} /> Schedule Reminder
-                  </button>
-                </form>
+                </div>
               )}
 
               {/* TAB 4: CLICKABLE CLIENT INTERACTION HISTORY TIMELINE */}
@@ -1055,18 +1343,7 @@ export default function WorkDetailsPanel({
                     />
                   </div>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Optional Next Follow-up Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      value={nextFollowupDate}
-                      onChange={(e) => setNextFollowupDate(e.target.value)}
-                      className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-                    />
-                    <span className="text-[9px] text-theme-text-muted mt-1 block">
-                      Setting a date automatically creates a Follow-up Task in your workspace.
-                    </span>
-                  </div>
+
 
                   <div className="flex items-center justify-end gap-3 pt-2">
                     <button

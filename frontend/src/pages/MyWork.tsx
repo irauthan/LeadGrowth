@@ -267,13 +267,6 @@ export default function MyWork() {
 
         <div className="flex items-center gap-3 flex-wrap">
           <button
-            onClick={() => navigate('/priority-center')}
-            className="flex items-center gap-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700/80 px-4 py-2.5 text-xs font-bold text-slate-100 shadow-md transition-all"
-          >
-            <Zap size={15} className="text-amber-400" /> Priority Center
-          </button>
-
-          <button
             onClick={handleIdleSweep}
             className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-theme-primary to-blue-600 hover:from-theme-primary-hover hover:to-blue-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-theme-primary/20 transition-all"
           >

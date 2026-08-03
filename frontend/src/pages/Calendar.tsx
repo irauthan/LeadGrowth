@@ -25,7 +25,36 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-type ViewMode = 'day' | 'week' | 'month' | 'year' | 'schedule';
+import CalendarSettingsModal, { type CalendarCategory } from '../components/CalendarSettingsModal';
+import SchedulePreviewSidePanel from '../components/SchedulePreviewSidePanel';
+
+const formatLocalDateTime = (d: Date = new Date()): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const formatDateKey = (d: Date | string): string => {
+  if (!d) return '';
+  if (typeof d === 'string') {
+    const match = d.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function Calendar() {
   const user = useAuthStore((state) => state.user);
@@ -37,6 +66,18 @@ export default function Calendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Dynamic Sub-Calendars & Categories State
+  const [categories, setCategories] = useState<CalendarCategory[]>([
+    { id: 'cat_meetings', name: user?.fullName || 'My Schedule', color: '#6366f1', enabled: true, isSystem: true },
+    { id: 'cat_followups', name: 'Lead Follow-ups', color: '#f59e0b', enabled: true, isSystem: true },
+    { id: 'cat_tasks', name: 'Tasks & Deadlines', color: '#10b981', enabled: true, isSystem: true },
+    { id: 'cat_personal', name: 'Personal Reminders', color: '#a855f7', enabled: true, isSystem: true },
+  ]);
+
+  // Settings Modal State
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [defaultReminder, setDefaultReminder] = useState(15);
+
   // Layout & Dropdown Toggles
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
@@ -44,10 +85,6 @@ export default function Calendar() {
   const [peopleSearch, setPeopleSearch] = useState('');
 
   // Filter Checkboxes (Same as Google Calendar "My Calendars")
-  const [showFollowups, setShowFollowups] = useState(true);
-  const [showMeetings, setShowMeetings] = useState(true);
-  const [showTasks, setShowTasks] = useState(true);
-  const [showPersonal, setShowPersonal] = useState(true);
   const [showCompleted, setShowCompleted] = useState(true);
   const [showWeekends, setShowWeekends] = useState(true);
 
@@ -60,8 +97,8 @@ export default function Calendar() {
     title: '',
     description: '',
     eventType: 'MEETING',
-    startTime: new Date().toISOString().slice(0, 16),
-    endTime: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+    startTime: formatLocalDateTime(new Date(Date.now() + 5 * 60000)),
+    endTime: formatLocalDateTime(new Date(Date.now() + 65 * 60000)),
     allDay: false,
     leadName: '',
     priority: 'Medium',
@@ -74,6 +111,40 @@ export default function Calendar() {
   useEffect(() => {
     fetchEvents();
   }, [currentDate, view]);
+
+  const openCreateModalWithDate = (targetDate?: Date) => {
+    const now = new Date();
+    let start: Date;
+
+    if (targetDate) {
+      start = new Date(targetDate);
+      if (formatDateKey(targetDate) === formatDateKey(now)) {
+        start = new Date(now.getTime() + 5 * 60000);
+      } else if (start.getTime() < now.getTime()) {
+        start = new Date(now.getTime() + 5 * 60000);
+      } else {
+        start.setHours(9, 0, 0, 0);
+      }
+    } else {
+      start = new Date(now.getTime() + 5 * 60000);
+    }
+
+    const end = new Date(start.getTime() + 3600000);
+
+    setCreateForm({
+      title: '',
+      description: '',
+      eventType: 'MEETING',
+      startTime: formatLocalDateTime(start),
+      endTime: formatLocalDateTime(end),
+      allDay: false,
+      leadName: '',
+      priority: 'Medium',
+      reminderMinutes: 15,
+      notes: ''
+    });
+    setShowCreateModal(true);
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -102,8 +173,8 @@ export default function Calendar() {
       }
 
       const data = await calendarService.getEvents(
-        start.toISOString().split('T')[0],
-        end.toISOString().split('T')[0]
+        formatDateKey(start),
+        formatDateKey(end)
       );
       setEvents(data || []);
     } catch (err) {
@@ -115,16 +186,41 @@ export default function Calendar() {
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!createForm.title || !createForm.title.trim()) {
+      alert('Please enter a title for the event.');
+      return;
+    }
+
+    const startLocalStr = createForm.startTime || formatLocalDateTime(new Date());
+    const startDate = new Date(startLocalStr);
+    const now = new Date();
+
+    if (startDate.getTime() < now.getTime() - 60000) {
+      alert('⚠️ Event start time cannot be in the past. Please select a future date and time.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await calendarService.createEvent(createForm);
+      const endDate = createForm.endTime && new Date(createForm.endTime) > startDate
+        ? new Date(createForm.endTime)
+        : new Date(startDate.getTime() + 3600000);
+
+      const payload: CreateCalendarEventRequest = {
+        ...createForm,
+        title: createForm.title.trim(),
+        startTime: startLocalStr,
+        endTime: formatLocalDateTime(endDate)
+      };
+      await calendarService.createEvent(payload);
       setShowCreateModal(false);
+      const resetNow = new Date(Date.now() + 5 * 60000);
       setCreateForm({
         title: '',
         description: '',
         eventType: 'MEETING',
-        startTime: new Date().toISOString().slice(0, 16),
-        endTime: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+        startTime: formatLocalDateTime(resetNow),
+        endTime: formatLocalDateTime(new Date(resetNow.getTime() + 3600000)),
         allDay: false,
         leadName: '',
         priority: 'Medium',
@@ -133,7 +229,8 @@ export default function Calendar() {
       });
       fetchEvents();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create calendar event.');
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create calendar event.';
+      alert(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -206,14 +303,26 @@ export default function Calendar() {
     }
   };
 
-  // Filter events based on checkbox state
+  // Filter events based on checkbox state & dynamic sub-calendars
   const filteredEvents = events.filter((e) => {
     if (!showCompleted && (e.status === 'COMPLETED' || e.status === 'Completed')) return false;
     const type = e.eventType?.toUpperCase();
-    if (type === 'FOLLOW_UP' && !showFollowups) return false;
-    if (type === 'MEETING' && !showMeetings) return false;
-    if (type === 'TASK' && !showTasks) return false;
-    if (type === 'PERSONAL_REMINDER' && !showPersonal) return false;
+    if (type === 'FOLLOW_UP') {
+      const cat = categories.find((c) => c.id === 'cat_followups');
+      if (cat && !cat.enabled) return false;
+    }
+    if (type === 'MEETING') {
+      const cat = categories.find((c) => c.id === 'cat_meetings');
+      if (cat && !cat.enabled) return false;
+    }
+    if (type === 'TASK') {
+      const cat = categories.find((c) => c.id === 'cat_tasks');
+      if (cat && !cat.enabled) return false;
+    }
+    if (type === 'PERSONAL_REMINDER') {
+      const cat = categories.find((c) => c.id === 'cat_personal');
+      if (cat && !cat.enabled) return false;
+    }
     return true;
   });
 
@@ -293,7 +402,7 @@ export default function Calendar() {
   };
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = formatDateKey(new Date());
 
   return (
     <div className="flex h-[calc(100vh-5rem)] flex-col bg-theme-bg text-theme-text rounded-3xl border border-theme-border shadow-2xl overflow-hidden">
@@ -359,7 +468,11 @@ export default function Calendar() {
           <button className="flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors hidden sm:flex">
             <HelpCircle size={18} />
           </button>
-          <button className="flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors">
+          <button 
+            onClick={() => setShowSettingsModal(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
+            title="Calendar Settings"
+          >
             <Settings size={18} />
           </button>
 
@@ -426,7 +539,7 @@ export default function Calendar() {
           </div>
 
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => openCreateModalWithDate()}
             className="hidden lg:flex items-center gap-2 rounded-full bg-blue-600 hover:bg-blue-700 px-5 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition-all ml-2"
           >
             <Plus size={16} /> Create
@@ -444,7 +557,7 @@ export default function Calendar() {
             {/* Floating Create Button */}
             <div className="relative">
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => openCreateModalWithDate()}
                 className="flex items-center gap-3 rounded-full border border-theme-border bg-theme-card px-6 py-3 text-sm font-bold text-theme-text shadow-lg hover:bg-theme-bg-alt transition-all w-max"
               >
                 <Plus size={22} className="text-blue-600" />
@@ -489,8 +602,8 @@ export default function Calendar() {
               </div>
               <div className="grid grid-cols-7 gap-y-1 text-center text-[11px]">
                 {getMiniMonthDays(miniDate).map((dayObj, idx) => {
-                  const dayStr = dayObj.date.toISOString().split('T')[0];
-                  const isSelected = currentDate.toISOString().split('T')[0] === dayStr;
+                  const dayStr = formatDateKey(dayObj.date);
+                  const isSelected = formatDateKey(currentDate) === dayStr;
                   const isToday = todayStr === dayStr;
 
                   return (
@@ -528,53 +641,36 @@ export default function Calendar() {
               />
             </div>
 
-            {/* My Calendars Filters (Exact Google Calendar Checkboxes) */}
+            {/* My Calendars Filters (Exact Google Calendar Checkboxes & Dynamic Categories) */}
             <div className="space-y-3 pt-2 border-t border-theme-border/50">
               <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
                 <span>My calendars</span>
-                <ChevronUp size={14} className="text-theme-text-muted" />
+                <button
+                  onClick={() => setShowSettingsModal(true)}
+                  className="p-1 rounded-lg hover:bg-theme-bg-alt text-theme-text-muted transition-colors"
+                  title="Manage Calendars & Settings"
+                >
+                  <Settings size={14} />
+                </button>
               </div>
 
               <div className="space-y-2 text-xs font-semibold">
-                <label className="flex items-center gap-2.5 cursor-pointer hover:bg-theme-bg-alt/50 p-1.5 rounded-xl">
-                  <input
-                    type="checkbox"
-                    checked={showMeetings}
-                    onChange={(e) => setShowMeetings(e.target.checked)}
-                    className="h-4 w-4 rounded accent-indigo-600"
-                  />
-                  <span className="flex-1 text-theme-text">{user?.fullName || 'My Schedule'}</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer hover:bg-theme-bg-alt/50 p-1.5 rounded-xl">
-                  <input
-                    type="checkbox"
-                    checked={showFollowups}
-                    onChange={(e) => setShowFollowups(e.target.checked)}
-                    className="h-4 w-4 rounded accent-amber-500"
-                  />
-                  <span className="flex-1 text-theme-text">Lead Follow-ups</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer hover:bg-theme-bg-alt/50 p-1.5 rounded-xl">
-                  <input
-                    type="checkbox"
-                    checked={showTasks}
-                    onChange={(e) => setShowTasks(e.target.checked)}
-                    className="h-4 w-4 rounded accent-emerald-500"
-                  />
-                  <span className="flex-1 text-theme-text">Tasks & Deadlines</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer hover:bg-theme-bg-alt/50 p-1.5 rounded-xl">
-                  <input
-                    type="checkbox"
-                    checked={showPersonal}
-                    onChange={(e) => setShowPersonal(e.target.checked)}
-                    className="h-4 w-4 rounded accent-purple-500"
-                  />
-                  <span className="flex-1 text-theme-text">Personal Reminders</span>
-                </label>
+                {categories.map((cat) => (
+                  <label key={cat.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-theme-bg-alt/50 p-1.5 rounded-xl">
+                    <input
+                      type="checkbox"
+                      checked={cat.enabled}
+                      onChange={() => {
+                        setCategories(
+                          categories.map((c) => (c.id === cat.id ? { ...c, enabled: !c.enabled } : c))
+                        );
+                      }}
+                      className="h-4 w-4 rounded"
+                      style={{ accentColor: cat.color }}
+                    />
+                    <span className="flex-1 text-theme-text truncate">{cat.name}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -610,14 +706,15 @@ export default function Calendar() {
                   {/* Month Cells Grid */}
                   <div className="grid grid-cols-7 flex-1 auto-rows-fr gap-px bg-theme-border/40">
                     {getMonthDays().map((dayObj, idx) => {
-                      const dayStr = dayObj.date.toISOString().split('T')[0];
-                      const dayEvents = filteredEvents.filter((ev) => ev.startTime?.startsWith(dayStr));
+                      const dayStr = formatDateKey(dayObj.date);
+                      const dayEvents = filteredEvents.filter((ev) => ev.startTime && formatDateKey(ev.startTime) === dayStr);
                       const isToday = todayStr === dayStr;
 
                       return (
                         <div
                           key={idx}
-                          className={`bg-theme-card p-1.5 flex flex-col justify-between overflow-hidden transition-all hover:bg-theme-bg-alt/30 ${
+                          onClick={() => openCreateModalWithDate(dayObj.date)}
+                          className={`bg-theme-card p-1.5 flex flex-col justify-between overflow-hidden transition-all cursor-pointer hover:bg-theme-bg-alt/30 ${
                             !dayObj.isCurrentMonth ? 'opacity-40 bg-theme-bg-alt/10' : ''
                           }`}
                         >
@@ -640,7 +737,10 @@ export default function Calendar() {
                               return (
                                 <button
                                   key={ev.id}
-                                  onClick={() => setSelectedEvent(ev)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedEvent(ev);
+                                  }}
                                   className={`w-full text-left px-2 py-0.5 rounded-md text-[11px] font-bold truncate flex items-center gap-1.5 shadow-2xs transition-transform hover:scale-[1.02] ${style.bg} ${style.text}`}
                                 >
                                   <span className={`h-2 w-2 rounded-full ${style.dot} shrink-0`} />
@@ -668,7 +768,7 @@ export default function Calendar() {
                   <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-theme-border/60 py-3 shrink-0 text-center">
                     <div className="text-[10px] font-bold text-theme-text-muted">GMT+05:30</div>
                     {getWeekDays().map((d, i) => {
-                      const dStr = d.toISOString().split('T')[0];
+                      const dStr = formatDateKey(d);
                       const isToday = todayStr === dStr;
                       return (
                         <div key={i} className="flex flex-col items-center">
@@ -696,9 +796,9 @@ export default function Calendar() {
                             {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                           </div>
                           {getWeekDays().map((day, dayIdx) => {
-                            const dayStr = day.toISOString().split('T')[0];
+                            const dayStr = formatDateKey(day);
                             const hourEvents = filteredEvents.filter((ev) => {
-                              if (!ev.startTime?.startsWith(dayStr)) return false;
+                              if (!ev.startTime || formatDateKey(ev.startTime) !== dayStr) return false;
                               const evHour = new Date(ev.startTime).getHours();
                               return evHour === hour;
                             });
@@ -732,7 +832,7 @@ export default function Calendar() {
               {view === 'day' && (
                 <div className="h-full flex flex-col max-w-4xl mx-auto p-4">
                   <div className="border-b border-theme-border/60 pb-3 flex items-center gap-3">
-                    <span className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-extrabold ${todayStr === currentDate.toISOString().split('T')[0] ? 'bg-blue-600 text-white' : 'bg-theme-bg-alt text-theme-text'}`}>
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-extrabold ${todayStr === formatDateKey(currentDate) ? 'bg-blue-600 text-white' : 'bg-theme-bg-alt text-theme-text'}`}>
                       {currentDate.getDate()}
                     </span>
                     <div>
@@ -743,9 +843,9 @@ export default function Calendar() {
 
                   <div className="flex-1 overflow-y-auto divide-y divide-theme-border/40 pt-2">
                     {hours.map((hour) => {
-                      const dayStr = currentDate.toISOString().split('T')[0];
+                      const dayStr = formatDateKey(currentDate);
                       const hourEvents = filteredEvents.filter((ev) => {
-                        if (!ev.startTime?.startsWith(dayStr)) return false;
+                        if (!ev.startTime || formatDateKey(ev.startTime) !== dayStr) return false;
                         return new Date(ev.startTime).getHours() === hour;
                       });
 
@@ -796,8 +896,8 @@ export default function Calendar() {
                         </div>
                         <div className="grid grid-cols-7 gap-1 text-center text-[10px]">
                           {getMiniMonthDays(monthDate).map((dayObj, dIdx) => {
-                            const dStr = dayObj.date.toISOString().split('T')[0];
-                            const hasEvents = events.some((ev) => ev.startTime?.startsWith(dStr));
+                            const dStr = formatDateKey(dayObj.date);
+                            const hasEvents = events.some((ev) => ev.startTime && formatDateKey(ev.startTime) === dStr);
                             const isToday = todayStr === dStr;
 
                             return (
@@ -887,7 +987,7 @@ export default function Calendar() {
       {/* --- CREATE EVENT MODAL --- */}
       {showCreateModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-3 py-6 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-lg rounded-3xl bg-theme-card border border-theme-border p-6 shadow-2xl space-y-4 my-auto">
+          <div className="w-full max-w-4xl rounded-3xl bg-theme-card border border-theme-border p-6 shadow-2xl space-y-4 my-auto">
             <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
               <h3 className="text-base font-extrabold text-theme-text">Create New Event</h3>
               <button onClick={() => setShowCreateModal(false)} className="p-1.5 rounded-xl bg-theme-bg-alt text-theme-text-muted">
@@ -895,75 +995,117 @@ export default function Calendar() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Sales Meeting / Lead Outreach"
-                  value={createForm.title}
-                  onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-xs font-bold text-theme-text outline-none focus:border-blue-500"
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+              
+              {/* Form Section */}
+              <div className="md:col-span-7 space-y-4">
+                <form onSubmit={handleCreateSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block mb-1">Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Sales Meeting / Lead Outreach"
+                      value={createForm.title}
+                      onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-xs font-bold text-theme-text outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block mb-1">Category</label>
+                    <select
+                      value={createForm.eventType}
+                      onChange={(e) => setCreateForm({ ...createForm, eventType: e.target.value as EventType })}
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-3 text-xs font-bold text-theme-text outline-none focus:border-blue-500"
+                    >
+                      <option value="MEETING">Meeting</option>
+                      <option value="FOLLOW_UP">Follow-up</option>
+                      <option value="PERSONAL_REMINDER">Personal Reminder</option>
+                      <option value="TASK">Task</option>
+                      <option value="CALL_REMINDER">Call Reminder</option>
+                    </select>
+                  </div>
+
+                  {createForm.startTime && new Date(createForm.startTime).getTime() < Date.now() - 60000 && (
+                    <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3.5 py-2.5 text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                      <span>⚠️</span>
+                      <span>Event time is in the past. Meetings can only be scheduled for present or future times.</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block mb-1">Event Date *</label>
+                    <input
+                      type="date"
+                      required
+                      min={formatLocalDateTime(new Date()).slice(0, 10)}
+                      value={createForm.startTime ? createForm.startTime.slice(0, 10) : formatLocalDateTime(new Date()).slice(0, 10)}
+                      onChange={(e) => {
+                        const dateVal = e.target.value;
+                        if (!dateVal) return;
+                        const timePart = createForm.startTime && createForm.startTime.includes('T') ? createForm.startTime.split('T')[1] : '10:00';
+                        const newStart = `${dateVal}T${timePart}`;
+                        const startDate = new Date(newStart);
+                        const endDate = !isNaN(startDate.getTime()) ? formatLocalDateTime(new Date(startDate.getTime() + 3600000)) : '';
+                        setCreateForm({ ...createForm, startTime: newStart, endTime: endDate });
+                      }}
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-3 text-xs text-theme-text font-bold outline-none focus:border-blue-500"
+                    />
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl w-max">
+                      <Clock size={12} />
+                      <span>Selected Time: {createForm.startTime && createForm.startTime.includes('T') ? new Date(createForm.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00 AM'}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block mb-1">Description & Agenda</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Meeting agenda or details..."
+                      value={createForm.description}
+                      onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-3 text-xs text-theme-text outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateModal(false)}
+                      className="rounded-2xl border border-theme-border bg-theme-bg-alt px-4 py-2 text-xs font-semibold text-theme-text-muted"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="rounded-2xl bg-blue-600 hover:bg-blue-700 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all"
+                    >
+                      Save Event
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Side Schedule Agenda Preview */}
+              <div className="md:col-span-5 w-full">
+                <SchedulePreviewSidePanel
+                  selectedDate={createForm.startTime}
+                  onSelectSlot={(slotTime) => {
+                    const startDt = new Date(slotTime);
+                    const endDt = new Date(startDt.getTime() + 3600000);
+                    setCreateForm({
+                      ...createForm,
+                      startTime: slotTime,
+                      endTime: formatLocalDateTime(endDt)
+                    });
+                  }}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block mb-1">Category</label>
-                  <select
-                    value={createForm.eventType}
-                    onChange={(e) => setCreateForm({ ...createForm, eventType: e.target.value as EventType })}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-3 text-xs font-bold text-theme-text outline-none focus:border-blue-500"
-                  >
-                    <option value="MEETING">Meeting</option>
-                    <option value="FOLLOW_UP">Follow-up</option>
-                    <option value="PERSONAL_REMINDER">Personal Reminder</option>
-                    <option value="TASK">Task</option>
-                    <option value="CALL_REMINDER">Call Reminder</option>
-                  </select>
-                </div>
+            </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block mb-1">Start Time *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={createForm.startTime}
-                    onChange={(e) => setCreateForm({ ...createForm, startTime: e.target.value })}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2 px-3 text-xs text-theme-text font-bold outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block mb-1">Description & Agenda</label>
-                <textarea
-                  rows={3}
-                  placeholder="Meeting agenda or details..."
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-3 text-xs text-theme-text outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="rounded-2xl border border-theme-border bg-theme-bg-alt px-4 py-2 text-xs font-semibold text-theme-text-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="rounded-2xl bg-blue-600 hover:bg-blue-700 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all"
-                >
-                  Save Event
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
@@ -1034,6 +1176,20 @@ export default function Calendar() {
           </div>
         </div>
       )}
+
+      {/* --- CALENDAR SETTINGS & CATEGORY MANAGEMENT MODAL --- */}
+      <CalendarSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        events={events}
+        onEventsUpdated={fetchEvents}
+        categories={categories}
+        onCategoriesUpdated={setCategories}
+        defaultView={view}
+        onDefaultViewChange={setView}
+        defaultReminder={defaultReminder}
+        onDefaultReminderChange={setDefaultReminder}
+      />
 
     </div>
   );

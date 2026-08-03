@@ -55,8 +55,8 @@ public class PriorityService {
 
         for (Lead lead : leads) {
             String status = lead.getStatus() != null ? lead.getStatus() : "New";
-            // Ignore converted or lost from active priority queue
-            if ("Converted".equalsIgnoreCase(status) || "Lost".equalsIgnoreCase(status)) {
+            // Ignore converted, lost, or rejected from active priority queue
+            if ("Converted".equalsIgnoreCase(status) || "Lost".equalsIgnoreCase(status) || "Rejected".equalsIgnoreCase(status)) {
                 continue;
             }
 

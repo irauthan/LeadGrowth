@@ -709,6 +709,19 @@ public class LeadService {
             }
         }
 
+        // When activity is logged (executive talked/interacted with client), complete any due/past follow-up for this lead
+        List<FollowupReminder> existingReminders = followupRepository.findByLeadIdOrderByScheduledAtDesc(lead.getId());
+        for (FollowupReminder r : existingReminders) {
+            if ("UPCOMING".equalsIgnoreCase(r.getStatus()) || "PENDING".equalsIgnoreCase(r.getStatus()) || "OVERDUE".equalsIgnoreCase(r.getStatus())) {
+                if (r.getScheduledAt() != null && !r.getScheduledAt().isAfter(LocalDateTime.now())) {
+                    r.setStatus("COMPLETED");
+                    r.setCompletedAt(LocalDateTime.now());
+                    if (request.getOutcome() != null) r.setOutcome(request.getOutcome());
+                    followupRepository.save(r);
+                }
+            }
+        }
+
         // Timeline Audit History
         LeadHistory history = new LeadHistory(
                 lead,

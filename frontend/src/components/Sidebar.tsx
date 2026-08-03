@@ -68,7 +68,6 @@ export default function Sidebar() {
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
     { name: 'Notifications', icon: Bell, path: '/notifications-page' },
     { name: 'Settings', icon: Settings, path: '/settings' },
-    { name: 'Priority Center', icon: Zap, path: '/priority-center' },
     { name: 'Follow-ups', icon: Clock, path: '/followups' },
     { name: 'Team Management', icon: Users, path: '/users' },
     { name: 'Activity Logs', icon: History, path: '/activity-logs' },

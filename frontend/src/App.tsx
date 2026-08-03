@@ -24,7 +24,6 @@ import AcceptInvite from './pages/AcceptInvite';
 import Billing from './pages/Billing';
 import SecurityCenter from './pages/SecurityCenter';
 import MyWork from './pages/MyWork';
-import PriorityCenter from './pages/PriorityCenter';
 import Calendar from './pages/Calendar';
 
 export default function App() {
@@ -43,7 +42,6 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/my-work" element={<MyWork />} />
-          <Route path="/priority-center" element={<PriorityCenter />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/leads" element={<Leads />} />
