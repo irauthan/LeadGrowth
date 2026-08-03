@@ -15,8 +15,7 @@ import {
   Zap,
   ChevronRight,
   Briefcase,
-  Eye,
-  LayoutGrid
+  Eye
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
@@ -154,13 +153,6 @@ export default function UserDashboard() {
 
         <div className="flex items-center gap-3 flex-wrap">
           <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
-          <Link
-            to="/settings"
-            className="flex items-center gap-2 rounded-2xl bg-theme-bg-alt border border-theme-border hover:bg-theme-card px-3 py-2.5 text-xs font-bold text-theme-text transition-all"
-            title="Edit and customize Dashboard Cards layout in Settings"
-          >
-            <LayoutGrid size={14} className="text-theme-primary" /> Edit Cards
-          </Link>
           <Link
             to="/my-work"
             className="flex items-center gap-2 rounded-2xl bg-theme-bg-alt border border-theme-border hover:bg-theme-card px-4 py-2.5 text-xs font-bold text-theme-text transition-all"
