@@ -30,7 +30,8 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @Column(name = "profile_image", length = 255)
+    @Lob
+    @Column(name = "profile_image", columnDefinition = "LONGTEXT")
     private String profileImage;
 
     @Column(length = 20)

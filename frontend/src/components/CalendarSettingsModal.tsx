@@ -136,8 +136,8 @@ export default function CalendarSettingsModal({
               <Settings size={20} />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-theme-text">Calendar Settings & Preferences</h3>
-              <p className="text-xs text-theme-text-muted">Manage default views, sub-calendars, categories, and bulk event cleanup.</p>
+              <h3 className="text-lg font-extrabold text-theme-text">Scheduler Settings & Preferences</h3>
+              <p className="text-xs text-theme-text-muted">Manage default views, schedulers, categories, and bulk event cleanup.</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl bg-theme-bg-alt text-theme-text-muted hover:text-theme-text">

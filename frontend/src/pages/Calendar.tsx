@@ -416,12 +416,12 @@ export default function Calendar() {
             <Menu size={20} />
           </button>
 
-          {/* Google Calendar Logo Icon */}
+          {/* Scheduler Logo Icon */}
           <div className="flex items-center gap-2.5 mr-2">
             <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-extrabold text-lg shadow-md shadow-blue-500/20">
               <span>{new Date().getDate()}</span>
             </div>
-            <span className="text-xl font-bold text-theme-text tracking-tight hidden sm:inline">Calendar</span>
+            <span className="text-xl font-bold text-theme-text tracking-tight hidden sm:inline">Scheduler</span>
           </div>
 
           {/* Today Button */}
@@ -637,14 +637,14 @@ export default function Calendar() {
               />
             </div>
 
-            {/* My Calendars Filters (Exact Google Calendar Checkboxes & Dynamic Categories) */}
+            {/* My Schedulers Filters */}
             <div className="space-y-3 pt-2 border-t border-theme-border/50">
               <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
-                <span>My calendars</span>
+                <span>My schedulers</span>
                 <button
                   onClick={() => setShowSettingsModal(true)}
                   className="p-1 rounded-lg hover:bg-theme-bg-alt text-theme-text-muted transition-colors"
-                  title="Manage Calendars & Settings"
+                  title="Manage Schedulers & Settings"
                 >
                   <Settings size={14} />
                 </button>
@@ -670,10 +670,10 @@ export default function Calendar() {
               </div>
             </div>
 
-            {/* Other Calendars Section */}
+            {/* Other Schedulers Section */}
             <div className="space-y-2 pt-2 border-t border-theme-border/50">
               <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
-                <span>Other calendars</span>
+                <span>Other schedulers</span>
                 <Plus size={14} className="text-theme-text-muted cursor-pointer" />
               </div>
             </div>
@@ -687,7 +687,7 @@ export default function Calendar() {
           {loading ? (
             <div className="flex h-full items-center justify-center space-y-3 flex-col">
               <Loader2 size={36} className="animate-spin text-blue-600" />
-              <span className="text-xs font-bold text-theme-text-muted">Syncing Google Calendar View...</span>
+              <span className="text-xs font-bold text-theme-text-muted">Syncing Scheduler View...</span>
             </div>
           ) : (
             <>

@@ -148,7 +148,7 @@ export default function TaskRescheduleModal({ task, isOpen, onClose, onSuccess }
 
           <div className="p-3 rounded-2xl bg-theme-primary/5 border border-theme-primary/20 text-[10px] font-bold text-theme-text-muted flex items-center gap-2">
             <CheckCircle2 size={14} className="text-emerald-500" />
-            <span>Automatically syncs with Google Calendar module & notifies assigned team manager.</span>
+            <span>Automatically syncs with Scheduler module & notifies assigned team manager.</span>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">

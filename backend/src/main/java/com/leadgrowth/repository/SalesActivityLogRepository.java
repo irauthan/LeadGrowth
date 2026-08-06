@@ -11,4 +11,7 @@ public interface SalesActivityLogRepository extends JpaRepository<SalesActivityL
     List<SalesActivityLog> findBySalesActivityIdOrderByActivityNumberAsc(Long salesActivityId);
     List<SalesActivityLog> findBySalesActivityIdOrderByActivityNumberDesc(Long salesActivityId);
     List<SalesActivityLog> findByLeadIdOrderByCreatedAtDesc(Long leadId);
+    List<SalesActivityLog> findByLeadIdOrderByCreatedAtAsc(Long leadId);
+    List<SalesActivityLog> findByLoggedByIdAndCreatedAtBetweenOrderByCreatedAtDesc(Long loggedById, java.time.LocalDateTime start, java.time.LocalDateTime end);
+    List<SalesActivityLog> findByCreatedAtBetweenOrderByCreatedAtDesc(java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

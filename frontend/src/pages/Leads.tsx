@@ -14,8 +14,9 @@ import {
   Flame,
   Zap,
   Briefcase,
-  Clock,
-  AlertCircle
+  AlertCircle,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
@@ -36,6 +37,11 @@ export default function Leads() {
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+
+  // Bulk Selection & Auto-Assign state
+  const [selectedLeadIds, setSelectedLeadIds] = useState<number[]>([]);
+  const [bulkAssigning, setBulkAssigning] = useState(false);
+  const isManagementUser = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ROLE_MANAGER');
 
   // Lead Create Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -59,12 +65,14 @@ export default function Leads() {
   const fetchLeads = async () => {
     try {
       const res = await api.get('/api/leads');
-      setLeads(res.data);
-      if (res.data.length > 0) {
-        setSelectedLead(res.data[0]);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setLeads(data);
+      if (data.length > 0) {
+        setSelectedLead(data[0]);
       }
     } catch (e) {
       console.error(e);
+      setLeads([]);
     } finally {
       setLoading(false);
     }
@@ -73,11 +81,12 @@ export default function Leads() {
   const fetchMembers = async () => {
     try {
       const res = await api.get('/api/users/assignable');
-      setMembers(res.data);
+      setMembers(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       try {
         const res2 = await api.get('/api/users/members');
-        const salesExecs = (res2.data || []).filter((m: any) => {
+        const list = Array.isArray(res2.data) ? res2.data : [];
+        const salesExecs = list.filter((m: any) => {
           const roleNames = (m.roles || []).map((r: any) => (r.name || r || '').toUpperCase());
           const hasUser = roleNames.includes('ROLE_USER') || roleNames.includes('USER');
           const hasAdminOrManager = roleNames.includes('ROLE_ADMIN') || roleNames.includes('ADMIN') || roleNames.includes('ROLE_MANAGER') || roleNames.includes('MANAGER');
@@ -86,6 +95,7 @@ export default function Leads() {
         setMembers(salesExecs);
       } catch (err) {
         console.error(err);
+        setMembers([]);
       }
     }
   };
@@ -93,9 +103,10 @@ export default function Leads() {
   const fetchCampaigns = async () => {
     try {
       const res = await api.get('/api/campaigns');
-      setCampaigns(res.data);
+      setCampaigns(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       console.error(e);
+      setCampaigns([]);
     }
   };
 
@@ -164,6 +175,65 @@ export default function Leads() {
     }
   };
 
+  const handleToggleSelectAll = () => {
+    if (selectedLeadIds.length === filteredLeads.length) {
+      setSelectedLeadIds([]);
+    } else {
+      setSelectedLeadIds(filteredLeads.map((l) => l.id));
+    }
+  };
+
+  const handleToggleSelectLead = (e: React.MouseEvent, leadId: number) => {
+    e.stopPropagation();
+    setSelectedLeadIds((prev) =>
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId]
+    );
+  };
+
+  const handleBulkAutoAssign = async () => {
+    if (selectedLeadIds.length === 0) return;
+    setBulkAssigning(true);
+    try {
+      await api.post(`/api/leads/bulk-assign?leadIds=${selectedLeadIds.join(',')}&userId=-1`);
+      alert(`Successfully auto-assigned ${selectedLeadIds.length} lead(s) via Smart Hybrid Engine!`);
+      setSelectedLeadIds([]);
+      fetchLeads();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to bulk auto-assign leads.');
+    } finally {
+      setBulkAssigning(false);
+    }
+  };
+
+  const handleBulkManualAssign = async (targetUserId: number) => {
+    if (selectedLeadIds.length === 0 || !targetUserId) return;
+    setBulkAssigning(true);
+    try {
+      await api.post(`/api/leads/bulk-assign?leadIds=${selectedLeadIds.join(',')}&userId=${targetUserId}`);
+      alert(`Successfully assigned ${selectedLeadIds.length} lead(s) to selected team member!`);
+      setSelectedLeadIds([]);
+      fetchLeads();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to bulk assign leads.');
+    } finally {
+      setBulkAssigning(false);
+    }
+  };
+
+  const handleSingleAutoAssign = async (e: React.MouseEvent, leadId: number) => {
+    e.stopPropagation();
+    try {
+      await api.post(`/api/leads/${leadId}/auto-assign`);
+      alert('Lead successfully auto-assigned via Smart Hybrid Engine!');
+      fetchLeads();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to auto-assign lead.');
+    }
+  };
+
   const handleExport = async (format: 'csv' | 'excel' | 'pdf') => {
     try {
       await downloadReport('leads', format);
@@ -191,12 +261,13 @@ export default function Leads() {
   };
 
   // Priority Engine Counters
-  const overdueCount = leads.filter(isLeadOverdue).length;
-  const highPriorityCount = leads.filter((l) => l.priority === 'HIGH' || l.qualityTier === 'HOT').length;
-  const newLeadsCount = leads.filter((l) => l.status === 'New').length;
+  const leadsArray = Array.isArray(leads) ? leads : [];
+  const overdueCount = leadsArray.filter(isLeadOverdue).length;
+  const highPriorityCount = leadsArray.filter((l) => l.priority === 'HIGH' || l.qualityTier === 'HOT').length;
+  const newLeadsCount = leadsArray.filter((l) => l.status === 'New').length;
 
   // Filtered Leads
-  const filteredLeads = leads.filter((l) => {
+  const filteredLeads = leadsArray.filter((l) => {
     const matchesSearch = 
       !search ||
       l.name?.toLowerCase().includes(search.toLowerCase()) || 
@@ -407,12 +478,69 @@ export default function Leads() {
               </div>
             </div>
 
+              {/* Management Bulk Auto-Assign Controls */}
+              {isManagementUser && filteredLeads.length > 0 && (
+                <div className="p-3 rounded-2xl bg-theme-bg-alt/70 border border-theme-border space-y-2">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handleToggleSelectAll}
+                      className="flex items-center gap-1.5 text-xs font-bold text-theme-text-muted hover:text-theme-text"
+                    >
+                      {selectedLeadIds.length === filteredLeads.length ? (
+                        <CheckSquare size={16} className="text-theme-primary" />
+                      ) : (
+                        <Square size={16} />
+                      )}
+                      <span>Select All ({filteredLeads.length})</span>
+                    </button>
+
+                    {selectedLeadIds.length > 0 && (
+                      <span className="text-[11px] font-extrabold text-theme-primary bg-theme-primary/10 px-2 py-0.5 rounded-full border border-theme-primary/20">
+                        {selectedLeadIds.length} Selected
+                      </span>
+                    )}
+                  </div>
+
+                  {selectedLeadIds.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleBulkAutoAssign}
+                        disabled={bulkAssigning}
+                        className="w-full sm:w-auto flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-theme-primary to-indigo-500 hover:opacity-90 text-white text-xs font-extrabold shadow-md disabled:opacity-50 transition-all"
+                      >
+                        {bulkAssigning ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
+                        <span>⚡ Bulk Auto-Assign ({selectedLeadIds.length})</span>
+                      </button>
+
+                      <select
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (val) handleBulkManualAssign(val);
+                        }}
+                        disabled={bulkAssigning}
+                        className="w-full sm:w-auto rounded-xl border border-theme-border bg-theme-card px-2.5 py-1.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
+                      >
+                        <option value="">Bulk Assign To...</option>
+                        {members.map((m: any) => (
+                          <option key={m.id} value={m.id}>
+                            {m.fullName || m.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+
             {/* Feed List Items */}
             <div className="max-h-[650px] space-y-2.5 overflow-y-auto pr-1">
               {filteredLeads.map((lead) => {
                 const isSelected = selectedLead?.id === lead.id;
                 const isLostLead = lead.status === 'Lost' || lead.status === 'Rejected';
                 const isOverdue = isLeadOverdue(lead);
+                const isChecked = selectedLeadIds.includes(lead.id);
 
                 return (
                   <button
@@ -429,12 +557,26 @@ export default function Leads() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`font-bold ${isOverdue ? 'text-rose-500 font-extrabold' : isLostLead ? 'text-rose-400' : 'text-theme-text'}`}>
-                        {lead.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {isManagementUser && (
+                          <div
+                            onClick={(e) => handleToggleSelectLead(e, lead.id)}
+                            className="text-theme-text-muted hover:text-theme-primary cursor-pointer"
+                          >
+                            {isChecked ? (
+                              <CheckSquare size={16} className="text-theme-primary" />
+                            ) : (
+                              <Square size={16} />
+                            )}
+                          </div>
+                        )}
+                        <span className={`font-bold ${isOverdue ? 'text-rose-500 font-extrabold' : isLostLead ? 'text-rose-400' : 'text-theme-text'}`}>
+                          {lead.name}
+                        </span>
+                      </div>
                       <span className="text-[10px] text-theme-text-muted">{formatShortDate(lead.createdAt)}</span>
                     </div>
-                    <p className="mt-1 text-xs text-theme-text-muted truncate">{lead.email}</p>
+                    <p className="mt-1 text-xs text-theme-text-muted truncate pl-6">{lead.email}</p>
 
                     {isOverdue && (
                       <div className="mt-2 flex items-center gap-1 text-[10px] font-extrabold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-lg border border-rose-500/20 w-max">
@@ -448,15 +590,28 @@ export default function Leads() {
                       }`}>
                         {lead.sourcePlatform}
                       </span>
-                      <span className={`rounded px-2 py-0.5 text-[9px] font-extrabold ${
-                        isOverdue
-                          ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30'
-                          : isLostLead 
-                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                          : 'bg-theme-primary/10 text-theme-primary'
-                      }`}>
-                        {isOverdue ? 'OVERDUE' : isLostLead ? `🔴 ${lead.status.toUpperCase()}` : lead.status}
-                      </span>
+
+                      <div className="flex items-center gap-1.5">
+                        {isManagementUser && (
+                          <div
+                            onClick={(e) => handleSingleAutoAssign(e, lead.id)}
+                            className="flex items-center gap-1 text-[9px] font-extrabold text-theme-primary bg-theme-primary/10 hover:bg-theme-primary/20 px-2 py-0.5 rounded-lg border border-theme-primary/20 transition-all cursor-pointer"
+                            title="Auto-Assign this single lead using Smart AI Engine"
+                          >
+                            <Zap size={10} /> Auto-Assign
+                          </div>
+                        )}
+
+                        <span className={`rounded px-2 py-0.5 text-[9px] font-extrabold ${
+                          isOverdue
+                            ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30'
+                            : isLostLead 
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                            : 'bg-theme-primary/10 text-theme-primary'
+                        }`}>
+                          {isOverdue ? 'OVERDUE' : isLostLead ? `🔴 ${lead.status.toUpperCase()}` : lead.status}
+                        </span>
+                      </div>
                     </div>
                   </button>
                 );

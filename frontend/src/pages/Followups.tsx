@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { followUpService, type FollowUp } from '../services/followUpService';
 import FollowUpModal from '../components/FollowUpModal';
@@ -9,21 +9,14 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Plus, 
-  Check, 
   Loader2, 
   Search,
-  History,
-  X,
-  Phone,
-  Mail,
   Zap,
   Tag,
   User as UserIcon,
   Calendar,
-  AlertTriangle,
   RefreshCw,
   Ban,
-  TrendingUp,
   Filter
 } from 'lucide-react';
 
@@ -110,24 +103,34 @@ export default function Followups() {
   };
 
   const handleBulkAutoSchedule = async () => {
-    const pendingLeads = followups
-      .filter((f) => f.status === 'UPCOMING' || f.status === 'PENDING' || f.status === 'OVERDUE')
-      .map((f) => f.leadId);
+    const closedStages = ['CLOSED', 'DISQUALIFIED'];
+    const pendingFollowups = followups.filter((f) => {
+      if (f.status === 'COMPLETED' || f.status === 'CANCELLED') return false;
+      const st = f.leadStage ? f.leadStage.trim().toUpperCase() : '';
+      if (closedStages.includes(st)) return false;
+      return true;
+    });
 
+    const pendingLeads = pendingFollowups.map((f) => f.leadId);
     const uniqueLeadIds = Array.from(new Set(pendingLeads));
     if (uniqueLeadIds.length === 0) {
-      alert('No pending or overdue leads found to auto-schedule.');
+      alert('No eligible active or overdue leads found to auto-schedule.');
       return;
     }
 
-    if (!window.confirm(`Auto-schedule ${uniqueLeadIds.length} pending/overdue leads to nearest available working hour slots?`)) return;
+    const overdueCount = pendingFollowups.filter(f => f.status === 'OVERDUE' || f.status === 'MISSED' || f.isOverdue).length;
+    const promptMsg = overdueCount > 0
+      ? `Auto-schedule ${uniqueLeadIds.length} leads? (${overdueCount} overdue leads will automatically be escalated to High Priority and rescheduled into nearest future slots)`
+      : `Auto-schedule ${uniqueLeadIds.length} active leads to nearest available working hour slots?`;
+
+    if (!window.confirm(promptMsg)) return;
 
     setBulkScheduling(true);
     try {
       await followUpService.bulkAutoSchedule(uniqueLeadIds);
-      setSuccessMsg(`Successfully auto-scheduled ${uniqueLeadIds.length} leads without conflicts!`);
+      setSuccessMsg(`Successfully auto-scheduled ${uniqueLeadIds.length} leads cleanly without conflicts!`);
       fetchFollowups();
-      setTimeout(() => setSuccessMsg(''), 3500);
+      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Bulk auto schedule failed.');
     } finally {
@@ -155,8 +158,12 @@ export default function Followups() {
     if (statusTab === 'COMPLETED' && f.status !== 'COMPLETED') return false;
     if (statusTab === 'CANCELLED' && f.status !== 'CANCELLED') return false;
 
-    // 2. Stage Filter
-    if (stageFilter !== 'ALL' && f.leadStage !== stageFilter) return false;
+    // 2. Stage Filter (flexible matching so all ongoing work stages display)
+    if (stageFilter !== 'ALL') {
+      const sFilter = stageFilter.toLowerCase();
+      const lStage = (f.leadStage || '').toLowerCase();
+      if (!lStage.includes(sFilter) && !sFilter.includes(lStage)) return false;
+    }
 
     // 3. Search Filter
     if (searchTerm) {
@@ -326,7 +333,6 @@ export default function Followups() {
         ) : (
           <div className="divide-y divide-theme-border/50">
             {filteredFollowups.map((f) => {
-              const isDone = f.status === 'COMPLETED';
               const isOverdue = f.isOverdue || f.status === 'OVERDUE' || f.status === 'MISSED';
 
               return (

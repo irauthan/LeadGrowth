@@ -8,8 +8,51 @@ import {
   Smartphone, 
   Briefcase, 
   FileText,
-  Camera
+  Camera,
+  Upload,
+  Trash2
 } from 'lucide-react';
+
+const compressImageFile = (file: File, maxWidth = 350, maxHeight = 350, quality = 0.85): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('Failed to load image.'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function Profile() {
   const user = useAuthStore((state) => state.user);
@@ -23,6 +66,25 @@ export default function Profile() {
     bio: user?.bio || '',
     profileImage: user?.profileImage || '',
   });
+
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 8 * 1024 * 1024) {
+      setProfileError('Image size should be less than 8MB.');
+      return;
+    }
+
+    try {
+      const compressedBase64 = await compressImageFile(file);
+      setProfileForm((prev) => ({ ...prev, profileImage: compressedBase64 }));
+      setProfileError('');
+    } catch (err) {
+      console.error(err);
+      setProfileError('Failed to process image file.');
+    }
+  };
 
   const [passwordForm, setPasswordForm] = useState({
     oldPassword: '',
@@ -118,13 +180,27 @@ export default function Profile() {
                 <img
                   src={profileForm.profileImage}
                   alt="avatar"
-                  className="h-28 w-28 rounded-3xl object-cover shadow-md"
+                  className="h-28 w-28 rounded-3xl object-cover shadow-md border-2 border-theme-border"
                 />
               ) : (
                 <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-theme-primary text-3xl font-extrabold text-white shadow-md">
                   {getInitials(user?.fullName || '')}
                 </div>
               )}
+              <label
+                htmlFor="avatar-file-input"
+                className="absolute inset-0 rounded-3xl bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer text-white text-[11px] font-extrabold gap-1 backdrop-blur-xs shadow-lg"
+              >
+                <Camera size={22} />
+                <span>Upload Photo</span>
+              </label>
+              <input
+                id="avatar-file-input"
+                type="file"
+                accept="image/*"
+                onChange={handleImageFileUpload}
+                className="hidden"
+              />
             </div>
 
             <h3 className="text-xl font-bold text-theme-text">{user?.fullName}</h3>
@@ -204,19 +280,29 @@ export default function Profile() {
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Avatar Image URL</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-4 flex items-center text-theme-text-muted">
-                      <Camera size={16} />
-                    </span>
-                    <input
-                      type="url"
-                      placeholder="https://images.unsplash.com/photo-..."
-                      value={profileForm.profileImage}
-                      onChange={(e) => setProfileForm({ ...profileForm, profileImage: e.target.value })}
-                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 pl-11 pr-4 text-sm outline-none focus:border-theme-primary text-theme-text"
-                    />
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-theme-text-muted">Profile Avatar Photo</label>
+                  <div className="flex items-center gap-3 mt-1">
+                    <label className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text hover:bg-theme-border/40 cursor-pointer transition-all">
+                      <Upload size={16} className="text-theme-primary" />
+                      <span>{profileForm.profileImage ? 'Change Photo File' : 'Upload Photo File'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {profileForm.profileImage && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileForm({ ...profileForm, profileImage: '' })}
+                        className="px-3.5 py-2.5 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 text-xs font-bold hover:bg-rose-500/20 transition-all flex items-center gap-1.5"
+                      >
+                        <Trash2 size={14} /> Remove Photo
+                      </button>
+                    )}
                   </div>
+                  <p className="mt-1 text-[10px] font-semibold text-theme-text-muted">Choose any JPG, PNG, WEBP, GIF or SVG file (Max 5MB)</p>
                 </div>
               </div>
 

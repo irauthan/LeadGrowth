@@ -47,11 +47,11 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-300">
+    <div className="min-h-screen max-w-full overflow-x-hidden bg-theme-bg text-theme-text transition-colors duration-300">
       <Sidebar />
-      <div className={`flex flex-col min-h-screen transition-all duration-300 ${getMainDesktopPadding()}`}>
+      <div className={`flex flex-col min-h-screen max-w-full overflow-x-hidden transition-all duration-300 ${getMainDesktopPadding()}`}>
         <Navbar />
-        <main className={`flex-1 px-3 sm:px-6 ${getMainContentPadding()}`}>
+        <main className={`flex-1 max-w-full overflow-x-hidden px-3 sm:px-6 ${getMainContentPadding()}`}>
           <Outlet />
         </main>
         <Footer />

@@ -25,6 +25,7 @@ import Billing from './pages/Billing';
 import SecurityCenter from './pages/SecurityCenter';
 import MyWork from './pages/MyWork';
 import Calendar from './pages/Calendar';
+import ExecutiveWorkMonitor from './pages/ExecutiveWorkMonitor';
 
 export default function App() {
   return (
@@ -42,7 +43,8 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/my-work" element={<MyWork />} />
-          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/scheduler" element={<Calendar />} />
+          <Route path="/calendar" element={<Navigate to="/scheduler" replace />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/followups" element={<Followups />} />
@@ -58,6 +60,7 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
 
           {/* Admin specific controls */}
+          <Route path="/admin/work-monitor" element={<ExecutiveWorkMonitor />} />
           <Route path="/admin/users" element={<UserManagement />} />
           <Route path="/admin/workspace" element={<WorkspaceManagement />} />
           <Route path="/admin/api" element={<ApiManagement />} />

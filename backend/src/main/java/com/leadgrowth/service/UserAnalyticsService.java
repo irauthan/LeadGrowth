@@ -1,5 +1,6 @@
 package com.leadgrowth.service;
 
+import com.leadgrowth.entity.FollowupReminder;
 import com.leadgrowth.entity.Lead;
 import com.leadgrowth.entity.Task;
 import com.leadgrowth.entity.User;
@@ -73,8 +74,12 @@ public class UserAnalyticsService {
         long activeTasksCount = myTasks.size() - completedTasksCount;
         long conversionsCount = myLeads.stream().filter(l -> "Converted".equalsIgnoreCase(l.getStatus())).count();
 
-        long pendingFollowupsCount = followupRepository.findByWorkspaceIdOrderByScheduledAtAsc(workspaceId).stream()
-                .filter(f -> f.getLead() != null && userId.equals(f.getLead().getAssignedToId()) && !"COMPLETED".equalsIgnoreCase(f.getStatus()))
+        List<FollowupReminder> workspaceReminders = followupRepository.findByWorkspaceIdOrderByScheduledAtAsc(workspaceId);
+        long pendingFollowupsCount = workspaceReminders.stream()
+                .filter(f -> !"COMPLETED".equalsIgnoreCase(f.getStatus()) && !"CANCELLED".equalsIgnoreCase(f.getStatus()))
+                .filter(f -> f.getLead() == null || (!"New".equalsIgnoreCase(f.getLead().getStatus()) && !"New Lead".equalsIgnoreCase(f.getLead().getStatus())))
+                .filter(f -> (f.getAssignedTo() != null && userId.equals(f.getAssignedTo().getId())) ||
+                             (f.getLead() != null && f.getLead().getAssignedTo() != null && userId.equals(f.getLead().getAssignedTo().getId())))
                 .count();
 
         double personalRevenue = myLeads.stream()

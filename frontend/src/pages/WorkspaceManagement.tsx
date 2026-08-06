@@ -37,14 +37,16 @@ export default function WorkspaceManagement() {
     try {
       const res = await api.get('/api/workspaces/current');
       const ws = res.data;
-      setWorkspaceName(ws.name);
-      setWorkspaceSlug(ws.slug);
-      setInviteCode(ws.inviteCode);
-      setCompanyName(ws.companyName || '');
-      setIndustry(ws.industry || '');
-      setTeamSize(ws.teamSize || 1);
-      setWebsite(ws.website || '');
-      setTimezone(ws.timezone || 'UTC');
+      if (ws) {
+        setWorkspaceName(ws.name || user?.workspaceName || 'Default Workspace');
+        setWorkspaceSlug(ws.slug || user?.workspaceSlug || 'default-slug');
+        setInviteCode(ws.inviteCode || user?.inviteCode || 'LG-DEFAULT');
+        setCompanyName(ws.companyName || '');
+        setIndustry(ws.industry || '');
+        setTeamSize(ws.teamSize || 1);
+        setWebsite(ws.website || '');
+        setTimezone(ws.timezone || 'UTC');
+      }
     } catch (err) {
       console.error('Failed to load workspace settings', err);
     } finally {
@@ -71,13 +73,13 @@ export default function WorkspaceManagement() {
 
       setSuccessMsg('Workspace configurations saved successfully!');
       
-      // Update local Zustand store so changes propagate globally
+      const roleStr = typeof user?.roles?.[0] === 'string' ? user?.roles[0] : (user?.roles?.[0] as any)?.name || 'ROLE_ADMIN';
       setWorkspace(
         res.data.id,
         res.data.name,
         res.data.slug,
         res.data.inviteCode,
-        user?.roles[0]
+        roleStr
       );
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update workspace settings.');

@@ -11,7 +11,6 @@ import {
   Wifi, 
   Clock, 
   CheckCircle, 
-  CreditCard, 
   ExternalLink,
   Plus,
   RefreshCw,
@@ -84,7 +83,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
 
       {/* Header Command Center Banner */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl relative overflow-hidden">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl relative">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
             <Shield size={28} />
@@ -101,12 +100,6 @@ export default function AdminDashboard() {
 
         <div className="flex items-center gap-3 flex-wrap">
           <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
-          <Link
-            to="/settings"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-text hover:bg-theme-border/20 transition-all"
-          >
-            <CreditCard size={14} /> Workspace Billing
-          </Link>
           <Link
             to="/admin/users"
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover text-xs font-bold text-white shadow-lg shadow-theme-primary/10 transition-all"

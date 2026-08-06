@@ -20,6 +20,7 @@ import {
 import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
 import { useLayoutStore } from '../../store/layoutStore';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
 
@@ -49,6 +50,14 @@ export default function UserDashboard() {
     pendingPayment: 0
   });
 
+  // Live WebSocket sync for real-time KPI updates
+  useWebSocket({
+    workspaceId: user?.workspaceId,
+    onLeadReceived: () => {
+      fetchUserData();
+    },
+  });
+
   useEffect(() => {
     fetchUserData();
   }, [timeFilter]);
@@ -74,7 +83,8 @@ export default function UserDashboard() {
 
       setKpis(kpiRes.data);
       setMyLeads(leadsRes.data || []);
-      setFollowups((followupsRes.data || []).filter((f: any) => f.status !== 'COMPLETED'));
+      const activeFollowupList = (followupsRes.data || []).filter((f: any) => f.status !== 'COMPLETED' && f.status !== 'CANCELLED');
+      setFollowups(activeFollowupList);
       setPendingLeads(pendingRes.data || []);
       if (workflowRes.data) {
         setWorkflowPending(workflowRes.data);
@@ -127,7 +137,7 @@ export default function UserDashboard() {
   }
 
   const assignedLeadsCount = kpis?.myAssignedLeads ?? myLeads.length;
-  const pendingFollowupsCount = kpis?.myPendingFollowups ?? followups.length;
+  const pendingFollowupsCount = followups.length > 0 ? followups.length : (kpis?.myPendingFollowups ?? 0);
   const conversionsCount = kpis?.myConversions ?? myLeads.filter(l => l.status === 'Converted').length;
   const personalRevenue = kpis?.myRevenueContribution ?? (conversionsCount * 2500);
 

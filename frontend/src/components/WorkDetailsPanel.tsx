@@ -26,8 +26,8 @@ import {
   Maximize2,
   Minimize2,
   UserCheck,
-  UserPlus,
-  Loader2
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
@@ -180,16 +180,38 @@ export default function WorkDetailsPanel({
     if (!leadId || !selectedAssigneeId) return;
     setAssigningLead(true);
     try {
-      await api.patch(`/api/leads/${leadId}/assign`, null, {
-        params: { userId: parseInt(selectedAssigneeId, 10) }
-      });
-      setAssignSuccessMsg('Lead successfully assigned!');
+      if (selectedAssigneeId === '-1') {
+        await api.post(`/api/leads/${leadId}/auto-assign`);
+        setAssignSuccessMsg('Lead successfully auto-assigned via Smart AI Hybrid Engine!');
+      } else {
+        await api.patch(`/api/leads/${leadId}/assign`, null, {
+          params: { userId: parseInt(selectedAssigneeId, 10) }
+        });
+        setAssignSuccessMsg('Lead successfully assigned!');
+      }
       setTimeout(() => setAssignSuccessMsg(''), 4000);
       fetchLeadDetails();
       onLeadUpdated();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to assign lead.');
+      alert(err.response?.data?.message || 'Failed to assign lead.');
+    } finally {
+      setAssigningLead(false);
+    }
+  };
+
+  const handleAutoAssignLead = async () => {
+    if (!leadId) return;
+    setAssigningLead(true);
+    try {
+      await api.post(`/api/leads/${leadId}/auto-assign`);
+      setAssignSuccessMsg('Lead successfully auto-assigned via Smart AI Hybrid Engine!');
+      setTimeout(() => setAssignSuccessMsg(''), 4000);
+      fetchLeadDetails();
+      onLeadUpdated();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to auto-assign lead.');
     } finally {
       setAssigningLead(false);
     }
@@ -205,13 +227,13 @@ export default function WorkDetailsPanel({
         api.get(`/api/leads/${leadId}/activities-history`).catch(() => ({ data: [] }))
       ]);
       setLead(leadRes.data);
-      setClientNotes(leadRes.data.clientNotes || '');
-      setProposalAmount(leadRes.data.proposalAmount || '');
-      setTimeline(timelineRes.data || []);
-      setActivityLogsHistory(logsRes.data || []);
+      setClientNotes(leadRes.data?.clientNotes || '');
+      setProposalAmount(leadRes.data?.proposalAmount || '');
+      setTimeline(Array.isArray(timelineRes.data) ? timelineRes.data : []);
+      setActivityLogsHistory(Array.isArray(logsRes.data) ? logsRes.data : []);
 
       // Auto-expand first non-completed step or first step
-      if (leadRes.data.activities && leadRes.data.activities.length > 0) {
+      if (leadRes.data && Array.isArray(leadRes.data.activities) && leadRes.data.activities.length > 0) {
         const initialExpand: Record<string, boolean> = {};
         let expandedOne = false;
         leadRes.data.activities.forEach((act: SalesActivity) => {
@@ -644,6 +666,7 @@ export default function WorkDetailsPanel({
                                 className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-3 text-xs outline-none focus:border-theme-primary text-theme-text font-bold"
                               >
                                 <option value="">-- Select Sales Executive --</option>
+                                <option value="-1">⚡ Auto-Assign via Smart AI Hybrid Engine</option>
                                 {members.map((m: any) => (
                                   <option key={m.id} value={m.id}>
                                     {m.fullName || m.name} ({m.email})
@@ -653,14 +676,25 @@ export default function WorkDetailsPanel({
                             </div>
                           </div>
 
-                          <div className="flex justify-end gap-3 pt-2">
+                          <div className="flex flex-wrap justify-end gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={handleAutoAssignLead}
+                              disabled={assigningLead}
+                              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-theme-primary to-indigo-500 hover:opacity-90 px-4 py-2.5 text-xs font-bold text-white shadow-md disabled:opacity-50 transition-all cursor-pointer"
+                              title="Automatically assign to best sales rep based on workload score and live availability"
+                            >
+                              {assigningLead ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                              <span>⚡ Auto-Assign (Smart AI Engine)</span>
+                            </button>
+
                             <button
                               type="submit"
                               disabled={assigningLead || !selectedAssigneeId}
-                              className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-5 py-2.5 text-xs font-bold text-white shadow-md disabled:opacity-50 transition-all cursor-pointer"
+                              className="flex items-center gap-2 rounded-2xl bg-theme-card border border-theme-border hover:bg-theme-bg-alt px-5 py-2.5 text-xs font-bold text-theme-text shadow-md disabled:opacity-50 transition-all cursor-pointer"
                             >
                               {assigningLead ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
-                              <span>Assign Lead to Executive</span>
+                              <span>Assign Lead to Selected Executive</span>
                             </button>
                           </div>
                         </form>
@@ -1035,7 +1069,7 @@ export default function WorkDetailsPanel({
                       <Calendar size={16} className="text-theme-primary" /> Schedule Direct Follow-up Task
                     </h3>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Type</label>
                         <select
@@ -1060,16 +1094,38 @@ export default function WorkDetailsPanel({
                           onChange={(e) => {
                             const dateVal = e.target.value;
                             if (!dateVal) return;
-                            const timePart = followupDate && followupDate.includes('T') ? followupDate.split('T')[1] : '10:00';
+                            const timePart = followupDate && followupDate.includes('T') ? followupDate.split('T')[1].slice(0, 5) : '10:00';
                             setFollowupDate(`${dateVal}T${timePart}`);
                           }}
                           className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
                         />
-                        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl w-max">
-                          <Clock size={13} />
-                          <span>Selected Time: {formatTimeDisplay(followupDate)}</span>
-                        </div>
                       </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Time *</label>
+                        <input
+                          type="time"
+                          step="900"
+                          required
+                          value={followupDate && followupDate.includes('T') ? followupDate.split('T')[1].slice(0, 5) : '10:00'}
+                          onChange={(e) => {
+                            const timeVal = e.target.value;
+                            if (!timeVal) return;
+                            const datePart = followupDate ? formatLocalDateOnly(followupDate) : formatLocalDateOnly(new Date());
+                            setFollowupDate(`${datePart}T${timeVal}`);
+                          }}
+                          className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Selected Time Badge & Working Hours */}
+                    <div className="pt-1 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl">
+                        <Clock size={13} />
+                        <span>Selected Time: {formatTimeDisplay(followupDate)}</span>
+                      </div>
+                      <span className="text-[9px] text-theme-text-muted font-bold">Working Hours: 9:00 AM – 7:00 PM</span>
                     </div>
 
                     <div>

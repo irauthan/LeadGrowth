@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, Check } from 'lucide-react';
 
 export interface TimeFilterState {
@@ -18,6 +18,19 @@ export default function TimeFilterDropdown({ value, onChange, className = '' }: 
   const [showCustomRange, setShowCustomRange] = useState(value.period === 'custom');
   const [customStart, setCustomStart] = useState(value.startDate || '');
   const [customEnd, setCustomEnd] = useState(value.endDate || '');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const options = [
     { key: 'daily', label: 'Today' },
@@ -53,7 +66,7 @@ export default function TimeFilterDropdown({ value, onChange, className = '' }: 
   };
 
   return (
-    <div className={`relative inline-block text-left ${className}`}>
+    <div ref={dropdownRef} className={`relative inline-block text-left ${className}`}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}

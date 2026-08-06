@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { 
   LayoutGrid, 
   Table as TableIcon, 
@@ -8,7 +8,6 @@ import {
   Phone, 
   Mail, 
   Building, 
-  Zap, 
   ChevronRight, 
   Sparkles,
   CheckCircle2,
@@ -48,7 +47,6 @@ const STAGES_TABLE_LIST = [
 ];
 
 export default function MyWork() {
-  const navigate = useNavigate();
   const [leads, setLeads] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -219,10 +217,14 @@ export default function MyWork() {
   const getStageLeads = (stageKey: string) => {
     return filteredLeads.filter((l) => {
       const st = l.status || 'New';
+      const isNewLead = st === 'New' || st === 'New Lead';
       const hasScheduledFollowup = !!l.nextFollowupDate;
 
       if (stageKey === 'New') {
-        return st === 'New' && !hasScheduledFollowup;
+        return isNewLead;
+      }
+      if (isNewLead) {
+        return false;
       }
       if (stageKey === 'Interaction') {
         if (hasScheduledFollowup) return false;

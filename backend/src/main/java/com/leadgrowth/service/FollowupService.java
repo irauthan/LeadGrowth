@@ -51,20 +51,26 @@ public class FollowupService {
     }
 
     /**
-     * Rule 3: Find next available slot respecting working hours & avoiding duplicate slots
+     * Rule 3: Find next available slot respecting working hours & avoiding duplicate slots (15-min intervals)
      */
     public LocalDateTime findNextAvailableSlot(Long userId, LocalDateTime startFrom) {
         LocalDateTime candidate = startFrom != null && startFrom.isAfter(LocalDateTime.now()) ? startFrom : LocalDateTime.now();
 
-        // Round to next 30-minute interval
+        // Round to next 15-minute interval
         int minute = candidate.getMinute();
-        if (minute > 0 && minute < 30) {
+        if (minute > 0 && minute < 15) {
+            candidate = candidate.withMinute(15).withSecond(0).withNano(0);
+        } else if (minute > 15 && minute < 30) {
             candidate = candidate.withMinute(30).withSecond(0).withNano(0);
-        } else if (minute > 30) {
+        } else if (minute > 30 && minute < 45) {
+            candidate = candidate.withMinute(45).withSecond(0).withNano(0);
+        } else if (minute > 45) {
             candidate = candidate.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+        } else {
+            candidate = candidate.withSecond(0).withNano(0);
         }
 
-        // Ensure starts within working hours
+        // Ensure starts within working hours (9:00 AM – 7:00 PM)
         if (candidate.toLocalTime().isBefore(WORK_START)) {
             candidate = candidate.with(WORK_START);
         } else if (candidate.toLocalTime().isAfter(WORK_END)) {
@@ -73,20 +79,21 @@ public class FollowupService {
 
         // Loop to find free slot
         int attempts = 0;
-        while (attempts < 200) { // Limit search depth to 200 slots (~4 days)
+        while (attempts < 400) { // Search up to 400 15-min slots (~4 days)
             if (isWithinWorkingHours(candidate)) {
                 boolean hasConflict = followupRepository.existsActiveSlotForUser(userId, candidate, null);
                 if (!hasConflict) {
                     return candidate;
                 }
             }
-            // Advance by 30 mins
-            candidate = candidate.plusMinutes(30);
+            // Advance by 15 mins
+            candidate = candidate.plusMinutes(15);
 
             // If time rolls past 7:00 PM, advance to 9:00 AM next morning
             if (candidate.toLocalTime().isAfter(WORK_END)) {
                 candidate = candidate.plusDays(1).with(WORK_START);
             }
+            attempts++;
         }
         return LocalDateTime.now().plusDays(1).with(WORK_START);
     }
@@ -253,7 +260,11 @@ public class FollowupService {
     }
 
     /**
-     * Scenario 8: Bulk Auto Schedule
+     * Scenario 8 & E1.1: Bulk Auto Schedule
+     * - Overdue leads receive highest priority (High).
+     * - Overdue leads rescheduled into nearest available future slots in chronological order.
+     * - Skip already completed/closed leads.
+     * - Sequential scheduling prevents overlapping appointments.
      */
     @Transactional
     public List<Map<String, Object>> bulkAutoSchedule(String userEmail, List<Long> leadIds) {
@@ -261,21 +272,87 @@ public class FollowupService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<Map<String, Object>> results = new ArrayList<>();
-        LocalDateTime searchStart = LocalDateTime.now();
+        if (leadIds == null || leadIds.isEmpty()) return results;
 
+        Set<String> closedStatuses = Set.of("CLOSED", "DISQUALIFIED");
+
+        List<Lead> eligibleLeads = new ArrayList<>();
         for (Long leadId : leadIds) {
             Lead lead = leadRepository.findById(leadId).orElse(null);
             if (lead == null) continue;
+            String st = lead.getStatus() != null ? lead.getStatus().trim().toUpperCase() : "";
+            if (closedStatuses.contains(st)) {
+                continue; // Skip completed or closed leads
+            }
+            eligibleLeads.add(lead);
+        }
 
+        LocalDateTime now = LocalDateTime.now();
+        List<Lead> overdueLeads = new ArrayList<>();
+        List<Lead> normalLeads = new ArrayList<>();
+
+        for (Lead lead : eligibleLeads) {
+            List<FollowupReminder> followups = followupRepository.findByLeadIdOrderByScheduledAtDesc(lead.getId());
+            boolean isOverdue = false;
+            if (!followups.isEmpty()) {
+                FollowupReminder latest = followups.get(0);
+                if ("OVERDUE".equalsIgnoreCase(latest.getStatus()) || "MISSED".equalsIgnoreCase(latest.getStatus()) ||
+                    (latest.getScheduledAt() != null && latest.getScheduledAt().isBefore(now) && !"COMPLETED".equalsIgnoreCase(latest.getStatus()) && !"CANCELLED".equalsIgnoreCase(latest.getStatus()))) {
+                    isOverdue = true;
+                }
+            }
+            if (isOverdue) {
+                // Overdue leads automatically receive highest priority
+                lead.setPriority("High");
+                leadRepository.save(lead);
+                overdueLeads.add(lead);
+            } else {
+                normalLeads.add(lead);
+            }
+        }
+
+        // Sort overdue leads by latest scheduled time (oldest overdue first)
+        overdueLeads.sort((l1, l2) -> {
+            List<FollowupReminder> f1 = followupRepository.findByLeadIdOrderByScheduledAtDesc(l1.getId());
+            List<FollowupReminder> f2 = followupRepository.findByLeadIdOrderByScheduledAtDesc(l2.getId());
+            LocalDateTime t1 = !f1.isEmpty() && f1.get(0).getScheduledAt() != null ? f1.get(0).getScheduledAt() : now;
+            LocalDateTime t2 = !f2.isEmpty() && f2.get(0).getScheduledAt() != null ? f2.get(0).getScheduledAt() : now;
+            return t1.compareTo(t2);
+        });
+
+        List<Lead> orderedLeads = new ArrayList<>();
+        orderedLeads.addAll(overdueLeads);
+        orderedLeads.addAll(normalLeads);
+
+        LocalDateTime searchStart = now;
+
+        for (Lead lead : orderedLeads) {
             User assignedUser = lead.getAssignedTo() != null ? lead.getAssignedTo() : user;
             LocalDateTime freeSlot = findNextAvailableSlot(assignedUser.getId(), searchStart);
 
-            Map<String, Object> scheduled = createFollowup(leadId, userEmail, freeSlot.toString(), "CALL", "Bulk auto-scheduled follow-up", null, null, null, false);
-            results.add(scheduled);
+            List<FollowupReminder> existingList = followupRepository.findByLeadIdOrderByScheduledAtDesc(lead.getId());
+            FollowupReminder targetFollowup = existingList.stream()
+                    .filter(f -> !"COMPLETED".equalsIgnoreCase(f.getStatus()) && !"CANCELLED".equalsIgnoreCase(f.getStatus()))
+                    .findFirst().orElse(null);
 
-            // Advance search cursor to avoid assigning identical slot to next lead in bulk loop
-            searchStart = freeSlot.plusMinutes(30);
+            Map<String, Object> scheduledMap;
+            if (targetFollowup != null) {
+                targetFollowup.setScheduledAt(freeSlot);
+                targetFollowup.setStatus("UPCOMING");
+                targetFollowup.setRemarks("Bulk auto-scheduled to nearest available future slot.");
+                FollowupReminder saved = followupRepository.save(targetFollowup);
+                if (calendarService != null) {
+                    calendarService.syncFollowupToCalendar(saved);
+                }
+                scheduledMap = convertToMap(saved);
+            } else {
+                scheduledMap = createFollowup(lead.getId(), userEmail, freeSlot.toString(), "CALL", "Bulk auto-scheduled follow-up", null, null, null, false);
+            }
+
+            results.add(scheduledMap);
+            searchStart = freeSlot.plusMinutes(15);
         }
+
         return results;
     }
 
@@ -322,7 +399,9 @@ public class FollowupService {
         boolean isAdminOrManager = user.getRoles().stream()
                 .anyMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_MANAGER"));
 
-        List<FollowupReminder> workspaceReminders = followupRepository.findByWorkspaceIdOrderByScheduledAtAsc(user.getWorkspace().getId());
+        List<FollowupReminder> workspaceReminders = followupRepository.findByWorkspaceIdOrderByScheduledAtAsc(user.getWorkspace().getId()).stream()
+                .filter(r -> r.getLead() == null || (!"New".equalsIgnoreCase(r.getLead().getStatus()) && !"New Lead".equalsIgnoreCase(r.getLead().getStatus())))
+                .collect(Collectors.toList());
         List<FollowupReminder> reminders;
         if (isAdminOrManager) {
             reminders = workspaceReminders;

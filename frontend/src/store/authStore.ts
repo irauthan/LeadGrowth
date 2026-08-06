@@ -18,20 +18,27 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       isAuthenticated: false,
-      login: (token, user) => set({ token, user, isAuthenticated: true }),
+      login: (token, user) => {
+        const normalizedRoles = (user.roles || []).map((r: any) =>
+          typeof r === 'string' ? r : r.name || 'ROLE_USER'
+        );
+        set({ token, user: { ...user, roles: normalizedRoles }, isAuthenticated: true });
+      },
       logout: () => set({ token: null, user: null, isAuthenticated: false }),
       updateUser: (updatedUser) => set((state) => {
         if (!state.user) return state;
-        return {
-          user: {
-            ...state.user,
-            ...updatedUser,
-          },
-        };
+        const current = { ...state.user, ...updatedUser };
+        if (current.roles) {
+          current.roles = current.roles.map((r: any) => typeof r === 'string' ? r : r.name || 'ROLE_USER');
+        }
+        return { user: current };
       }),
       setWorkspace: (workspaceId, workspaceName, workspaceSlug, inviteCode, roleName) => set((state) => {
         if (!state.user) return state;
-        const currentRoles = roleName ? [roleName] : state.user.roles;
+        const normalizedRoleName = typeof roleName === 'string' ? roleName : (roleName as any)?.name;
+        const currentRoles = normalizedRoleName
+          ? [normalizedRoleName]
+          : state.user.roles.map((r: any) => typeof r === 'string' ? r : r.name || 'ROLE_USER');
         return {
           user: {
             ...state.user,

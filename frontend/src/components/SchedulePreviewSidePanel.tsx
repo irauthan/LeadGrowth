@@ -24,11 +24,14 @@ const formatDateKey = (val?: string): string => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const formatTime12h = (hour: number): string => {
-  if (hour === 0) return '12:00 AM';
-  if (hour < 12) return `${hour}:00 AM`;
-  if (hour === 12) return '12:00 PM';
-  return `${hour - 12}:00 PM`;
+const formatTime12hFromMinutes = (totalMinutes: number): string => {
+  const hour = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  const padMins = String(mins).padStart(2, '0');
+  if (hour === 0) return `12:${padMins} AM`;
+  if (hour < 12) return `${hour}:${padMins} AM`;
+  if (hour === 12) return `12:${padMins} PM`;
+  return `${hour - 12}:${padMins} PM`;
 };
 
 export default function SchedulePreviewSidePanel({
@@ -40,6 +43,7 @@ export default function SchedulePreviewSidePanel({
   const dateKey = formatDateKey(selectedDate);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const slotInterval = 30;
 
   useEffect(() => {
     if (!dateKey) return;
@@ -63,8 +67,22 @@ export default function SchedulePreviewSidePanel({
     };
   }, [dateKey]);
 
-  // Working Hours Slots (9 AM to 7 PM)
-  const workingHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+  // Generate Working Hours Slots (9:00 AM to 7:00 PM = 540 to 1140 minutes)
+  const slots = (() => {
+    const list: Array<{ timeStr: string; label: string; totalMinutes: number }> = [];
+    const startMins = 9 * 60; // 9:00 AM
+    const endMins = 19 * 60; // 7:00 PM
+
+    for (let mins = startMins; mins < endMins; mins += slotInterval) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const timeStr = `${pad(h)}:${pad(m)}`;
+      const label = formatTime12hFromMinutes(mins);
+      list.push({ timeStr, label, totalMinutes: mins });
+    }
+    return list;
+  })();
 
   const dateDisplayStr = (() => {
     if (!dateKey) return 'Today';
@@ -76,17 +94,18 @@ export default function SchedulePreviewSidePanel({
     return dateKey;
   })();
 
-  const handleSlotClick = (hour: number) => {
+  const handleSlotClick = (timeStr: string) => {
     if (!onSelectSlot || !dateKey) return;
     const parts = dateKey.split('-');
     if (parts.length === 3) {
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const slotStr = `${parts[0]}-${parts[1]}-${parts[2]}T${pad(hour)}:00`;
+      const slotStr = `${parts[0]}-${parts[1]}-${parts[2]}T${timeStr}`;
       onSelectSlot(slotStr);
     }
   };
 
-  const selectedHour = selectedDate && selectedDate.includes('T') ? new Date(selectedDate).getHours() : undefined;
+  const selectedTimeStr = selectedDate && selectedDate.includes('T')
+    ? selectedDate.split('T')[1].slice(0, 5)
+    : undefined;
 
   return (
     <div className={`flex flex-col bg-theme-bg-alt/70 border border-theme-border/60 rounded-3xl p-4 space-y-3 ${compact ? 'w-full' : 'w-full max-w-xs'}`}>
@@ -106,40 +125,48 @@ export default function SchedulePreviewSidePanel({
         {loading && <Loader2 size={14} className="animate-spin text-blue-600" />}
       </div>
 
-      {/* Busy Count & Status */}
-      <div className="flex items-center justify-between text-[10px] font-extrabold px-1">
-        <span className="text-theme-text-muted">Existing Commitments:</span>
+      {/* Commitments Count */}
+      <div className="flex items-center justify-between gap-1 text-[10px] font-extrabold px-1">
+        <span className="text-theme-text-muted">Working Hours Free Slots:</span>
         <span className={`px-2 py-0.5 rounded-full ${events.length > 0 ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'}`}>
           {events.length} {events.length === 1 ? 'Event' : 'Events'}
         </span>
       </div>
 
-      {/* Hourly Timeline Grid */}
-      <div className="space-y-1.5 flex-1 overflow-y-auto max-h-[320px] pr-1">
-        {workingHours.map((hour) => {
+      {/* Minute-Level Slot List */}
+      <div className="space-y-1 flex-1 overflow-y-auto max-h-[330px] pr-1">
+        {slots.map((slot) => {
+          // Check collision with calendar events
+          const slotStartMinutes = slot.totalMinutes;
+          const slotEndMinutes = slot.totalMinutes + slotInterval;
+
           const slotEvents = events.filter((e) => {
             if (!e.startTime) return false;
-            const evHour = new Date(e.startTime).getHours();
-            return evHour === hour;
+            const evStart = new Date(e.startTime);
+            const evStartMins = evStart.getHours() * 60 + evStart.getMinutes();
+            const evEnd = e.endTime ? new Date(e.endTime) : new Date(evStart.getTime() + 30 * 60000);
+            const evEndMins = evEnd.getHours() * 60 + evEnd.getMinutes();
+
+            return (slotStartMinutes < evEndMins && slotEndMinutes > evStartMins);
           });
 
           const isBusy = slotEvents.length > 0;
-          const isSelected = selectedHour === hour;
+          const isSelected = selectedTimeStr === slot.timeStr;
 
           return (
             <div
-              key={hour}
+              key={slot.timeStr}
               className={`p-2 rounded-2xl border text-xs transition-all flex items-center justify-between gap-2 ${
                 isBusy
-                  ? 'bg-amber-500/5 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                  ? 'bg-amber-500/5 border-amber-500/30 text-amber-700 dark:text-amber-300 opacity-80'
                   : isSelected
-                  ? 'bg-blue-600/10 border-blue-500 text-blue-600 dark:text-blue-400 font-extrabold shadow-xs'
+                  ? 'bg-blue-600/10 border-blue-500 text-blue-600 dark:text-blue-400 font-extrabold shadow-2xs'
                   : 'bg-theme-card border-theme-border/50 text-theme-text hover:border-blue-500/50'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[10px] font-bold font-mono text-theme-text-muted shrink-0">
-                  {formatTime12h(hour)}
+                <span className="text-[10px] font-bold font-mono text-theme-text-muted shrink-0 w-16">
+                  {slot.label}
                 </span>
 
                 {isBusy ? (
@@ -147,13 +174,10 @@ export default function SchedulePreviewSidePanel({
                     <span className="text-[10px] font-extrabold block truncate">
                       ⛔ {slotEvents[0].title}
                     </span>
-                    <span className="text-[9px] text-amber-600/80 dark:text-amber-400/80 font-bold block truncate">
-                      {slotEvents[0].eventType || 'Occupied'}
-                    </span>
                   </div>
                 ) : (
                   <span className={`text-[10px] font-bold flex items-center gap-1 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    <CheckCircle2 size={12} /> {isSelected ? 'Selected Slot' : 'Available Slot'}
+                    <CheckCircle2 size={12} /> {isSelected ? 'Selected' : 'Free'}
                   </span>
                 )}
               </div>
@@ -161,14 +185,14 @@ export default function SchedulePreviewSidePanel({
               {!isBusy && onSelectSlot && (
                 <button
                   type="button"
-                  onClick={() => handleSlotClick(hour)}
-                  className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-all shrink-0 ${
+                  onClick={() => handleSlotClick(slot.timeStr)}
+                  className={`px-2 py-0.5 rounded-xl text-[10px] font-extrabold transition-all shrink-0 ${
                     isSelected
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-blue-600 text-white shadow-2xs'
                       : 'bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-500/20'
                   }`}
                 >
-                  {isSelected ? '✓ Selected' : 'Pick Time'}
+                  {isSelected ? 'Selected' : 'Pick'}
                 </button>
               )}
             </div>
@@ -176,10 +200,10 @@ export default function SchedulePreviewSidePanel({
         })}
       </div>
 
-      {/* Auto Pick Guidance Tip */}
+      {/* Guidance Footer */}
       <div className="pt-2 border-t border-theme-border/40 text-[10px] text-theme-text-muted font-semibold flex items-center gap-1.5">
         <Sparkles size={13} className="text-amber-500 shrink-0" />
-        <span>Click <strong>"Pick Time"</strong> on any available slot to auto-fill the schedule time.</span>
+        <span>Click any free slot to auto-fill date & exact time.</span>
       </div>
 
     </div>

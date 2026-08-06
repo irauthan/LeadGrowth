@@ -29,11 +29,23 @@ const DEFAULT_NAV_ITEMS = [
   '/leads',
   '/my-work',
   '/analytics',
+  '/scheduler',
   '/calendar',
   '/campaigns',
   '/reports',
   '/notifications-page',
-  '/settings'
+  '/settings',
+  '/followups',
+  '/users',
+  '/activity-logs',
+  '/billing',
+  '/admin/work-monitor',
+  '/admin/users',
+  '/admin/workspace',
+  '/admin/api',
+  '/admin/system',
+  '/admin/security',
+  '/admin/audit-logs'
 ];
 
 interface LayoutState {
@@ -63,12 +75,13 @@ const getSavedPosition = (): SidebarPosition => {
 };
 
 const getSavedNavItems = (): string[] => {
-  const saved = localStorage.getItem('leadgrowth_enabled_nav_items_v4');
+  const saved = localStorage.getItem('leadgrowth_enabled_nav_items_v5');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        const missing = DEFAULT_NAV_ITEMS.filter((item) => !parsed.includes(item));
+        return [...parsed, ...missing];
       }
     } catch (e) {
       console.error(e);

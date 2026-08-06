@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import type { AppTheme } from '../store/themeStore';
@@ -20,16 +21,91 @@ import {
   Eye,
   EyeOff,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Camera,
+  Upload,
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import axios from 'axios';
 
 import { useLayoutStore } from '../store/layoutStore';
 import type { SidebarPosition } from '../store/layoutStore';
 
+const compressImageFile = (file: File, maxWidth = 350, maxHeight = 350, quality = 0.85): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('Failed to load image.'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function Settings() {
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
+  const updateUser = useAuthStore((state) => state.updateUser);
+
+  const handleSettingsAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 8 * 1024 * 1024) {
+      alert('Image size should be less than 8MB.');
+      return;
+    }
+
+    try {
+      const compressedBase64 = await compressImageFile(file);
+      await axios.put(
+        'http://localhost:8080/api/users/profile',
+        {
+          fullName: user?.fullName,
+          phone: user?.phone,
+          designation: user?.designation,
+          bio: user?.bio,
+          profileImage: compressedBase64,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      updateUser({ profileImage: compressedBase64 });
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to upload profile photo.');
+    }
+  };
   const { theme, setTheme } = useThemeStore();
   const { 
     sidebarPosition, 
@@ -197,10 +273,80 @@ export default function Settings() {
           {/* PROFILE SETTINGS TAB */}
           {activeTab === 'profile' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div>
-                <h3 className="text-base font-bold">Profile Info</h3>
-                <p className="text-xs text-theme-text-muted">Manage your credentials and email contacts.</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-theme-border/40 pb-4">
+                <div>
+                  <h3 className="text-base font-bold text-theme-text">Profile Info & Photo</h3>
+                  <p className="text-xs text-theme-text-muted">Manage your personal details and account photo.</p>
+                </div>
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-theme-primary/10 text-theme-primary hover:bg-theme-primary/20 text-xs font-bold transition-all w-max"
+                >
+                  <span>Edit Full Profile</span>
+                  <ExternalLink size={14} />
+                </Link>
               </div>
+
+              {/* Avatar File Upload Box */}
+              <div className="flex items-center gap-4 p-4 rounded-3xl bg-theme-bg-alt/60 border border-theme-border/60">
+                <div className="relative group">
+                  {user?.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt="Avatar"
+                      className="w-16 h-16 rounded-2xl object-cover border-2 border-theme-border shadow-xs"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-2xl bg-theme-primary text-white font-extrabold text-xl flex items-center justify-center shadow-xs">
+                      {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                    </div>
+                  )}
+                  <label
+                    htmlFor="settings-avatar-file"
+                    className="absolute inset-0 rounded-2xl bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer text-white backdrop-blur-xs"
+                  >
+                    <Camera size={18} />
+                  </label>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-theme-primary text-white text-xs font-bold hover:bg-theme-primary-hover cursor-pointer shadow-xs transition-all">
+                      <Upload size={14} />
+                      <span>{user?.profileImage ? 'Change Photo' : 'Upload Photo File'}</span>
+                      <input
+                        id="settings-avatar-file"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleSettingsAvatarUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {user?.profileImage && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await axios.put(
+                              'http://localhost:8080/api/users/profile',
+                              { fullName: user?.fullName, phone: user?.phone, designation: user?.designation, bio: user?.bio, profileImage: '' },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            updateUser({ profileImage: '' });
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }}
+                        className="px-3 py-2 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 text-xs font-bold hover:bg-rose-500/20 transition-all flex items-center gap-1"
+                      >
+                        <Trash2 size={13} /> Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-theme-text-muted font-semibold">Upload any JPG, PNG, WEBP or SVG image file (Max 5MB)</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-theme-text-muted mb-2">Full Name</label>

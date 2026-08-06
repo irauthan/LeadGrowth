@@ -252,40 +252,60 @@ export default function FollowUpModal({
                       onChange={(e) => {
                         const dateVal = e.target.value;
                         if (!dateVal) return;
-                        const timePart = scheduledAt && scheduledAt.includes('T') ? scheduledAt.split('T')[1] : '10:00';
+                        const timePart = scheduledAt && scheduledAt.includes('T') ? scheduledAt.split('T')[1].slice(0, 5) : '10:00';
                         setScheduledAt(`${dateVal}T${timePart}`);
                       }}
-                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-3 font-bold text-theme-text outline-none focus:border-blue-500"
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-3 font-bold text-theme-text outline-none focus:border-blue-500 text-xs"
                     />
                     {isCheckingConflict && (
                       <Loader2 size={14} className="absolute right-3 top-3 animate-spin text-blue-500" />
                     )}
                   </div>
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl">
-                      <Clock size={12} />
-                      <span>Time: {scheduledAt && scheduledAt.includes('T') ? new Date(scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00 AM'}</span>
-                    </div>
-                    <span className="text-[9px] text-theme-text-muted font-semibold">9:00 AM – 7:00 PM</span>
-                  </div>
                 </div>
 
                 <div>
                   <label className="font-extrabold uppercase tracking-wider text-theme-text-muted text-[10px] block mb-1">
-                    Follow-up Type *
+                    Exact Time (15-min Slots) *
                   </label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-3 font-bold text-theme-text outline-none focus:border-blue-500"
-                  >
-                    <option value="CALL">Phone Call</option>
-                    <option value="MEETING">In-Person / Virtual Meeting</option>
-                    <option value="DEMO">Product Demo</option>
-                    <option value="EMAIL">Email Follow-up</option>
-                    <option value="VISIT">Site Visit</option>
-                  </select>
+                  <input
+                    type="time"
+                    step="900"
+                    required
+                    value={scheduledAt && scheduledAt.includes('T') ? scheduledAt.split('T')[1].slice(0, 5) : '10:00'}
+                    onChange={(e) => {
+                      const timeVal = e.target.value;
+                      if (!timeVal) return;
+                      const datePart = scheduledAt ? scheduledAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
+                      setScheduledAt(`${datePart}T${timeVal}`);
+                    }}
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-3 font-bold text-theme-text outline-none focus:border-blue-500 text-xs"
+                  />
                 </div>
+              </div>
+
+              <div className="mt-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl">
+                  <Clock size={12} />
+                  <span>Scheduled: {scheduledAt && scheduledAt.includes('T') ? new Date(scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00 AM'}</span>
+                </div>
+                <span className="text-[9px] text-theme-text-muted font-semibold">Working Hours: 9:00 AM – 7:00 PM</span>
+              </div>
+
+              <div>
+                <label className="font-extrabold uppercase tracking-wider text-theme-text-muted text-[10px] block mb-1">
+                  Follow-up Type *
+                </label>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-3 font-bold text-theme-text outline-none focus:border-blue-500 text-xs"
+                >
+                  <option value="CALL">Phone Call</option>
+                  <option value="MEETING">In-Person / Virtual Meeting</option>
+                  <option value="DEMO">Product Demo</option>
+                  <option value="EMAIL">Email Follow-up</option>
+                  <option value="VISIT">Site Visit</option>
+                </select>
               </div>
 
               <div>

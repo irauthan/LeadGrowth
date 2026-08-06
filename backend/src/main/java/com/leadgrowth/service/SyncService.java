@@ -24,6 +24,7 @@ public class SyncService {
     private final SyncLogRepository syncLogRepository;
     private final AdMetricsRepository adMetricsRepository;
     private final WebSocketManager webSocketManager;
+    private final FollowupService followupService;
 
     private final Random random = new Random();
     private final List<String> firstNames = Arrays.asList("James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda", "William", "Elizabeth");
@@ -37,7 +38,8 @@ public class SyncService {
             IntegrationRepository integrationRepository,
             SyncLogRepository syncLogRepository,
             AdMetricsRepository adMetricsRepository,
-            WebSocketManager webSocketManager
+            WebSocketManager webSocketManager,
+            @org.springframework.context.annotation.Lazy FollowupService followupService
     ) {
         this.campaignRepository = campaignRepository;
         this.leadRepository = leadRepository;
@@ -46,6 +48,7 @@ public class SyncService {
         this.syncLogRepository = syncLogRepository;
         this.adMetricsRepository = adMetricsRepository;
         this.webSocketManager = webSocketManager;
+        this.followupService = followupService;
     }
 
     @Transactional

@@ -10,7 +10,6 @@ import {
   History,
   Bell,
   Settings, 
-  UserCog,
   Building2,
   Key,
   Activity,
@@ -24,7 +23,6 @@ import {
   CreditCard,
   ShieldCheck,
   Briefcase,
-  Zap,
   Calendar,
   X
 } from 'lucide-react';
@@ -63,19 +61,19 @@ export default function Sidebar() {
     { name: 'Workspace', icon: UserCheck, path: '/leads' },
     { name: 'Pipelines', icon: Briefcase, path: '/my-work' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
-    { name: 'Calendar', icon: Calendar, path: '/calendar' },
+    { name: 'Scheduler', icon: Calendar, path: '/scheduler' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
     { name: 'Notifications', icon: Bell, path: '/notifications-page' },
     { name: 'Settings', icon: Settings, path: '/settings' },
     { name: 'Follow-ups', icon: Clock, path: '/followups' },
-    { name: 'Team Management', icon: Users, path: '/users' },
+    { name: 'Team Management', icon: Users, path: '/admin/users' },
     { name: 'Activity Logs', icon: History, path: '/activity-logs' },
     { name: 'SaaS Billing', icon: CreditCard, path: '/billing' },
   ];
 
   const adminMenu = [
-    { name: 'User Management', icon: UserCog, path: '/admin/users', adminOnly: false },
+    { name: 'Executive Work Monitor', icon: Activity, path: '/admin/work-monitor', adminOnly: false },
     { name: 'Workspace Management', icon: Building2, path: '/admin/workspace', adminOnly: true },
     { name: 'API Management', icon: Key, path: '/admin/api', adminOnly: true },
     { name: 'System Monitoring', icon: Activity, path: '/admin/system', adminOnly: true },
@@ -84,9 +82,9 @@ export default function Sidebar() {
   ];
 
   const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
-  const restrictedPaths = isUserOnly ? ['/billing', '/users', '/activity-logs'] : (!isAdmin ? ['/billing'] : []);
+  const restrictedPaths = isUserOnly ? ['/billing', '/users', '/admin/users', '/activity-logs'] : (!isAdmin ? ['/billing'] : []);
   const visibleGeneralMenu = generalMenu
-    .filter(item => enabledNavItems.includes(item.path) && !restrictedPaths.includes(item.path))
+    .filter(item => (enabledNavItems.includes(item.path) || (item.path === '/scheduler' && enabledNavItems.includes('/calendar'))) && !restrictedPaths.includes(item.path))
     .sort((a, b) => {
       const indexA = enabledNavItems.indexOf(a.path);
       const indexB = enabledNavItems.indexOf(b.path);
@@ -95,9 +93,7 @@ export default function Sidebar() {
     });
   const visibleAdminMenu = adminMenu.filter(item => enabledNavItems.includes(item.path) && (isAdmin || (!item.adminOnly && isManager)));
 
-  const getInitials = (name?: string) => {
-    return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
-  };
+
 
   const tooltipPositionClass = sidebarPosition === 'top' ? 'top-full pt-2' : 'bottom-full pb-2';
 
@@ -220,27 +216,8 @@ export default function Sidebar() {
 
             <div className="h-6 w-[1px] bg-theme-border/40 mx-1 flex-shrink-0" />
 
-            {/* User Avatar & Logout */}
+            {/* User Logout */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              <div className="relative group flex-shrink-0">
-                <Link to="/settings" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-theme-bg-alt/50 border border-theme-border/20">
-                  {user?.profileImage ? (
-                    <img src={user.profileImage} alt="Avatar" className="h-8 w-8 rounded-xl object-cover" />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-xs font-bold text-white shadow-sm">
-                      {getInitials(user?.fullName)}
-                    </div>
-                  )}
-                </Link>
-                {/* Tooltip */}
-                <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none ${tooltipPositionClass}`}>
-                  <div className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700 text-center">
-                    <p className="text-xs font-bold">{user?.fullName}</p>
-                    <p className="text-[9px] text-slate-400 font-semibold">{user?.roles[0]?.replace('ROLE_', '') || 'USER'}</p>
-                  </div>
-                </div>
-              </div>
-
               <div className="relative group flex-shrink-0">
                 <button
                   onClick={logout}
@@ -388,34 +365,8 @@ export default function Sidebar() {
             )}
           </div>
 
-          {/* Footer User Profile & Session Logout */}
-          <div className="p-3 border-t border-theme-border/30 space-y-2">
-            <div className="flex items-center gap-3 p-2 rounded-2xl bg-theme-bg-alt/30 border border-theme-border/10">
-              {user?.profileImage ? (
-                <img
-                  src={user.profileImage}
-                  alt="Avatar"
-                  className="h-8 w-8 rounded-xl object-cover shadow-sm border border-theme-border"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-xs font-bold text-white shadow-sm">
-                  {getInitials(user?.fullName)}
-                </div>
-              )}
-              {(!isCollapsed || isMobileOpen) && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex-1 overflow-hidden"
-                >
-                  <h5 className="text-xs font-bold truncate leading-none">{user?.fullName}</h5>
-                  <span className="text-[9px] font-semibold text-theme-text-muted truncate leading-none mt-1 block">
-                    {user?.roles[0]?.replace('ROLE_', '') || 'USER'}
-                  </span>
-                </motion.div>
-              )}
-            </div>
-
+          {/* Footer Session Logout */}
+          <div className="p-3 border-t border-theme-border/30">
             <button
               onClick={() => { setMobileOpen(false); logout(); }}
               className="group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition-colors"
