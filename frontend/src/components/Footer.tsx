@@ -1,4 +1,5 @@
-import { ShieldCheck, Cpu } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { NyaarLogo } from './NyaarLogo';
 
 interface FooterProps {
   variant?: 'authenticated' | 'public';
@@ -25,9 +26,9 @@ export default function Footer({ variant = 'authenticated' }: FooterProps) {
 
         {/* Right Side: Product Branding & Version */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-bold text-theme-text">
-            <Cpu size={13} className="text-theme-primary" />
-            <span>LeadGrowth Enterprise CRM</span>
+          <div className="flex items-center gap-2 font-bold text-theme-text">
+            <NyaarLogo size={18} animated />
+            <span>NYAAR Enterprise CRM</span>
           </div>
 
           <span className="h-3 w-px bg-theme-border hidden sm:block" />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NyaarLogo } from '../components/NyaarLogo';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { 
@@ -7,7 +8,6 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Loader2, 
-  TrendingUp, 
   ChevronRight,
   Eye,
   EyeOff
@@ -92,8 +92,8 @@ export default function AcceptInvite() {
         
         {/* Branding Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-lg mb-1">
-            <TrendingUp size={24} />
+          <div className="inline-flex items-center justify-center mb-1">
+            <NyaarLogo size={48} animated />
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-white">Join Workspace</h2>
           <p className="text-xs text-slate-400">Complete your profile setup to accept your workspace invitation.</p>

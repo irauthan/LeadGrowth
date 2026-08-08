@@ -77,7 +77,6 @@ public class UserAnalyticsService {
         List<FollowupReminder> workspaceReminders = followupRepository.findByWorkspaceIdOrderByScheduledAtAsc(workspaceId);
         long pendingFollowupsCount = workspaceReminders.stream()
                 .filter(f -> !"COMPLETED".equalsIgnoreCase(f.getStatus()) && !"CANCELLED".equalsIgnoreCase(f.getStatus()))
-                .filter(f -> f.getLead() == null || (!"New".equalsIgnoreCase(f.getLead().getStatus()) && !"New Lead".equalsIgnoreCase(f.getLead().getStatus())))
                 .filter(f -> (f.getAssignedTo() != null && userId.equals(f.getAssignedTo().getId())) ||
                              (f.getLead() != null && f.getLead().getAssignedTo() != null && userId.equals(f.getLead().getAssignedTo().getId())))
                 .count();

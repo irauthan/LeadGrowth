@@ -1,9 +1,11 @@
 package com.leadgrowth.scheduler;
 
 import com.leadgrowth.entity.CalendarEvent;
+import com.leadgrowth.entity.FollowupReminder;
 import com.leadgrowth.entity.Notification;
 import com.leadgrowth.entity.User;
 import com.leadgrowth.repository.CalendarEventRepository;
+import com.leadgrowth.repository.FollowupRepository;
 import com.leadgrowth.repository.NotificationRepository;
 import com.leadgrowth.repository.UserRepository;
 import org.slf4j.Logger;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class CalendarReminderScheduler {
@@ -22,15 +25,18 @@ public class CalendarReminderScheduler {
     private final CalendarEventRepository calendarEventRepository;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final FollowupRepository followupRepository;
 
     public CalendarReminderScheduler(
             CalendarEventRepository calendarEventRepository,
             NotificationRepository notificationRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            FollowupRepository followupRepository
     ) {
         this.calendarEventRepository = calendarEventRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.followupRepository = followupRepository;
     }
 
     // Runs every 1 minute to trigger upcoming calendar event reminders
@@ -67,6 +73,32 @@ public class CalendarReminderScheduler {
 
                 event.setReminderSent(true);
                 calendarEventRepository.save(event);
+            }
+        }
+    }
+
+    // Runs every 1 minute to scan for overdue follow-up reminders
+    @Scheduled(fixedRate = 60000)
+    public void scanAndMarkOverdueFollowups() {
+        LocalDateTime now = LocalDateTime.now();
+        List<FollowupReminder> pending = followupRepository.findAll().stream()
+                .filter(f -> ("UPCOMING".equalsIgnoreCase(f.getStatus()) || "PENDING".equalsIgnoreCase(f.getStatus())) && f.getScheduledAt() != null && f.getScheduledAt().isBefore(now))
+                .collect(Collectors.toList());
+
+        for (FollowupReminder r : pending) {
+            r.setStatus("OVERDUE");
+            followupRepository.save(r);
+
+            if (r.getAssignedTo() != null) {
+                String leadName = r.getLead() != null ? r.getLead().getName() : "Lead";
+                Notification notification = Notification.builder()
+                        .user(r.getAssignedTo())
+                        .title("Overdue Follow-up Alert")
+                        .message(String.format("Follow-up for '%s' was scheduled for %s and is now OVERDUE.", leadName, r.getScheduledAt().toString().replace('T', ' ')))
+                        .isRead(false)
+                        .build();
+                notificationRepository.save(notification);
+                log.info("Marked follow-up ID {} OVERDUE for lead {}", r.getId(), leadName);
             }
         }
     }

@@ -1017,23 +1017,22 @@ public class LeadService {
         dto.setCreatedAt(lead.getCreatedAt());
 
         // Synchronize Follow-up Details for Pipeline Cards & Views
-        boolean isNewStatus = "New".equalsIgnoreCase(lead.getStatus()) || "New Lead".equalsIgnoreCase(lead.getStatus());
-        if (!isNewStatus) {
-            List<FollowupReminder> followups = followupRepository.findByLeadIdOrderByScheduledAtDesc(lead.getId());
-            if (followups != null && !followups.isEmpty()) {
-                FollowupReminder latestOrUpcoming = followups.stream()
-                        .filter(f -> "UPCOMING".equalsIgnoreCase(f.getStatus()) || "PENDING".equalsIgnoreCase(f.getStatus()))
-                        .findFirst()
-                        .orElse(followups.get(0));
+        List<FollowupReminder> followups = followupRepository.findByLeadIdOrderByScheduledAtDesc(lead.getId());
+        if (followups != null && !followups.isEmpty()) {
+            FollowupReminder latestOrUpcoming = followups.stream()
+                    .filter(f -> "UPCOMING".equalsIgnoreCase(f.getStatus()) || "PENDING".equalsIgnoreCase(f.getStatus()) || "OVERDUE".equalsIgnoreCase(f.getStatus()))
+                    .findFirst()
+                    .orElse(followups.get(0));
 
-                LocalDateTime followupTime = latestOrUpcoming.getScheduledAt() != null ? latestOrUpcoming.getScheduledAt() : latestOrUpcoming.getNextFollowupDate();
-                dto.setNextFollowupDate(followupTime);
-                dto.setFollowupNotes(latestOrUpcoming.getNotes() != null ? latestOrUpcoming.getNotes() : latestOrUpcoming.getRemarks());
-                dto.setFollowupType(latestOrUpcoming.getType() != null ? latestOrUpcoming.getType() : "CALL");
-                dto.setFollowupStatus(latestOrUpcoming.getStatus());
-                if (dto.getLastFollowupDate() == null) {
-                    dto.setLastFollowupDate(followupTime);
-                }
+            LocalDateTime followupTime = latestOrUpcoming.getScheduledAt() != null ? latestOrUpcoming.getScheduledAt() : latestOrUpcoming.getNextFollowupDate();
+            dto.setNextFollowupDate(followupTime);
+            dto.setFollowupNotes(latestOrUpcoming.getNotes() != null ? latestOrUpcoming.getNotes() : latestOrUpcoming.getRemarks());
+            dto.setFollowupType(latestOrUpcoming.getType() != null ? latestOrUpcoming.getType() : "CALL");
+
+            boolean isOverdue = "OVERDUE".equalsIgnoreCase(latestOrUpcoming.getStatus()) || "MISSED".equalsIgnoreCase(latestOrUpcoming.getStatus()) || (followupTime != null && followupTime.isBefore(LocalDateTime.now()) && !"COMPLETED".equalsIgnoreCase(latestOrUpcoming.getStatus()) && !"CANCELLED".equalsIgnoreCase(latestOrUpcoming.getStatus()));
+            dto.setFollowupStatus(isOverdue ? "OVERDUE" : latestOrUpcoming.getStatus());
+            if (dto.getLastFollowupDate() == null) {
+                dto.setLastFollowupDate(followupTime);
             }
         }
 

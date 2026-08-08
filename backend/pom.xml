@@ -12,7 +12,7 @@
     <artifactId>backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>backend</name>
-    <description>Lead Growth Marketing Analytics &amp; Lead Management SaaS Platform Backend</description>
+    <description>NYAAR Marketing Analytics &amp; Lead Management SaaS Platform Backend</description>
 
     <properties>
         <java.version>17</java.version>

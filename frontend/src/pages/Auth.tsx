@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { NyaarLogo } from '../components/NyaarLogo';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
@@ -9,7 +10,6 @@ import {
   Briefcase, 
   Phone, 
   Loader2, 
-  TrendingUp, 
   ChevronRight, 
   ChevronLeft, 
   Eye,
@@ -311,11 +311,9 @@ export default function Auth() {
 
           {/* Header Branding */}
           <div className="relative z-10 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#1D9BF0] to-[#00C2A8] text-white shadow-xl">
-              <TrendingUp size={24} />
-            </div>
+            <NyaarLogo size={44} animated />
             <div>
-              <span className="text-2xl font-extrabold tracking-tight text-white block">Lead Growth</span>
+              <span className="text-2xl font-black tracking-tight text-white block">NYAAR</span>
               <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Enterprise Growth SaaS Platform</span>
             </div>
           </div>
@@ -387,7 +385,7 @@ export default function Auth() {
 
           {/* Footer Info */}
           <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-6 text-xs text-slate-400 font-medium">
-            <span>© 2026 Lead Growth Inc. Enterprise Edition</span>
+            <span>© 2026 NYAAR Inc. Enterprise Edition</span>
             <div className="flex items-center gap-4">
               <span className="hover:text-white transition-colors cursor-pointer">Privacy Policy</span>
               <span className="hover:text-white transition-colors cursor-pointer">Security</span>
@@ -400,10 +398,8 @@ export default function Auth() {
           
           {/* Mobile Header Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-[#0F4C81] to-[#1D9BF0] text-white shadow-md">
-              <TrendingUp size={20} />
-            </div>
-            <span className="text-xl font-extrabold text-[#0F4C81]">Lead Growth</span>
+            <NyaarLogo size={36} animated />
+            <span className="text-2xl font-black text-[#0F4C81]">NYAAR</span>
           </div>
 
           <div className="w-full max-w-md space-y-8 bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-xl">
@@ -564,7 +560,7 @@ export default function Auth() {
                     <input
                       type="email"
                       required
-                      placeholder="e.g. alex@leadgrowth.com"
+                      placeholder="e.g. alex@nyaar.com"
                       value={loginForm.email}
                       onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                       className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] focus:bg-white transition-all"

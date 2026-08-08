@@ -1,8 +1,8 @@
-# LeadGrowth — Enterprise Marketing Analytics & Lead Management SaaS Platform
+# NYAAR — Enterprise Marketing Analytics & Lead Management SaaS Platform
 
 > **Tagline:** "One Dashboard. Every Lead. Complete Growth."
 
-**LeadGrowth** is an enterprise-grade SaaS dashboard and Lead Management System (LMS) built for performance marketing teams, digital agencies, and sales operations. The platform centralizes campaign analytics, intelligent lead distribution, real-time activity feeds, executive productivity tracking, and reporting into a unified, high-performance web platform.
+**NYAAR** is an enterprise-grade SaaS dashboard and Lead Management System (LMS) built for performance marketing teams, digital agencies, and sales operations. The platform centralizes campaign analytics, intelligent lead distribution, real-time activity feeds, executive productivity tracking, and reporting into a unified, high-performance web platform.
 
 ---
 
@@ -28,10 +28,10 @@
 
 ## Platform Overview
 
-LeadGrowth closes the gap between performance marketing spend and sales conversions. By capturing leads from ad platforms (Meta Ads, Google Ads), automatically assigning them to sales representatives, tracking daily calls/tasks, and providing executive monitoring, LeadGrowth ensures no revenue opportunity is missed.
+NYAAR closes the gap between performance marketing spend and sales conversions. By capturing leads from ad platforms (Meta Ads, Google Ads), automatically assigning them to sales representatives, tracking daily calls/tasks, and providing executive monitoring, NYAAR ensures no revenue opportunity is missed.
 
 ### High-Level Workflow
-1. **Intake & Sync:** Marketing ad campaigns sync lead and spend data into LeadGrowth via automated schedulers or webhooks.
+1. **Intake & Sync:** Marketing ad campaigns sync lead and spend data into NYAAR via automated schedulers or webhooks.
 2. **Smart Assignment:** Intelligent round-robin or workload-based queues assign incoming leads to sales reps based on availability and priority.
 3. **Execution & Engagement:** Sales reps utilize the **MyWork Workspace**, **Priority Center**, **Call History**, and **Interactive Calendar** to manage daily follow-ups.
 4. **Monitoring & Analytics:** Managers and Executives monitor real-time SLA compliance, team productivity metrics, and campaign ROI.

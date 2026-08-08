@@ -5,6 +5,8 @@ import com.leadgrowth.dto.PriorityStatsDto;
 import com.leadgrowth.entity.Lead;
 import com.leadgrowth.entity.SalesActivityLog;
 import com.leadgrowth.entity.User;
+import com.leadgrowth.entity.FollowupReminder;
+import com.leadgrowth.repository.FollowupRepository;
 import com.leadgrowth.repository.LeadRepository;
 import com.leadgrowth.repository.SalesActivityLogRepository;
 import com.leadgrowth.repository.UserRepository;
@@ -24,15 +26,18 @@ public class PriorityService {
     private final LeadRepository leadRepository;
     private final SalesActivityLogRepository salesActivityLogRepository;
     private final UserRepository userRepository;
+    private final FollowupRepository followupRepository;
 
     public PriorityService(
             LeadRepository leadRepository,
             SalesActivityLogRepository salesActivityLogRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            FollowupRepository followupRepository
     ) {
         this.leadRepository = leadRepository;
         this.salesActivityLogRepository = salesActivityLogRepository;
         this.userRepository = userRepository;
+        this.followupRepository = followupRepository;
     }
 
     public List<PriorityDto> getPrioritizedLeadsForUser(String userEmail) {
@@ -76,6 +81,21 @@ public class PriorityService {
                     if (l.getNextFollowupDate() != null) {
                         nextFollowup = l.getNextFollowupDate();
                         break;
+                    }
+                }
+            }
+
+            // Also check FollowupReminder table for scheduled follow-ups
+            List<FollowupReminder> followups = followupRepository.findByLeadIdOrderByScheduledAtDesc(lead.getId());
+            if (followups != null && !followups.isEmpty()) {
+                FollowupReminder activeReminder = followups.stream()
+                        .filter(f -> !"COMPLETED".equalsIgnoreCase(f.getStatus()) && !"CANCELLED".equalsIgnoreCase(f.getStatus()))
+                        .findFirst()
+                        .orElse(null);
+                if (activeReminder != null) {
+                    LocalDateTime schedTime = activeReminder.getScheduledAt() != null ? activeReminder.getScheduledAt() : activeReminder.getNextFollowupDate();
+                    if (schedTime != null && (nextFollowup == null || schedTime.isBefore(nextFollowup))) {
+                        nextFollowup = schedTime;
                     }
                 }
             }

@@ -399,9 +399,7 @@ public class FollowupService {
         boolean isAdminOrManager = user.getRoles().stream()
                 .anyMatch(r -> r.getName().equals("ROLE_ADMIN") || r.getName().equals("ROLE_MANAGER"));
 
-        List<FollowupReminder> workspaceReminders = followupRepository.findByWorkspaceIdOrderByScheduledAtAsc(user.getWorkspace().getId()).stream()
-                .filter(r -> r.getLead() == null || (!"New".equalsIgnoreCase(r.getLead().getStatus()) && !"New Lead".equalsIgnoreCase(r.getLead().getStatus())))
-                .collect(Collectors.toList());
+        List<FollowupReminder> workspaceReminders = followupRepository.findByWorkspaceIdOrderByScheduledAtAsc(user.getWorkspace().getId());
         List<FollowupReminder> reminders;
         if (isAdminOrManager) {
             reminders = workspaceReminders;
@@ -415,7 +413,7 @@ public class FollowupService {
         // Rule 5 & Scenario 10: Auto update overdue/missed and check High Priority escalation
         LocalDateTime now = LocalDateTime.now();
         for (FollowupReminder r : reminders) {
-            if (("UPCOMING".equals(r.getStatus()) || "PENDING".equals(r.getStatus())) && r.getScheduledAt().isBefore(now)) {
+            if (("UPCOMING".equals(r.getStatus()) || "PENDING".equals(r.getStatus())) && r.getScheduledAt() != null && r.getScheduledAt().isBefore(now)) {
                 r.setStatus("OVERDUE");
                 followupRepository.save(r);
 

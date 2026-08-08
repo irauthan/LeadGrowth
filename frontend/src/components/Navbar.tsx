@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { NyaarLogo } from './NyaarLogo';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import type { AppTheme } from '../store/themeStore';
@@ -15,7 +16,6 @@ import {
   UserCheck,
   CheckSquare,
   Menu,
-  TrendingUp,
   X
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
@@ -312,9 +312,7 @@ export default function Navbar() {
 
           {/* App Brand Logo on Mobile header when sidebar closed */}
           <Link to="/dashboard" className="flex items-center gap-2 lg:hidden">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-white shadow-sm">
-              <TrendingUp size={18} />
-            </div>
+            <NyaarLogo size={28} animated />
           </Link>
 
           <div className="flex flex-col">

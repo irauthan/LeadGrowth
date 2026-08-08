@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { NyaarLogo } from './NyaarLogo';
 import { 
   LayoutDashboard, 
   Megaphone, 
@@ -16,7 +17,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
   Building,
   Clock,
   ShieldAlert,
@@ -125,14 +125,14 @@ export default function Sidebar() {
             <div className="relative group flex-shrink-0">
               <Link 
                 to="/dashboard" 
-                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-white shadow-md nav-glow transition-transform hover:scale-105"
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-theme-bg-alt/80 text-white shadow-md nav-glow transition-transform hover:scale-105"
               >
-                <TrendingUp size={20} />
+                <NyaarLogo size={24} animated />
               </Link>
               {/* Tooltip */}
               <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none ${tooltipPositionClass}`}>
                 <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
-                  Lead Growth
+                  NYAAR
                 </span>
               </div>
             </div>
@@ -243,16 +243,14 @@ export default function Sidebar() {
           {/* Header Logo & Mobile Close */}
           <div className="flex h-20 items-center justify-between px-6 border-b border-theme-border/30">
             <Link to="/dashboard" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-white shadow-lg nav-glow">
-                <TrendingUp size={22} className="animate-pulse-slow" />
-              </div>
+              <NyaarLogo size={32} animated />
               {(!isCollapsed || isMobileOpen) && (
                 <motion.span 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="bg-gradient-to-r from-theme-primary to-indigo-400 bg-clip-text text-lg font-extrabold tracking-tight text-transparent"
+                  className="bg-gradient-to-r from-cyan-400 via-brand-400 to-indigo-400 bg-clip-text text-xl font-black tracking-tight text-transparent"
                 >
-                  Lead Growth
+                  NYAAR
                 </motion.span>
               )}
             </Link>
