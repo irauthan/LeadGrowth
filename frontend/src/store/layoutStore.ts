@@ -12,7 +12,7 @@ export interface DashboardCardConfig {
 
 export const DEFAULT_DASHBOARD_CARDS: DashboardCardConfig[] = [
   { id: 'kpis_summary', label: 'Primary KPI Stat Cards', category: 'All', description: 'Pipeline, Follow-ups, Conversions & Revenue summary cards', enabled: true },
-  { id: 'workflow_queue', label: 'Workflow Steps Queue', category: 'User', description: 'Action cards for First Call, Demo, Proposal & Payment steps', enabled: true },
+  { id: 'workflow_queue', label: 'Workflow Steps Queue', category: 'User', description: 'Active lead counts across workflow stages (New, Interaction, Follow-up, Proposal, Negotiation, Converted)', enabled: true },
   { id: 'pending_leads', label: 'Pending Assigned Leads', category: 'User', description: 'Lead queue acceptance & pipeline addition list', enabled: true },
   { id: 'today_followups', label: 'Today\'s Follow-up Schedule', category: 'User', description: 'Reminders list for scheduled client touchpoints', enabled: true },
   { id: 'call_metrics', label: 'Call & Outreach Analytics', category: 'All', description: 'Call logs, talk time & communication summary', enabled: true },

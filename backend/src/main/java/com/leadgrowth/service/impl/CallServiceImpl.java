@@ -12,6 +12,9 @@ import com.leadgrowth.repository.NotificationRepository;
 import com.leadgrowth.repository.UserRepository;
 import com.leadgrowth.service.CallService;
 import com.leadgrowth.websocket.WebSocketManager;
+import com.leadgrowth.entity.FollowupReminder;
+import com.leadgrowth.repository.FollowupRepository;
+import com.leadgrowth.service.CalendarService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,19 +35,25 @@ public class CallServiceImpl implements CallService {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final WebSocketManager webSocketManager;
+    private final FollowupRepository followupRepository;
+    private final CalendarService calendarService;
 
     public CallServiceImpl(
             CallHistoryRepository callHistoryRepository,
             LeadRepository leadRepository,
             UserRepository userRepository,
             NotificationRepository notificationRepository,
-            @Lazy WebSocketManager webSocketManager
+            @Lazy WebSocketManager webSocketManager,
+            FollowupRepository followupRepository,
+            @Lazy CalendarService calendarService
     ) {
         this.callHistoryRepository = callHistoryRepository;
         this.leadRepository = leadRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.webSocketManager = webSocketManager;
+        this.followupRepository = followupRepository;
+        this.calendarService = calendarService;
     }
 
     @Override
@@ -117,18 +126,26 @@ public class CallServiceImpl implements CallService {
         CallSessionDto dto = convertToDto(saved);
 
         // Send WebSocket Notification to workspace
-        webSocketManager.broadcastCallSession(user.getWorkspace().getId(), dto);
-
-        // If call lasted > 15 minutes, notify team manager
-        if (seconds >= 900) {
-            String msgText = user.getFullName() + " completed a " + (seconds / 60) + " minute call with lead " + call.getLead().getName();
-            Notification notif = new Notification();
-            notif.setUser(user);
-            notif.setTitle("Long Call Completed");
-            notif.setMessage(msgText);
-            notif.setIsRead(false);
-            notificationRepository.save(notif);
-            webSocketManager.broadcastWorkspaceNotification(user.getWorkspace().getId(), notif);
+        // Auto-complete any pending/upcoming followups for this lead
+        if (call.getLead() != null) {
+            try {
+                List<FollowupReminder> existingReminders = followupRepository.findByLeadIdOrderByScheduledAtDesc(call.getLead().getId());
+                for (FollowupReminder r : existingReminders) {
+                    if ("UPCOMING".equalsIgnoreCase(r.getStatus()) || "PENDING".equalsIgnoreCase(r.getStatus()) || "OVERDUE".equalsIgnoreCase(r.getStatus()) || "MISSED".equalsIgnoreCase(r.getStatus())) {
+                        r.setStatus("COMPLETED");
+                        r.setCompletedAt(now);
+                        if (notes != null && !notes.isBlank()) {
+                            r.setOutcome(notes);
+                        }
+                        FollowupReminder savedR = followupRepository.save(r);
+                        if (calendarService != null) {
+                            calendarService.syncFollowupToCalendar(savedR);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to resolve followups on call end: " + e.getMessage());
+            }
         }
 
         return dto;

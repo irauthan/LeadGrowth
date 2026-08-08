@@ -251,13 +251,8 @@ public class LeadService {
 
         Lead saved = leadRepository.save(lead);
 
-        // Record history & timeline activity
-        try {
-            leadHistoryRepository.save(new LeadHistory(saved, "STAGE_CHANGE", "Stage updated from '" + oldStatus + "' to '" + targetStatus + "'", user, oldStatus, targetStatus));
-            leadActivityRepository.save(new com.leadgrowth.entity.LeadActivity(saved, user, user.getWorkspace(), "STAGE_CHANGE", "Stage Changed to " + targetStatus, "Moved stage from '" + oldStatus + "' to '" + targetStatus + "'"));
-        } catch (Exception e) {
-            // Ignore non-fatal logging exceptions
-        }
+        // Auto-resolve any pending/upcoming follow-ups and sync to calendar
+        resolveOverdueFollowupsForLead(saved, "Stage updated from '" + oldStatus + "' to '" + targetStatus + "'");
 
         LeadDto resultDto = convertToDto(saved);
         webSocketManager.broadcastLead(user.getWorkspace().getId(), resultDto);
@@ -807,27 +802,25 @@ public class LeadService {
         return convertToDto(lead);
     }
 
-    private void resolveOverdueFollowupsForLead(Lead lead, String outcome) {
+    public void resolveOverdueFollowupsForLead(Lead lead, String outcome) {
         if (lead == null) return;
         try {
             List<FollowupReminder> existingReminders = followupRepository.findByLeadIdOrderByScheduledAtDesc(lead.getId());
             for (FollowupReminder r : existingReminders) {
                 if ("UPCOMING".equalsIgnoreCase(r.getStatus()) || "PENDING".equalsIgnoreCase(r.getStatus()) || "OVERDUE".equalsIgnoreCase(r.getStatus()) || "MISSED".equalsIgnoreCase(r.getStatus())) {
-                    if (r.getScheduledAt() != null && !r.getScheduledAt().isAfter(LocalDateTime.now())) {
-                        r.setStatus("COMPLETED");
-                        r.setCompletedAt(LocalDateTime.now());
-                        if (outcome != null && !outcome.isBlank()) {
-                            r.setOutcome(outcome);
-                        }
-                        FollowupReminder savedR = followupRepository.save(r);
-                        if (calendarService != null) {
-                            calendarService.syncFollowupToCalendar(savedR);
-                        }
+                    r.setStatus("COMPLETED");
+                    r.setCompletedAt(LocalDateTime.now());
+                    if (outcome != null && !outcome.isBlank()) {
+                        r.setOutcome(outcome);
+                    }
+                    FollowupReminder savedR = followupRepository.save(r);
+                    if (calendarService != null) {
+                        calendarService.syncFollowupToCalendar(savedR);
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error resolving overdue followups for lead #" + lead.getId() + ": " + e.getMessage());
+            System.err.println("Error resolving pending followups for lead #" + lead.getId() + ": " + e.getMessage());
         }
     }
 
@@ -1079,12 +1072,9 @@ public class LeadService {
 
         List<Lead> leads;
         if (isUserOnly) {
-            leads = leadRepository.findPipelineLeadsByUserId(user.getId());
+            leads = leadRepository.findByAssignedToIdOrderByCreatedAtDesc(user.getId());
         } else {
-            leads = leadRepository.findPipelineLeadsByWorkspaceId(user.getWorkspace().getId());
-            if (leads.isEmpty()) {
-                leads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(user.getWorkspace().getId());
-            }
+            leads = leadRepository.findByWorkspaceIdOrderByCreatedAtDesc(user.getWorkspace().getId());
         }
 
         return leads.stream().map(this::convertToDto).collect(Collectors.toList());

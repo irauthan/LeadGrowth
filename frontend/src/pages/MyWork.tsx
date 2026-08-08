@@ -62,6 +62,7 @@ export default function MyWork() {
 
   // Business-Critical Filters & Search (E4 Filter Streamlining)
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStage, setSelectedStage] = useState('ALL');
   const [selectedPriority, setSelectedPriority] = useState('ALL');
   const [selectedQuality, setSelectedQuality] = useState('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'a-z' | 'z-a' | 'priority' | 'progress'>('newest');
@@ -94,7 +95,7 @@ export default function MyWork() {
 
     const paramStage = searchParams.get('stage');
     if (paramStage) {
-      setSearchTerm(paramStage);
+      setSelectedStage(paramStage);
     }
   }, [searchParams, leads]);
 
@@ -102,7 +103,7 @@ export default function MyWork() {
     setLoading(true);
     try {
       const [leadsRes, contactsRes] = await Promise.all([
-        api.get('/api/leads/pipeline'),
+        api.get('/api/leads').catch(() => api.get('/api/leads/pipeline')),
         api.get('/api/leads/contacts').catch(() => ({ data: [] }))
       ]);
       setLeads(leadsRes.data || []);
@@ -194,7 +195,6 @@ export default function MyWork() {
       lead.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.campaignName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(lead.id).includes(searchTerm);
 
     const matchesPriority = selectedPriority === 'ALL' || lead.priority === selectedPriority;
@@ -216,9 +216,10 @@ export default function MyWork() {
 
   const getStageLeads = (stageKey: string) => {
     return filteredLeads.filter((l) => {
-      const st = l.status || 'New';
-      const isNewLead = st === 'New' || st === 'New Lead';
-      const hasScheduledFollowup = !!l.nextFollowupDate;
+      const st = (l.status || 'New').trim();
+      const stLower = st.toLowerCase();
+      const isNewLead = stLower === 'new' || stLower === 'new lead' || stLower === 'fresh';
+      const hasScheduledFollowup = !!l.nextFollowupDate || !!l.lastFollowupDate;
 
       if (stageKey === 'New') {
         return isNewLead;
@@ -228,18 +229,21 @@ export default function MyWork() {
       }
       if (stageKey === 'Interaction') {
         if (hasScheduledFollowup) return false;
-        return st === 'Interaction' || st === 'Contacted' || st === 'First Call';
+        return stLower === 'interaction' || stLower === 'contacted' || stLower === 'first call' || stLower === 'first_call';
       }
       if (stageKey === 'Follow-up') {
-        if (st === 'Follow-up' || st === 'Follow-Up' || st === 'Requirement Collection' || st === 'Interested') return true;
-        if (hasScheduledFollowup && st !== 'Proposal Sent' && st !== 'Proposal' && st !== 'Negotiation' && st !== 'Converted' && st !== 'Lost' && st !== 'Rejected') {
+        if (stLower === 'follow-up' || stLower === 'followup' || stLower === 'requirement collection' || stLower === 'requirement_collection' || stLower === 'interested') return true;
+        if (hasScheduledFollowup && stLower !== 'proposal sent' && stLower !== 'proposal_sent' && stLower !== 'proposal' && stLower !== 'demo scheduled' && stLower !== 'demo_scheduled' && stLower !== 'qualified' && stLower !== 'negotiation' && stLower !== 'negotiation_started' && stLower !== 'closing' && stLower !== 'converted' && stLower !== 'payment completed' && stLower !== 'payment_completed' && stLower !== 'payment' && stLower !== 'closed won' && stLower !== 'closed_won' && stLower !== 'lost' && stLower !== 'rejected') {
           return true;
         }
         return false;
       }
       if (stageKey === 'Proposal Sent') return st === 'Proposal Sent' || st === 'Proposal' || st === 'Demo Scheduled' || st === 'Qualified';
       if (stageKey === 'Negotiation') return st === 'Negotiation';
-      if (stageKey === 'Converted') return st === 'Converted' || st === 'Closing' || st === 'Payment' || st === 'Payment Completed';
+      if (stageKey === 'Converted') {
+        const s = st.toLowerCase().trim();
+        return s === 'converted' || s === 'closing' || s === 'payment' || s === 'payment completed' || s === 'payment_completed' || s === 'closed won' || s === 'closed_won';
+      }
       if (stageKey === 'Lost') return st === 'Lost' || st === 'Rejected';
       return st === stageKey;
     });
@@ -328,6 +332,21 @@ export default function MyWork() {
         {/* Filters */}
         <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto no-scrollbar">
           <select
+            value={selectedStage}
+            onChange={(e) => setSelectedStage(e.target.value)}
+            className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+          >
+            <option value="ALL">Stage: All Stages</option>
+            <option value="New">Stage: New Leads</option>
+            <option value="Interaction">Stage: Interaction</option>
+            <option value="Follow-up">Stage: Follow-up</option>
+            <option value="Proposal Sent">Stage: Proposal Sent</option>
+            <option value="Negotiation">Stage: Negotiation</option>
+            <option value="Converted">Stage: Converted</option>
+            <option value="Lost">Stage: Lost</option>
+          </select>
+
+          <select
             value={selectedPriority}
             onChange={(e) => setSelectedPriority(e.target.value)}
             className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
@@ -381,7 +400,25 @@ export default function MyWork() {
           {/* VIEW MODE 1: REDESIGNED ENTERPRISE HORIZONTAL KANBAN BOARD */}
           {viewMode === 'kanban' && (
             <div className="flex flex-nowrap overflow-x-auto gap-4 pb-6 pt-2 snap-x select-none custom-scrollbar min-h-[calc(100vh-230px)] items-start">
-              {KANBAN_STAGES.map((col) => {
+              {(selectedStage === 'ALL'
+                ? KANBAN_STAGES
+                : (KANBAN_STAGES.filter(col => {
+                    const target = selectedStage.toLowerCase().trim();
+                    const colKey = col.key.toLowerCase().trim();
+                    if (target === 'follow-up' || target === 'followup') return colKey === 'follow-up';
+                    if (target === 'proposal sent' || target === 'proposal') return colKey === 'proposal sent';
+                    return colKey === target || col.title.toLowerCase().trim() === target;
+                  }).length > 0
+                    ? KANBAN_STAGES.filter(col => {
+                        const target = selectedStage.toLowerCase().trim();
+                        const colKey = col.key.toLowerCase().trim();
+                        if (target === 'follow-up' || target === 'followup') return colKey === 'follow-up';
+                        if (target === 'proposal sent' || target === 'proposal') return colKey === 'proposal sent';
+                        return colKey === target || col.title.toLowerCase().trim() === target;
+                      })
+                    : KANBAN_STAGES
+                  )
+              ).map((col) => {
                 const stageLeads = getStageLeads(col.key);
                 const Icon = col.icon;
                 const isCollapsed = collapsedColumns[col.key] ?? false;
@@ -783,7 +820,7 @@ export default function MyWork() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-theme-border/30">
-                    {filteredLeads.map((lead) => (
+                    {(selectedStage === 'ALL' ? filteredLeads : filteredLeads.filter(l => getStageLeads(selectedStage).some(sl => sl.id === l.id))).map((lead) => (
                       <tr 
                         key={lead.id} 
                         onClick={() => openDetails(lead.id)}

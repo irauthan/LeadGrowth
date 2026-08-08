@@ -74,7 +74,7 @@ export default function UserDashboard() {
 
       const [kpiRes, leadsRes, followupsRes, pendingRes, workflowRes, callRes] = await Promise.all([
         api.get('/api/users/me/dashboard', { params }).catch(() => ({ data: null })),
-        api.get('/api/leads/pipeline').catch(() => api.get('/api/leads')),
+        api.get('/api/leads').catch(() => api.get('/api/leads/pipeline')),
         api.get('/api/followups').catch(() => ({ data: [] })),
         api.get('/api/leads/pending-assigned').catch(() => ({ data: [] })),
         api.get('/api/leads/workflow-pending-counts').catch(() => ({ data: {} })),
@@ -136,9 +136,54 @@ export default function UserDashboard() {
     );
   }
 
+  const getStageCount = (targetStage: string) => {
+    if (!myLeads || !Array.isArray(myLeads)) return 0;
+    const followupLeadIds = new Set(
+      (followups || []).map((f: any) => f.leadId || f.lead?.id).filter(Boolean)
+    );
+
+    return myLeads.filter((lead: any) => {
+      const st = (lead.status || '').trim();
+      const stLower = st.toLowerCase();
+      const isNewLead = stLower === 'new' || stLower === 'new lead' || stLower === 'fresh';
+      const hasScheduledFollowup = !!lead.nextFollowupDate || followupLeadIds.has(lead.id);
+
+      if (targetStage === 'New') {
+        return isNewLead;
+      }
+      if (isNewLead) {
+        return false;
+      }
+      if (targetStage === 'Interaction') {
+        if (hasScheduledFollowup) return false;
+        return stLower === 'interaction' || stLower === 'contacted' || stLower === 'first call' || stLower === 'first_call';
+      }
+      if (targetStage === 'Follow-up') {
+        if (stLower === 'follow-up' || stLower === 'followup' || stLower === 'requirement collection' || stLower === 'requirement_collection' || stLower === 'interested') return true;
+        if (hasScheduledFollowup && stLower !== 'proposal sent' && stLower !== 'proposal_sent' && stLower !== 'proposal' && stLower !== 'demo scheduled' && stLower !== 'demo_scheduled' && stLower !== 'qualified' && stLower !== 'negotiation' && stLower !== 'negotiation_started' && stLower !== 'closing' && stLower !== 'converted' && stLower !== 'payment completed' && stLower !== 'payment_completed' && stLower !== 'payment' && stLower !== 'closed won' && stLower !== 'closed_won' && stLower !== 'lost' && stLower !== 'rejected') {
+          return true;
+        }
+        return false;
+      }
+      if (targetStage === 'Proposal Sent') {
+        return stLower === 'proposal sent' || stLower === 'proposal_sent' || stLower === 'proposal' || stLower === 'demo scheduled' || stLower === 'demo_scheduled' || stLower === 'qualified';
+      }
+      if (targetStage === 'Negotiation') {
+        return stLower === 'negotiation' || stLower === 'negotiation_started' || stLower === 'closing';
+      }
+      if (targetStage === 'Converted') {
+        return stLower === 'converted' || stLower === 'payment completed' || stLower === 'payment_completed' || stLower === 'payment' || stLower === 'closed won' || stLower === 'closed_won';
+      }
+      if (targetStage === 'Lost') {
+        return stLower === 'lost' || stLower === 'rejected';
+      }
+      return stLower === targetStage.toLowerCase();
+    }).length;
+  };
+
   const assignedLeadsCount = kpis?.myAssignedLeads ?? myLeads.length;
   const pendingFollowupsCount = followups.length > 0 ? followups.length : (kpis?.myPendingFollowups ?? 0);
-  const conversionsCount = kpis?.myConversions ?? myLeads.filter(l => l.status === 'Converted').length;
+  const conversionsCount = kpis?.myConversions ?? getStageCount('Converted');
   const personalRevenue = kpis?.myRevenueContribution ?? (conversionsCount * 2500);
 
   return (
@@ -401,7 +446,7 @@ export default function UserDashboard() {
         title="Your Call Activity & Contact Details"
       />
 
-      {/* Workflow Stage-wise Pending Breakdown Grid */}
+      {/* Workflow Stage-wise Active Breakdown Grid */}
       {isCardEnabled('workflow_queue') && (
         <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
           <div className="flex items-center justify-between">
@@ -409,18 +454,18 @@ export default function UserDashboard() {
               <Briefcase size={16} className="text-theme-primary" /> Workflow Stage Active Containers
             </h3>
             <span className="text-[10px] font-bold text-theme-text-muted">
-              Live Pending Action Tasks Across Leads
+              Live Active Leads Across Workflow Stages
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { label: 'Pending First Calls', count: workflowPending.pendingFirstCalls || 0, color: 'text-blue-400', bg: 'bg-blue-500/10', targetStage: 'Interaction' },
-              { label: 'Pending Requirements', count: workflowPending.pendingRequirementCollection || 0, color: 'text-purple-400', bg: 'bg-purple-500/10', targetStage: 'Interaction' },
-              { label: 'Pending Demos', count: workflowPending.pendingDemo || 0, color: 'text-amber-400', bg: 'bg-amber-500/10', targetStage: 'Follow-up' },
-              { label: 'Pending Proposals', count: workflowPending.pendingProposal || 0, color: 'text-cyan-400', bg: 'bg-cyan-500/10', targetStage: 'Proposal Sent' },
-              { label: 'Pending Negotiation', count: workflowPending.pendingNegotiation || 0, color: 'text-rose-400', bg: 'bg-rose-500/10', targetStage: 'Negotiation' },
-              { label: 'Pending Payment', count: workflowPending.pendingPayment || 0, color: 'text-emerald-400', bg: 'bg-emerald-500/10', targetStage: 'Converted' }
+              { label: 'New Leads', count: getStageCount('New'), color: 'text-blue-400', bg: 'bg-blue-500/10', targetStage: 'New' },
+              { label: 'Interaction', count: getStageCount('Interaction'), color: 'text-purple-400', bg: 'bg-purple-500/10', targetStage: 'Interaction' },
+              { label: 'Follow-up', count: getStageCount('Follow-up'), color: 'text-amber-400', bg: 'bg-amber-500/10', targetStage: 'Follow-up' },
+              { label: 'Proposal Sent', count: getStageCount('Proposal Sent'), color: 'text-cyan-400', bg: 'bg-cyan-500/10', targetStage: 'Proposal Sent' },
+              { label: 'Negotiation', count: getStageCount('Negotiation'), color: 'text-rose-400', bg: 'bg-rose-500/10', targetStage: 'Negotiation' },
+              { label: 'Converted', count: getStageCount('Converted'), color: 'text-emerald-400', bg: 'bg-emerald-500/10', targetStage: 'Converted' }
             ].map((item, i) => (
               <Link
                 key={i}
