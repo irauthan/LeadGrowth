@@ -23,7 +23,6 @@ export default function Reports() {
 
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'my-reports' | 'review' | 'exports'>('my-reports');
-
   // E1 & E3 Time Filter State
   const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
 
@@ -178,7 +177,7 @@ export default function Reports() {
             Daily Sales Reports & Export Console
           </h1>
           <p className="text-xs text-theme-text-muted mt-0.5">
-            Submit daily activity reports to your manager, track review statuses, and download analytical database exports.
+Submit daily activity reports to your manager, monitor their review status, and access analytical database exports for deeper insights.
           </p>
         </div>
 
@@ -208,7 +207,6 @@ export default function Reports() {
         </div>
         <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
       </div>
-
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-theme-border/40 pb-2">
         <button
@@ -259,7 +257,7 @@ export default function Reports() {
               <Loader2 size={24} className="animate-spin text-theme-primary" />
               <span className="text-xs text-theme-text-muted font-bold">Fetching submitted reports...</span>
             </div>
-          ) : (
+          ) : (   
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-theme-bg-alt border-b border-theme-border text-theme-text-muted font-extrabold uppercase text-[10px] tracking-wider">

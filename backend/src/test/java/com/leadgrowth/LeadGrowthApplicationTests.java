@@ -496,3 +496,4 @@ public class LeadGrowthApplicationTests {
                                 .andExpect(jsonPath("$.refreshToken").exists());
         }
 }
+

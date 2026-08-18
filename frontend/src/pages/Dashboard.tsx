@@ -16,6 +16,6 @@ export default function Dashboard() {
   if (isManager) {
     return <ManagerDashboard />;
   }
-
+ 
   return <UserDashboard />;
 }

@@ -254,7 +254,7 @@ export default function UserManagement() {
     <div className="space-y-6">
       
       {/* Top Header Command Center */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-theme-card border border-theme-border rounded-3xl p-6 shadow-xl relative overflow-hidden">
+      <div className="flex flex-col lg:flex-r   ow lg:items-center justify-between gap-4 bg-theme-card border border-theme-border rounded-3xl p-6 shadow-xl relative overflow-hidden">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-white shadow-lg nav-glow">
             <UsersIcon size={24} />

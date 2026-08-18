@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { NyaarLogo } from '../components/NyaarLogo';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { 
@@ -8,6 +7,7 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Loader2, 
+  TrendingUp, 
   ChevronRight,
   Eye,
   EyeOff
@@ -92,8 +92,8 @@ export default function AcceptInvite() {
         
         {/* Branding Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center mb-1">
-            <NyaarLogo size={48} animated />
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-lg mb-1">
+            <TrendingUp size={24} />
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-white">Join Workspace</h2>
           <p className="text-xs text-slate-400">Complete your profile setup to accept your workspace invitation.</p>
@@ -159,7 +159,7 @@ export default function AcceptInvite() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full rounded-2xl border border-slate-700 bg-slate-800/60 py-3 pl-10 pr-10 text-sm font-medium text-white outline-none focus:border-cyan-400"
                   />
-                  <button
+                  <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
@@ -190,3 +190,4 @@ export default function AcceptInvite() {
     </div>
   );
 }
+

@@ -285,7 +285,7 @@ export default function UserDashboard() {
           className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-theme-primary/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Assigned Pipeline</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Assigned Leads</span>
             <UserCheck size={16} className="text-theme-primary transition-transform group-hover:scale-110" />
           </div>
           <h3 className="text-2xl font-extrabold text-theme-text">{assignedLeadsCount}</h3>
