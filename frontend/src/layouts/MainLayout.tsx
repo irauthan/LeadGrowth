@@ -8,26 +8,26 @@ import Footer from '../components/Footer';
 import { useLayoutStore } from '../store/layoutStore';
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Hoossh | Dashboard',
-  '/my-work': 'Hoossh | My Work & Tasks',
-  '/leads': 'Hoossh | Leads',
-  '/campaigns': 'Hoossh | Campaigns',
-  '/analytics': 'Hoossh | Analytics',
-  '/reports': 'Hoossh | Reports',
-  '/scheduler': 'Hoossh | Scheduler',
-  '/followups': 'Hoossh | Follow-ups',
-  '/users': 'Hoossh | Team',
-  '/settings': 'Hoossh | Settings',
-  '/billing': 'Hoossh | Billing',
-  '/integrations': 'Hoossh | Integrations',
-  '/profile': 'Hoossh | Profile',
-  '/admin/work-monitor': 'Hoossh | Executive Monitor',
-  '/admin/users': 'Hoossh | User Management',
-  '/admin/workspace': 'Hoossh | Workspace Management',
-  '/admin/api': 'Hoossh | API Management',
-  '/admin/system': 'Hoossh | System Monitoring',
-  '/admin/security': 'Hoossh | Security Center',
-  '/admin/audit-logs': 'Hoossh | Audit Logs'
+  '/dashboard': 'Hoossh Lead Growth | Dashboard',
+  '/my-work': 'Hoossh Lead Growth | My Work & Tasks',
+  '/leads': 'Hoossh Lead Growth | Leads & CRM',
+  '/campaigns': 'Hoossh Lead Growth | Campaigns & Ads',
+  '/analytics': 'Hoossh Lead Growth | Analytics & Growth',
+  '/reports': 'Hoossh Lead Growth | Reports & Exports',
+  '/scheduler': 'Hoossh Lead Growth | Scheduler & Calendar',
+  '/followups': 'Hoossh Lead Growth | Follow-ups',
+  '/users': 'Hoossh Lead Growth | Team & Members',
+  '/settings': 'Hoossh Lead Growth | Settings',
+  '/billing': 'Hoossh Lead Growth | Billing & Subscriptions',
+  '/integrations': 'Hoossh Lead Growth | Integrations',
+  '/profile': 'Hoossh Lead Growth | Profile',
+  '/admin/work-monitor': 'Hoossh Lead Growth | Executive Monitor',
+  '/admin/users': 'Hoossh Lead Growth | User Management',
+  '/admin/workspace': 'Hoossh Lead Growth | Workspace Management',
+  '/admin/api': 'Hoossh Lead Growth | API Management',
+  '/admin/system': 'Hoossh Lead Growth | System Monitoring',
+  '/admin/security': 'Hoossh Lead Growth | Security Center',
+  '/admin/audit-logs': 'Hoossh Lead Growth | Audit Logs'
 };
 
 export default function MainLayout() {
@@ -37,7 +37,7 @@ export default function MainLayout() {
   const { isCollapsed, sidebarPosition } = useLayoutStore();
 
   useEffect(() => {
-    const title = PAGE_TITLES[location.pathname] || 'Hoossh Lead Management';
+    const title = PAGE_TITLES[location.pathname] || 'Hoossh Lead Growth CRM';
     document.title = title;
   }, [location.pathname]);
 

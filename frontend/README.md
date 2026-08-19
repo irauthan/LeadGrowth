@@ -1,6 +1,6 @@
-# LeadGrowth Frontend
+# Hoossh Lead Growth CRM - Frontend
 
-This project is the frontend for the LeadGrowth application. It is built with React, TypeScript, and Vite to provide a fast development experience with hot module replacement (HMR) and modern build tooling.
+This project is the frontend for the Hoossh Lead Growth CRM application. It is built with React, TypeScript, Tailwind CSS, and Vite to provide a fast development experience with hot module replacement (HMR) and modern build tooling.
 
 ## Features
 

@@ -127,11 +127,11 @@ export default function Sidebar() {
                 to="/dashboard" 
                 className="flex h-10 w-10 items-center justify-center rounded-2xl bg-theme-bg-alt/80 text-white shadow-md nav-glow transition-transform hover:scale-105"
               >
-                <HoosshLogo size={24} animated />
+                <HoosshLogo size={24} variant="icon-only" animated />
               </Link>
               <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none ${tooltipPositionClass}`}>
                 <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
-                  Hoossh Lead Management
+                  Hoossh Lead Growth
                 </span>
               </div>
             </div>
@@ -236,7 +236,11 @@ export default function Sidebar() {
         <div className={`flex flex-col h-full w-full ${isHorizontal ? 'lg:hidden' : 'flex'}`}>
           <div className="flex h-20 items-center justify-between px-4 border-b border-theme-border/30">
             <Link to="/dashboard" className="flex items-center gap-2.5 overflow-hidden" onClick={() => setMobileOpen(false)}>
-              <HoosshLogo size={isCollapsed ? 32 : 36} animated />
+              {isCollapsed ? (
+                <HoosshLogo size={32} variant="icon-only" animated />
+              ) : (
+                <HoosshLogo size={32} variant="with-text" animated />
+              )}
             </Link>
 
             <button

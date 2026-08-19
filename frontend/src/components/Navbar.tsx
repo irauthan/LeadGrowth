@@ -312,7 +312,7 @@ export default function Navbar() {
 
           {/* App Brand Logo on Mobile header when sidebar closed */}
           <Link to="/dashboard" className="flex items-center gap-2 lg:hidden">
-            <HoosshLogo size={28} animated />
+            <HoosshLogo size={28} variant="icon-only" animated />
           </Link>
 
           <div className="flex flex-col">

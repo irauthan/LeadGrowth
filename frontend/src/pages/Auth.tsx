@@ -64,6 +64,7 @@ export default function Auth() {
   const [inviteWorkspaceName, setInviteWorkspaceName] = useState('');
 
   useEffect(() => {
+    document.title = 'Hoossh Lead Growth CRM | Authentication';
     const params = new URLSearchParams(window.location.search);
     const token = params.get('inviteToken');
     if (token) {
@@ -292,66 +293,66 @@ export default function Auth() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-slate-900 font-sans selection:bg-cyan-500 selection:text-white">
+    <div className="relative min-h-screen w-full bg-slate-50 font-sans selection:bg-blue-600 selection:text-white">
       {/* Container Grid */}
       <div className="relative z-10 flex min-h-screen w-full flex-col lg:flex-row">
         
-        {/* LEFT COLUMN: Modern Enterprise Business Showcase */}
-        <div className="hidden lg:flex lg:w-7/12 flex-col justify-between p-12 lg:p-16 bg-gradient-to-br from-[#0F4C81] via-[#123E68] to-[#0A2E52] text-white relative overflow-hidden">
-          {/* Wave Background Pattern overlay */}
-          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#1D9BF0_1px,transparent_1px)] [background-size:24px_24px]" />
-          
-          {/* Animated Float Blobs */}
-          <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-[#1D9BF0]/20 blur-3xl animate-pulse" />
-          <div className="absolute bottom-10 right-10 h-80 w-80 rounded-full bg-[#00C2A8]/20 blur-3xl animate-float-delayed" />
+        {/* LEFT COLUMN: Clean White / Light Slate Business Showcase */}
+        <div className="hidden lg:flex lg:w-7/12 flex-col justify-between p-12 lg:p-16 bg-gradient-to-b from-slate-50 via-blue-50/30 to-white border-r border-slate-200 text-slate-800 relative overflow-hidden">
+          {/* Subtle grid pattern overlay */}
+          <div className="absolute inset-0 opacity-40 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
           {/* Header Branding */}
           <div className="relative z-10 flex items-center gap-3">
-            <HoosshLogo size={48} animated />
+            <HoosshLogo size={38} variant="icon-only" animated />
             <div>
-              <span className="text-2xl font-black tracking-tight text-white block">Hoossh</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Smart Lead Management Platform</span>
+              <span className="text-xl font-black tracking-tight text-slate-900 block">
+                Hoossh <span className="text-blue-600 font-black">Lead Growth</span>
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 -mt-0.5 block">
+                Enterprise CRM & Operations
+              </span>
             </div>
           </div>
 
-          {/* Middle Floating Analytics Cards Showcase */}
+          {/* Middle Analytics Cards Showcase */}
           <div className="relative z-10 my-auto space-y-6 max-w-xl">
             <div className="space-y-3">
-              <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 px-3.5 py-1 text-xs font-bold text-cyan-300">
-                <Zap size={14} className="text-[#00C2A8]" /> Streamlined Lead & Team Intelligence
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3.5 py-1 text-xs font-bold text-blue-700">
+                <Zap size={14} className="text-blue-600" /> Streamlined Lead & Team Intelligence
               </span>
-              <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight text-white">
+              <h1 className="text-3xl lg:text-4xl font-black tracking-tight leading-tight text-slate-900">
                 Accelerate Sales Pipeline & Team Velocity
               </h1>
-              <p className="text-sm font-medium text-slate-300 leading-relaxed">
+              <p className="text-sm font-normal text-slate-600 leading-relaxed">
                 Empower your sales, marketing, and management teams with automated lead assignments, task workflows, and real-time activity insights.
               </p>
             </div>
 
-            {/* Interactive Graphic Card 1: Revenue & Lead Metrics */}
-            <div className="grid grid-cols-2 gap-4 pt-4">
-              <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md shadow-xl animate-float">
+            {/* Interactive Graphic Cards */}
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-cyan-200">Active Pipeline</span>
-                  <div className="h-8 w-8 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-300">
+                  <span className="text-xs font-bold text-slate-500">Active Pipeline</span>
+                  <div className="h-8 w-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
                     <BarChart3 size={16} />
                   </div>
                 </div>
-                <h3 className="text-2xl font-extrabold text-white mt-2">$148,250</h3>
-                <p className="text-[10px] font-semibold text-emerald-400 mt-1 flex items-center gap-1">
+                <h3 className="text-2xl font-black text-slate-900 mt-2">₹148,250</h3>
+                <p className="text-[11px] font-semibold text-emerald-600 mt-1 flex items-center gap-1">
                   ↑ +34.8% vs last month
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md shadow-xl animate-float-delayed">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-cyan-200">Task Completion Rate</span>
-                  <div className="h-8 w-8 rounded-xl bg-teal-500/20 flex items-center justify-center text-[#00C2A8]">
+                  <span className="text-xs font-bold text-slate-500">Task Completion Rate</span>
+                  <div className="h-8 w-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
                     <Target size={16} />
                   </div>
                 </div>
-                <h3 className="text-2xl font-extrabold text-white mt-2">96.4%</h3>
-                <p className="text-[10px] font-semibold text-cyan-300 mt-1 flex items-center gap-1">
+                <h3 className="text-2xl font-black text-slate-900 mt-2">96.4%</h3>
+                <p className="text-[11px] font-semibold text-blue-600 mt-1 flex items-center gap-1">
                   Automated distribution
                 </p>
               </div>
@@ -359,52 +360,54 @@ export default function Auth() {
 
             {/* Feature Checkmarks */}
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                <CheckCircle2 size={16} className="text-[#00C2A8]" /> Granular RBAC Permissions
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <CheckCircle2 size={16} className="text-blue-600 flex-shrink-0" /> Granular RBAC Permissions
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                <CheckCircle2 size={16} className="text-[#00C2A8]" /> Automated Task Assignment
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <CheckCircle2 size={16} className="text-blue-600 flex-shrink-0" /> Automated Task Assignment
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                <CheckCircle2 size={16} className="text-[#00C2A8]" /> Live System Monitoring
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <CheckCircle2 size={16} className="text-blue-600 flex-shrink-0" /> Live System Monitoring
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                <CheckCircle2 size={16} className="text-[#00C2A8]" /> WebSocket Realtime Sync
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <CheckCircle2 size={16} className="text-blue-600 flex-shrink-0" /> WebSocket Realtime Sync
               </div>
             </div>
           </div>
 
           {/* Footer Info */}
-          <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-6 text-xs text-slate-400 font-medium">
-            <span>© 2026 Hoossh Lead Management. All rights reserved.</span>
+          <div className="relative z-10 flex items-center justify-between border-t border-slate-200 pt-6 text-xs text-slate-500 font-medium">
+            <span>© 2026 Hoossh Lead Growth CRM. All rights reserved.</span>
             <div className="flex items-center gap-4">
-              <span className="hover:text-white transition-colors cursor-pointer">Privacy Policy</span>
-              <span className="hover:text-white transition-colors cursor-pointer">Security</span>
+              <span className="hover:text-slate-900 transition-colors cursor-pointer">Privacy Policy</span>
+              <span className="hover:text-slate-900 transition-colors cursor-pointer">Security</span>
             </div>
           </div>
         </div>
 
         {/* RIGHT COLUMN: Modern White / Light SaaS Form */}
-        <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 bg-[#F8FAFC]">
+        <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 bg-white">
           
           {/* Mobile Header Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <HoosshLogo size={40} animated />
-            <span className="text-2xl font-black text-[#0F4C81]">Hoossh</span>
+            <HoosshLogo size={36} variant="icon-only" animated />
+            <span className="text-xl font-black text-slate-900">
+              Hoossh <span className="text-blue-600">Lead Growth</span>
+            </span>
           </div>
 
-          <div className="w-full max-w-md space-y-8 bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-xl">
+          <div className="w-full max-w-md space-y-6 bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 shadow-lg shadow-slate-100">
             
             {/* Header Title */}
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-[#0F4C81]">
+              <h2 className="text-2xl font-black tracking-tight text-slate-900">
                 {isForgotPassword 
                   ? 'Reset Account Password' 
                   : activeTab === 'login' 
                   ? 'Sign In to Workspace' 
                   : 'Register Workspace Account'}
               </h2>
-              <p className="mt-1.5 text-xs font-semibold text-slate-500">
+              <p className="mt-1.5 text-xs text-slate-500">
                 {isForgotPassword 
                   ? 'Enter your registered email to receive a password reset token.' 
                   : activeTab === 'login' 
@@ -415,13 +418,13 @@ export default function Auth() {
 
             {/* TAB SELECTOR BUTTONS */}
             {!isForgotPassword && !inviteToken && (
-              <div className="flex rounded-2xl bg-slate-100 p-1 border border-slate-200">
+              <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
                 <button
                   type="button"
                   onClick={() => { setActiveTab('login'); setError(''); setSuccessMessage(''); }}
-                  className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all ${
+                  className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
                     activeTab === 'login' 
-                      ? 'bg-[#0F4C81] text-white shadow-md' 
+                      ? 'bg-blue-600 text-white shadow-sm' 
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -430,9 +433,9 @@ export default function Auth() {
                 <button
                   type="button"
                   onClick={() => { setActiveTab('signup'); setSignupStep(1); setError(''); setSuccessMessage(''); }}
-                  className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all ${
+                  className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
                     activeTab === 'signup' 
-                      ? 'bg-[#0F4C81] text-white shadow-md' 
+                      ? 'bg-blue-600 text-white shadow-sm' 
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -443,7 +446,7 @@ export default function Auth() {
 
             {/* ERROR & SUCCESS ALERTS */}
             {error && (
-              <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4 text-xs font-bold text-rose-600 flex items-center gap-2">
+              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3.5 text-xs font-bold text-rose-600 flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-rose-500" />
                 {error}
               </div>
@@ -565,7 +568,7 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => { setIsForgotPassword(true); setError(''); setSuccessMessage(''); }}
-                      className="text-[11px] font-bold text-[#1D9BF0] hover:underline"
+                      className="text-[11px] font-bold text-blue-600 hover:underline"
                     >
                       Forgot Password?
                     </button>
@@ -578,7 +581,7 @@ export default function Auth() {
                       placeholder="••••••••"
                       value={loginForm.password}
                       onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] focus:bg-white transition-all"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-medium text-slate-900 outline-none focus:border-blue-600 focus:bg-white transition-all"
                     />
                     <button
                       type="button"
@@ -597,7 +600,7 @@ export default function Auth() {
                     id="rememberMe"
                     checked={loginForm.rememberMe}
                     onChange={(e) => setLoginForm({ ...loginForm, rememberMe: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-[#0F4C81] focus:ring-[#0F4C81]"
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                   <label htmlFor="rememberMe" className="text-xs font-semibold text-slate-600 cursor-pointer">
                     Remember me on this browser
@@ -607,7 +610,7 @@ export default function Auth() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-2xl bg-[#0F4C81] hover:bg-[#0A365C] py-3.5 text-xs font-bold text-white shadow-lg shadow-[#0F4C81]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-bold text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 size={18} className="animate-spin" /> : 'Access Workspace Dashboard'}
                 </button>
@@ -618,8 +621,8 @@ export default function Auth() {
               <form onSubmit={handleSignupSubmit} className="space-y-4">
                 
                 {inviteToken && (
-                  <div className="rounded-2xl bg-cyan-500/10 border border-cyan-500/20 p-3 text-xs text-[#0F4C81]">
-                    <p className="font-bold uppercase tracking-wider text-[10px]">Workspace Invitation</p>
+                  <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
+                    <p className="font-bold uppercase tracking-wider text-[10px] text-blue-700">Workspace Invitation</p>
                     <p className="mt-1 font-medium">Joining workspace <span className="font-bold">{inviteWorkspaceName}</span> as <span className="font-bold">{inviteRole}</span></p>
                   </div>
                 )}
@@ -630,7 +633,7 @@ export default function Auth() {
                       <div key={s} className="flex items-center">
                         <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${
                           signupStep === s 
-                            ? 'bg-[#0F4C81] text-white shadow-md ring-4 ring-[#0F4C81]/15' 
+                            ? 'bg-blue-600 text-white shadow-sm ring-4 ring-blue-100' 
                             : signupStep > s 
                             ? 'bg-emerald-500 text-white' 
                             : 'bg-slate-100 border border-slate-200 text-slate-400'
@@ -655,7 +658,7 @@ export default function Auth() {
                           placeholder="e.g. Sarah Jenkins"
                           value={signupForm.fullName}
                           onChange={(e) => setSignupForm({ ...signupForm, fullName: e.target.value })}
-                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] focus:bg-white"
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-medium text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
                         />
                       </div>
                     </div>
@@ -671,7 +674,7 @@ export default function Auth() {
                           placeholder="sarah@company.com"
                           value={signupForm.email}
                           onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
-                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] focus:bg-white disabled:opacity-50"
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-medium text-slate-900 outline-none focus:border-blue-600 focus:bg-white disabled:opacity-50"
                         />
                       </div>
                     </div>
@@ -686,7 +689,7 @@ export default function Auth() {
                           placeholder="+1 (555) 000-0000"
                           value={signupForm.phone}
                           onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })}
-                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] focus:bg-white"
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-medium text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
                         />
                       </div>
                     </div>
@@ -705,7 +708,7 @@ export default function Auth() {
                           placeholder="Minimum 6 characters"
                           value={signupForm.password}
                           onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
-                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] focus:bg-white"
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-medium text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
                         />
                         <button
                           type="button"
@@ -727,7 +730,7 @@ export default function Auth() {
                           placeholder="Repeat password"
                           value={signupForm.confirmPassword}
                           onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
-                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] focus:bg-white"
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-medium text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
                         />
                         <button
                           type="button"
@@ -747,25 +750,25 @@ export default function Auth() {
                       <button
                         type="button"
                         onClick={() => setWorkspaceAction('CREATE')}
-                        className={`rounded-2xl border p-3.5 text-center transition-all ${
+                        className={`rounded-xl border p-3.5 text-center transition-all ${
                           workspaceAction === 'CREATE'
-                            ? 'border-[#0F4C81] bg-[#0F4C81]/10 text-[#0F4C81] font-bold'
+                            ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold'
                             : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300'
                         }`}
                       >
-                        <Briefcase size={18} className="mx-auto mb-1" />
+                        <Briefcase size={18} className="mx-auto mb-1 text-blue-600" />
                         <span className="block text-xs">Create Workspace</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setWorkspaceAction('JOIN')}
-                        className={`rounded-2xl border p-3.5 text-center transition-all ${
+                        className={`rounded-xl border p-3.5 text-center transition-all ${
                           workspaceAction === 'JOIN'
-                            ? 'border-[#0F4C81] bg-[#0F4C81]/10 text-[#0F4C81] font-bold'
+                            ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold'
                             : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300'
                         }`}
                       >
-                        <Users size={18} className="mx-auto mb-1" />
+                        <Users size={18} className="mx-auto mb-1 text-blue-600" />
                         <span className="block text-xs">Join Workspace</span>
                       </button>
                     </div>
@@ -780,7 +783,7 @@ export default function Auth() {
                             placeholder="e.g. Apex Growth Agency"
                             value={signupForm.workspaceName}
                             onChange={(e) => setSignupForm({ ...signupForm, workspaceName: e.target.value })}
-                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81]"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-medium text-slate-900 outline-none focus:border-blue-600"
                           />
                         </div>
                         <div>
@@ -791,7 +794,7 @@ export default function Auth() {
                             placeholder="e.g. Apex Corp Inc"
                             value={signupForm.companyName}
                             onChange={(e) => setSignupForm({ ...signupForm, companyName: e.target.value })}
-                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81]"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-medium text-slate-900 outline-none focus:border-blue-600"
                           />
                         </div>
                       </div>
@@ -804,7 +807,7 @@ export default function Auth() {
                           placeholder="WS-XXXXXXXX"
                           value={signupForm.inviteCode}
                           onChange={(e) => setSignupForm({ ...signupForm, inviteCode: e.target.value })}
-                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] uppercase"
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-medium text-slate-900 outline-none focus:border-blue-600 uppercase"
                         />
                       </div>
                     )}
@@ -816,7 +819,7 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => { setError(''); setSignupStep(prev => prev - 1); }}
-                      className="flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-slate-600 hover:bg-slate-100"
+                      className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-slate-600 hover:bg-slate-100"
                     >
                       <ChevronLeft size={18} />
                     </button>
@@ -825,7 +828,7 @@ export default function Auth() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 rounded-2xl bg-[#0F4C81] hover:bg-[#0A365C] py-3.5 text-xs font-bold text-white shadow-lg shadow-[#0F4C81]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-bold text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                   >
                     {loading ? (
                       <Loader2 size={18} className="animate-spin" />
@@ -844,7 +847,7 @@ export default function Auth() {
           </div>
 
           <div className="mt-8 text-center text-xs text-slate-500 font-semibold">
-            Need help? Contact system administrator or visit <Link to="/" className="text-[#0F4C81] hover:underline font-bold">Main Welcome Page</Link>
+            Need help? Contact system administrator or visit <Link to="/" className="text-blue-600 hover:underline font-bold">Main Welcome Page</Link>
           </div>
         </div>
 

@@ -1,374 +1,746 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { HoosshLogo } from '../components/HoosshLogo';
 import {
   ArrowRight,
   BarChart3,
-  DollarSign,
-  Layers,
-  LineChart,
-  Sparkles,
+  CheckCircle2,
+  Users,
   Target,
-  Users
+  TrendingUp,
+  ShieldCheck,
+  Zap,
+  PhoneCall,
+  DollarSign,
+  UserCheck,
+  Menu,
+  X,
+  Activity,
+  Mail,
+  Send,
+  Play,
+  Layers,
+  Inbox
 } from 'lucide-react';
-import Footer from '../components/Footer';
 
 export default function Welcome() {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.12,
-      },
-    },
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', company: '', message: '' });
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactSubmitted(true);
   };
 
-  const itemVariants = {
-    hidden: {
-      opacity: 0,
-      y: 30,
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.7,
-        ease: 'easeOut' as const,
-      },
-    },
-  };
+  const navLinks = [
+    { label: 'Features', href: '#features' },
+    { label: 'How It Works', href: '#how-it-works' },
+    { label: 'Pricing', href: '#pricing' },
+    { label: 'Contact', href: '#contact' },
+  ];
 
-  const featureCards = [
+  const features = [
     {
-      title: 'Marketing Analytics',
-      desc: 'Monitor clicks, impressions, conversions and ad performance from one unified dashboard.',
-      icon: BarChart3,
-      color: 'from-blue-600 to-cyan-500',
-    },
-    {
-      title: 'Live Lead Tracking',
-      desc: 'Receive instant lead updates using real-time WebSocket events and automated distribution.',
+      title: 'Lead Management',
+      desc: 'Capture, organize, and track leads throughout their lifecycle with custom statuses and source attribution.',
       icon: Target,
-      color: 'from-blue-500 to-indigo-600',
     },
     {
-      title: 'Campaign Insights',
-      desc: 'Analyze CTR, CPC, Cost and Conversion Rate effortlessly across all channels.',
-      icon: LineChart,
-      color: 'from-sky-500 to-blue-600',
-    },
-    {
-      title: 'Team Collaboration',
-      desc: 'Assign leads, create activity logs, set reminders and collaborate securely.',
-      icon: Users,
-      color: 'from-blue-700 to-indigo-500',
-    },
-    {
-      title: 'Revenue Monitoring',
-      desc: 'Track revenue, ROAS, financial metrics and business growth in real time.',
-      icon: DollarSign,
-      color: 'from-cyan-600 to-blue-600',
-    },
-    {
-      title: 'Platform Integrations',
-      desc: 'Connect Meta Ads, Google Ads and third-party SaaS integrations seamlessly.',
+      title: 'Sales CRM & Pipeline',
+      desc: 'Manage clients, follow-ups, and deal stages from one unified collaborative workspace.',
       icon: Layers,
-      color: 'from-indigo-500 to-blue-500',
+    },
+    {
+      title: 'Performance Analytics',
+      desc: 'Understand CTR, CPC, conversion rates, and revenue impact across marketing campaigns.',
+      icon: BarChart3,
+    },
+    {
+      title: 'Automated Lead Assignment',
+      desc: 'Distribute incoming leads to sales reps based on availability and role permissions.',
+      icon: UserCheck,
+    },
+    {
+      title: 'Real-Time Notifications',
+      desc: 'Instant alerts for hot lead activity, calendar reminders, and task deadlines.',
+      icon: Zap,
+    },
+    {
+      title: 'Team Productivity',
+      desc: 'Monitor rep activity, task completion velocity, call logs, and audit histories.',
+      icon: Users,
+    },
+  ];
+
+  const steps = [
+    {
+      step: '01',
+      title: 'Capture Leads',
+      desc: 'Ingest leads directly from ad campaigns, webhooks, and forms.',
+      icon: Inbox,
+    },
+    {
+      step: '02',
+      title: 'Organize & Assign',
+      desc: 'Categorize by status and route instantly to the right reps.',
+      icon: UserCheck,
+    },
+    {
+      step: '03',
+      title: 'Follow Up & Engage',
+      desc: 'Log calls, set calendar reminders, and nurture prospects to deal close.',
+      icon: PhoneCall,
+    },
+    {
+      step: '04',
+      title: 'Measure & Grow',
+      desc: 'Analyze conversions, calculate ROI, and scale revenue with confidence.',
+      icon: TrendingUp,
+    },
+  ];
+
+  const pricingPlans = [
+    {
+      name: 'Free',
+      price: '₹0',
+      period: 'Forever free',
+      desc: 'Essential lead tracking for solo founders and small teams.',
+      features: [
+        'Up to 5 Team Members',
+        '1,000 Active Leads',
+        'Standard Lead Queue & Notes',
+        'Personal Task Manager',
+        'Basic Pipeline Analytics',
+      ],
+      popular: false,
+      cta: 'Start Free',
+    },
+    {
+      name: 'Professional',
+      price: '₹7,999',
+      period: 'Per month',
+      desc: 'Complete CRM and analytics suite for growing sales teams.',
+      features: [
+        'Up to 25 Team Members',
+        '10,000 Active Leads',
+        'Full Campaign Analytics',
+        'Automated Lead Assignment',
+        'Follow-up & Calendar Engine',
+        'WebSocket Realtime Live Updates',
+      ],
+      popular: true,
+      cta: 'Get Started',
+    },
+    {
+      name: 'Enterprise',
+      price: '₹24,999',
+      period: 'Per month',
+      desc: 'Dedicated infrastructure, governance, and priority support.',
+      features: [
+        'Up to 100 Team Members',
+        '100,000 Active Leads',
+        'Executive Work Monitor & RBAC',
+        'API Management & Webhooks',
+        'Security Center & Audit Log Export',
+        'Dedicated Account Manager',
+      ],
+      popular: false,
+      cta: 'Contact Sales',
     },
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/40 to-white text-slate-900">
-
-      {/* Background Grid Accent */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#3b82f60d_1px,transparent_1px),linear-gradient(to_bottom,#3b82f60d_1px,transparent_1px)] bg-[size:60px_60px] opacity-70" />
-
-      {/* Ambient Blue Background Glows */}
-      <div className="absolute -left-48 -top-48 h-[650px] w-[650px] rounded-full bg-blue-400/15 blur-[160px]" />
-      <div className="absolute -right-48 bottom-0 h-[650px] w-[650px] rounded-full bg-cyan-400/15 blur-[160px]" />
-      <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-sky-300/10 blur-[180px]" />
-
-      {/* Floating Blue Accent Orbs */}
-      <div className="absolute top-36 left-16 h-24 w-24 rounded-full bg-blue-500/10 blur-2xl animate-pulse" />
-      <div className="absolute right-20 top-56 h-36 w-36 rounded-full bg-cyan-500/10 blur-2xl animate-pulse" />
-
-      <div className="relative z-20">
-
-        {/* Header Navigation */}
-        <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 border-b border-blue-100/60 bg-white/70 backdrop-blur-md sticky top-0 z-50">
-          <div className="flex items-center gap-3">
-            <HoosshLogo size={44} animated />
-            <div>
-              <h1 className="text-xl font-black tracking-tight text-blue-950">
-                Hoossh
-              </h1>
-              <p className="text-[11px] text-blue-600/80 font-bold uppercase tracking-wider">
-                Lead Management Platform
-              </p>
+    <div className="min-h-screen bg-white text-slate-800 selection:bg-blue-600 selection:text-white font-sans antialiased">
+      
+      {/* ========================================================================= */}
+      {/* 1. NAVBAR (CLEAN WHITE)                                                   */}
+      {/* ========================================================================= */}
+      <nav className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 h-20">
+          
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-3">
+            <HoosshLogo size={36} variant="icon-only" animated />
+            <div className="flex flex-col">
+              <span className="text-lg font-black tracking-tight text-slate-900">
+                Hoossh <span className="text-blue-600 font-black">Lead Growth</span>
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 -mt-0.5">
+                CRM & Analytics
+              </span>
             </div>
+          </Link>
+
+          {/* Nav Links */}
+          <div className="hidden md:flex items-center gap-1">
+            {navLinks.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-colors"
+              >
+                {item.label}
+              </a>
+            ))}
           </div>
 
-          <Link
-            to="/auth"
-            className="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 text-sm font-bold shadow-lg shadow-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700"
+          {/* CTAs */}
+          <div className="hidden md:flex items-center gap-3">
+            <Link
+              to="/auth"
+              className="rounded-xl px-4 py-2 text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors"
+            >
+              Login
+            </Link>
+            <Link
+              to="/auth"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition-all hover:shadow-md active:scale-95"
+            >
+              <span>Get Started</span>
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:text-slate-900 md:hidden"
+            aria-label="Toggle Navigation"
           >
-            Sign In to Workspace
-          </Link>
-        </header>
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
 
-        <main className="mx-auto max-w-7xl px-6">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="flex flex-col items-center pt-12 pb-24 text-center lg:pt-20"
-          >
-            {/* White & Blue Pill Badge */}
-            <motion.div
-              variants={itemVariants}
-              className="mb-8 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-5 py-2 text-xs font-bold text-blue-700 shadow-sm"
-            >
-              <Sparkles size={15} className="text-blue-500" />
-              <span>One Unified Dashboard • Every Lead • Enterprise Growth</span>
-            </motion.div>
-
-            {/* Main Headline */}
-            <motion.h1
-              variants={itemVariants}
-              className="max-w-5xl text-5xl font-black leading-tight tracking-tight text-blue-950 sm:text-6xl lg:text-7xl"
-            >
-              Grow Your Business
-              <br />
-              <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 bg-clip-text text-transparent">
-                Smarter & Faster Than Ever
-              </span>
-            </motion.h1>
-
-            {/* Subtitle */}
-            <motion.p
-              variants={itemVariants}
-              className="mt-8 max-w-3xl text-lg font-medium leading-8 text-slate-600"
-            >
-              Manage ad campaigns, monitor marketing performance, organize leads with automated RBAC distribution, collaborate with your team and scale revenue — all from one modern SaaS platform.
-            </motion.p>
-
-            {/* Primary Action Buttons */}
-            <motion.div
-              variants={itemVariants}
-              className="mt-10 flex flex-wrap justify-center gap-4"
-            >
-              <Link
-                to="/auth"
-                className="group flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-9 py-4 font-bold text-white transition-all duration-300 hover:-translate-y-1 shadow-xl shadow-blue-500/25"
-              >
-                Access Dashboard
-                <ArrowRight
-                  size={18}
-                  className="transition-transform duration-300 group-hover:translate-x-1"
-                />
-              </Link>
-
-              <a
-                href="#features"
-                className="rounded-2xl border border-blue-200 bg-white px-9 py-4 font-bold text-blue-900 shadow-md transition-all duration-300 hover:-translate-y-1 hover:bg-blue-50/50 hover:border-blue-300"
-              >
-                Explore Capabilities
-              </a>
-            </motion.div>
-
-            {/* Key Metrics Showcase Cards */}
-            <motion.div
-              variants={itemVariants}
-              className="mt-16 grid w-full max-w-4xl grid-cols-2 gap-5 md:grid-cols-4"
-            >
-              {[
-                { value: "25K+", label: "Active Leads" },
-                { value: "98%", label: "Conversion Tracking" },
-                { value: "₹2.5M", label: "Revenue Managed" },
-                { value: "120+", label: "Teams" },
-              ].map((item) => (
-                <div
+        {/* Mobile Menu Drawer */}
+        {mobileMenuOpen && (
+          <div className="border-b border-slate-200 bg-white px-6 py-5 md:hidden shadow-lg">
+            <div className="flex flex-col space-y-2">
+              {navLinks.map((item) => (
+                <a
                   key={item.label}
-                  className="rounded-3xl border border-blue-100 bg-white p-6 shadow-md shadow-blue-950/5 transition-all hover:-translate-y-1.5 hover:shadow-xl hover:border-blue-300"
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  <h2 className="text-3xl font-black text-blue-600">
-                    {item.value}
-                  </h2>
-                  <p className="mt-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    {item.label}
-                  </p>
-                </div>
+                  {item.label}
+                </a>
               ))}
-            </motion.div>
+              <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+                <Link
+                  to="/auth"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-center rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-50"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/auth"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-center rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white"
+                >
+                  Get Started
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
 
-            {/* Interactive Dashboard Mockup Preview */}
-            <motion.div
-              variants={itemVariants}
-              className="relative mt-20 w-full max-w-6xl"
+      {/* ========================================================================= */}
+      {/* 2. HERO SECTION (CLEAN WHITE)                                             */}
+      {/* ========================================================================= */}
+      <section className="pt-14 pb-16 sm:pt-20 sm:pb-24 bg-gradient-to-b from-slate-50/60 to-white border-b border-slate-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+
+          {/* Headline */}
+          <h1 className="mx-auto max-w-4xl text-4xl sm:text-6xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.15]">
+            Turn Every Lead Into <br className="hidden sm:inline" />
+            <span className="text-blue-600">Measurable Growth</span>
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
+            Capture inbound leads, automate sales assignments, monitor ad conversions, and scale your sales pipeline with Hoossh Lead Growth CRM.
+          </p>
+
+          {/* CTAs */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <Link
+              to="/auth"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-7 py-3.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95"
             >
-              {/* Outer Blue Glow Frame */}
-              <div className="absolute inset-0 -z-10 rounded-[40px] bg-gradient-to-r from-blue-500/15 via-sky-400/15 to-indigo-500/15 blur-2xl" />
+              <span>Get Started</span>
+              <ArrowRight size={16} />
+            </Link>
 
-              {/* Dashboard Container */}
-              <div className="overflow-hidden rounded-[32px] border border-blue-200/80 bg-white shadow-2xl shadow-blue-950/10">
+            <Link
+              to="/auth"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all shadow-xs"
+            >
+              <Play size={15} className="text-blue-600 fill-blue-600" />
+              <span>Live Demo</span>
+            </Link>
+          </div>
 
-                {/* Top Window Header */}
-                <div className="flex items-center justify-between border-b border-blue-100 bg-slate-50/80 px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-rose-400" />
-                    <div className="h-3 w-3 rounded-full bg-amber-400" />
-                    <div className="h-3 w-3 rounded-full bg-emerald-400" />
+          {/* Clean Dashboard Mockup Preview */}
+          <div className="mt-14 mx-auto max-w-5xl text-left">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60 overflow-hidden">
+              
+              {/* Window Bar */}
+              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-rose-400" />
+                  <div className="h-3 w-3 rounded-full bg-amber-400" />
+                  <div className="h-3 w-3 rounded-full bg-emerald-400" />
+                </div>
+                <span className="text-xs font-bold text-slate-500">
+                  Hoossh Lead Growth Workspace Dashboard
+                </span>
+                <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" /> Live
+                </span>
+              </div>
+
+              {/* Dashboard Content */}
+              <div className="p-6 sm:p-8 space-y-6">
+                
+                {/* 4 Metric Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span className="text-xs font-bold uppercase tracking-wider">Total Leads</span>
+                      <Target size={18} className="text-blue-600" />
+                    </div>
+                    <div className="mt-2 text-2xl font-black text-slate-900">4,820</div>
+                    <p className="mt-1 text-xs font-semibold text-emerald-600">↑ +18.4% this month</p>
                   </div>
 
-                  <div className="rounded-full border border-blue-200 bg-white px-5 py-1.5 text-xs font-bold text-blue-700 shadow-xs">
-                    Hoossh Workspace Dashboard
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span className="text-xs font-bold uppercase tracking-wider">Active Pipeline</span>
+                      <Activity size={18} className="text-indigo-600" />
+                    </div>
+                    <div className="mt-2 text-2xl font-black text-slate-900">1,240</div>
+                    <p className="mt-1 text-xs font-semibold text-blue-600">94.2% assigned</p>
                   </div>
 
-                  <div className="flex gap-2">
-                    <div className="h-7 w-7 rounded-lg bg-blue-100/70" />
-                    <div className="h-7 w-7 rounded-lg bg-blue-100/70" />
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span className="text-xs font-bold uppercase tracking-wider">Conversions</span>
+                      <TrendingUp size={18} className="text-emerald-600" />
+                    </div>
+                    <div className="mt-2 text-2xl font-black text-slate-900">428</div>
+                    <p className="mt-1 text-xs font-semibold text-emerald-600">8.9% conversion</p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span className="text-xs font-bold uppercase tracking-wider">Revenue Impact</span>
+                      <DollarSign size={18} className="text-cyan-600" />
+                    </div>
+                    <div className="mt-2 text-2xl font-black text-slate-900">₹2.85M</div>
+                    <p className="mt-1 text-xs font-semibold text-cyan-600">3.4x ROAS on ads</p>
                   </div>
                 </div>
 
-                {/* Dashboard Mockup Cards */}
-                <div className="grid gap-6 p-8 lg:grid-cols-3 bg-slate-50/40">
-
-                  {/* Revenue Card */}
-                  <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-                    <p className="text-xs font-bold uppercase text-slate-400 tracking-wider">Revenue Managed</p>
-                    <h2 className="mt-3 text-4xl font-black text-blue-600">₹42.5K</h2>
-                    <div className="mt-6 h-2.5 rounded-full bg-blue-100">
-                      <div className="h-2.5 w-[82%] rounded-full bg-gradient-to-r from-blue-600 to-cyan-500" />
+                {/* Table & Funnel Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Recent Leads */}
+                  <div className="lg:col-span-2 rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <h3 className="text-sm font-bold text-slate-900">Live Inbound Leads</h3>
+                      <span className="text-xs font-bold text-blue-600">Real-Time Routing</span>
                     </div>
-                  </div>
 
-                  {/* New Leads Card */}
-                  <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-                    <p className="text-xs font-bold uppercase text-slate-400 tracking-wider">New Leads Intake</p>
-                    <h2 className="mt-3 text-4xl font-black text-indigo-600">3,280</h2>
-                    <div className="mt-6 flex items-end gap-2">
-                      <div className="h-10 flex-1 rounded-t-lg bg-blue-200" />
-                      <div className="h-16 flex-1 rounded-t-lg bg-blue-400" />
-                      <div className="h-12 flex-1 rounded-t-lg bg-blue-300" />
-                      <div className="h-20 flex-1 rounded-t-lg bg-blue-600" />
-                      <div className="h-24 flex-1 rounded-t-lg bg-indigo-500" />
-                    </div>
-                  </div>
-
-                  {/* Conversion Rate Card */}
-                  <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-                    <p className="text-xs font-bold uppercase text-slate-400 tracking-wider">Conversion Efficiency</p>
-                    <h2 className="mt-3 text-4xl font-black text-cyan-600">91%</h2>
-                    <div className="mt-6 flex items-end gap-2">
-                      {[40, 60, 75, 50, 90, 70, 95].map((height, index) => (
-                        <div
-                          key={index}
-                          className="flex-1 rounded-t-md bg-gradient-to-t from-blue-600 to-cyan-400"
-                          style={{ height: `${height * 0.3}px` }}
-                        />
+                    <div className="mt-2 divide-y divide-slate-100 text-sm">
+                      {[
+                        { name: 'Dr. Arjun Verma', company: 'Healthcare Clinic', source: 'Meta Ads', rep: 'Alex M.', status: 'Proposal', bg: 'bg-indigo-50 text-indigo-700' },
+                        { name: 'Priya Sharma', company: 'NovaTech', source: 'Google Ads', rep: 'Rohan G.', status: 'Qualified', bg: 'bg-emerald-50 text-emerald-700' },
+                        { name: 'Michael Chang', company: 'Apex Real Estate', source: 'Website Webhook', rep: 'Sarah J.', status: 'Contacted', bg: 'bg-amber-50 text-amber-700' },
+                        { name: 'Neha Patel', company: 'ScaleUp Ventures', source: 'Instagram Form', rep: 'Alex M.', status: 'New', bg: 'bg-blue-50 text-blue-700' },
+                      ].map((lead, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-2.5">
+                          <div>
+                            <span className="font-bold text-slate-900">{lead.name}</span>
+                            <span className="text-xs text-slate-500 ml-1.5">({lead.company})</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-slate-500 hidden sm:inline">{lead.source}</span>
+                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${lead.bg}`}>
+                              {lead.status}
+                            </span>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
 
+                  {/* Campaign ROAS */}
+                  <div className="rounded-xl border border-slate-200 p-4 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Campaign ROAS</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Ad Returns Across Channels</p>
+
+                      <div className="mt-4 space-y-3.5">
+                        <div>
+                          <div className="flex justify-between text-xs font-semibold mb-1">
+                            <span className="text-slate-700">Meta Ads Funnel</span>
+                            <span className="text-blue-600 font-bold">3.8x</span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                            <div className="h-full bg-blue-600 rounded-full w-[78%]" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-xs font-semibold mb-1">
+                            <span className="text-slate-700">Google Search</span>
+                            <span className="text-emerald-600 font-bold">4.2x</span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full w-[88%]" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-xs font-semibold mb-1">
+                            <span className="text-slate-700">Retargeting</span>
+                            <span className="text-indigo-600 font-bold">2.9x</span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                            <div className="h-full bg-indigo-500 rounded-full w-[62%]" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Team SLA</span>
+                      <span className="text-emerald-600 font-bold">98.2% on time</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Bottom Campaign Rows */}
-                <div className="border-t border-blue-100 bg-white p-8">
-                  <div className="grid grid-cols-4 rounded-xl bg-blue-50/70 p-3.5 text-xs font-bold text-blue-900 uppercase tracking-wider">
-                    <span>Campaign</span>
-                    <span>Platform</span>
-                    <span>Status</span>
-                    <span>Revenue</span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. CAPABILITIES / FEATURES (CLEAN WHITE)                                  */}
+      {/* ========================================================================= */}
+      <section id="features" className="py-20 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600">
+              CORE CAPABILITIES
+            </span>
+            <h2 className="mt-2 text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              Everything Needed to Accelerate Sales
+            </h2>
+            <p className="mt-3 text-base text-slate-600">
+              Structured tools designed to help your team respond faster, nurture better, and close consistently.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((item, idx) => (
+              <div
+                key={idx}
+                className="rounded-2xl border border-slate-200 bg-white p-7 hover:border-blue-300 hover:shadow-md transition-all"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-5">
+                  <item.icon size={22} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">{item.title}</h3>
+                <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                  {item.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 4. HOW IT WORKS (CLEAN STEPPER)                                           */}
+      {/* ========================================================================= */}
+      <section id="how-it-works" className="py-20 bg-slate-50 border-y border-slate-200">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600">
+              SIMPLE 4-STEP PROCESS
+            </span>
+            <h2 className="mt-2 text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              How Hoossh Drives Growth
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {steps.map((item, idx) => (
+              <div
+                key={idx}
+                className="rounded-2xl border border-slate-200 bg-white p-6 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-2xl font-black text-blue-600">{item.step}</span>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                      <item.icon size={18} />
+                    </div>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
+                  <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 5. PRICING SECTION (CLEAN WHITE)                                          */}
+      {/* ========================================================================= */}
+      <section id="pricing" className="py-20 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600">
+              TRANSPARENT PRICING
+            </span>
+            <h2 className="mt-2 text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              Plans Scaled to Your Business
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            {pricingPlans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`relative flex flex-col justify-between rounded-2xl p-7 bg-white transition-all ${
+                  plan.popular
+                    ? 'border-2 border-blue-600 shadow-lg'
+                    : 'border border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
+                    Most Popular
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
+                  <p className="mt-2 text-xs text-slate-500 min-h-[32px]">{plan.desc}</p>
+
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-slate-900">{plan.price}</span>
+                    <span className="text-xs font-semibold text-slate-500">/ {plan.period}</span>
                   </div>
 
-                  {[
-                    ["Summer Growth", "Meta Ads", "Running", "₹12,500"],
-                    ["Search High Intent", "Google Ads", "Active", "₹9,200"],
-                    ["Retargeting Funnel", "Instagram", "Completed", "₹6,850"],
-                  ].map((row, i) => (
-                    <div
-                      key={i}
-                      className="grid grid-cols-4 border-b border-slate-100 px-4 py-4 text-sm text-slate-700 font-medium"
-                    >
-                      <span className="font-bold text-slate-900">{row[0]}</span>
-                      <span>{row[1]}</span>
-                      <span className="text-emerald-600 font-bold">{row[2]}</span>
-                      <span className="font-black text-blue-600">{row[3]}</span>
-                    </div>
-                  ))}
+                  <div className="mt-6 space-y-2.5 border-t border-slate-100 pt-5">
+                    {plan.features.map((feat, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs text-slate-700 font-medium">
+                        <CheckCircle2 size={14} className="text-blue-600 flex-shrink-0" />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-              </div>
-            </motion.div>
-
-            {/* Features Showcase Section */}
-            <section id="features" className="mt-32 w-full">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="mb-16 text-center"
-              >
-                <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.25em] text-blue-600">
-                  PLATFORM CAPABILITIES
-                </p>
-
-                <h2 className="text-4xl font-black text-blue-950 lg:text-5xl">
-                  Everything You Need to Scale
-                </h2>
-
-                <p className="mx-auto mt-4 max-w-2xl text-base font-medium text-slate-500">
-                  Hoossh combines marketing analytics, lead management, campaign tracking, and team productivity tools into a unified, high-performance interface.
-                </p>
-              </motion.div>
-
-              <div className="grid gap-7 md:grid-cols-2 lg:grid-cols-3">
-                {featureCards.map((feature, index) => (
-                  <motion.div
-                    key={feature.title}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{
-                      duration: 0.5,
-                      delay: index * 0.07,
-                    }}
-                    className="group relative overflow-hidden rounded-3xl border border-blue-100 bg-white p-8 shadow-md transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:border-blue-300"
+                <div className="mt-6 pt-5 border-t border-slate-100">
+                  <Link
+                    to="/auth"
+                    className={`block w-full text-center rounded-xl py-2.5 text-sm font-bold transition-all ${
+                      plan.popular
+                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                        : 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                    }`}
                   >
-                    {/* Soft Hover Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-cyan-50/50 opacity-0 transition duration-300 group-hover:opacity-100" />
-
-                    {/* Icon Container */}
-                    <div
-                      className={`relative mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.color} text-white shadow-lg shadow-blue-500/20 transition duration-300 group-hover:scale-105`}
-                    >
-                      <feature.icon size={26} />
-                    </div>
-
-                    {/* Card Title */}
-                    <h3 className="relative text-xl font-black text-blue-950 transition group-hover:text-blue-600">
-                      {feature.title}
-                    </h3>
-
-                    {/* Card Description */}
-                    <p className="relative mt-3 text-sm leading-relaxed text-slate-500 font-medium">
-                      {feature.desc}
-                    </p>
-
-                    {/* Bottom Accent Line */}
-                    <div className="relative mt-6 h-1 w-12 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-300 group-hover:w-20" />
-                  </motion.div>
-                ))}
+                    {plan.cta}
+                  </Link>
+                </div>
               </div>
-            </section>
+            ))}
+          </div>
 
-          </motion.div>
-        </main>
+        </div>
+      </section>
 
-        <Footer variant="public" />
-      </div>
+      {/* ========================================================================= */}
+      {/* 6. CONTACT / INQUIRY SECTION (CLEAN WHITE)                                */}
+      {/* ========================================================================= */}
+      <section id="contact" className="py-20 bg-slate-50 border-t border-slate-200">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600">
+                GET IN TOUCH
+              </span>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                Let’s Discuss Your Team’s Growth Goals
+              </h2>
+              <p className="mt-3 text-base text-slate-600 leading-relaxed">
+                Have questions about custom workflows, team onboarding, or enterprise setup? Our product specialists are ready to help.
+              </p>
+
+              <div className="mt-6 space-y-3.5 text-sm text-slate-700">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <Mail size={16} />
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500 block">Direct Inquiries</span>
+                    <span className="font-bold text-slate-900">support@hoossh.com</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <ShieldCheck size={16} />
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500 block">Enterprise Security</span>
+                    <span className="font-bold text-slate-900">SOC-2 & GDPR Ready Architecture</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Clean Form Card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs">
+              {contactSubmitted ? (
+                <div className="text-center py-8 space-y-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mx-auto">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">Thank You for Reaching Out!</h3>
+                  <p className="text-xs text-slate-600">A Hoossh specialist will respond within one business day.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleContactSubmit} className="space-y-3.5">
+                  <h3 className="text-base font-bold text-slate-900">Send an Inquiry</h3>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Rahul Sharma"
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Work Email</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="rahul@company.com"
+                        value={contactForm.email}
+                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Company</label>
+                      <input
+                        type="text"
+                        placeholder="Company Ltd."
+                        value={contactForm.company}
+                        onChange={(e) => setContactForm({ ...contactForm, company: e.target.value })}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Message</label>
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Tell us about your team size, lead sources, or specific needs..."
+                      value={contactForm.message}
+                      onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition-colors shadow-sm"
+                  >
+                    <span>Submit Inquiry</span>
+                    <Send size={14} />
+                  </button>
+                </form>
+              )}
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 7. FOOTER (CLEAN WHITE / LIGHT)                                           */}
+      {/* ========================================================================= */}
+      <footer className="border-t border-slate-200 bg-white py-10 text-slate-600 text-xs">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
+            
+            {/* Logo & Description */}
+            <div className="space-y-2 max-w-sm">
+              <Link to="/" className="flex items-center gap-2.5">
+                <HoosshLogo size={28} variant="icon-only" animated />
+                <span className="text-base font-black tracking-tight text-slate-900">
+                  Hoossh <span className="text-blue-600 font-extrabold">Lead Growth</span>
+                </span>
+              </Link>
+              <p className="text-xs text-slate-500">
+                Enterprise lead management and sales CRM platform.
+              </p>
+            </div>
+
+            {/* Links */}
+            <div className="flex flex-wrap gap-x-6 gap-y-2 font-semibold text-slate-700">
+              <a href="#features" className="hover:text-blue-600 transition-colors">Features</a>
+              <a href="#how-it-works" className="hover:text-blue-600 transition-colors">How It Works</a>
+              <a href="#pricing" className="hover:text-blue-600 transition-colors">Pricing</a>
+              <a href="#contact" className="hover:text-blue-600 transition-colors">Contact</a>
+              <Link to="/auth" className="hover:text-blue-600 transition-colors">Login</Link>
+            </div>
+
+          </div>
+
+          {/* Copyright */}
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
+            <p>© 2026 Hoossh Lead Growth CRM. All rights reserved.</p>
+            <div className="flex items-center gap-3">
+              <span>Privacy Policy</span>
+              <span>•</span>
+              <span>Terms of Service</span>
+            </div>
+          </div>
+
+        </div>
+      </footer>
+
     </div>
   );
 }

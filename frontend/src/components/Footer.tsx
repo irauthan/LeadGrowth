@@ -14,11 +14,11 @@ export default function Footer({ variant = 'authenticated' }: FooterProps) {
     }`}>
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
         
-        {/* Left Side: Copyright Notice & Developer Branding */}
+        {/* Left Side: Copyright Notice & Legal Name */}
         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 text-center sm:text-left">
           <span>© {currentYear}</span>
           <span className="font-extrabold text-theme-primary tracking-wide">
-            Hoossh
+            Hoossh Lead Growth CRM
           </span>
           <span className="hidden sm:inline">•</span>
           <span>All Rights Reserved.</span>
@@ -27,8 +27,8 @@ export default function Footer({ variant = 'authenticated' }: FooterProps) {
         {/* Right Side: Product Branding & Version */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 font-bold text-theme-text">
-            <HoosshLogo size={22} animated />
-            <span>Hoossh Lead Management</span>
+            <HoosshLogo size={24} variant="icon-only" animated />
+            <span>Hoossh Lead Growth</span>
           </div>
 
           <span className="h-3 w-px bg-theme-border hidden sm:block" />
