@@ -37,14 +37,26 @@ export default function Onboarding() {
       const response = await api.post('/api/workspaces/create', createForm);
       const data = response.data;
       
-      // Update global auth store state
-      setWorkspace(
-        data.workspaceId,
-        data.workspaceName,
-        data.workspaceSlug,
-        data.inviteCode,
-        'ROLE_ADMIN' // Assign ROLE_ADMIN upon workspace creation
-      );
+      if (data.token) {
+        useAuthStore.getState().login(data.token, {
+          id: data.userId || user?.id || 0,
+          email: data.email || user?.email || '',
+          fullName: data.fullName || user?.fullName || '',
+          roles: Array.from(data.roles || ['ROLE_ADMIN']),
+          workspaceId: data.workspaceId,
+          workspaceName: data.workspaceName,
+          workspaceSlug: data.workspaceSlug,
+          inviteCode: data.inviteCode,
+        });
+      } else {
+        setWorkspace(
+          data.workspaceId,
+          data.workspaceName,
+          data.workspaceSlug,
+          data.inviteCode,
+          'ROLE_ADMIN'
+        );
+      }
 
       navigate('/dashboard');
     } catch (err: any) {
@@ -64,14 +76,26 @@ export default function Onboarding() {
       const response = await api.post('/api/workspaces/join', joinForm);
       const data = response.data;
 
-      // Update global auth store state
-      setWorkspace(
-        data.workspaceId,
-        data.workspaceName,
-        data.workspaceSlug,
-        data.inviteCode,
-        'ROLE_USER' // Assign ROLE_USER upon joining workspace
-      );
+      if (data.token) {
+        useAuthStore.getState().login(data.token, {
+          id: data.userId || user?.id || 0,
+          email: data.email || user?.email || '',
+          fullName: data.fullName || user?.fullName || '',
+          roles: Array.from(data.roles || ['ROLE_USER']),
+          workspaceId: data.workspaceId,
+          workspaceName: data.workspaceName,
+          workspaceSlug: data.workspaceSlug,
+          inviteCode: data.inviteCode,
+        });
+      } else {
+        setWorkspace(
+          data.workspaceId,
+          data.workspaceName,
+          data.workspaceSlug,
+          data.inviteCode,
+          'ROLE_USER'
+        );
+      }
 
       navigate('/dashboard');
     } catch (err: any) {

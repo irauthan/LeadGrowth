@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import Sidebar from '../components/Sidebar';
@@ -6,11 +7,39 @@ import MobileBottomNav from '../components/MobileBottomNav';
 import Footer from '../components/Footer';
 import { useLayoutStore } from '../store/layoutStore';
 
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Hoossh | Dashboard',
+  '/my-work': 'Hoossh | My Work & Tasks',
+  '/leads': 'Hoossh | Leads',
+  '/campaigns': 'Hoossh | Campaigns',
+  '/analytics': 'Hoossh | Analytics',
+  '/reports': 'Hoossh | Reports',
+  '/scheduler': 'Hoossh | Scheduler',
+  '/followups': 'Hoossh | Follow-ups',
+  '/users': 'Hoossh | Team',
+  '/settings': 'Hoossh | Settings',
+  '/billing': 'Hoossh | Billing',
+  '/integrations': 'Hoossh | Integrations',
+  '/profile': 'Hoossh | Profile',
+  '/admin/work-monitor': 'Hoossh | Executive Monitor',
+  '/admin/users': 'Hoossh | User Management',
+  '/admin/workspace': 'Hoossh | Workspace Management',
+  '/admin/api': 'Hoossh | API Management',
+  '/admin/system': 'Hoossh | System Monitoring',
+  '/admin/security': 'Hoossh | Security Center',
+  '/admin/audit-logs': 'Hoossh | Audit Logs'
+};
+
 export default function MainLayout() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const location = useLocation();
   const { isCollapsed, sidebarPosition } = useLayoutStore();
+
+  useEffect(() => {
+    const title = PAGE_TITLES[location.pathname] || 'Hoossh Lead Management';
+    document.title = title;
+  }, [location.pathname]);
 
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;

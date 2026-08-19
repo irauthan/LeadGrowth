@@ -41,14 +41,7 @@ export default function UserDashboard() {
   const [idleMessage, setIdleMessage] = useState('');
   const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
 
-  const [workflowPending, setWorkflowPending] = useState<any>({
-    pendingFirstCalls: 0,
-    pendingRequirementCollection: 0,
-    pendingDemo: 0,
-    pendingProposal: 0,
-    pendingNegotiation: 0,
-    pendingPayment: 0
-  });
+
 
   // Live WebSocket sync for real-time KPI updates
   useWebSocket({
@@ -72,7 +65,7 @@ export default function UserDashboard() {
       if (timeFilter.startDate) params.startDate = timeFilter.startDate;
       if (timeFilter.endDate) params.endDate = timeFilter.endDate;
 
-      const [kpiRes, leadsRes, followupsRes, pendingRes, workflowRes, callRes] = await Promise.all([
+      const [kpiRes, leadsRes, followupsRes, pendingRes, , callRes] = await Promise.all([
         api.get('/api/users/me/dashboard', { params }).catch(() => ({ data: null })),
         api.get('/api/leads').catch(() => api.get('/api/leads/pipeline')),
         api.get('/api/followups').catch(() => ({ data: [] })),
@@ -86,9 +79,6 @@ export default function UserDashboard() {
       const activeFollowupList = (followupsRes.data || []).filter((f: any) => f.status !== 'COMPLETED' && f.status !== 'CANCELLED');
       setFollowups(activeFollowupList);
       setPendingLeads(pendingRes.data || []);
-      if (workflowRes.data) {
-        setWorkflowPending(workflowRes.data);
-      }
       setCallAnalytics(callRes.data);
     } catch (err) {
       console.error('Failed to load User Productivity Hub data', err);

@@ -81,18 +81,17 @@ export default function Leads() {
   const fetchMembers = async () => {
     try {
       const res = await api.get('/api/users/assignable');
-      setMembers(Array.isArray(res.data) ? res.data : []);
+      const list = Array.isArray(res.data) ? res.data : [];
+      if (list.length > 0) {
+        setMembers(list);
+      } else {
+        const res2 = await api.get('/api/users/members');
+        setMembers(Array.isArray(res2.data) ? res2.data : []);
+      }
     } catch (e) {
       try {
         const res2 = await api.get('/api/users/members');
-        const list = Array.isArray(res2.data) ? res2.data : [];
-        const salesExecs = list.filter((m: any) => {
-          const roleNames = (m.roles || []).map((r: any) => (r.name || r || '').toUpperCase());
-          const hasUser = roleNames.includes('ROLE_USER') || roleNames.includes('USER');
-          const hasAdminOrManager = roleNames.includes('ROLE_ADMIN') || roleNames.includes('ADMIN') || roleNames.includes('ROLE_MANAGER') || roleNames.includes('MANAGER');
-          return hasUser && !hasAdminOrManager;
-        });
-        setMembers(salesExecs);
+        setMembers(Array.isArray(res2.data) ? res2.data : []);
       } catch (err) {
         console.error(err);
         setMembers([]);

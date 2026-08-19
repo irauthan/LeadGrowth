@@ -158,17 +158,17 @@ export default function WorkDetailsPanel({
   const fetchMembers = async () => {
     try {
       const res = await api.get('/api/users/assignable');
-      setMembers(res.data || []);
+      const list = Array.isArray(res.data) ? res.data : [];
+      if (list.length > 0) {
+        setMembers(list);
+      } else {
+        const res2 = await api.get('/api/users/members');
+        setMembers(Array.isArray(res2.data) ? res2.data : []);
+      }
     } catch (e) {
       try {
         const res2 = await api.get('/api/users/members');
-        const salesExecs = (res2.data || []).filter((m: any) => {
-          const roleNames = (m.roles || []).map((r: any) => (r.name || r || '').toUpperCase());
-          const hasUser = roleNames.includes('ROLE_USER') || roleNames.includes('USER');
-          const hasAdminOrManager = roleNames.includes('ROLE_ADMIN') || roleNames.includes('ADMIN') || roleNames.includes('ROLE_MANAGER') || roleNames.includes('MANAGER');
-          return hasUser && !hasAdminOrManager;
-        });
-        setMembers(salesExecs);
+        setMembers(Array.isArray(res2.data) ? res2.data : []);
       } catch (err) {
         console.error(err);
       }
@@ -306,9 +306,13 @@ export default function WorkDetailsPanel({
     if (!leadId || !completeModalStepKey) return;
     setSubmittingCompletion(true);
     try {
-      await api.post(`/api/leads/${leadId}/workflow-steps/${completeModalStepKey}/complete`, {
+      const payload: any = {
         completionRemarks
-      });
+      };
+      if (proposalAmount !== '' && proposalAmount !== undefined && proposalAmount !== null) {
+        payload.proposalAmount = Number(proposalAmount);
+      }
+      await api.post(`/api/leads/${leadId}/workflow-steps/${completeModalStepKey}/complete`, payload);
       setCompleteModalStepKey(null);
       fetchLeadDetails();
       onLeadUpdated();
@@ -1444,6 +1448,24 @@ export default function WorkDetailsPanel({
                 </p>
 
                 <form onSubmit={handleCompleteStepSubmit} className="space-y-4">
+                  {(completeModalStepKey === 'PROPOSAL_SENT' || completeModalStepKey === 'NEGOTIATION' || completeModalStepKey === 'CLOSING' || completeModalStepKey === 'PAYMENT_FOLLOWUP') && (
+                    <div>
+                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">
+                        {completeModalStepKey === 'PROPOSAL_SENT' ? 'Proposal Amount (₹)' : 'Negotiated / Agreed Deal Value (₹)'}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-emerald-500">₹</span>
+                        <input
+                          type="number"
+                          placeholder="e.g. 50000"
+                          value={proposalAmount}
+                          onChange={(e) => setProposalAmount(e.target.value)}
+                          className="w-full bg-theme-bg border border-theme-border rounded-xl pl-7 pr-3 py-2 text-xs font-extrabold text-theme-text focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Final Completion Remark</label>
                     <textarea

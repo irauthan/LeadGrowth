@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
-import { NyaarLogo } from './NyaarLogo';
+import { HoosshLogo } from './HoosshLogo';
 
 interface FooterProps {
   variant?: 'authenticated' | 'public';
@@ -18,7 +18,7 @@ export default function Footer({ variant = 'authenticated' }: FooterProps) {
         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 text-center sm:text-left">
           <span>© {currentYear}</span>
           <span className="font-extrabold text-theme-primary tracking-wide">
-            CountreesAI-Technology
+            Hoossh
           </span>
           <span className="hidden sm:inline">•</span>
           <span>All Rights Reserved.</span>
@@ -27,8 +27,8 @@ export default function Footer({ variant = 'authenticated' }: FooterProps) {
         {/* Right Side: Product Branding & Version */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 font-bold text-theme-text">
-            <NyaarLogo size={18} animated />
-            <span>NYAAR Enterprise CRM</span>
+            <HoosshLogo size={22} animated />
+            <span>Hoossh Lead Management</span>
           </div>
 
           <span className="h-3 w-px bg-theme-border hidden sm:block" />

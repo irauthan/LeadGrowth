@@ -260,7 +260,7 @@ export default function Analytics() {
   }
 
   // Admin / Manager Full Analytics View
-  const adminFunnelData = data ? Object.entries(data.funnel).map(([name, value]) => ({
+  const adminFunnelData = (data && data.funnel) ? Object.entries(data.funnel).map(([name, value]) => ({
     name,
     value,
   })) : [];

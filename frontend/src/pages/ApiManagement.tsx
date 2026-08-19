@@ -166,7 +166,7 @@ export default function ApiManagement() {
           <div className="rounded-3xl border border-theme-border bg-theme-card p-12 text-center shadow-sm">
             <Key size={36} className="mx-auto text-theme-text-muted opacity-55" />
             <h3 className="text-sm font-bold text-theme-text mt-4">No active API keys</h3>
-            <p className="text-xs text-theme-text-muted mt-1">Generate a key above to sync your NYAAR integrations with third-party software.</p>
+            <p className="text-xs text-theme-text-muted mt-1">Generate a key above to sync your Hoossh integrations with third-party software.</p>
           </div>
         )}
       </div>

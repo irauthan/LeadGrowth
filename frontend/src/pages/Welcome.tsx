@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { NyaarLogo } from '../components/NyaarLogo';
+import { HoosshLogo } from '../components/HoosshLogo';
 import {
   ArrowRight,
   BarChart3,
@@ -98,13 +98,13 @@ export default function Welcome() {
         {/* Header Navigation */}
         <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 border-b border-blue-100/60 bg-white/70 backdrop-blur-md sticky top-0 z-50">
           <div className="flex items-center gap-3">
-            <NyaarLogo size={40} animated />
+            <HoosshLogo size={44} animated />
             <div>
               <h1 className="text-xl font-black tracking-tight text-blue-950">
-                NYAAR
+                Hoossh
               </h1>
               <p className="text-[11px] text-blue-600/80 font-bold uppercase tracking-wider">
-                Enterprise SaaS Platform
+                Lead Management Platform
               </p>
             </div>
           </div>
@@ -222,7 +222,7 @@ export default function Welcome() {
                   </div>
 
                   <div className="rounded-full border border-blue-200 bg-white px-5 py-1.5 text-xs font-bold text-blue-700 shadow-xs">
-                    NYAAR Workspace Dashboard
+                    Hoossh Workspace Dashboard
                   </div>
 
                   <div className="flex gap-2">
@@ -320,7 +320,7 @@ export default function Welcome() {
                 </h2>
 
                 <p className="mx-auto mt-4 max-w-2xl text-base font-medium text-slate-500">
-                  NYAAR combines marketing analytics, lead management, campaign tracking, and team productivity tools into a unified white-and-blue interface.
+                  Hoossh combines marketing analytics, lead management, campaign tracking, and team productivity tools into a unified, high-performance interface.
                 </p>
               </motion.div>
 

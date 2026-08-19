@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { NyaarLogo } from './NyaarLogo';
+import { HoosshLogo } from './HoosshLogo';
 import { 
   LayoutDashboard, 
   Megaphone, 
@@ -127,24 +127,21 @@ export default function Sidebar() {
                 to="/dashboard" 
                 className="flex h-10 w-10 items-center justify-center rounded-2xl bg-theme-bg-alt/80 text-white shadow-md nav-glow transition-transform hover:scale-105"
               >
-                <NyaarLogo size={24} animated />
+                <HoosshLogo size={24} animated />
               </Link>
-              {/* Tooltip */}
               <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none ${tooltipPositionClass}`}>
                 <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
-                  NYAAR
+                  Hoossh Lead Management
                 </span>
               </div>
             </div>
 
             <div className="h-6 w-[1px] bg-theme-border/40 mx-1 flex-shrink-0" />
 
-            {/* Workspace Info Icon */}
             <div className="relative group flex-shrink-0">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-theme-bg-alt/80 border border-theme-border/30 text-theme-primary shadow-xs">
                 <Building size={18} />
               </div>
-              {/* Tooltip */}
               <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none ${tooltipPositionClass}`}>
                 <div className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700 text-center">
                   <p className="text-xs font-bold">{user?.workspaceName || 'Default Workspace'}</p>
@@ -236,26 +233,12 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* VERTICAL SIDEBAR CONTENT (Used for Left / Right position or Mobile Drawer) */}
-        {/* ========================================================================= */}
         <div className={`flex flex-col h-full w-full ${isHorizontal ? 'lg:hidden' : 'flex'}`}>
-          {/* Header Logo & Mobile Close */}
-          <div className="flex h-20 items-center justify-between px-6 border-b border-theme-border/30">
-            <Link to="/dashboard" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
-              <NyaarLogo size={32} animated />
-              {(!isCollapsed || isMobileOpen) && (
-                <motion.span 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-gradient-to-r from-cyan-400 via-brand-400 to-indigo-400 bg-clip-text text-xl font-black tracking-tight text-transparent"
-                >
-                  NYAAR
-                </motion.span>
-              )}
+          <div className="flex h-20 items-center justify-between px-4 border-b border-theme-border/30">
+            <Link to="/dashboard" className="flex items-center gap-2.5 overflow-hidden" onClick={() => setMobileOpen(false)}>
+              <HoosshLogo size={isCollapsed ? 32 : 36} animated />
             </Link>
 
-            {/* Close Button on Mobile Drawer */}
             <button
               onClick={() => setMobileOpen(false)}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-theme-bg-alt text-theme-text-muted hover:text-theme-text lg:hidden"

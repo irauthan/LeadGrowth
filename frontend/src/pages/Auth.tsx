@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NyaarLogo } from '../components/NyaarLogo';
+import { HoosshLogo } from '../components/HoosshLogo';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
@@ -20,7 +20,6 @@ import {
   Zap,
   Users
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
@@ -293,10 +292,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#F8FAFC] text-[#1E293B] flex">
-      {/* Background Decorative Gradients & Waves */}
-      <div className="absolute top-0 right-0 w-full lg:w-1/2 h-full bg-gradient-to-br from-[#0F4C81] via-[#1D9BF0] to-[#00C2A8] opacity-5 lg:opacity-100 transition-opacity" />
-      
+    <div className="relative min-h-screen w-full bg-slate-900 font-sans selection:bg-cyan-500 selection:text-white">
       {/* Container Grid */}
       <div className="relative z-10 flex min-h-screen w-full flex-col lg:flex-row">
         
@@ -311,21 +307,16 @@ export default function Auth() {
 
           {/* Header Branding */}
           <div className="relative z-10 flex items-center gap-3">
-            <NyaarLogo size={44} animated />
+            <HoosshLogo size={48} animated />
             <div>
-              <span className="text-2xl font-black tracking-tight text-white block">NYAAR</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Enterprise Growth SaaS Platform</span>
+              <span className="text-2xl font-black tracking-tight text-white block">Hoossh</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Smart Lead Management Platform</span>
             </div>
           </div>
 
           {/* Middle Floating Analytics Cards Showcase */}
           <div className="relative z-10 my-auto space-y-6 max-w-xl">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="space-y-3"
-            >
+            <div className="space-y-3">
               <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 px-3.5 py-1 text-xs font-bold text-cyan-300">
                 <Zap size={14} className="text-[#00C2A8]" /> Streamlined Lead & Team Intelligence
               </span>
@@ -335,7 +326,7 @@ export default function Auth() {
               <p className="text-sm font-medium text-slate-300 leading-relaxed">
                 Empower your sales, marketing, and management teams with automated lead assignments, task workflows, and real-time activity insights.
               </p>
-            </motion.div>
+            </div>
 
             {/* Interactive Graphic Card 1: Revenue & Lead Metrics */}
             <div className="grid grid-cols-2 gap-4 pt-4">
@@ -385,7 +376,7 @@ export default function Auth() {
 
           {/* Footer Info */}
           <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-6 text-xs text-slate-400 font-medium">
-            <span>© 2026 NYAAR Inc. Enterprise Edition</span>
+            <span>© 2026 Hoossh Lead Management. All rights reserved.</span>
             <div className="flex items-center gap-4">
               <span className="hover:text-white transition-colors cursor-pointer">Privacy Policy</span>
               <span className="hover:text-white transition-colors cursor-pointer">Security</span>
@@ -398,8 +389,8 @@ export default function Auth() {
           
           {/* Mobile Header Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <NyaarLogo size={36} animated />
-            <span className="text-2xl font-black text-[#0F4C81]">NYAAR</span>
+            <HoosshLogo size={40} animated />
+            <span className="text-2xl font-black text-[#0F4C81]">Hoossh</span>
           </div>
 
           <div className="w-full max-w-md space-y-8 bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-xl">
@@ -560,7 +551,7 @@ export default function Auth() {
                     <input
                       type="email"
                       required
-                      placeholder="e.g. alex@nyaar.com"
+                      placeholder="e.g. alex@hoossh.com"
                       value={loginForm.email}
                       onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                       className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-medium text-slate-900 outline-none focus:border-[#0F4C81] focus:bg-white transition-all"
