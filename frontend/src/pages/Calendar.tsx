@@ -400,25 +400,162 @@ export default function Calendar() {
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const todayStr = formatDateKey(new Date());
 
+  // Shared sidebar body — rendered both in the desktop docked sidebar
+  // and the mobile slide-over drawer so the two stay in sync.
+  const sidebarContent = (
+    <>
+      {/* Floating Create Button */}
+      <div className="relative">
+        <button
+          onClick={() => {
+            openCreateModalWithDate();
+            setIsSidebarOpen(false);
+          }}
+          className="flex items-center gap-3 rounded-full border border-theme-border bg-theme-card px-6 py-3 text-sm font-bold text-theme-text shadow-lg hover:bg-theme-bg-alt transition-all w-max"
+        >
+          <Plus size={22} className="text-blue-600" />
+          <span>Create</span>
+          <ChevronDown size={14} className="text-theme-text-muted ml-1" />
+        </button>
+      </div>
+
+      {/* Mini Month Calendar Widget */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-extrabold text-theme-text">
+            {miniDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                const d = new Date(miniDate);
+                d.setMonth(d.getMonth() - 1);
+                setMiniDate(d);
+              }}
+              className="p-1 rounded-full text-theme-text-muted hover:bg-theme-bg-alt"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              onClick={() => {
+                const d = new Date(miniDate);
+                d.setMonth(d.getMonth() + 1);
+                setMiniDate(d);
+              }}
+              className="p-1 rounded-full text-theme-text-muted hover:bg-theme-bg-alt"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Mini Month Grid */}
+        <div className="grid grid-cols-7 text-center text-[10px] font-bold text-theme-text-muted">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div className="grid grid-cols-7 gap-y-1 text-center text-[11px]">
+          {getMiniMonthDays(miniDate).map((dayObj, idx) => {
+            const dayStr = formatDateKey(dayObj.date);
+            const isSelected = formatDateKey(currentDate) === dayStr;
+            const isToday = todayStr === dayStr;
+
+            return (
+              <button
+                key={idx}
+                onClick={() => {
+                  setCurrentDate(dayObj.date);
+                }}
+                className={`h-7 w-7 rounded-full mx-auto flex items-center justify-center font-semibold transition-all ${
+                  isToday
+                    ? 'bg-blue-600 text-white font-bold'
+                    : isSelected
+                    ? 'bg-blue-500/20 text-blue-600 font-bold'
+                    : dayObj.isCurrentMonth
+                    ? 'text-theme-text hover:bg-theme-bg-alt'
+                    : 'text-theme-text-muted opacity-40'
+                }`}
+              >
+                {dayObj.date.getDate()}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* People Search */}
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-3 text-theme-text-muted" />
+        <input
+          type="text"
+          placeholder="Search for people"
+          value={peopleSearch}
+          onChange={(e) => setPeopleSearch(e.target.value)}
+          className="w-full rounded-2xl bg-theme-bg-alt pl-9 pr-3 py-2 text-xs font-semibold text-theme-text outline-none border border-transparent focus:border-blue-500"
+        />
+      </div>
+
+      {/* My Schedulers Filters */}
+      <div className="space-y-3 pt-2 border-t border-theme-border/50">
+        <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
+          <span>My schedulers</span>
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="p-1 rounded-lg hover:bg-theme-bg-alt text-theme-text-muted transition-colors"
+            title="Manage Schedulers & Settings"
+          >
+            <Settings size={14} />
+          </button>
+        </div>
+
+        <div className="space-y-2 text-xs font-semibold">
+          {categories.map((cat) => (
+            <label key={cat.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-theme-bg-alt/50 p-1.5 rounded-xl">
+              <input
+                type="checkbox"
+                checked={cat.enabled}
+                onChange={() => {
+                  setCategories(
+                    categories.map((c) => (c.id === cat.id ? { ...c, enabled: !c.enabled } : c))
+                  );
+                }}
+                className="h-4 w-4 rounded"
+                style={{ accentColor: cat.color }}
+              />
+              <span className="flex-1 text-theme-text truncate">{cat.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Other Schedulers Section */}
+      <div className="space-y-2 pt-2 border-t border-theme-border/50">
+        <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
+          <span>Other schedulers</span>
+          <Plus size={14} className="text-theme-text-muted cursor-pointer" />
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex h-[calc(100vh-5rem)] flex-col bg-theme-bg text-theme-text rounded-3xl border border-theme-border shadow-2xl overflow-hidden">
       
       {/* --- TOP GOOGLE CALENDAR HEADER --- */}
-      <header className="flex h-16 items-center justify-between border-b border-theme-border/60 bg-theme-card px-4 shrink-0 z-30">
+      <header className="flex flex-wrap sm:flex-nowrap h-auto sm:h-16 items-center justify-between gap-2 border-b border-theme-border/60 bg-theme-card px-2 sm:px-4 py-2 sm:py-0 shrink-0 z-30">
         
         {/* Left Section: Menu, Branding, Today, Nav, Title */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3 shrink-0 order-1 min-w-0">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors shrink-0"
             title="Toggle main menu"
           >
             <Menu size={20} />
           </button>
 
           {/* Scheduler Logo Icon */}
-          <div className="flex items-center gap-2.5 mr-2">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-extrabold text-lg shadow-md shadow-blue-500/20">
+          <div className="flex items-center gap-2.5 mr-1 sm:mr-2 shrink-0">
+            <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-extrabold text-base sm:text-lg shadow-md shadow-blue-500/20">
               <span>{new Date().getDate()}</span>
             </div>
             <span className="text-xl font-bold text-theme-text tracking-tight hidden sm:inline">Scheduler</span>
@@ -427,23 +564,23 @@ export default function Calendar() {
           {/* Today Button */}
           <button
             onClick={() => navigateDate('today')}
-            className="rounded-full border border-theme-border px-5 py-2 text-xs font-bold text-theme-text hover:bg-theme-bg-alt shadow-2xs transition-all"
+            className="shrink-0 rounded-full border border-theme-border px-3 sm:px-5 py-1.5 sm:py-2 text-xs font-bold text-theme-text hover:bg-theme-bg-alt shadow-2xs transition-all"
           >
             Today
           </button>
 
           {/* Navigation Arrows */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => navigateDate('prev')}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
               title="Previous period"
             >
               <ChevronLeft size={20} />
             </button>
             <button
               onClick={() => navigateDate('next')}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
               title="Next period"
             >
               <ChevronRight size={20} />
@@ -451,234 +588,138 @@ export default function Calendar() {
           </div>
 
           {/* Dynamic Header Date Range */}
-          <h2 className="text-lg sm:text-xl font-bold text-theme-text ml-2 tracking-tight">
+          <h2 className="text-sm sm:text-lg md:text-xl font-bold text-theme-text ml-1 sm:ml-2 tracking-tight truncate max-w-[90px] xs:max-w-[130px] sm:max-w-none">
             {getHeaderTitle()}
           </h2>
         </div>
 
-        {/* Right Section: Search, Settings, View Dropdown, Upgrade */}
-        <div className="flex items-center gap-2">
-          <button className="flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors">
+        {/* Right Section: Search, Settings, View Dropdown, Create */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 order-2 w-full sm:w-auto justify-end">
+          <button className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors">
             <Search size={18} />
           </button>
-          <button className="flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors hidden sm:flex">
+          <button className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors">
             <HelpCircle size={18} />
           </button>
-          <button 
-            onClick={() => setShowSettingsModal(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
-            title="Calendar Settings"
-          >
-            <Settings size={18} />
-          </button>
 
-          {/* GOOGLE CALENDAR VIEW SWITCHER DROPDOWN */}
-          <div className="relative ml-2">
-            <button
-              type="button"
-              onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
-              className="flex items-center gap-2 rounded-xl border border-theme-border bg-theme-bg-alt px-4 py-2 text-xs font-bold text-theme-text hover:bg-theme-card transition-all"
+          {/* Grouped toolbar: keeps Settings / View / Create together in one
+              tidy pill on mobile instead of floating loosely and overlapping. */}
+          <div className="flex items-center gap-1 sm:gap-2 rounded-2xl bg-theme-bg-alt/70 sm:bg-transparent p-1 sm:p-0 border border-theme-border/50 sm:border-0">
+            <button 
+              onClick={() => setShowSettingsModal(true)}
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-card transition-colors shrink-0"
+              title="Calendar Settings"
             >
-              <span className="capitalize">{view}</span>
-              <ChevronDown size={14} className="text-theme-text-muted" />
+              <Settings size={16} className="sm:hidden" />
+              <Settings size={18} className="hidden sm:block" />
             </button>
 
-            {isViewDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-theme-border bg-theme-card p-2 shadow-2xl z-50 space-y-1">
-                {[
-                  { key: 'day', label: 'Day', shortcut: 'D' },
-                  { key: 'week', label: 'Week', shortcut: 'W' },
-                  { key: 'month', label: 'Month', shortcut: 'M' },
-                  { key: 'year', label: 'Year', shortcut: 'Y' },
-                  { key: 'schedule', label: 'Schedule', shortcut: 'A' },
-                ].map((item) => (
-                  <button
-                    key={item.key}
-                    onClick={() => {
-                      setView(item.key as ViewMode);
-                      setIsViewDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all ${
-                      view === item.key
-                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-extrabold'
-                        : 'text-theme-text hover:bg-theme-bg-alt'
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    <span className="text-[10px] text-theme-text-muted font-mono">{item.shortcut}</span>
-                  </button>
-                ))}
+            {/* GOOGLE CALENDAR VIEW SWITCHER DROPDOWN */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
+                className="flex items-center gap-1 sm:gap-2 rounded-xl bg-theme-card sm:bg-theme-bg-alt border border-theme-border px-2 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold text-theme-text hover:bg-theme-card transition-all"
+              >
+                <span className="capitalize">{view}</span>
+                <ChevronDown size={14} className="text-theme-text-muted" />
+              </button>
 
-                <div className="my-1.5 border-t border-theme-border/50" />
+              {isViewDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 max-w-[85vw] rounded-2xl border border-theme-border bg-theme-card p-2 shadow-2xl z-50 space-y-1">
+                  {[
+                    { key: 'day', label: 'Day', shortcut: 'D' },
+                    { key: 'week', label: 'Week', shortcut: 'W' },
+                    { key: 'month', label: 'Month', shortcut: 'M' },
+                    { key: 'year', label: 'Year', shortcut: 'Y' },
+                    { key: 'schedule', label: 'Schedule', shortcut: 'A' },
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      onClick={() => {
+                        setView(item.key as ViewMode);
+                        setIsViewDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                        view === item.key
+                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-extrabold'
+                          : 'text-theme-text hover:bg-theme-bg-alt'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      <span className="text-[10px] text-theme-text-muted font-mono">{item.shortcut}</span>
+                    </button>
+                  ))}
 
-                <label className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-theme-text cursor-pointer hover:bg-theme-bg-alt">
-                  <input
-                    type="checkbox"
-                    checked={showWeekends}
-                    onChange={(e) => setShowWeekends(e.target.checked)}
-                    className="h-4 w-4 rounded border-theme-border text-blue-600"
-                  />
-                  <span>Show weekends</span>
-                </label>
+                  <div className="my-1.5 border-t border-theme-border/50" />
 
-                <label className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-theme-text cursor-pointer hover:bg-theme-bg-alt">
-                  <input
-                    type="checkbox"
-                    checked={showCompleted}
-                    onChange={(e) => setShowCompleted(e.target.checked)}
-                    className="h-4 w-4 rounded border-theme-border text-blue-600"
-                  />
-                  <span>Show completed tasks</span>
-                </label>
-              </div>
-            )}
+                  <label className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-theme-text cursor-pointer hover:bg-theme-bg-alt">
+                    <input
+                      type="checkbox"
+                      checked={showWeekends}
+                      onChange={(e) => setShowWeekends(e.target.checked)}
+                      className="h-4 w-4 rounded border-theme-border text-blue-600"
+                    />
+                    <span>Show weekends</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-theme-text cursor-pointer hover:bg-theme-bg-alt">
+                    <input
+                      type="checkbox"
+                      checked={showCompleted}
+                      onChange={(e) => setShowCompleted(e.target.checked)}
+                      className="h-4 w-4 rounded border-theme-border text-blue-600"
+                    />
+                    <span>Show completed tasks</span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Create button — always visible so mobile users (where the
+                sidebar is hidden) still have a way to add an event. */}
+            <button
+              onClick={() => openCreateModalWithDate()}
+              className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-blue-600 hover:bg-blue-700 px-2.5 sm:px-5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white shadow-md shadow-blue-500/20 transition-all shrink-0"
+            >
+              <Plus size={15} className="sm:hidden" />
+              <Plus size={16} className="hidden sm:block" />
+              <span>Create</span>
+            </button>
           </div>
-
-          <button
-            onClick={() => openCreateModalWithDate()}
-            className="hidden lg:flex items-center gap-2 rounded-full bg-blue-600 hover:bg-blue-700 px-5 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition-all ml-2"
-          >
-            <Plus size={16} /> Create
-          </button>
         </div>
       </header>
 
       {/* --- MAIN CALENDAR WORKSPACE (SIDEBAR + GRID) --- */}
       <div className="flex flex-1 overflow-hidden relative">
         
-        {/* --- LEFT GOOGLE CALENDAR SIDEBAR --- */}
+        {/* --- LEFT GOOGLE CALENDAR SIDEBAR (DESKTOP, DOCKED) --- */}
         {isSidebarOpen && (
           <aside className="w-64 border-r border-theme-border/60 bg-theme-card p-4 space-y-6 shrink-0 overflow-y-auto hidden md:block">
-            
-            {/* Floating Create Button */}
-            <div className="relative">
-              <button
-                onClick={() => openCreateModalWithDate()}
-                className="flex items-center gap-3 rounded-full border border-theme-border bg-theme-card px-6 py-3 text-sm font-bold text-theme-text shadow-lg hover:bg-theme-bg-alt transition-all w-max"
-              >
-                <Plus size={22} className="text-blue-600" />
-                <span>Create</span>
-                <ChevronDown size={14} className="text-theme-text-muted ml-1" />
-              </button>
-            </div>
+            {sidebarContent}
+          </aside>
+        )}
 
-            {/* Mini Month Calendar Widget */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-extrabold text-theme-text">
-                  {miniDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      const d = new Date(miniDate);
-                      d.setMonth(d.getMonth() - 1);
-                      setMiniDate(d);
-                    }}
-                    className="p-1 rounded-full text-theme-text-muted hover:bg-theme-bg-alt"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const d = new Date(miniDate);
-                      d.setMonth(d.getMonth() + 1);
-                      setMiniDate(d);
-                    }}
-                    className="p-1 rounded-full text-theme-text-muted hover:bg-theme-bg-alt"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Mini Month Grid */}
-              <div className="grid grid-cols-7 text-center text-[10px] font-bold text-theme-text-muted">
-                <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-              </div>
-              <div className="grid grid-cols-7 gap-y-1 text-center text-[11px]">
-                {getMiniMonthDays(miniDate).map((dayObj, idx) => {
-                  const dayStr = formatDateKey(dayObj.date);
-                  const isSelected = formatDateKey(currentDate) === dayStr;
-                  const isToday = todayStr === dayStr;
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setCurrentDate(dayObj.date);
-                      }}
-                      className={`h-7 w-7 rounded-full mx-auto flex items-center justify-center font-semibold transition-all ${
-                        isToday
-                          ? 'bg-blue-600 text-white font-bold'
-                          : isSelected
-                          ? 'bg-blue-500/20 text-blue-600 font-bold'
-                          : dayObj.isCurrentMonth
-                          ? 'text-theme-text hover:bg-theme-bg-alt'
-                          : 'text-theme-text-muted opacity-40'
-                      }`}
-                    >
-                      {dayObj.date.getDate()}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* People Search */}
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-3 text-theme-text-muted" />
-              <input
-                type="text"
-                placeholder="Search for people"
-                value={peopleSearch}
-                onChange={(e) => setPeopleSearch(e.target.value)}
-                className="w-full rounded-2xl bg-theme-bg-alt pl-9 pr-3 py-2 text-xs font-semibold text-theme-text outline-none border border-transparent focus:border-blue-500"
-              />
-            </div>
-
-            {/* My Schedulers Filters */}
-            <div className="space-y-3 pt-2 border-t border-theme-border/50">
-              <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
-                <span>My schedulers</span>
+        {/* --- LEFT SIDEBAR (MOBILE, SLIDE-OVER DRAWER) --- */}
+        {isSidebarOpen && (
+          <div className="md:hidden fixed inset-0 z-40 flex">
+            <aside
+              className="w-72 max-w-[85vw] h-full bg-theme-card p-4 space-y-6 overflow-y-auto shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-extrabold text-theme-text">Menu</span>
                 <button
-                  onClick={() => setShowSettingsModal(true)}
-                  className="p-1 rounded-lg hover:bg-theme-bg-alt text-theme-text-muted transition-colors"
-                  title="Manage Schedulers & Settings"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-1.5 rounded-xl bg-theme-bg-alt text-theme-text-muted"
                 >
-                  <Settings size={14} />
+                  <X size={16} />
                 </button>
               </div>
-
-              <div className="space-y-2 text-xs font-semibold">
-                {categories.map((cat) => (
-                  <label key={cat.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-theme-bg-alt/50 p-1.5 rounded-xl">
-                    <input
-                      type="checkbox"
-                      checked={cat.enabled}
-                      onChange={() => {
-                        setCategories(
-                          categories.map((c) => (c.id === cat.id ? { ...c, enabled: !c.enabled } : c))
-                        );
-                      }}
-                      className="h-4 w-4 rounded"
-                      style={{ accentColor: cat.color }}
-                    />
-                    <span className="flex-1 text-theme-text truncate">{cat.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Other Schedulers Section */}
-            <div className="space-y-2 pt-2 border-t border-theme-border/50">
-              <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
-                <span>Other schedulers</span>
-                <Plus size={14} className="text-theme-text-muted cursor-pointer" />
-              </div>
-            </div>
-
-          </aside>
+              {sidebarContent}
+            </aside>
+            <div className="flex-1 bg-black/50" onClick={() => setIsSidebarOpen(false)} />
+          </div>
         )}
 
         {/* --- MAIN CALENDAR VIEWS AREA --- */}
@@ -693,7 +734,7 @@ export default function Calendar() {
             <>
               {/* 1. MONTH VIEW */}
               {view === 'month' && (
-                <div className="h-full flex flex-col min-w-[750px]">
+                <div className="h-full flex flex-col">
                   {/* Days of Week Header */}
                   <div className="grid grid-cols-7 border-b border-theme-border/60 py-2 text-center text-xs font-bold uppercase tracking-wider text-theme-text-muted shrink-0">
                     <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
@@ -710,13 +751,13 @@ export default function Calendar() {
                         <div
                           key={idx}
                           onClick={() => openCreateModalWithDate(dayObj.date)}
-                          className={`bg-theme-card p-1.5 flex flex-col justify-between overflow-hidden transition-all cursor-pointer hover:bg-theme-bg-alt/30 ${
+                          className={`bg-theme-card p-0.5 sm:p-1.5 flex flex-col justify-between overflow-hidden transition-all cursor-pointer hover:bg-theme-bg-alt/30 ${
                             !dayObj.isCurrentMonth ? 'opacity-40 bg-theme-bg-alt/10' : ''
                           }`}
                         >
-                          <div className="flex items-center justify-between px-1">
+                          <div className="flex items-center justify-center sm:justify-between px-0.5 sm:px-1">
                             <span
-                              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                              className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] sm:text-xs font-bold ${
                                 isToday
                                   ? 'bg-blue-600 text-white shadow-xs'
                                   : 'text-theme-text'
@@ -726,8 +767,19 @@ export default function Calendar() {
                             </span>
                           </div>
 
-                          {/* Event Pills inside Day Cell */}
-                          <div className="space-y-1 mt-1 flex-1 overflow-y-auto max-h-[100px]">
+                          {/* Mobile: compact dot indicators only, no text, no scroll */}
+                          <div className="flex sm:hidden flex-wrap justify-center items-center gap-0.5 mt-0.5">
+                            {dayEvents.slice(0, 4).map((ev) => {
+                              const style = getEventStyle(ev.eventType);
+                              return <span key={ev.id} className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />;
+                            })}
+                            {dayEvents.length > 4 && (
+                              <span className="text-[7px] font-extrabold text-blue-600">+{dayEvents.length - 4}</span>
+                            )}
+                          </div>
+
+                          {/* sm and up: full event pills with titles */}
+                          <div className="hidden sm:block space-y-1 mt-1 flex-1 overflow-y-auto max-h-[100px]">
                             {dayEvents.slice(0, 4).map((ev) => {
                               const style = getEventStyle(ev.eventType);
                               return (
@@ -759,20 +811,22 @@ export default function Calendar() {
 
               {/* 2. WEEK VIEW */}
               {view === 'week' && (
-                <div className="h-full flex flex-col min-w-[800px]">
+                <div className="h-full flex flex-col">
                   {/* Week Days Header */}
-                  <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-theme-border/60 py-3 shrink-0 text-center">
-                    <div className="text-[10px] font-bold text-theme-text-muted">GMT+05:30</div>
+                  <div className="grid grid-cols-[24px_repeat(7,minmax(0,1fr))] sm:grid-cols-[60px_repeat(7,1fr)] border-b border-theme-border/60 py-2 sm:py-3 shrink-0 text-center">
+                    <div className="text-[7px] sm:text-[10px] font-bold text-theme-text-muted self-center truncate px-0.5">
+                      <span className="hidden sm:inline">GMT+05:30</span>
+                    </div>
                     {getWeekDays().map((d, i) => {
                       const dStr = formatDateKey(d);
                       const isToday = todayStr === dStr;
                       return (
-                        <div key={i} className="flex flex-col items-center">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">
-                            {d.toLocaleString('default', { weekday: 'short' })}
+                        <div key={i} className="flex flex-col items-center min-w-0">
+                          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">
+                            {d.toLocaleString('default', { weekday: 'short' }).slice(0, 2)}
                           </span>
                           <span
-                            className={`flex h-8 w-8 items-center justify-center rounded-full text-base font-extrabold mt-0.5 ${
+                            className={`flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs sm:text-base font-extrabold mt-0.5 ${
                               isToday ? 'bg-blue-600 text-white shadow-md' : 'text-theme-text'
                             }`}
                           >
@@ -785,11 +839,11 @@ export default function Calendar() {
 
                   {/* Hours & Events Slot Grid */}
                   <div className="flex-1 overflow-y-auto">
-                    <div className="grid grid-cols-[60px_repeat(7,1fr)] divide-x divide-y divide-theme-border/40">
+                    <div className="grid grid-cols-[24px_repeat(7,minmax(0,1fr))] sm:grid-cols-[60px_repeat(7,1fr)] divide-x divide-y divide-theme-border/40">
                       {hours.map((hour) => (
                         <div key={hour} className="contents">
-                          <div className="py-3 px-2 text-[10px] font-bold text-theme-text-muted text-right pr-3 border-b border-theme-border/30">
-                            {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+                          <div className="py-2 sm:py-3 px-0.5 sm:px-2 text-[7px] sm:text-[10px] font-bold text-theme-text-muted text-right pr-0.5 sm:pr-3 border-b border-theme-border/30 truncate">
+                            {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
                           </div>
                           {getWeekDays().map((day, dayIdx) => {
                             const dayStr = formatDateKey(day);
@@ -800,17 +854,18 @@ export default function Calendar() {
                             });
 
                             return (
-                              <div key={dayIdx} className="min-h-[48px] p-1 border-b border-theme-border/30 relative hover:bg-theme-bg-alt/20">
+                              <div key={dayIdx} className="min-h-[30px] sm:min-h-[48px] p-0.5 sm:p-1 border-b border-theme-border/30 relative hover:bg-theme-bg-alt/20 min-w-0">
                                 {hourEvents.map((ev) => {
                                   const style = getEventStyle(ev.eventType);
                                   return (
                                     <button
                                       key={ev.id}
                                       onClick={() => setSelectedEvent(ev)}
-                                      className={`w-full text-left p-1.5 rounded-lg text-xs font-bold shadow-xs truncate flex flex-col ${style.bg} ${style.text} border-l-4 ${style.border}`}
+                                      className={`w-full text-left rounded sm:rounded-lg shadow-xs flex flex-col ${style.bg} ${style.text} border-l-2 sm:border-l-4 ${style.border} p-0.5 sm:p-1.5`}
                                     >
-                                      <span className="truncate font-extrabold">{ev.title}</span>
-                                      <span className="text-[9px] opacity-80">{ev.startTime ? new Date(ev.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                                      <span className="sm:hidden block h-2.5 w-full rounded-full" />
+                                      <span className="hidden sm:block truncate font-extrabold text-xs">{ev.title}</span>
+                                      <span className="hidden sm:block text-[9px] opacity-80">{ev.startTime ? new Date(ev.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                                     </button>
                                   );
                                 })}
@@ -826,9 +881,9 @@ export default function Calendar() {
 
               {/* 3. DAY VIEW */}
               {view === 'day' && (
-                <div className="h-full flex flex-col max-w-4xl mx-auto p-4">
+                <div className="h-full flex flex-col max-w-4xl mx-auto p-3 sm:p-4">
                   <div className="border-b border-theme-border/60 pb-3 flex items-center gap-3">
-                    <span className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-extrabold ${todayStr === formatDateKey(currentDate) ? 'bg-blue-600 text-white' : 'bg-theme-bg-alt text-theme-text'}`}>
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-extrabold shrink-0 ${todayStr === formatDateKey(currentDate) ? 'bg-blue-600 text-white' : 'bg-theme-bg-alt text-theme-text'}`}>
                       {currentDate.getDate()}
                     </span>
                     <div>
@@ -846,24 +901,24 @@ export default function Calendar() {
                       });
 
                       return (
-                        <div key={hour} className="flex items-start gap-4 py-3 min-h-[50px]">
-                          <span className="w-16 text-right text-xs font-bold text-theme-text-muted">
+                        <div key={hour} className="flex items-start gap-2 sm:gap-4 py-3 min-h-[50px]">
+                          <span className="w-12 sm:w-16 text-right text-xs font-bold text-theme-text-muted shrink-0">
                             {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                           </span>
-                          <div className="flex-1 space-y-1">
+                          <div className="flex-1 space-y-1 min-w-0">
                             {hourEvents.map((ev) => {
                               const style = getEventStyle(ev.eventType);
                               return (
                                 <button
                                   key={ev.id}
                                   onClick={() => setSelectedEvent(ev)}
-                                  className={`w-full text-left p-3 rounded-2xl border ${style.bg} ${style.border} flex items-center justify-between shadow-xs`}
+                                  className={`w-full text-left p-3 rounded-2xl border ${style.bg} ${style.border} flex items-center justify-between gap-2 shadow-xs`}
                                 >
-                                  <div>
-                                    <h4 className={`text-sm font-extrabold ${style.text}`}>{ev.title}</h4>
-                                    <p className="text-xs text-theme-text-muted mt-0.5">{ev.description || 'No description'}</p>
+                                  <div className="min-w-0">
+                                    <h4 className={`text-sm font-extrabold truncate ${style.text}`}>{ev.title}</h4>
+                                    <p className="text-xs text-theme-text-muted mt-0.5 truncate">{ev.description || 'No description'}</p>
                                   </div>
-                                  <span className="text-xs font-mono font-bold text-theme-text-muted">
+                                  <span className="text-xs font-mono font-bold text-theme-text-muted shrink-0">
                                     {new Date(ev.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                   </span>
                                 </button>
@@ -879,7 +934,7 @@ export default function Calendar() {
 
               {/* 4. YEAR VIEW (12 Mini Month Grids) */}
               {view === 'year' && (
-                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                <div className="p-3 sm:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 max-w-7xl mx-auto">
                   {Array.from({ length: 12 }, (_, monthIdx) => {
                     const monthDate = new Date(currentDate.getFullYear(), monthIdx, 1);
                     return (
@@ -926,7 +981,7 @@ export default function Calendar() {
 
               {/* 5. SCHEDULE / AGENDA VIEW */}
               {view === 'schedule' && (
-                <div className="p-6 max-w-4xl mx-auto space-y-4">
+                <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-4">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
                     <Tag size={16} /> Scheduled Workspace Agenda
                   </h3>
@@ -941,9 +996,9 @@ export default function Calendar() {
                           key={ev.id}
                           className={`p-4 rounded-2xl border ${style.bg} ${style.border} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all hover:scale-[1.01]`}
                         >
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
                             <span className={`mt-1 h-3 w-3 rounded-full ${style.dot} shrink-0`} />
-                            <div>
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h4 className={`text-sm font-bold ${style.text} ${isDone ? 'line-through opacity-60' : ''}`}>
                                   {ev.title}
@@ -964,7 +1019,7 @@ export default function Calendar() {
 
                           <button
                             onClick={() => setSelectedEvent(ev)}
-                            className="px-3.5 py-1.5 rounded-xl border border-theme-border bg-theme-card text-xs font-bold text-theme-text hover:bg-theme-bg-alt transition-all"
+                            className="shrink-0 px-3.5 py-1.5 rounded-xl border border-theme-border bg-theme-card text-xs font-bold text-theme-text hover:bg-theme-bg-alt transition-all"
                           >
                             Details
                           </button>
@@ -982,8 +1037,8 @@ export default function Calendar() {
 
       {/* --- CREATE EVENT MODAL --- */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-3 py-6 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-4xl rounded-3xl bg-theme-card border border-theme-border p-6 shadow-2xl space-y-4 my-auto">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-3 py-4 sm:py-6 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-4xl rounded-3xl bg-theme-card border border-theme-border p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
             <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
               <h3 className="text-base font-extrabold text-theme-text">Create New Event</h3>
               <button onClick={() => setShowCreateModal(false)} className="p-1.5 rounded-xl bg-theme-bg-alt text-theme-text-muted">
@@ -1108,23 +1163,23 @@ export default function Calendar() {
 
       {/* --- EVENT DETAIL MODAL --- */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-3 py-6 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-md rounded-3xl bg-theme-card border border-theme-border p-6 shadow-2xl space-y-4 my-auto">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-3 py-4 sm:py-6 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md rounded-3xl bg-theme-card border border-theme-border p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
             <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
-              <div>
+              <div className="min-w-0">
                 <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                   {selectedEvent.eventType}
                 </span>
-                <h3 className="text-lg font-extrabold text-theme-text mt-1">{selectedEvent.title}</h3>
+                <h3 className="text-lg font-extrabold text-theme-text mt-1 truncate">{selectedEvent.title}</h3>
               </div>
-              <button onClick={() => setSelectedEvent(null)} className="p-1.5 rounded-xl bg-theme-bg-alt text-theme-text-muted">
+              <button onClick={() => setSelectedEvent(null)} className="p-1.5 rounded-xl bg-theme-bg-alt text-theme-text-muted shrink-0">
                 <X size={16} />
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
               <div className="p-3 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/30 space-y-1.5">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="font-bold text-theme-text">Scheduled Time:</span>
                   <span className="font-mono text-blue-600 font-bold">{new Date(selectedEvent.startTime).toLocaleString()}</span>
                 </div>
@@ -1144,7 +1199,7 @@ export default function Calendar() {
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-3 border-t border-theme-border/30">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-theme-border/30">
               {selectedEvent.leadId && (
                 <Link to="/leads" className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline">
                   Open Lead <ExternalLink size={12} />

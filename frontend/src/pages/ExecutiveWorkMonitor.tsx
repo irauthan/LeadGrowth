@@ -733,8 +733,10 @@ export default function ExecutiveWorkMonitor() {
           onClose={() => setLeadDrawerId(null)}
           onLeadUpdated={() => fetchWorkSummary()}
         />
-      )}
+      )}    
+
 
     </div>
+  
   );
 }
