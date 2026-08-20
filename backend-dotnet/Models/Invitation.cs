@@ -27,7 +27,7 @@ public class Invitation
     public long WorkspaceId { get; set; }
 
     [ForeignKey("WorkspaceId")]
-    public virtual Workspace Workspace { get; set; } = null!;
+    public virtual Workspace? Workspace { get; set; }
 
     [Required]
     [MaxLength(20)]

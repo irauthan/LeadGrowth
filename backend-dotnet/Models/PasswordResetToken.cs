@@ -15,7 +15,7 @@ public class PasswordResetToken
     public long UserId { get; set; }
 
     [ForeignKey("UserId")]
-    public virtual User User { get; set; } = null!;
+    public virtual User? User { get; set; }
 
     [Required]
     [MaxLength(100)]

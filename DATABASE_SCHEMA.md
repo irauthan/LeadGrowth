@@ -1,5 +1,5 @@
 # Hoossh Lead Management — Full Database Schema Documentation
-**Database Name**: `leadgrowth_db`  
+**Database Name**: `leadgrowth`  
 **Engine**: MySQL 8.x / InnoDB  
 **Charset / Collation**: `utf8mb4 / utf8mb4_0900_ai_ci`  
 **Application Framework**: ASP.NET Core (.NET 8) EF Core & Spring Boot Compatible  

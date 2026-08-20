@@ -15,7 +15,7 @@ public class UserSession
     public long UserId { get; set; }
 
     [ForeignKey("UserId")]
-    public virtual User User { get; set; } = null!;
+    public virtual User? User { get; set; }
 
     [Column("ip_address")]
     [MaxLength(45)]
