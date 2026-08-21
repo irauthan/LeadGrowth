@@ -21,6 +21,7 @@ import {
 import { Link, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { useLayoutStore } from '../store/layoutStore';
+import { getProfileImageUrl } from '../utils/imageUrl';
 
 export default function Navbar() {
   const user = useAuthStore((state) => state.user);
@@ -575,7 +576,7 @@ export default function Navbar() {
               <div className="relative">
                 {user?.profileImage ? (
                   <img
-                    src={user.profileImage}
+                    src={getProfileImageUrl(user.profileImage)}
                     alt="profile"
                     className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl object-cover shadow"
                   />

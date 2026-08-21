@@ -10,11 +10,68 @@ public class UserService : IUserService
 {
     private readonly LeadGrowthDbContext _context;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IWebHostEnvironment _env;
 
-    public UserService(LeadGrowthDbContext context, IPasswordHasher passwordHasher)
+    public UserService(
+        LeadGrowthDbContext context, 
+        IPasswordHasher passwordHasher,
+        IWebHostEnvironment env)
     {
         _context = context;
         _passwordHasher = passwordHasher;
+        _env = env;
+    }
+
+    private async Task<string?> ProcessProfileImageAsync(string? rawImage, long userId)
+    {
+        if (string.IsNullOrWhiteSpace(rawImage))
+        {
+            return rawImage;
+        }
+
+        if (!rawImage.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return rawImage;
+        }
+
+        try
+        {
+            var commaIndex = rawImage.IndexOf(',');
+            if (commaIndex == -1) return rawImage;
+
+            var header = rawImage.Substring(0, commaIndex);
+            var base64Data = rawImage.Substring(commaIndex + 1);
+
+            string extension = ".jpg";
+            if (header.Contains("png", StringComparison.OrdinalIgnoreCase)) extension = ".png";
+            else if (header.Contains("webp", StringComparison.OrdinalIgnoreCase)) extension = ".webp";
+            else if (header.Contains("gif", StringComparison.OrdinalIgnoreCase)) extension = ".gif";
+
+            var bytes = Convert.FromBase64String(base64Data);
+
+            var webRoot = _env.WebRootPath;
+            if (string.IsNullOrEmpty(webRoot))
+            {
+                webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            }
+            var uploadsDir = Path.Combine(webRoot, "uploads", "avatars");
+
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+
+            var fileName = $"avatar_{userId}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{extension}";
+            var filePath = Path.Combine(uploadsDir, fileName);
+
+            await File.WriteAllBytesAsync(filePath, bytes);
+
+            return $"/uploads/avatars/{fileName}";
+        }
+        catch
+        {
+            return rawImage;
+        }
     }
 
     public async Task<User> UpdateProfileAsync(UserProfileRequest request, string userEmail)
@@ -38,7 +95,7 @@ public class UserService : IUserService
 
         if (request.ProfileImage != null)
         {
-            user.ProfileImage = request.ProfileImage;
+            user.ProfileImage = await ProcessProfileImageAsync(request.ProfileImage, user.Id);
         }
 
         await _context.SaveChangesAsync();
@@ -338,7 +395,7 @@ public class UserService : IUserService
         targetUser.Department = request.Department;
         if (request.ProfileImage != null)
         {
-            targetUser.ProfileImage = request.ProfileImage;
+            targetUser.ProfileImage = await ProcessProfileImageAsync(request.ProfileImage, targetUser.Id);
         }
 
         await _context.SaveChangesAsync();

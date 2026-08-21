@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { getProfileImageUrl } from '../utils/imageUrl';
 import { 
   User as UserIcon, 
   Lock, 
@@ -178,7 +179,7 @@ export default function Profile() {
             <div className="relative group mb-4">
               {profileForm.profileImage ? (
                 <img
-                  src={profileForm.profileImage}
+                  src={getProfileImageUrl(profileForm.profileImage)}
                   alt="avatar"
                   className="h-28 w-28 rounded-3xl object-cover shadow-md border-2 border-theme-border"
                 />

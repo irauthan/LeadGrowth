@@ -10,7 +10,7 @@ async function dumpSchema() {
     return await mysql.createConnection({
       host: 'localhost',
       user: 'root',
-      password: '12345',
+      password: '123456',
       database: 'leadgrowth_db'
     });
   });

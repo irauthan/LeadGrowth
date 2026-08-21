@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Connection String & Database Context (EF Core + Pomelo MySQL 8.x)
 var connectionString = builder.Configuration.GetConnectionString("LeadGrowthDb") 
-    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=12345;";
+    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=123456;";
 
 builder.Services.AddDbContext<LeadGrowthDbContext>(options =>
 {
@@ -113,6 +113,7 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline
 app.UseCors("AllowAll");
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();

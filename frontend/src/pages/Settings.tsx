@@ -28,6 +28,8 @@ import {
   ExternalLink
 } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/api';
+import { getProfileImageUrl } from '../utils/imageUrl';
 
 import { useLayoutStore } from '../store/layoutStore';
 import type { SidebarPosition } from '../store/layoutStore';
@@ -90,7 +92,7 @@ export default function Settings() {
     try {
       const compressedBase64 = await compressImageFile(file);
       await axios.put(
-        'http://localhost:8080/api/users/profile',
+        `${API_BASE_URL}/api/users/profile`,
         {
           fullName: user?.fullName,
           phone: user?.phone,
@@ -173,7 +175,7 @@ export default function Settings() {
     setLoading(true);
     try {
       await axios.post(
-        'http://localhost:8080/api/users/password',
+        `${API_BASE_URL}/api/users/password`,
         { oldPassword, newPassword, confirmPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -292,7 +294,7 @@ export default function Settings() {
                 <div className="relative group">
                   {user?.profileImage ? (
                     <img
-                      src={user.profileImage}
+                      src={getProfileImageUrl(user.profileImage)}
                       alt="Avatar"
                       className="w-16 h-16 rounded-2xl object-cover border-2 border-theme-border shadow-xs"
                     />
@@ -328,7 +330,7 @@ export default function Settings() {
                         onClick={async () => {
                           try {
                             await axios.put(
-                              'http://localhost:8080/api/users/profile',
+                              `${API_BASE_URL}/api/users/profile`,
                               { fullName: user?.fullName, phone: user?.phone, designation: user?.designation, bio: user?.bio, profileImage: '' },
                               { headers: { Authorization: `Bearer ${token}` } }
                             );

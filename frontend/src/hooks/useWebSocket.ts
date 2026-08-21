@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Lead } from '../types';
+import { API_BASE_URL } from '../services/api';
 
 interface UseWebSocketOptions {
   workspaceId?: number;
@@ -15,10 +16,15 @@ export const useWebSocket = ({ workspaceId, onLeadReceived }: UseWebSocketOption
     if (!workspaceId) return;
 
     const connect = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // Default backend dev port is 8080
-      const host = 'localhost:8080';
-      const wsUrl = `${protocol}//${host}/ws-leads`;
+      let wsUrl = '';
+      try {
+        const urlObj = new URL(API_BASE_URL.startsWith('http') ? API_BASE_URL : `http://${window.location.host}`);
+        const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${wsProtocol}//${urlObj.host}/ws-leads`;
+      } catch (err) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//localhost:5000/ws-leads`;
+      }
 
       console.log(`Connecting to WebSocket: ${wsUrl}`);
       const socket = new WebSocket(wsUrl);

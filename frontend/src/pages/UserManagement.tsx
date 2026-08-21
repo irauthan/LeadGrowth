@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { getProfileImageUrl } from '../utils/imageUrl';
 
 export interface ManagedUser {
   id: number;
@@ -417,7 +418,7 @@ export default function UserManagement() {
                       <div className="flex items-center gap-3">
                         <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary font-extrabold text-base border border-theme-primary/20 overflow-hidden shadow-2xs">
                           {item.profileImage ? (
-                            <img src={item.profileImage} alt={item.fullName} className="h-full w-full object-cover" />
+                            <img src={getProfileImageUrl(item.profileImage)} alt={item.fullName} className="h-full w-full object-cover" />
                           ) : (
                             getInitials(item.fullName)
                           )}
@@ -540,7 +541,7 @@ export default function UserManagement() {
                             <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary font-extrabold flex-shrink-0">
                               {item.profileImage ? (
                                 <img
-                                  src={item.profileImage}
+                                  src={getProfileImageUrl(item.profileImage)}
                                   alt={item.fullName}
                                   className="h-9 w-9 rounded-xl object-cover border border-theme-border shadow-2xs"
                                 />
