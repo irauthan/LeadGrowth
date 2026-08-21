@@ -12,7 +12,9 @@ import {
   CheckCircle,
   Loader2,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Award,
+  AlertTriangle
 } from 'lucide-react';
 
 import TaskRescheduleModal from '../components/TaskRescheduleModal';
@@ -196,8 +198,9 @@ export default function Tasks() {
       <div key={task.id} className="group rounded-2xl border border-theme-border bg-theme-card p-5 shadow-sm transition-all hover:shadow-md flex flex-col justify-between relative overflow-hidden">
         {/* Approved Glowing Badge */}
         {isTaskApproved && (
-          <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-teal-500 text-white text-[9px] font-extrabold px-3 py-1 rounded-bl-2xl shadow-md flex items-center gap-1">
-            <span>🏅 Task Completed & Verified</span>
+          <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-teal-500 text-white text-[9px] font-extrabold px-3 py-1 rounded-bl-2xl shadow-md flex items-center gap-1.5">
+            <Award size={12} className="shrink-0" />
+            <span>Task Completed & Verified</span>
           </div>
         )}
 
@@ -219,7 +222,8 @@ export default function Tasks() {
           {/* Suspended alert banner */}
           {isTaskSuspended && (
             <div className="mt-3 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-500 flex items-center gap-1.5">
-              <span>⚠️ Workload Suspended by Assignee - Reassignment Required</span>
+              <AlertTriangle size={13} className="shrink-0 text-amber-500" />
+              <span>Workload Suspended by Assignee - Reassignment Required</span>
             </div>
           )}
         </div>
@@ -337,7 +341,8 @@ export default function Tasks() {
                     className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-extrabold px-2.5 py-1 shadow-xs flex items-center gap-1"
                     title="Approve & Award Verified Completion Badge"
                   >
-                    <span>🏅 Approve & Badge</span>
+                    <Award size={12} />
+                    <span>Approve & Badge</span>
                   </button>
                   <button
                     onClick={() => handleReject(task.id)}

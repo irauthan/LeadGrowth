@@ -16,7 +16,8 @@ import {
   Briefcase,
   AlertCircle,
   CheckSquare,
-  Square
+  Square,
+  XCircle
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
@@ -510,7 +511,7 @@ export default function Leads() {
                         className="w-full sm:w-auto flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-theme-primary to-indigo-500 hover:opacity-90 text-white text-xs font-extrabold shadow-md disabled:opacity-50 transition-all"
                       >
                         {bulkAssigning ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-                        <span>⚡ Bulk Auto-Assign ({selectedLeadIds.length})</span>
+                        <span>Bulk Auto-Assign ({selectedLeadIds.length})</span>
                       </button>
 
                       <select
@@ -601,14 +602,15 @@ export default function Leads() {
                           </div>
                         )}
 
-                        <span className={`rounded px-2 py-0.5 text-[9px] font-extrabold ${
+                        <span className={`rounded px-2 py-0.5 text-[9px] font-extrabold inline-flex items-center gap-1 ${
                           isOverdue
                             ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30'
                             : isLostLead 
                             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                             : 'bg-theme-primary/10 text-theme-primary'
                         }`}>
-                          {isOverdue ? 'OVERDUE' : isLostLead ? `🔴 ${lead.status.toUpperCase()}` : lead.status}
+                          {isLostLead && <XCircle size={10} className="text-rose-400" />}
+                          <span>{isOverdue ? 'OVERDUE' : isLostLead ? lead.status.toUpperCase() : lead.status}</span>
                         </span>
                       </div>
                     </div>
@@ -736,7 +738,7 @@ export default function Leads() {
                   className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2.5 px-4 text-sm outline-none focus:border-theme-primary text-theme-text"
                 >
                   <option value="">Unassigned (Queue)</option>
-                  <option value="-1">🎲 Auto-Assign via Engine</option>
+                  <option value="-1">Auto-Assign via Engine</option>
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>{m.fullName}</option>
                   ))}

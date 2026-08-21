@@ -470,8 +470,9 @@ export default function PriorityCenter() {
                       <span className="px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-theme-bg-alt text-theme-text border border-theme-border">
                         {item.currentStage}
                       </span>
-                      <span className="px-2 py-0.5 rounded-lg text-xs font-extrabold bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                        🔥 {item.qualityTier || 'WARM'} ({item.qualityScore || 75} PTS)
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-extrabold bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
+                        <Flame size={12} className="text-amber-500 fill-amber-500/20" />
+                        <span>{item.qualityTier || 'WARM'} ({item.qualityScore || 75} PTS)</span>
                       </span>
                     </div>
 

@@ -18,7 +18,8 @@ import {
   HelpCircle,
   Menu,
   ChevronDown,
-  Tag
+  Tag,
+  AlertTriangle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -192,7 +193,7 @@ export default function Calendar() {
     const now = new Date();
 
     if (startDate.getTime() < now.getTime() - 60000) {
-      alert('⚠️ Event start time cannot be in the past. Please select a future date and time.');
+      alert('Event start time cannot be in the past. Please select a future date and time.');
       return;
     }
 
@@ -1080,7 +1081,7 @@ export default function Calendar() {
 
                   {createForm.startTime && new Date(createForm.startTime).getTime() < Date.now() - 60000 && (
                     <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3.5 py-2.5 text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                      <span>⚠️</span>
+                      <AlertTriangle size={15} className="shrink-0 text-amber-500" />
                       <span>Event time is in the past. Meetings can only be scheduled for present or future times.</span>
                     </div>
                   )}

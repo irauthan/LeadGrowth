@@ -206,9 +206,18 @@ export default function Billing() {
                   </div>
 
                   <div className="pt-3 border-t border-theme-border/30 space-y-2 text-xs text-theme-text-muted">
-                    <p>✓ Up to <strong>{p.users}</strong> Team Members</p>
-                    <p>✓ Up to <strong>{p.leads.toLocaleString()}</strong> Leads</p>
-                    <p>✓ <strong>{p.storage}</strong> Cloud Storage</p>
+                    <p className="flex items-center gap-2">
+                      <Check size={14} className="text-emerald-500 shrink-0" />
+                      <span>Up to <strong>{p.users}</strong> Team Members</span>
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <Check size={14} className="text-emerald-500 shrink-0" />
+                      <span>Up to <strong>{p.leads.toLocaleString()}</strong> Leads</span>
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <Check size={14} className="text-emerald-500 shrink-0" />
+                      <span><strong>{p.storage}</strong> Cloud Storage</span>
+                    </p>
                   </div>
 
                   <div className="pt-3 border-t border-theme-border/30 space-y-2">

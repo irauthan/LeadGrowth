@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PhoneCall, Square, Play, X } from 'lucide-react';
+import { PhoneCall, Square, Play, X, Timer } from 'lucide-react';
 import api from '../services/api';
 import type { CallSession } from '../types';
 
@@ -137,8 +137,9 @@ export default function CallTimerWidget({
             <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block">
               {isCurrentLeadCall ? `Active Call on ${leadName}` : `Active Call on Lead #${activeCall.leadId}`}
             </span>
-            <div className="text-xl font-black text-rose-500 font-mono tracking-wider">
-              ⏱ {formatHHMMSS(elapsedSeconds)}
+            <div className="text-xl font-black text-rose-500 font-mono tracking-wider flex items-center gap-1.5">
+              <Timer size={18} className="animate-pulse flex-shrink-0" />
+              <span>{formatHHMMSS(elapsedSeconds)}</span>
             </div>
           </div>
 

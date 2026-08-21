@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { calendarService } from '../services/calendarService';
 import type { CalendarEvent } from '../types';
-import { Calendar as CalendarIcon, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle2, Loader2, Sparkles, Ban } from 'lucide-react';
 
 interface Props {
   selectedDate?: string;
@@ -171,8 +171,9 @@ export default function SchedulePreviewSidePanel({
 
                 {isBusy ? (
                   <div className="min-w-0 truncate">
-                    <span className="text-[10px] font-extrabold block truncate">
-                      ⛔ {slotEvents[0].title}
+                    <span className="text-[10px] font-extrabold flex items-center gap-1 truncate text-rose-400">
+                      <Ban size={11} className="shrink-0" />
+                      <span className="truncate">{slotEvents[0].title}</span>
                     </span>
                   </div>
                 ) : (

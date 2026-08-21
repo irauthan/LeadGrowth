@@ -15,7 +15,8 @@ import {
   Zap,
   ChevronRight,
   Briefcase,
-  Eye
+  Eye,
+  Bell
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
@@ -225,8 +226,9 @@ export default function UserDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="flex h-3 w-3 rounded-full bg-amber-500 animate-ping" />
-              <h3 className="text-sm font-extrabold text-theme-text">
-                🔔 Newly Received Leads ({pendingLeads.length} Lead{pendingLeads.length > 1 ? 's' : ''} Assigned)
+              <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-1.5">
+                <Bell size={16} className="text-amber-500" />
+                <span>Newly Received Leads ({pendingLeads.length} Lead{pendingLeads.length > 1 ? 's' : ''} Assigned)</span>
               </h3>
             </div>
             <span className="text-[10px] font-bold text-amber-500 uppercase px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">

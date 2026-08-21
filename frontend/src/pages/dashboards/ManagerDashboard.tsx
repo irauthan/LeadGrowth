@@ -10,7 +10,9 @@ import {
   Clock, 
   Sparkles, 
   Zap,
-  Eye
+  Eye,
+  Lightbulb,
+  Star
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
@@ -281,7 +283,10 @@ export default function ManagerDashboard() {
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
               <Zap size={14} className="text-amber-400" /> Sales Executive Call Leaderboard
             </h4>
-            <span className="text-[10px] text-theme-text-muted font-bold">💡 Click any executive row to view conversation details</span>
+            <span className="text-[10px] text-theme-text-muted font-bold flex items-center gap-1.5">
+              <Lightbulb size={13} className="text-amber-400" />
+              <span>Click any executive row to view conversation details</span>
+            </span>
           </div>
           
           <div className="overflow-x-auto">
@@ -378,8 +383,9 @@ export default function ManagerDashboard() {
                     <td className="py-3 px-3 font-black text-purple-400 font-mono text-sm">{scoreItem.workloadScore}</td>
                     <td className="py-3 px-3">
                       {scoreItem.preferredForAutoAssignment ? (
-                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                          ⭐ Preferred Candidate
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                          <Star size={11} className="text-emerald-400 fill-emerald-400/20" />
+                          <span>Preferred Candidate</span>
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-full text-[9px] font-bold bg-theme-bg-alt text-theme-text-muted border border-theme-border">

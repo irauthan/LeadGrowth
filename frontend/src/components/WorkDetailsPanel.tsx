@@ -27,7 +27,10 @@ import {
   Minimize2,
   UserCheck,
   Loader2,
-  Zap
+  Zap,
+  XCircle,
+  Lightbulb,
+  Timer
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
@@ -455,7 +458,7 @@ export default function WorkDetailsPanel({
                 <option value="Proposal Sent">PROPOSAL SENT</option>
                 <option value="Negotiation">NEGOTIATION</option>
                 <option value="Converted">CONVERTED</option>
-                <option value="Lost">🔴 LOST (DROP LEAD)</option>
+                <option value="Lost">LOST (DROP LEAD)</option>
               </select>
             </h2>
             <p className="text-xs text-theme-text-muted">
@@ -552,7 +555,10 @@ export default function WorkDetailsPanel({
                   <div className="flex items-start gap-2.5">
                     <AlertCircle size={18} className="shrink-0 mt-0.5 animate-bounce" />
                     <div>
-                      <p className="font-extrabold uppercase tracking-wide">🔴 OVERDUE ACTION REQUIRED FOR THIS LEAD!</p>
+                      <p className="font-extrabold uppercase tracking-wide flex items-center gap-1.5">
+                        <AlertCircle size={14} className="text-rose-400 animate-pulse" />
+                        <span>OVERDUE ACTION REQUIRED FOR THIS LEAD!</span>
+                      </p>
                       <p className="text-[11px] font-semibold text-rose-400 mt-0.5">
                         Scheduled follow-up ({new Date(lead.nextFollowupDate).toLocaleString()}) was missed.
                       </p>
@@ -670,7 +676,7 @@ export default function WorkDetailsPanel({
                                 className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-3 text-xs outline-none focus:border-theme-primary text-theme-text font-bold"
                               >
                                 <option value="">-- Select Sales Executive --</option>
-                                <option value="-1">⚡ Auto-Assign via Smart AI Hybrid Engine</option>
+                                <option value="-1">Auto-Assign via Smart AI Hybrid Engine</option>
                                 {members.map((m: any) => (
                                   <option key={m.id} value={m.id}>
                                     {m.fullName || m.name} ({m.email})
@@ -689,7 +695,7 @@ export default function WorkDetailsPanel({
                               title="Automatically assign to best sales rep based on workload score and live availability"
                             >
                               {assigningLead ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                              <span>⚡ Auto-Assign (Smart AI Engine)</span>
+                              <span>Auto-Assign (Smart AI Engine)</span>
                             </button>
 
                             <button
@@ -821,7 +827,7 @@ export default function WorkDetailsPanel({
                                     {isLostStep && <AlertCircle size={14} className="text-rose-400 flex-shrink-0 animate-pulse" />}
                                     <span>{act.title}</span>
                                   </h4>
-                                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
                                     isLostStep
                                       ? isCompleted
                                         ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
@@ -832,7 +838,19 @@ export default function WorkDetailsPanel({
                                       ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                                       : 'bg-theme-bg-alt text-theme-text-muted border-theme-border'
                                   }`}>
-                                    {isLostStep ? (isCompleted ? '🔴 LEAD LOST / DROPPED' : '🔴 DROP LEAD STAGE') : (isCompleted ? '✔ COMPLETED' : act.status)}
+                                    {isLostStep ? (
+                                      <>
+                                        <XCircle size={10} className="text-rose-400" />
+                                        <span>{isCompleted ? 'LEAD LOST / DROPPED' : 'DROP LEAD STAGE'}</span>
+                                      </>
+                                    ) : isCompleted ? (
+                                      <>
+                                        <CheckCircle2 size={10} className="text-emerald-400" />
+                                        <span>COMPLETED</span>
+                                      </>
+                                    ) : (
+                                      act.status
+                                    )}
                                   </span>
                                   {!isCompleted && lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
                                     <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-500 border border-rose-500/40 animate-pulse flex items-center gap-1">
@@ -845,8 +863,19 @@ export default function WorkDetailsPanel({
                                 </div>
 
                                 {isCompleted ? (
-                                  <p className={`text-[10px] font-medium mt-1 ${isLostStep ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
-                                    {isLostStep ? '🔴 Lead marked Lost / Dropped by' : 'Completed by'} <strong className="font-bold">{act.completedByName || 'Sales Rep'}</strong> • {act.completedAt ? new Date(act.completedAt).toLocaleString() : ''}
+                                  <p className={`text-[10px] font-medium mt-1 flex items-center gap-1.5 flex-wrap ${isLostStep ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
+                                    {isLostStep ? (
+                                      <>
+                                        <XCircle size={12} className="text-rose-400 flex-shrink-0" />
+                                        <span>Lead marked Lost / Dropped by</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle2 size={12} className="text-emerald-400 flex-shrink-0" />
+                                        <span>Completed by</span>
+                                      </>
+                                    )}
+                                    <strong className="font-bold">{act.completedByName || 'Sales Rep'}</strong> • {act.completedAt ? new Date(act.completedAt).toLocaleString() : ''}
                                     {act.completionRemarks && ` — "${act.completionRemarks}"`}
                                   </p>
                                 ) : (
@@ -1196,8 +1225,9 @@ export default function WorkDetailsPanel({
                     </div>
                   </div>
 
-                  <p className="text-[10px] text-theme-text-muted">
-                    💡 Click on any interaction record below to open and inspect full discussion notes, duration, and follow-up details.
+                  <p className="text-[10px] text-theme-text-muted flex items-center gap-1.5">
+                    <Lightbulb size={13} className="text-amber-400 flex-shrink-0" />
+                    <span>Click on any interaction record below to open and inspect full discussion notes, duration, and follow-up details.</span>
                   </p>
 
                   {/* Call History Duration Logs */}
@@ -1226,8 +1256,9 @@ export default function WorkDetailsPanel({
 
                               <div className="flex items-center gap-2 text-[10px] text-theme-text-muted">
                                 {item.duration && (
-                                  <span className="px-2 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border font-bold text-amber-400">
-                                    ⏱️ {item.duration}
+                                  <span className="px-2 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border font-bold text-amber-400 flex items-center gap-1">
+                                    <Timer size={11} className="text-amber-400" />
+                                    <span>{item.duration}</span>
                                   </span>
                                 )}
                                 <span className="font-semibold">{item.date || new Date(item.timestamp).toLocaleDateString()} at {item.time || new Date(item.timestamp).toLocaleTimeString()}</span>

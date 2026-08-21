@@ -18,7 +18,8 @@ import {
   BarChart3,
   Target,
   Zap,
-  Users
+  Users,
+  Check
 } from 'lucide-react';
 
 export default function Auth() {
@@ -638,7 +639,7 @@ export default function Auth() {
                             ? 'bg-emerald-500 text-white' 
                             : 'bg-slate-100 border border-slate-200 text-slate-400'
                         }`}>
-                          {signupStep > s ? '✓' : s}
+                          {signupStep > s ? <Check size={14} className="stroke-[3]" /> : s}
                         </div>
                         {s < 3 && <div className={`h-0.5 w-14 mx-1 transition-all ${signupStep > s ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
                       </div>

@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Maximize2,
   Minimize2,
-  Users
+  Users,
+  Flame
 } from 'lucide-react';
 import api from '../services/api';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
@@ -513,12 +514,13 @@ export default function MyWork() {
                               {lead.priority || 'MEDIUM'}
                             </span>
 
-                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${
+                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
                               lead.qualityTier === 'HOT' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                               lead.qualityTier === 'COLD' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                               'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                             }`}>
-                              🔥 {lead.qualityTier || 'WARM'} ({lead.qualityScore || 75}pt)
+                              <Flame size={11} className="text-amber-400 fill-amber-400/20" />
+                              <span>{lead.qualityTier || 'WARM'} ({lead.qualityScore || 75}pt)</span>
                             </span>
                           </div>
 
@@ -718,8 +720,9 @@ export default function MyWork() {
                             {contact.currentStage || 'Contact'}
                           </span>
 
-                          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                            🔥 {contact.qualityTier || 'WARM'} ({contact.qualityScore || 75}pt)
+                          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
+                            <Flame size={11} className="text-amber-500 fill-amber-500/20" />
+                            <span>{contact.qualityTier || 'WARM'} ({contact.qualityScore || 75}pt)</span>
                           </span>
                         </div>
 
@@ -849,8 +852,9 @@ export default function MyWork() {
                           }`}>
                             {lead.priority || 'MEDIUM'}
                           </span>
-                          <div className="text-[10px] text-amber-400 font-bold">
-                            🔥 {lead.qualityTier} ({lead.qualityScore}pt)
+                          <div className="text-[10px] text-amber-400 font-bold flex items-center gap-1">
+                            <Flame size={11} className="text-amber-400 fill-amber-400/20" />
+                            <span>{lead.qualityTier} ({lead.qualityScore}pt)</span>
                           </div>
                         </td>
 
