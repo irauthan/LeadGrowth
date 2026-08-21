@@ -62,20 +62,10 @@ export default function Navbar() {
   };
 
   // Global layout and search state
-  const { isCollapsed, toggleMobileOpen, sidebarPosition } = useLayoutStore();
+  const { toggleMobileOpen } = useLayoutStore();
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [globalSearchResults, setGlobalSearchResults] = useState<{title: string, type: string, subtitle: string, url: string}[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-
-  const getHeaderDesktopPadding = () => {
-    if (sidebarPosition === 'right') {
-      return isCollapsed ? 'lg:pr-[110px] lg:pl-6' : 'lg:pr-[300px] lg:pl-6';
-    }
-    if (sidebarPosition === 'top' || sidebarPosition === 'bottom') {
-      return 'lg:pl-6 lg:pr-6';
-    }
-    return isCollapsed ? 'lg:pl-[110px]' : 'lg:pl-[300px]';
-  };
 
   useEffect(() => {
     if (!globalSearchQuery.trim()) {
@@ -299,34 +289,38 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Main Top Header Navbar */}
-      <header className={`fixed left-0 right-0 top-0 z-40 flex h-16 sm:h-20 items-center justify-between border-b border-theme-border bg-theme-bg/85 px-3 sm:px-6 backdrop-blur-md transition-all duration-300 ${getHeaderDesktopPadding()} pl-3`}>
-        {/* Left Section: Mobile Sidebar Toggle & Page Title */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+      {/* Main Top Header Navbar (Always fixed edge-to-edge at top) */}
+      <header className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b border-theme-border/80 bg-theme-card/85 px-3 sm:px-6 backdrop-blur-md transition-all duration-300">
+        {/* Left Section: Mobile Sidebar Toggle, Brand Icon & Page Title */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={(e) => { e.stopPropagation(); toggleMobileOpen(); }}
-            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/60 text-theme-text shadow-sm hover:bg-theme-bg-alt active:scale-95 transition-all lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/60 text-theme-text shadow-sm hover:bg-theme-bg-alt active:scale-95 transition-all lg:hidden"
             title="Open Menu"
           >
             <Menu size={18} />
           </button>
 
-          {/* App Brand Logo on Mobile header when sidebar closed */}
-          <Link to="/dashboard" className="flex items-center gap-2 lg:hidden">
+          {/* Compact App Brand Icon */}
+          <Link to="/dashboard" className="flex items-center transition-transform hover:scale-105" title="Hoossh Lead Growth">
             <HoosshLogo size={28} variant="icon-only" animated />
           </Link>
 
+          {/* Subtle Vertical Divider */}
+          <div className="h-5 w-[1px] bg-theme-border/60 mx-0.5 sm:mx-1" />
+
+          {/* Page Title & Breadcrumbs */}
           <div className="flex flex-col">
-            <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-theme-text-muted">
+            <div className="hidden md:flex items-center gap-1 text-[11px] font-semibold text-theme-text-muted">
               <span>Home</span>
               {getBreadcrumbs().map((b) => (
-                <span key={b.path} className="flex items-center gap-1.5">
-                  <span className="text-[10px] opacity-70">/</span>
+                <span key={b.path} className="flex items-center gap-1">
+                  <span className="text-[9px] opacity-60">/</span>
                   <Link to={b.path} className="hover:text-theme-primary transition-colors">{b.label}</Link>
                 </span>
               ))}
             </div>
-            <h1 className="text-base sm:text-lg font-bold text-theme-text leading-snug">{getPageTitle()}</h1>
+            <h1 className="text-xs sm:text-sm md:text-base font-bold text-theme-text leading-tight truncate">{getPageTitle()}</h1>
           </div>
         </div>
 

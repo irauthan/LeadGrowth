@@ -57,22 +57,22 @@ export default function MainLayout() {
 
   const getMainDesktopPadding = () => {
     if (sidebarPosition === 'right') {
-      return isCollapsed ? 'lg:pr-[110px] lg:pl-0' : 'lg:pr-[300px] lg:pl-0';
+      return isCollapsed ? 'lg:pr-[72px] lg:pl-0' : 'lg:pr-[260px] lg:pl-0';
     }
     if (sidebarPosition === 'top' || sidebarPosition === 'bottom') {
       return 'lg:pl-0 lg:pr-0';
     }
-    return isCollapsed ? 'lg:pl-[110px]' : 'lg:pl-[300px]';
+    return isCollapsed ? 'lg:pl-[72px] lg:pr-0' : 'lg:pl-[260px] lg:pr-0';
   };
 
   const getMainContentPadding = () => {
     if (sidebarPosition === 'top') {
-      return 'pt-20 sm:pt-44 pb-24 lg:pb-8';
+      return 'pt-28 pb-24 lg:pb-8';
     }
     if (sidebarPosition === 'bottom') {
-      return 'pt-20 sm:pt-28 pb-24 lg:pb-28';
+      return 'pt-16 pb-24 lg:pb-20';
     }
-    return 'pt-20 sm:pt-28 pb-24 lg:pb-8';
+    return 'pt-16 pb-24 lg:pb-8';
   };
 
   return (
@@ -80,7 +80,7 @@ export default function MainLayout() {
       <Sidebar />
       <div className={`flex flex-col min-h-screen max-w-full overflow-x-hidden transition-all duration-300 ${getMainDesktopPadding()}`}>
         <Navbar />
-        <main className={`flex-1 max-w-full overflow-x-hidden px-3 sm:px-6 ${getMainContentPadding()}`}>
+        <main className={`flex-1 max-w-full overflow-x-hidden px-4 sm:px-8 py-6 ${getMainContentPadding()}`}>
           <Outlet />
         </main>
         <Footer />

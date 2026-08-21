@@ -41,19 +41,19 @@ export default function Sidebar() {
 
   const getSidebarPlacement = () => {
     if (isMobileOpen) {
-      return 'left-4 top-4 bottom-4 w-[280px] max-w-[85vw] flex-col';
+      return 'left-0 top-0 bottom-0 w-[280px] max-w-[85vw] flex-col rounded-r-2xl rounded-l-none z-50 border-r border-theme-border/60 shadow-2xl';
     }
     const baseMobile = '-translate-x-full lg:translate-x-0';
     if (sidebarPosition === 'right') {
-      return `${baseMobile} lg:right-4 lg:left-auto lg:top-4 lg:bottom-4 lg:flex-col`;
+      return `${baseMobile} lg:right-0 lg:left-auto lg:top-16 lg:bottom-0 lg:flex-col lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-theme-border/60 z-30`;
     }
     if (sidebarPosition === 'top') {
-      return `-translate-x-full lg:top-[88px] lg:left-1/2 lg:-translate-x-1/2 lg:right-auto lg:bottom-auto lg:flex-row lg:h-16 lg:w-max lg:max-w-[95vw]`;
+      return `-translate-x-full lg:top-16 lg:left-0 lg:right-0 lg:bottom-auto lg:flex-row lg:h-12 lg:w-full lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b lg:border-theme-border/60 z-30`;
     }
     if (sidebarPosition === 'bottom') {
-      return `-translate-x-full lg:bottom-4 lg:left-1/2 lg:-translate-x-1/2 lg:right-auto lg:top-auto lg:flex-row lg:h-16 lg:w-max lg:max-w-[95vw]`;
+      return `-translate-x-full lg:bottom-0 lg:left-0 lg:right-0 lg:top-auto lg:flex-row lg:h-12 lg:w-full lg:rounded-none lg:border-x-0 lg:border-b-0 lg:border-t lg:border-theme-border/60 z-30`;
     }
-    return `${baseMobile} lg:left-4 lg:right-auto lg:top-4 lg:bottom-4 lg:flex-col`;
+    return `${baseMobile} lg:left-0 lg:right-auto lg:top-16 lg:bottom-0 lg:flex-col lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r lg:border-theme-border/60 z-30`;
   };
 
   const generalMenu = [
@@ -93,9 +93,8 @@ export default function Sidebar() {
     });
   const visibleAdminMenu = adminMenu.filter(item => enabledNavItems.includes(item.path) && (isAdmin || (!item.adminOnly && isManager)));
 
-
-
   const tooltipPositionClass = sidebarPosition === 'top' ? 'top-full pt-2' : 'bottom-full pb-2';
+  const sideTooltipClass = sidebarPosition === 'right' ? 'right-full mr-2' : 'left-full ml-2';
 
   return (
     <>
@@ -110,11 +109,11 @@ export default function Sidebar() {
       <motion.div
         animate={
           isHorizontal && !isMobileOpen 
-            ? { width: 'auto' } 
-            : { width: isCollapsed ? '88px' : '280px' }
+            ? { width: '100%' } 
+            : { width: isMobileOpen ? '280px' : (isCollapsed ? '72px' : '260px') }
         }
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className={`fixed z-50 rounded-3xl border border-theme-border bg-theme-card/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ${getSidebarPlacement()}`}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        className={`fixed bg-theme-card/95 backdrop-blur-xl transition-all duration-300 ${getSidebarPlacement()}`}
       >
         {/* ========================================================================= */}
         {/* DESKTOP HORIZONTAL DOCK (Used when sidebarPosition is top or bottom)       */}
@@ -233,31 +232,33 @@ export default function Sidebar() {
           </div>
         )}
 
+        {/* ========================================================================= */}
+        {/* VERTICAL SIDEBAR (Desktop Left/Right or Mobile Drawer)                     */}
+        {/* ========================================================================= */}
         <div className={`flex flex-col h-full w-full ${isHorizontal ? 'lg:hidden' : 'flex'}`}>
-          <div className="flex h-20 items-center justify-between px-4 border-b border-theme-border/30">
-            <Link to="/dashboard" className="flex items-center gap-2.5 overflow-hidden" onClick={() => setMobileOpen(false)}>
-              {isCollapsed ? (
-                <HoosshLogo size={32} variant="icon-only" animated />
-              ) : (
-                <HoosshLogo size={32} variant="with-text" animated />
-              )}
-            </Link>
+          {/* Mobile Only Header (Logo + Close X) */}
+          {isMobileOpen && (
+            <div className="flex h-16 items-center justify-between px-4 border-b border-theme-border/40">
+              <Link to="/dashboard" className="flex items-center gap-2.5 overflow-hidden" onClick={() => setMobileOpen(false)}>
+                <HoosshLogo size={28} variant="with-text" animated />
+              </Link>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-theme-bg-alt text-theme-text-muted hover:text-theme-text"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          )}
 
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-theme-bg-alt text-theme-text-muted hover:text-theme-text lg:hidden"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Collapse Toggle for Desktop (Only when Left or Right position) */}
-          {!isHorizontal && (
+          {/* Desktop Collapse Toggle Button (Fixed on edge of sidebar card) */}
+          {!isHorizontal && !isMobileOpen && (
             <button
               onClick={toggleCollapsed}
-              className={`absolute top-24 hidden lg:flex h-6 w-6 items-center justify-center rounded-full border border-theme-border bg-theme-bg text-theme-text/80 shadow-md transition-all hover:bg-theme-bg-alt ${
+              className={`absolute top-4 hidden lg:flex h-6 w-6 items-center justify-center rounded-full border border-theme-border bg-theme-card text-theme-text/80 shadow-md transition-all hover:bg-theme-bg-alt hover:scale-110 z-40 ${
                 sidebarPosition === 'right' ? '-left-3' : '-right-3'
               }`}
+              title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
               {sidebarPosition === 'right' 
                 ? (isCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />)
@@ -267,9 +268,11 @@ export default function Sidebar() {
           )}
 
           {/* Workspace Selector Block */}
-          <div className="px-3 pt-4 pb-2">
-            <div className="flex items-center gap-3 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/20 p-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary">
+          <div className="px-2.5 pt-3 pb-1">
+            <div className={`flex items-center gap-2.5 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/30 ${
+              isCollapsed && !isMobileOpen ? 'p-2 justify-center' : 'p-2.5'
+            }`}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary flex-shrink-0">
                 <Building size={16} />
               </div>
               {(!isCollapsed || isMobileOpen) && (
@@ -278,7 +281,7 @@ export default function Sidebar() {
                   animate={{ opacity: 1 }}
                   className="flex-1 overflow-hidden"
                 >
-                  <h4 className="text-xs font-bold truncate">{user?.workspaceName || 'Default Workspace'}</h4>
+                  <h4 className="text-xs font-bold truncate text-theme-text">{user?.workspaceName || 'Default Workspace'}</h4>
                   <p className="text-[9px] font-semibold text-theme-text-muted truncate">Code: {user?.inviteCode || 'N/A'}</p>
                 </motion.div>
               )}
@@ -286,51 +289,24 @@ export default function Sidebar() {
           </div>
 
           {/* Navigation Scrollable Area */}
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
-            {/* General items */}
+          <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-3 custom-scrollbar">
+            {/* General Section */}
             <div className="space-y-1">
               {(!isCollapsed || isMobileOpen) && (
-                <span className="px-4 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">General</span>
+                <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">General</span>
               )}
               {visibleGeneralMenu.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    onClick={() => setMobileOpen(false)}
-                    className={`group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
-                        : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
-                    }`}
-                  >
-                    <item.icon
-                      size={18}
-                      className={`flex-shrink-0 transition-transform group-hover:scale-110 ${
-                        isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
-                      }`}
-                    />
-                    {(!isCollapsed || isMobileOpen) && <span>{item.name}</span>}
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Admin and Management items */}
-            {(isAdmin || isManager) && visibleAdminMenu.length > 0 && (
-              <div className="space-y-1 pt-2 border-t border-theme-border/30">
-                {(!isCollapsed || isMobileOpen) && (
-                  <span className="px-4 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Management</span>
-                )}
-                {visibleAdminMenu.map((item) => {
-                  const isActive = location.pathname === item.path;
-                  return (
+                  <div key={item.name} className="relative group">
                     <Link
-                      key={item.name}
                       to={item.path}
                       onClick={() => setMobileOpen(false)}
-                      className={`group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                      className={`relative flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
+                        isCollapsed && !isMobileOpen 
+                          ? 'h-10 w-10 mx-auto justify-center' 
+                          : 'px-3.5 py-2.5'
+                      } ${
                         isActive
                           ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
                           : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
@@ -342,8 +318,67 @@ export default function Sidebar() {
                           isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
                         }`}
                       />
-                      {(!isCollapsed || isMobileOpen) && <span>{item.name}</span>}
+                      {(!isCollapsed || isMobileOpen) && (
+                        <span className="truncate text-xs font-semibold">{item.name}</span>
+                      )}
                     </Link>
+
+                    {/* Tooltip for Collapsed Mode */}
+                    {isCollapsed && !isMobileOpen && (
+                      <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none ${sideTooltipClass}`}>
+                        <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                          {item.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Admin and Management items */}
+            {(isAdmin || isManager) && visibleAdminMenu.length > 0 && (
+              <div className="space-y-1 pt-2 border-t border-theme-border/30">
+                {(!isCollapsed || isMobileOpen) && (
+                  <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Management</span>
+                )}
+                {visibleAdminMenu.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <div key={item.name} className="relative group">
+                      <Link
+                        to={item.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
+                          isCollapsed && !isMobileOpen 
+                            ? 'h-10 w-10 mx-auto justify-center' 
+                            : 'px-3.5 py-2.5'
+                        } ${
+                          isActive
+                            ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
+                            : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
+                        }`}
+                      >
+                        <item.icon
+                          size={18}
+                          className={`flex-shrink-0 transition-transform group-hover:scale-110 ${
+                            isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
+                          }`}
+                        />
+                        {(!isCollapsed || isMobileOpen) && (
+                          <span className="truncate text-xs font-semibold">{item.name}</span>
+                        )}
+                      </Link>
+
+                      {/* Tooltip for Collapsed Mode */}
+                      {isCollapsed && !isMobileOpen && (
+                        <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none ${sideTooltipClass}`}>
+                          <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                            {item.name} (Admin)
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -351,12 +386,15 @@ export default function Sidebar() {
           </div>
 
           {/* Footer Session Logout */}
-          <div className="p-3 border-t border-theme-border/30">
+          <div className="p-2 border-t border-theme-border/30">
             <button
               onClick={() => { setMobileOpen(false); logout(); }}
-              className="group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition-colors"
+              className={`group flex items-center rounded-2xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition-colors ${
+                isCollapsed && !isMobileOpen ? 'h-10 w-10 mx-auto justify-center p-0' : 'w-full gap-2.5 px-3.5 py-2.5'
+              }`}
+              title="Logout"
             >
-              <LogOut size={18} className="flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+              <LogOut size={17} className="flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
               {(!isCollapsed || isMobileOpen) && <span>Logout</span>}
             </button>
           </div>
