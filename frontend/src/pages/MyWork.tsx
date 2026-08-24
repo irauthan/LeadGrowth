@@ -30,7 +30,6 @@ import WorkDetailsPanel from '../components/WorkDetailsPanel';
 const KANBAN_STAGES = [
   { key: 'New', title: 'New', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10', headerColor: 'from-blue-500/20 to-blue-500/5 text-blue-400', icon: Sparkles },
   { key: 'Interaction', title: 'Interaction', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-400', icon: MessageSquare },
-  { key: 'Follow-up', title: 'Follow-up', color: 'border-purple-500/40 text-purple-400 bg-purple-500/10', headerColor: 'from-purple-500/20 to-purple-500/5 text-purple-400', icon: ClipboardList },
   { key: 'Proposal Sent', title: 'Proposal Sent', color: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10', headerColor: 'from-cyan-500/20 to-cyan-500/5 text-cyan-400', icon: Send },
   { key: 'Negotiation', title: 'Negotiation', color: 'border-amber-500/40 text-amber-500 bg-amber-500/10', headerColor: 'from-amber-500/20 to-amber-500/5 text-amber-500', icon: Scale },
   { key: 'Converted', title: 'Converted', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10', headerColor: 'from-emerald-500/20 to-emerald-500/5 text-emerald-400', icon: CheckCircle2 },
@@ -40,7 +39,6 @@ const KANBAN_STAGES = [
 const STAGES_TABLE_LIST = [
   'New',
   'Interaction',
-  'Follow-up',
   'Proposal Sent',
   'Negotiation',
   'Converted',
@@ -70,6 +68,12 @@ export default function MyWork() {
 
   // Collapsed columns state for Kanban
   const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+  // Maximized column state for Kanban (full-width multi-column grid view)
+  const [maximizedStage, setMaximizedStage] = useState<string | null>(null);
+
+  const toggleMaximizeStage = (stageKey: string) => {
+    setMaximizedStage((prev) => (prev === stageKey ? null : stageKey));
+  };
 
   // Drag and drop state
   const [draggedLeadId, setDraggedLeadId] = useState<number | null>(null);
@@ -220,7 +224,6 @@ export default function MyWork() {
       const st = (l.status || 'New').trim();
       const stLower = st.toLowerCase();
       const isNewLead = stLower === 'new' || stLower === 'new lead' || stLower === 'fresh';
-      const hasScheduledFollowup = !!l.nextFollowupDate || !!l.lastFollowupDate;
 
       if (stageKey === 'New') {
         return isNewLead;
@@ -229,24 +232,16 @@ export default function MyWork() {
         return false;
       }
       if (stageKey === 'Interaction') {
-        if (hasScheduledFollowup) return false;
-        return stLower === 'interaction' || stLower === 'contacted' || stLower === 'first call' || stLower === 'first_call';
+        return stLower === 'interaction' || stLower === 'contacted' || stLower === 'first call' || stLower === 'first_call' || stLower === 'follow-up' || stLower === 'followup' || stLower === 'requirement collection' || stLower === 'requirement_collection' || stLower === 'interested';
       }
-      if (stageKey === 'Follow-up') {
-        if (stLower === 'follow-up' || stLower === 'followup' || stLower === 'requirement collection' || stLower === 'requirement_collection' || stLower === 'interested') return true;
-        if (hasScheduledFollowup && stLower !== 'proposal sent' && stLower !== 'proposal_sent' && stLower !== 'proposal' && stLower !== 'demo scheduled' && stLower !== 'demo_scheduled' && stLower !== 'qualified' && stLower !== 'negotiation' && stLower !== 'negotiation_started' && stLower !== 'closing' && stLower !== 'converted' && stLower !== 'payment completed' && stLower !== 'payment_completed' && stLower !== 'payment' && stLower !== 'closed won' && stLower !== 'closed_won' && stLower !== 'lost' && stLower !== 'rejected') {
-          return true;
-        }
-        return false;
-      }
-      if (stageKey === 'Proposal Sent') return st === 'Proposal Sent' || st === 'Proposal' || st === 'Demo Scheduled' || st === 'Qualified';
-      if (stageKey === 'Negotiation') return st === 'Negotiation';
+      if (stageKey === 'Proposal Sent') return stLower === 'proposal sent' || stLower === 'proposal_sent' || stLower === 'proposal' || stLower === 'demo scheduled' || stLower === 'demo_scheduled' || stLower === 'qualified';
+      if (stageKey === 'Negotiation') return stLower === 'negotiation' || stLower === 'negotiation_started' || stLower === 'closing';
       if (stageKey === 'Converted') {
-        const s = st.toLowerCase().trim();
+        const s = stLower.trim();
         return s === 'converted' || s === 'closing' || s === 'payment' || s === 'payment completed' || s === 'payment_completed' || s === 'closed won' || s === 'closed_won';
       }
-      if (stageKey === 'Lost') return st === 'Lost' || st === 'Rejected';
-      return st === stageKey;
+      if (stageKey === 'Lost') return stLower === 'lost' || stLower === 'rejected';
+      return stLower === stageKey.toLowerCase();
     });
   };
 
@@ -340,7 +335,6 @@ export default function MyWork() {
             <option value="ALL">Stage: All Stages</option>
             <option value="New">Stage: New Leads</option>
             <option value="Interaction">Stage: Interaction</option>
-            <option value="Follow-up">Stage: Follow-up</option>
             <option value="Proposal Sent">Stage: Proposal Sent</option>
             <option value="Negotiation">Stage: Negotiation</option>
             <option value="Converted">Stage: Converted</option>
@@ -401,19 +395,19 @@ export default function MyWork() {
           {/* VIEW MODE 1: REDESIGNED ENTERPRISE HORIZONTAL KANBAN BOARD */}
           {viewMode === 'kanban' && (
             <div className="flex flex-nowrap overflow-x-auto gap-4 pb-6 pt-2 snap-x select-none custom-scrollbar min-h-[calc(100vh-230px)] items-start">
-              {(selectedStage === 'ALL'
+              {!isContactsFullWidth && (maximizedStage
+                ? KANBAN_STAGES.filter((col) => col.key === maximizedStage)
+                : selectedStage === 'ALL'
                 ? KANBAN_STAGES
                 : (KANBAN_STAGES.filter(col => {
                     const target = selectedStage.toLowerCase().trim();
                     const colKey = col.key.toLowerCase().trim();
-                    if (target === 'follow-up' || target === 'followup') return colKey === 'follow-up';
                     if (target === 'proposal sent' || target === 'proposal') return colKey === 'proposal sent';
                     return colKey === target || col.title.toLowerCase().trim() === target;
                   }).length > 0
                     ? KANBAN_STAGES.filter(col => {
                         const target = selectedStage.toLowerCase().trim();
                         const colKey = col.key.toLowerCase().trim();
-                        if (target === 'follow-up' || target === 'followup') return colKey === 'follow-up';
                         if (target === 'proposal sent' || target === 'proposal') return colKey === 'proposal sent';
                         return colKey === target || col.title.toLowerCase().trim() === target;
                       })
@@ -422,7 +416,8 @@ export default function MyWork() {
               ).map((col) => {
                 const stageLeads = getStageLeads(col.key);
                 const Icon = col.icon;
-                const isCollapsed = collapsedColumns[col.key] ?? false;
+                const isMax = maximizedStage === col.key;
+                const isCollapsed = !isMax && (collapsedColumns[col.key] ?? false);
                 const isOver = dragOverStageKey === col.key;
 
                 if (isCollapsed) {
@@ -458,7 +453,11 @@ export default function MyWork() {
                     onDragOver={(e) => handleDragOver(e, col.key)}
                     onDragLeave={(e) => handleDragLeave(e, col.key)}
                     onDrop={(e) => handleDrop(e, col.key)}
-                    className={`w-[310px] min-w-[310px] max-w-[310px] flex-shrink-0 snap-start flex flex-col rounded-3xl border transition-all duration-200 shadow-lg relative ${
+                    className={`transition-all duration-300 flex-shrink-0 snap-start flex flex-col rounded-3xl border shadow-lg relative ${
+                      isMax
+                        ? 'w-full min-w-full'
+                        : 'w-[310px] min-w-[310px] max-w-[310px]'
+                    } ${
                       isOver 
                         ? 'border-2 border-dashed border-theme-primary bg-theme-primary/10 shadow-2xl scale-[1.01]' 
                         : 'border-theme-border/80 bg-theme-card/80 backdrop-blur-md'
@@ -485,17 +484,19 @@ export default function MyWork() {
                           {stageLeads.length}
                         </span>
                         <button
-                          onClick={() => toggleCollapseColumn(col.key)}
-                          title="Collapse Column"
+                          onClick={() => toggleMaximizeStage(col.key)}
+                          title={isMax ? "Restore Standard Column View" : "Maximize Column to Full Width"}
                           className="p-1 rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt/60 transition-all"
                         >
-                          <Minimize2 size={13} />
+                          {isMax ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                         </button>
                       </div>
                     </div>
 
                     {/* Column Body Cards Scroll Area */}
-                    <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)] p-3 space-y-3 custom-scrollbar min-h-[220px]">
+                    <div className={`flex-1 overflow-y-auto max-h-[calc(100vh-280px)] p-3 space-y-3 custom-scrollbar min-h-[220px] ${
+                      isMax ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 space-y-0' : ''
+                    }`}>
                       {stageLeads.map((lead) => (
                         <div
                           key={lead.id}
@@ -554,8 +555,8 @@ export default function MyWork() {
                             </div>
                           </div>
 
-                          {/* Scheduled / Latest Follow-Up Badge Box (ONLY for Follow-up column/status) */}
-                          {(col.key === 'Follow-up' || lead.status === 'Follow-up' || lead.status === 'Follow-Up') && (lead.nextFollowupDate || lead.lastFollowupDate || lead.followupNotes) && (
+                          {/* Scheduled / Latest Follow-Up Badge Box */}
+                          {(lead.nextFollowupDate || lead.lastFollowupDate || lead.followupNotes) && (
                             <div className="bg-purple-500/10 border border-purple-500/30 p-2.5 rounded-xl text-[10px] space-y-1">
                               <div className="flex items-center justify-between font-extrabold text-purple-400">
                                 <span className="flex items-center gap-1">
@@ -596,43 +597,47 @@ export default function MyWork() {
                             </div>
                           </div>
 
-                          {/* Bottom Quick Toolbar */}
-                          <div className="flex items-center justify-between pt-2 border-t border-theme-border/30 text-[10px]" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1.5">
-                              {lead.phone && (
-                                <a
-                                  href={`tel:${lead.phone}`}
-                                  title="Call Client"
-                                  className="p-1.5 rounded-lg bg-theme-bg-alt border border-theme-border/50 text-theme-text-muted hover:text-blue-400 hover:border-blue-400/50 transition-all"
-                                >
-                                  <Phone size={11} />
-                                </a>
-                              )}
-                              {lead.phone && (
-                                <a
-                                  href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="WhatsApp Chat"
-                                  className="p-1.5 rounded-lg bg-theme-bg-alt border border-theme-border/50 text-theme-text-muted hover:text-emerald-400 hover:border-emerald-400/50 transition-all"
-                                >
-                                  <MessageSquare size={11} />
-                                </a>
-                              )}
-                              {lead.email && (
-                                <a
-                                  href={`mailto:${lead.email}`}
-                                  title="Send Email"
-                                  className="p-1.5 rounded-lg bg-theme-bg-alt border border-theme-border/50 text-theme-text-muted hover:text-amber-400 hover:border-amber-400/50 transition-all"
-                                >
-                                  <Mail size={11} />
-                                </a>
-                              )}
+                          {/* Stage Transition Quick Actions & Work Button */}
+                          <div className="pt-2 border-t border-theme-border/40 flex items-center justify-between gap-1 text-[10px]">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`tel:${lead.phone}`, '_self');
+                                }}
+                                title="Quick Call"
+                                className="w-7 h-7 rounded-lg border border-theme-border/80 hover:border-theme-primary bg-theme-bg-alt flex items-center justify-center text-theme-text-muted hover:text-theme-primary transition-all"
+                              >
+                                <Phone size={11} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`https://wa.me/${lead.phone?.replace(/[^0-9]/g, '')}`, '_blank');
+                                }}
+                                title="WhatsApp"
+                                className="w-7 h-7 rounded-lg border border-theme-border/80 hover:border-emerald-500 bg-theme-bg-alt flex items-center justify-center text-theme-text-muted hover:text-emerald-400 transition-all"
+                              >
+                                <MessageSquare size={11} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`mailto:${lead.email}`, '_self');
+                                }}
+                                title="Send Email"
+                                className="w-7 h-7 rounded-lg border border-theme-border/80 hover:border-theme-primary bg-theme-bg-alt flex items-center justify-center text-theme-text-muted hover:text-theme-primary transition-all"
+                              >
+                                <Mail size={11} />
+                              </button>
                             </div>
 
                             <button
-                              onClick={() => openDetails(lead.id)}
-                              className="flex items-center gap-1 text-[10px] font-extrabold text-theme-primary hover:underline group-hover:translate-x-0.5 transition-transform"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDetails(lead.id);
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-theme-primary font-bold hover:bg-theme-primary/10 transition-all flex items-center gap-1 text-[11px]"
                             >
                               Work Card <ChevronRight size={12} />
                             </button>
@@ -657,57 +662,43 @@ export default function MyWork() {
               })}
 
               {/* CRM CONTACTS REPOSITORY SECTION (AUTOMATICALLY SYNCHRONIZED AFTER LOST) */}
-              <div
-                className={`transition-all duration-300 flex-shrink-0 snap-start flex flex-col rounded-3xl border border-theme-border bg-theme-card shadow-xl relative backdrop-blur-md ${
-                  isContactsFullWidth ? 'w-full min-w-full' : isContactsCollapsed ? 'w-[80px] min-w-[80px]' : 'w-[340px] min-w-[340px] max-w-[340px]'
-                }`}
-              >
+              {!maximizedStage && (
+                <div
+                  className={`transition-all duration-300 flex-shrink-0 snap-start flex flex-col rounded-3xl border border-theme-border bg-theme-card shadow-xl relative backdrop-blur-md ${
+                    isContactsFullWidth ? 'w-full min-w-full' : 'w-[340px] min-w-[340px] max-w-[340px]'
+                  }`}
+                >
                 {/* Contacts Header */}
                 <div className="p-4 rounded-t-3xl border-b border-theme-border bg-gradient-to-r from-theme-primary/10 via-theme-bg-alt to-theme-card flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <span className="w-7 h-7 rounded-xl flex items-center justify-center border border-theme-primary/40 text-theme-primary bg-theme-primary/10 shadow-xs">
                       <Users size={14} />
                     </span>
-                    {!isContactsCollapsed && (
-                      <div>
-                        <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-primary flex items-center gap-1.5">
-                          CONTACTS <span className="text-[9px] font-semibold text-theme-text-muted font-mono">(Repository)</span>
-                        </h3>
-                        <span className="text-[9px] font-bold text-theme-text-muted block">
-                          {contacts.length} Synchronized Contacts
-                        </span>
-                      </div>
-                    )}
+                    <div>
+                      <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-primary flex items-center gap-1.5">
+                        CONTACTS <span className="text-[9px] font-semibold text-theme-text-muted font-mono">(Repository)</span>
+                      </h3>
+                      <span className="text-[9px] font-bold text-theme-text-muted block">
+                        {contacts.length} Synchronized Contacts
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {!isContactsCollapsed && (
-                      <button
-                        onClick={() => setIsContactsFullWidth(!isContactsFullWidth)}
-                        title={isContactsFullWidth ? "Standard Column View" : "Full Width View"}
-                        className="p-1 rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-all"
-                      >
-                        {isContactsFullWidth ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-                      </button>
-                    )}
                     <button
-                      onClick={() => {
-                        setIsContactsCollapsed(!isContactsCollapsed);
-                        if (isContactsFullWidth) setIsContactsFullWidth(false);
-                      }}
-                      title={isContactsCollapsed ? "Expand Contacts" : "Collapse Contacts"}
+                      onClick={() => setIsContactsFullWidth(!isContactsFullWidth)}
+                      title={isContactsFullWidth ? "Standard Column View" : "Full Width View"}
                       className="p-1 rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-all"
                     >
-                      {isContactsCollapsed ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                      {isContactsFullWidth ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                     </button>
                   </div>
                 </div>
 
                 {/* Contacts Body */}
-                {!isContactsCollapsed && (
-                  <div className={`flex-1 overflow-y-auto max-h-[calc(100vh-280px)] p-3 space-y-3 custom-scrollbar min-h-[220px] ${
-                    isContactsFullWidth ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 space-y-0' : ''
-                  }`}>
+                <div className={`flex-1 overflow-y-auto max-h-[calc(100vh-270px)] p-4 space-y-3 custom-scrollbar min-h-[220px] ${
+                  isContactsFullWidth ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 space-y-0' : ''
+                }`}>
                     {contacts.map((contact) => (
                       <div
                         key={contact.leadId}
@@ -800,8 +791,8 @@ export default function MyWork() {
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -871,7 +862,7 @@ export default function MyWork() {
                         </td>
 
                         <td className="p-4">
-                          {lead.nextFollowupDate && (lead.status === 'Follow-up' || lead.status === 'Follow-Up' || lead.status === 'New' || lead.status === 'Interaction' || lead.status === 'Contacted') ? (
+                          {lead.nextFollowupDate ? (
                             <div className="space-y-0.5">
                               <div className="font-bold text-purple-400 flex items-center gap-1 text-xs">
                                 <ClipboardList size={11} /> {new Date(lead.nextFollowupDate).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

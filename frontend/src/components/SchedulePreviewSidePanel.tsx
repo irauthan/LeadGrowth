@@ -10,15 +10,13 @@ interface Props {
   compact?: boolean;
 }
 
-const formatDateKey = (val?: string): string => {
+const formatDateKey = (val: string | Date | undefined): string => {
   if (!val) {
     const d = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
-  const match = val.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (match) return match[1];
-  const d = new Date(val);
+  const d = typeof val === 'string' ? new Date(val) : val;
   if (isNaN(d.getTime())) return '';
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -156,45 +154,49 @@ export default function SchedulePreviewSidePanel({
           return (
             <div
               key={slot.timeStr}
-              className={`p-2 rounded-2xl border text-xs transition-all flex items-center justify-between gap-2 ${
+              className={`p-2.5 rounded-2xl border text-xs transition-all flex items-center justify-between gap-2 ${
                 isBusy
-                  ? 'bg-amber-500/5 border-amber-500/30 text-amber-700 dark:text-amber-300 opacity-80'
+                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-500 cursor-not-allowed opacity-90'
                   : isSelected
                   ? 'bg-blue-600/10 border-blue-500 text-blue-600 dark:text-blue-400 font-extrabold shadow-2xs'
                   : 'bg-theme-card border-theme-border/50 text-theme-text hover:border-blue-500/50'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="text-[10px] font-bold font-mono text-theme-text-muted shrink-0 w-16">
                   {slot.label}
                 </span>
 
                 {isBusy ? (
                   <div className="min-w-0 truncate">
-                    <span className="text-[10px] font-extrabold flex items-center gap-1 truncate text-rose-400">
+                    <span className="text-[10px] font-extrabold flex items-center gap-1 truncate text-rose-500">
                       <Ban size={11} className="shrink-0" />
-                      <span className="truncate">{slotEvents[0].title}</span>
+                      <span className="truncate">Slot Booked ({slotEvents[0].title || 'Busy'})</span>
                     </span>
                   </div>
                 ) : (
                   <span className={`text-[10px] font-bold flex items-center gap-1 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    <CheckCircle2 size={12} /> {isSelected ? 'Selected' : 'Free'}
+                    <CheckCircle2 size={12} /> {isSelected ? 'Selected' : 'Available'}
                   </span>
                 )}
               </div>
 
-              {!isBusy && onSelectSlot && (
+              {!isBusy && onSelectSlot ? (
                 <button
                   type="button"
                   onClick={() => handleSlotClick(slot.timeStr)}
-                  className={`px-2 py-0.5 rounded-xl text-[10px] font-extrabold transition-all shrink-0 ${
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-all shrink-0 ${
                     isSelected
                       ? 'bg-blue-600 text-white shadow-2xs'
                       : 'bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-500/20'
                   }`}
                 >
-                  {isSelected ? 'Selected' : 'Pick'}
+                  {isSelected ? 'Selected' : 'Pick Slot'}
                 </button>
+              ) : (
+                <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider px-2 py-0.5 rounded-lg bg-rose-500/10 shrink-0">
+                  Booked
+                </span>
               )}
             </div>
           );

@@ -154,6 +154,7 @@ public class UserService : IUserService
         var members = await GetWorkspaceMembersAsync(userEmail);
         return members
             .Where(u => !string.Equals("SUSPENDED", u.Status, StringComparison.OrdinalIgnoreCase))
+            .Where(u => !u.Roles.Any(r => r.Name.Contains("ADMIN", StringComparison.OrdinalIgnoreCase)))
             .ToList();
     }
 

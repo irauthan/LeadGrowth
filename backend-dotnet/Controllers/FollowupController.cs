@@ -108,6 +108,14 @@ public class FollowupController : ControllerBase
         return Ok(res);
     }
 
+    [HttpDelete("{id}")]
+    public async Task<ActionResult<Dictionary<string, object>>> DeleteFollowup(long id)
+    {
+        var email = GetUserEmail();
+        var res = await _followupService.CancelFollowupAsync(id, email, "Cancelled and removed by user");
+        return Ok(res);
+    }
+
     [HttpPost("{id}/reassign")]
     public async Task<ActionResult<Dictionary<string, object>>> ReassignFollowup(long id, [FromBody] Dictionary<string, object> payload)
     {

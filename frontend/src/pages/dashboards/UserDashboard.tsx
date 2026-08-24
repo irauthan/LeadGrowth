@@ -75,11 +75,18 @@ export default function UserDashboard() {
         api.get('/api/calls/user').catch(() => ({ data: null }))
       ]);
 
+      const rawPending = pendingRes.data || [];
+      const myLeadIds = new Set((leadsRes.data || []).map((l: any) => l.id));
+      // Deduplicate by unique id and filter out any leads already in pipeline
+      const uniquePending = rawPending
+        .filter((l: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.id === l.id) === idx)
+        .filter((l: any) => !myLeadIds.has(l.id));
+
       setKpis(kpiRes.data);
       setMyLeads(leadsRes.data || []);
       const activeFollowupList = (followupsRes.data || []).filter((f: any) => f.status !== 'COMPLETED' && f.status !== 'CANCELLED');
       setFollowups(activeFollowupList);
-      setPendingLeads(pendingRes.data || []);
+      setPendingLeads(uniquePending);
       setCallAnalytics(callRes.data);
     } catch (err) {
       console.error('Failed to load User Productivity Hub data', err);
@@ -90,6 +97,8 @@ export default function UserDashboard() {
 
   const handleAcceptPipeline = async (leadId: number, leadName: string) => {
     if (!user) return;
+    // Optimistically remove from pending leads immediately
+    setPendingLeads((prev) => prev.filter((l) => l.id !== leadId));
     try {
       await api.post(`/api/leads/${leadId}/add-to-pipeline`).catch(() =>
         api.patch(`/api/leads/${leadId}/assign?userId=${user.id}`)
@@ -98,6 +107,7 @@ export default function UserDashboard() {
       setTimeout(() => setIdleMessage(''), 4000);
       fetchUserData();
     } catch (e: any) {
+      fetchUserData();
       alert(e.response?.data?.message || 'Failed to add lead to pipeline');
     }
   };
@@ -105,9 +115,13 @@ export default function UserDashboard() {
   const handleIdleSweep = async () => {
     try {
       const res = await api.post('/api/leads/queue/idle-sweep');
-      if (res.data) {
-        setIdleMessage(`New lead auto-assigned: ${res.data.name}! Click 'Add To Pipelines' to accept.`);
-        fetchUserData();
+      if (res.data && res.data.id) {
+        // Only show if not already in myLeads
+        const isAlreadyPresent = myLeads.some((l: any) => l.id === res.data.id);
+        if (!isAlreadyPresent) {
+          setIdleMessage(`New lead auto-assigned: ${res.data.name}! Click 'Add To Pipelines' to accept.`);
+          fetchUserData();
+        }
       } else {
         setIdleMessage('Queue empty. You are fully caught up!');
       }
@@ -137,7 +151,6 @@ export default function UserDashboard() {
       const st = (lead.status || '').trim();
       const stLower = st.toLowerCase();
       const isNewLead = stLower === 'new' || stLower === 'new lead' || stLower === 'fresh';
-      const hasScheduledFollowup = !!lead.nextFollowupDate || followupLeadIds.has(lead.id);
 
       if (targetStage === 'New') {
         return isNewLead;
@@ -146,15 +159,7 @@ export default function UserDashboard() {
         return false;
       }
       if (targetStage === 'Interaction') {
-        if (hasScheduledFollowup) return false;
-        return stLower === 'interaction' || stLower === 'contacted' || stLower === 'first call' || stLower === 'first_call';
-      }
-      if (targetStage === 'Follow-up') {
-        if (stLower === 'follow-up' || stLower === 'followup' || stLower === 'requirement collection' || stLower === 'requirement_collection' || stLower === 'interested') return true;
-        if (hasScheduledFollowup && stLower !== 'proposal sent' && stLower !== 'proposal_sent' && stLower !== 'proposal' && stLower !== 'demo scheduled' && stLower !== 'demo_scheduled' && stLower !== 'qualified' && stLower !== 'negotiation' && stLower !== 'negotiation_started' && stLower !== 'closing' && stLower !== 'converted' && stLower !== 'payment completed' && stLower !== 'payment_completed' && stLower !== 'payment' && stLower !== 'closed won' && stLower !== 'closed_won' && stLower !== 'lost' && stLower !== 'rejected') {
-          return true;
-        }
-        return false;
+        return stLower === 'interaction' || stLower === 'contacted' || stLower === 'first call' || stLower === 'first_call' || stLower === 'follow-up' || stLower === 'followup' || stLower === 'requirement collection' || stLower === 'requirement_collection' || stLower === 'interested';
       }
       if (targetStage === 'Proposal Sent') {
         return stLower === 'proposal sent' || stLower === 'proposal_sent' || stLower === 'proposal' || stLower === 'demo scheduled' || stLower === 'demo_scheduled' || stLower === 'qualified';
@@ -450,11 +455,10 @@ export default function UserDashboard() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {[
               { label: 'New Leads', count: getStageCount('New'), color: 'text-blue-400', bg: 'bg-blue-500/10', targetStage: 'New' },
               { label: 'Interaction', count: getStageCount('Interaction'), color: 'text-purple-400', bg: 'bg-purple-500/10', targetStage: 'Interaction' },
-              { label: 'Follow-up', count: getStageCount('Follow-up'), color: 'text-amber-400', bg: 'bg-amber-500/10', targetStage: 'Follow-up' },
               { label: 'Proposal Sent', count: getStageCount('Proposal Sent'), color: 'text-cyan-400', bg: 'bg-cyan-500/10', targetStage: 'Proposal Sent' },
               { label: 'Negotiation', count: getStageCount('Negotiation'), color: 'text-rose-400', bg: 'bg-rose-500/10', targetStage: 'Negotiation' },
               { label: 'Converted', count: getStageCount('Converted'), color: 'text-emerald-400', bg: 'bg-emerald-500/10', targetStage: 'Converted' }

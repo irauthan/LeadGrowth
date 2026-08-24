@@ -316,11 +316,21 @@ public class LeadService : ILeadService
 
         var oldOwner = lead.AssignedTo;
         lead.AssignedToId = assignTarget.Id;
+        lead.AssignedById = user.Id;
         lead.AssignedDate = DateTime.UtcNow;
         lead.QueueStatus = assignTarget.Id == user.Id ? "IN_PIPELINE" : "ASSIGNED";
         if (assignTarget.WorkspaceId.HasValue)
         {
             lead.WorkspaceId = assignTarget.WorkspaceId.Value;
+        }
+
+        // Update any active follow-up reminders to the new assignee
+        var activeFollowups = await _context.FollowupReminders
+            .Where(f => f.LeadId == lead.Id && f.Status != "COMPLETED" && f.Status != "CANCELLED")
+            .ToListAsync();
+        foreach (var f in activeFollowups)
+        {
+            f.AssignedToId = assignTarget.Id;
         }
 
         await _context.SaveChangesAsync();

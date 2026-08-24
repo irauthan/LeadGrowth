@@ -19,12 +19,14 @@ import {
   Menu,
   ChevronDown,
   Tag,
-  AlertTriangle
+  AlertTriangle,
+  Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import CalendarSettingsModal, { type CalendarCategory } from '../components/CalendarSettingsModal';
 import SchedulePreviewSidePanel from '../components/SchedulePreviewSidePanel';
+import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
 const formatLocalDateTime = (d: Date = new Date()): string => {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -38,19 +40,11 @@ const formatLocalDateTime = (d: Date = new Date()): string => {
 
 const formatDateKey = (d: Date | string): string => {
   if (!d) return '';
-  if (typeof d === 'string') {
-    const match = d.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (match) return match[1];
-    const date = new Date(d);
-    if (isNaN(date.getTime())) return '';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const date = typeof d === 'string' ? new Date(d) : d;
+  if (isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
@@ -88,6 +82,8 @@ export default function Calendar() {
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [workLeadId, setWorkLeadId] = useState<number | null>(null);
+  const [isWorkPanelOpen, setIsWorkPanelOpen] = useState(false);
 
   // Form State
   const [createForm, setCreateForm] = useState<CreateCalendarEventRequest>({
@@ -246,12 +242,14 @@ export default function Calendar() {
   };
 
   const handleDeleteEvent = async (eventId: number) => {
-    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    if (!window.confirm('Are you sure you want to delete this event from the scheduler?')) return;
     try {
-      await calendarService.deleteEvent(eventId);
-      setEvents(events.filter((e) => e.id !== eventId));
+      setEvents((prev) => prev.filter((e) => e.id !== eventId));
       setSelectedEvent(null);
+      await calendarService.deleteEvent(eventId);
+      fetchEvents();
     } catch (err) {
+      fetchEvents();
       alert('Failed to delete event');
     }
   };
@@ -300,11 +298,24 @@ export default function Calendar() {
     }
   };
 
-  // Filter events based on checkbox state & dynamic sub-calendars
+  // Filter events based on checkbox state, search term & dynamic sub-calendars
   const filteredEvents = events.filter((e) => {
     if (!showCompleted && (e.status === 'COMPLETED' || e.status === 'Completed')) return false;
+
+    // Search filter across title, lead name, description, and assignee
+    if (peopleSearch && peopleSearch.trim()) {
+      const q = peopleSearch.toLowerCase().trim();
+      const matchTitle = e.title?.toLowerCase().includes(q);
+      const matchLeadName = e.leadName?.toLowerCase().includes(q);
+      const matchDesc = e.description?.toLowerCase().includes(q);
+      const matchAssignee = e.assignedUserName?.toLowerCase().includes(q);
+      if (!matchTitle && !matchLeadName && !matchDesc && !matchAssignee) {
+        return false;
+      }
+    }
+
     const type = e.eventType?.toUpperCase();
-    if (type === 'FOLLOW_UP') {
+    if (type === 'FOLLOW_UP' || type === 'CALL_REMINDER' || type === 'LEAD_REMINDER') {
       const cat = categories.find((c) => c.id === 'cat_followups');
       if (cat && !cat.enabled) return false;
     }
@@ -483,17 +494,7 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* People Search */}
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-3 text-theme-text-muted" />
-        <input
-          type="text"
-          placeholder="Search for people"
-          value={peopleSearch}
-          onChange={(e) => setPeopleSearch(e.target.value)}
-          className="w-full rounded-2xl bg-theme-bg-alt pl-9 pr-3 py-2 text-xs font-semibold text-theme-text outline-none border border-transparent focus:border-blue-500"
-        />
-      </div>
+
 
       {/* My Schedulers Filters */}
       <div className="space-y-3 pt-2 border-t border-theme-border/50">
@@ -525,14 +526,6 @@ export default function Calendar() {
               <span className="flex-1 text-theme-text truncate">{cat.name}</span>
             </label>
           ))}
-        </div>
-      </div>
-
-      {/* Other Schedulers Section */}
-      <div className="space-y-2 pt-2 border-t border-theme-border/50">
-        <div className="flex items-center justify-between text-xs font-extrabold text-theme-text">
-          <span>Other schedulers</span>
-          <Plus size={14} className="text-theme-text-muted cursor-pointer" />
         </div>
       </div>
     </>
@@ -596,12 +589,25 @@ export default function Calendar() {
 
         {/* Right Section: Search, Settings, View Dropdown, Create */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0 order-2 w-full sm:w-auto justify-end">
-          <button className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors">
-            <Search size={18} />
-          </button>
-          <button className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors">
-            <HelpCircle size={18} />
-          </button>
+          <div className="relative hidden sm:flex items-center">
+            <Search size={15} className="absolute left-3 text-theme-text-muted pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search people, leads..."
+              value={peopleSearch}
+              onChange={(e) => setPeopleSearch(e.target.value)}
+              className="w-36 md:w-52 rounded-full bg-theme-bg-alt pl-9 pr-7 py-1.5 text-xs font-semibold text-theme-text outline-none border border-theme-border/60 focus:border-blue-500 transition-all"
+            />
+            {peopleSearch && (
+              <button
+                onClick={() => setPeopleSearch('')}
+                className="absolute right-2.5 text-theme-text-muted hover:text-theme-text"
+                title="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
 
           {/* Grouped toolbar: keeps Settings / View / Create together in one
               tidy pill on mobile instead of floating loosely and overlapping. */}
@@ -1202,9 +1208,16 @@ export default function Calendar() {
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-theme-border/30">
               {selectedEvent.leadId && (
-                <Link to="/leads" className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline">
-                  Open Lead <ExternalLink size={12} />
-                </Link>
+                <button
+                  onClick={() => {
+                    setWorkLeadId(selectedEvent.leadId!);
+                    setIsWorkPanelOpen(true);
+                    setSelectedEvent(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition-all cursor-pointer"
+                >
+                  <Zap size={13} /> Work on Lead
+                </button>
               )}
 
               <div className="flex items-center gap-2 ml-auto">
@@ -1241,6 +1254,17 @@ export default function Calendar() {
         onDefaultViewChange={setView}
         defaultReminder={defaultReminder}
         onDefaultReminderChange={setDefaultReminder}
+      />
+
+      {/* --- LEAD WORK SIDE PANEL DRAWER --- */}
+      <WorkDetailsPanel
+        isOpen={isWorkPanelOpen}
+        leadId={workLeadId}
+        onClose={() => {
+          setIsWorkPanelOpen(false);
+          fetchEvents();
+        }}
+        onUpdate={fetchEvents}
       />
 
     </div>

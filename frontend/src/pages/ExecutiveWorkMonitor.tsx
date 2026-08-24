@@ -181,21 +181,18 @@ export default function ExecutiveWorkMonitor() {
   const getLeadProgressInfo = (status: string) => {
     const s = (status || '').toLowerCase().trim();
     if (s.includes('converted') || s.includes('won')) {
-      return { percent: 100, step: 5, totalSteps: 5, label: 'Converted / Won', color: 'bg-emerald-500', badge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
+      return { percent: 100, step: 4, totalSteps: 4, label: 'Converted / Won', color: 'bg-emerald-500', badge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
     }
     if (s.includes('proposal') || s.includes('negotiation')) {
-      return { percent: 80, step: 4, totalSteps: 5, label: 'Proposal & Negotiation', color: 'bg-purple-500', badge: 'bg-purple-500/10 text-purple-500 border-purple-500/20' };
+      return { percent: 75, step: 3, totalSteps: 4, label: 'Proposal & Negotiation', color: 'bg-purple-500', badge: 'bg-purple-500/10 text-purple-500 border-purple-500/20' };
     }
-    if (s.includes('interested') || s.includes('follow')) {
-      return { percent: 60, step: 3, totalSteps: 5, label: 'Follow-up / Interested', color: 'bg-blue-500', badge: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
-    }
-    if (s.includes('contacted') || s.includes('interaction')) {
-      return { percent: 40, step: 2, totalSteps: 5, label: 'Contacted', color: 'bg-amber-500', badge: 'bg-amber-500/10 text-amber-500 border-amber-500/20' };
+    if (s.includes('contacted') || s.includes('interaction') || s.includes('interested') || s.includes('follow')) {
+      return { percent: 50, step: 2, totalSteps: 4, label: 'Interaction', color: 'bg-amber-500', badge: 'bg-amber-500/10 text-amber-500 border-amber-500/20' };
     }
     if (s.includes('lost') || s.includes('reject')) {
-      return { percent: 0, step: 0, totalSteps: 5, label: 'Lost / Closed', color: 'bg-rose-500', badge: 'bg-rose-500/10 text-rose-500 border-rose-500/20' };
+      return { percent: 0, step: 0, totalSteps: 4, label: 'Lost / Closed', color: 'bg-rose-500', badge: 'bg-rose-500/10 text-rose-500 border-rose-500/20' };
     }
-    return { percent: 20, step: 1, totalSteps: 5, label: 'New Lead', color: 'bg-cyan-500', badge: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20' };
+    return { percent: 25, step: 1, totalSteps: 4, label: 'New Lead', color: 'bg-cyan-500', badge: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20' };
   };
 
   const filteredLeadWorkList = (summary?.leadWorkList || []).filter((item) => {
@@ -555,13 +552,12 @@ export default function ExecutiveWorkMonitor() {
                               <span className="text-xs font-extrabold text-theme-text">{progress.percent}% Pipeline Completion</span>
                             </div>
 
-                            <div className="grid grid-cols-5 gap-1.5 pt-1">
+                            <div className="grid grid-cols-4 gap-1.5 pt-1">
                               {[
                                 { step: 1, label: 'New Lead' },
-                                { step: 2, label: 'Contacted' },
-                                { step: 3, label: 'Follow-Up' },
-                                { step: 4, label: 'Proposal' },
-                                { step: 5, label: 'Converted' },
+                                { step: 2, label: 'Interaction' },
+                                { step: 3, label: 'Proposal' },
+                                { step: 4, label: 'Converted' },
                               ].map((st) => {
                                 const isDone = progress.step >= st.step;
                                 const isCurrent = progress.step === st.step;

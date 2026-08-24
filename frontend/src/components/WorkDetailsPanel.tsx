@@ -30,11 +30,16 @@ import {
   Zap,
   XCircle,
   Lightbulb,
-  Timer
+  Timer,
+  AlertTriangle,
+  RefreshCw,
+  Ban
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { downloadSingleLeadPdf } from '../services/reportService';
+import { followUpService, type FollowUp, type ConflictCheckResult } from '../services/followUpService';
+import FollowUpModal from './FollowUpModal';
 import type { SalesActivity, SalesActivityLog } from '../types';
 import CallTimerWidget from './CallTimerWidget';
 import CallHistoryLog from './CallHistoryLog';
@@ -143,11 +148,16 @@ export default function WorkDetailsPanel({
   const [selectedInteractionDetail, setSelectedInteractionDetail] = useState<any | null>(null);
   const [copiedRemarks, setCopiedRemarks] = useState(false);
 
-  // Followup form state
+  // Followup state
+  const [leadActiveFollowup, setLeadActiveFollowup] = useState<FollowUp | null>(null);
+  const [showRescheduleModal, setShowRescheduleModal] = useState<boolean>(false);
   const [followupType, setFollowupType] = useState('CALL');
   const [followupDate, setFollowupDate] = useState('');
   const [followupNotes, setFollowupNotes] = useState('');
   const [schedulingFollowup, setSchedulingFollowup] = useState(false);
+  const [followupConflict, setFollowupConflict] = useState<ConflictCheckResult | null>(null);
+  const [checkingConflict, setCheckingConflict] = useState(false);
+  const [completingFollowup, setCompletingFollowup] = useState(false);
 
   useEffect(() => {
     if (leadId && isOpen) {
@@ -224,16 +234,23 @@ export default function WorkDetailsPanel({
     if (!leadId) return;
     setLoading(true);
     try {
-      const [leadRes, timelineRes, logsRes] = await Promise.all([
+      const [leadRes, timelineRes, logsRes, followupsRes] = await Promise.all([
         api.get(`/api/leads/${leadId}`),
         api.get(`/api/leads/${leadId}/timeline`).catch(() => ({ data: [] })),
-        api.get(`/api/leads/${leadId}/activities-history`).catch(() => ({ data: [] }))
+        api.get(`/api/leads/${leadId}/activities-history`).catch(() => ({ data: [] })),
+        followUpService.getFollowups().catch(() => [])
       ]);
       setLead(leadRes.data);
       setClientNotes(leadRes.data?.clientNotes || '');
       setProposalAmount(leadRes.data?.proposalAmount || '');
       setTimeline(Array.isArray(timelineRes.data) ? timelineRes.data : []);
       setActivityLogsHistory(Array.isArray(logsRes.data) ? logsRes.data : []);
+
+      // Check active follow-up for this lead
+      const activeF = (followupsRes || []).find(
+        (f: any) => f.leadId === leadId && f.status !== 'COMPLETED' && f.status !== 'CANCELLED'
+      );
+      setLeadActiveFollowup(activeF || null);
 
       // Auto-expand first non-completed step or first step
       if (leadRes.data && Array.isArray(leadRes.data.activities) && leadRes.data.activities.length > 0) {
@@ -358,16 +375,48 @@ export default function WorkDetailsPanel({
     }
   };
 
+  // Conflict check for Tab 3 followup scheduling
+  useEffect(() => {
+    if (!followupDate || !isOpen || activeTab !== 'followup') {
+      setFollowupConflict(null);
+      return;
+    }
+    const dt = new Date(followupDate);
+    if (isNaN(dt.getTime())) return;
+
+    setCheckingConflict(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await followUpService.checkConflict(
+          lead?.assignedToId || currentUser?.id || 0,
+          followupDate
+        );
+        setFollowupConflict(res);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setCheckingConflict(false);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [followupDate, isOpen, activeTab, lead, currentUser]);
+
   const handleScheduleFollowup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!leadId || !followupDate) return;
+    if (followupConflict?.hasConflict) {
+      alert('This slot is already booked for another lead. Please choose a free slot.');
+      return;
+    }
+
     setSchedulingFollowup(true);
     try {
-      await api.post(`/api/followups`, {
+      await followUpService.createFollowup({
         leadId,
         scheduledAt: followupDate,
         type: followupType,
-        notes: followupNotes
+        notes: followupNotes,
+        autoScheduleIfConflict: false
       });
       alert('Follow-up scheduled successfully!');
       setFollowupDate('');
@@ -378,6 +427,34 @@ export default function WorkDetailsPanel({
       alert(err.response?.data?.message || 'Failed to schedule follow-up');
     } finally {
       setSchedulingFollowup(false);
+    }
+  };
+
+  const handleCompleteActiveFollowup = async () => {
+    if (!leadActiveFollowup) return;
+    setCompletingFollowup(true);
+    try {
+      await followUpService.complete(leadActiveFollowup.id, 'Follow-up successfully completed.');
+      setLeadActiveFollowup(null);
+      fetchLeadDetails();
+      onLeadUpdated();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to complete follow-up');
+    } finally {
+      setCompletingFollowup(false);
+    }
+  };
+
+  const handleCancelActiveFollowup = async () => {
+    if (!leadActiveFollowup) return;
+    if (!confirm('Are you sure you want to cancel this scheduled follow-up?')) return;
+    try {
+      await followUpService.cancel(leadActiveFollowup.id);
+      setLeadActiveFollowup(null);
+      fetchLeadDetails();
+      onLeadUpdated();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to cancel follow-up');
     }
   };
 
@@ -454,7 +531,6 @@ export default function WorkDetailsPanel({
               >
                 <option value="New">NEW</option>
                 <option value="Interaction">INTERACTION</option>
-                <option value="Follow-up">FOLLOW-UP</option>
                 <option value="Proposal Sent">PROPOSAL SENT</option>
                 <option value="Negotiation">NEGOTIATION</option>
                 <option value="Converted">CONVERTED</option>
@@ -677,11 +753,20 @@ export default function WorkDetailsPanel({
                               >
                                 <option value="">-- Select Sales Executive --</option>
                                 <option value="-1">Auto-Assign via Smart AI Hybrid Engine</option>
-                                {members.map((m: any) => (
-                                  <option key={m.id} value={m.id}>
-                                    {m.fullName || m.name} ({m.email})
-                                  </option>
-                                ))}
+                                {members
+                                  .filter((m: any) => {
+                                    const roles = Array.isArray(m.roles)
+                                      ? m.roles.map((r: any) => (typeof r === 'string' ? r : r.name || ''))
+                                      : [];
+                                    const roleStr = (m.role || m.designation || '').toUpperCase();
+                                    const isAdminUser = roles.some((r: string) => r.toUpperCase().includes('ADMIN')) || roleStr.includes('ADMIN');
+                                    return !isAdminUser;
+                                  })
+                                  .map((m: any) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.fullName || m.name} ({m.email})
+                                    </option>
+                                  ))}
                               </select>
                             </div>
                           </div>
@@ -1096,99 +1181,171 @@ export default function WorkDetailsPanel({
 
               {/* TAB 3: SCHEDULE FOLLOW-UP */}
               {activeTab === 'followup' && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                  <form onSubmit={handleScheduleFollowup} className="lg:col-span-7 p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                      <Calendar size={16} className="text-theme-primary" /> Schedule Direct Follow-up Task
-                    </h3>
+                <div className="space-y-4">
+                  {leadActiveFollowup ? (
+                    <div className="p-6 rounded-3xl bg-blue-500/10 border border-blue-500/30 space-y-4 shadow-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-3 w-3 rounded-full bg-blue-500 animate-ping" />
+                          <h3 className="text-sm font-black uppercase tracking-wider text-theme-text flex items-center gap-2">
+                            <Calendar size={18} className="text-theme-primary" /> Active Follow-up In Progress
+                          </h3>
+                        </div>
+                        <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                          {leadActiveFollowup.type || 'CALL'}
+                        </span>
+                      </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Type</label>
-                        <select
-                          value={followupType}
-                          onChange={(e) => setFollowupType(e.target.value)}
-                          className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                      <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/60 space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-black text-theme-text">
+                          <Clock size={16} className="text-blue-500" />
+                          <span>
+                            Scheduled Time: {leadActiveFollowup.scheduledAt ? new Date(leadActiveFollowup.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          </span>
+                        </div>
+                        {leadActiveFollowup.notes && (
+                          <p className="text-xs text-theme-text-muted italic bg-theme-bg-alt/50 p-3 rounded-xl border border-theme-border/30">
+                            "{leadActiveFollowup.notes}"
+                          </p>
+                        )}
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5 pt-1">
+                          <AlertCircle size={14} /> Only one active follow-up is allowed at a time. To set a new date, reschedule below or complete this follow-up.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 pt-1 flex-wrap">
+                        <button
+                          onClick={handleCompleteActiveFollowup}
+                          disabled={completingFollowup}
+                          className="flex-1 min-w-[140px] py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-1.5 transition-all"
                         >
-                          <option value="CALL">Phone Call</option>
-                          <option value="WHATSAPP">WhatsApp</option>
-                          <option value="EMAIL">Email</option>
-                          <option value="MEETING">Meeting / Demo</option>
-                        </select>
-                      </div>
+                          <CheckCircle2 size={16} /> Mark Completed
+                        </button>
 
-                      <div>
-                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Date *</label>
-                        <input
-                          type="date"
-                          required
-                          value={formatLocalDateOnly(followupDate || new Date())}
-                          min={formatLocalDateOnly(new Date())}
-                          onChange={(e) => {
-                            const dateVal = e.target.value;
-                            if (!dateVal) return;
-                            const timePart = followupDate && followupDate.includes('T') ? followupDate.split('T')[1].slice(0, 5) : '10:00';
-                            setFollowupDate(`${dateVal}T${timePart}`);
-                          }}
-                          className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        <button
+                          onClick={() => setShowRescheduleModal(true)}
+                          className="flex-1 min-w-[140px] py-2.5 rounded-2xl bg-theme-bg-alt hover:bg-theme-card border border-theme-border text-theme-text font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <RefreshCw size={14} /> Reschedule
+                        </button>
+
+                        <button
+                          onClick={handleCancelActiveFollowup}
+                          className="px-4 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs border border-rose-500/20 flex items-center justify-center gap-1 transition-all"
+                        >
+                          <Ban size={14} /> Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                      <form onSubmit={handleScheduleFollowup} className="lg:col-span-7 p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
+                          <Calendar size={16} className="text-theme-primary" /> Schedule Direct Follow-up Task
+                        </h3>
+
+                        {/* Slot Conflict Banner */}
+                        {followupConflict?.hasConflict && (
+                          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs space-y-1">
+                            <div className="flex items-center gap-1.5 font-extrabold">
+                              <AlertTriangle size={15} className="text-rose-500 shrink-0" />
+                              <span>Slot Booked: Already occupied {followupConflict.conflictingLeadName ? `by "${followupConflict.conflictingLeadName}"` : 'by another lead'}.</span>
+                            </div>
+                            <p className="text-[11px] text-theme-text-muted">
+                              You cannot give this time to this lead. Please select a free available slot.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Type</label>
+                            <select
+                              value={followupType}
+                              onChange={(e) => setFollowupType(e.target.value)}
+                              className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                            >
+                              <option value="CALL">Phone Call</option>
+                              <option value="WHATSAPP">WhatsApp</option>
+                              <option value="EMAIL">Email</option>
+                              <option value="MEETING">Meeting / Demo</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Date *</label>
+                            <input
+                              type="date"
+                              required
+                              value={formatLocalDateOnly(followupDate || new Date())}
+                              min={formatLocalDateOnly(new Date())}
+                              onChange={(e) => {
+                                const dateVal = e.target.value;
+                                if (!dateVal) return;
+                                const timePart = followupDate && followupDate.includes('T') ? followupDate.split('T')[1].slice(0, 5) : '10:00';
+                                setFollowupDate(`${dateVal}T${timePart}`);
+                              }}
+                              className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Time *</label>
+                            <input
+                              type="time"
+                              step="900"
+                              required
+                              value={followupDate && followupDate.includes('T') ? followupDate.split('T')[1].slice(0, 5) : '10:00'}
+                              onChange={(e) => {
+                                const timeVal = e.target.value;
+                                if (!timeVal) return;
+                                const datePart = followupDate ? formatLocalDateOnly(followupDate) : formatLocalDateOnly(new Date());
+                                setFollowupDate(`${datePart}T${timeVal}`);
+                              }}
+                              className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Selected Time Badge & Working Hours */}
+                        <div className="pt-1 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl">
+                            <Clock size={13} />
+                            <span>Selected Time: {formatTimeDisplay(followupDate)}</span>
+                          </div>
+                          <span className="text-[9px] text-theme-text-muted font-bold">Working Hours: 9:00 AM – 7:00 PM</span>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Objectives / Remarks</label>
+                          <textarea
+                            rows={3}
+                            placeholder="Key topics to discuss in the upcoming call..."
+                            value={followupNotes}
+                            onChange={(e) => setFollowupNotes(e.target.value)}
+                            className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={schedulingFollowup || Boolean(followupConflict?.hasConflict)}
+                          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition-all disabled:opacity-50"
+                        >
+                          <Plus size={16} /> Schedule Reminder
+                        </button>
+                      </form>
+
+                      <div className="lg:col-span-5 w-full">
+                        <SchedulePreviewSidePanel
+                          selectedDate={followupDate || formatLocalDateOnly(new Date())}
+                          onSelectSlot={(slotTime) => setFollowupDate(slotTime)}
+                          title="Day's Schedule & Free Slots"
+                          compact={true}
                         />
                       </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Time *</label>
-                        <input
-                          type="time"
-                          step="900"
-                          required
-                          value={followupDate && followupDate.includes('T') ? followupDate.split('T')[1].slice(0, 5) : '10:00'}
-                          onChange={(e) => {
-                            const timeVal = e.target.value;
-                            if (!timeVal) return;
-                            const datePart = followupDate ? formatLocalDateOnly(followupDate) : formatLocalDateOnly(new Date());
-                            setFollowupDate(`${datePart}T${timeVal}`);
-                          }}
-                          className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-                        />
-                      </div>
                     </div>
-
-                    {/* Selected Time Badge & Working Hours */}
-                    <div className="pt-1 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl">
-                        <Clock size={13} />
-                        <span>Selected Time: {formatTimeDisplay(followupDate)}</span>
-                      </div>
-                      <span className="text-[9px] text-theme-text-muted font-bold">Working Hours: 9:00 AM – 7:00 PM</span>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Objectives / Remarks</label>
-                      <textarea
-                        rows={3}
-                        placeholder="Key topics to discuss in the upcoming call..."
-                        value={followupNotes}
-                        onChange={(e) => setFollowupNotes(e.target.value)}
-                        className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={schedulingFollowup}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition-all"
-                    >
-                      <Plus size={16} /> Schedule Reminder
-                    </button>
-                  </form>
-
-                  <div className="lg:col-span-5 w-full">
-                    <SchedulePreviewSidePanel
-                      selectedDate={followupDate || formatLocalDateOnly(new Date())}
-                      onSelectSlot={(slotTime) => setFollowupDate(slotTime)}
-                      title="Day's Schedule & Free Slots"
-                      compact={true}
-                    />
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -1646,6 +1803,24 @@ export default function WorkDetailsPanel({
                 </div>
               </motion.div>
             </div>
+          )}
+
+          {/* FollowUpModal for Rescheduling from Panel */}
+          {lead && showRescheduleModal && (
+            <FollowUpModal
+              isOpen={showRescheduleModal}
+              onClose={() => setShowRescheduleModal(false)}
+              leadId={lead.id}
+              leadName={lead.name}
+              leadStage={lead.status}
+              assignedUserId={lead.assignedToId}
+              existingFollowup={leadActiveFollowup}
+              onSuccess={() => {
+                setShowRescheduleModal(false);
+                fetchLeadDetails();
+                onLeadUpdated();
+              }}
+            />
           )}
         </div>
       );

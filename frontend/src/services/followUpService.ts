@@ -35,8 +35,11 @@ export interface CreateFollowUpPayload {
 
 export interface ConflictCheckResult {
   hasConflict: boolean;
-  isWithinWorkingHours: boolean;
-  scheduledAt: string;
+  isWithinWorkingHours?: boolean;
+  scheduledAt?: string;
+  conflictCount?: number;
+  conflictingLeadName?: string;
+  conflictingTime?: string;
   message?: string;
   suggestedSlot?: string;
 }

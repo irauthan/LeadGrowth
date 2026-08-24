@@ -32,15 +32,16 @@ export default function FollowUpModal({
   existingFollowup,
   onSuccess
 }: Props) {
-  const isReschedule = Boolean(existingFollowup);
+  const [activeFollowup, setActiveFollowup] = useState<FollowUp | null>(existingFollowup || null);
+  const isReschedule = Boolean(activeFollowup);
 
   // Form State
   const defaultDateStr = new Date(Date.now() + 3600000).toISOString().slice(0, 16);
   const [scheduledAt, setScheduledAt] = useState<string>(
-    existingFollowup?.scheduledAt ? existingFollowup.scheduledAt.slice(0, 16) : defaultDateStr
+    activeFollowup?.scheduledAt ? activeFollowup.scheduledAt.slice(0, 16) : defaultDateStr
   );
-  const [type, setType] = useState<string>(existingFollowup?.type || 'CALL');
-  const [notes, setNotes] = useState<string>(existingFollowup?.notes || '');
+  const [type, setType] = useState<string>(activeFollowup?.type || 'CALL');
+  const [notes, setNotes] = useState<string>(activeFollowup?.notes || '');
   
   // Validation & Conflict State
   const [conflictResult, setConflictResult] = useState<ConflictCheckResult | null>(null);
@@ -51,13 +52,28 @@ export default function FollowUpModal({
 
   useEffect(() => {
     if (existingFollowup) {
+      setActiveFollowup(existingFollowup);
       setScheduledAt(existingFollowup.scheduledAt.slice(0, 16));
       setType(existingFollowup.type || 'CALL');
       setNotes(existingFollowup.notes || '');
-    } else {
-      setScheduledAt(new Date(Date.now() + 3600000).toISOString().slice(0, 16));
+    } else if (leadId && isOpen) {
+      // Check if lead already has an active follow-up
+      followUpService.getFollowups()
+        .then((list) => {
+          const found = (list || []).find((f) => f.leadId === leadId && f.status !== 'COMPLETED' && f.status !== 'CANCELLED');
+          if (found) {
+            setActiveFollowup(found);
+            setScheduledAt(found.scheduledAt.slice(0, 16));
+            setType(found.type || 'CALL');
+            setNotes(found.notes || '');
+          } else {
+            setActiveFollowup(null);
+            setScheduledAt(new Date(Date.now() + 3600000).toISOString().slice(0, 16));
+          }
+        })
+        .catch(() => {});
     }
-  }, [existingFollowup]);
+  }, [existingFollowup, leadId, isOpen]);
 
   // Real-time conflict & working hours validation
   useEffect(() => {
@@ -69,7 +85,7 @@ export default function FollowUpModal({
     // 1. Future Time Only Rule
     if (dt < now) {
       setPastError('Follow-up can only be scheduled to a future time.');
-    } else if (existingFollowup && new Date(existingFollowup.scheduledAt) > dt) {
+    } else if (activeFollowup && new Date(activeFollowup.scheduledAt) > dt) {
       setPastError('Follow-up can only be rescheduled to a future time (Backward rescheduling not allowed).');
     } else {
       setPastError(null);
@@ -84,14 +100,14 @@ export default function FollowUpModal({
     }
 
     // 3. Conflict Check API
-    if (assignedUserId && !isNaN(dt.getTime())) {
+    if (!isNaN(dt.getTime())) {
       setIsCheckingConflict(true);
       const timer = setTimeout(async () => {
         try {
           const res = await followUpService.checkConflict(
-            assignedUserId, 
+            assignedUserId || 0, 
             scheduledAt, 
-            existingFollowup?.id
+            activeFollowup?.id
           );
           setConflictResult(res);
         } catch (err) {
@@ -99,21 +115,21 @@ export default function FollowUpModal({
         } finally {
           setIsCheckingConflict(false);
         }
-      }, 400);
+      }, 350);
       return () => clearTimeout(timer);
     }
-  }, [scheduledAt, assignedUserId, isOpen, existingFollowup]);
+  }, [scheduledAt, assignedUserId, isOpen, activeFollowup]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pastError || workingHoursError) return;
+    if (pastError || workingHoursError || conflictResult?.hasConflict) return;
 
     setSubmitting(true);
     try {
-      if (isReschedule && existingFollowup) {
-        await followUpService.reschedule(existingFollowup.id, scheduledAt, false);
+      if (isReschedule && activeFollowup) {
+        await followUpService.reschedule(activeFollowup.id, scheduledAt, false);
       } else {
         await followUpService.createFollowup({
           leadId,
@@ -136,8 +152,8 @@ export default function FollowUpModal({
   const handleAutoSchedule = async () => {
     setSubmitting(true);
     try {
-      if (isReschedule && existingFollowup) {
-        await followUpService.reschedule(existingFollowup.id, scheduledAt, true);
+      if (isReschedule && activeFollowup) {
+        await followUpService.reschedule(activeFollowup.id, scheduledAt, true);
       } else {
         await followUpService.autoSchedule(leadId, type, notes);
       }
@@ -167,6 +183,11 @@ export default function FollowUpModal({
               <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                 Stage: {leadStage}
               </span>
+              {isReschedule && (
+                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  Active Follow-up Exists
+                </span>
+              )}
             </div>
             <h3 className="text-lg font-extrabold text-theme-text mt-1">
               {isReschedule ? `Reschedule Follow-up: ${leadName}` : `Schedule Follow-up: ${leadName}`}
@@ -183,7 +204,19 @@ export default function FollowUpModal({
           {/* Left Form Section */}
           <div className="md:col-span-7 space-y-4">
 
-            {/* Validation Errors & Conflict Warnings */}
+            {/* Existing Active Follow-up Banner (P3) */}
+            {isReschedule && activeFollowup && (
+              <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-600 dark:text-blue-400 space-y-1">
+                <div className="font-extrabold flex items-center gap-1.5">
+                  <Clock size={14} /> Currently Scheduled For: {new Date(activeFollowup.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <p className="text-[11px] text-theme-text-muted">
+                  An active follow-up is already in progress for this client. You can reschedule the time below. A new follow-up can be created once this one is marked completed.
+                </p>
+              </div>
+            )}
+
+            {/* Validation Errors & Conflict Warnings (P2) */}
             <div className="space-y-2">
               {pastError && (
                 <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-bold flex items-center gap-2">
@@ -200,14 +233,19 @@ export default function FollowUpModal({
               )}
 
               {conflictResult?.hasConflict && (
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs space-y-2">
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs space-y-2">
                   <div className="flex items-start gap-2 font-bold">
-                    <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                    <AlertTriangle size={18} className="text-rose-500 shrink-0 mt-0.5" />
                     <div>
-                      <p>This time slot is already occupied. Please reschedule or use Auto Schedule.</p>
+                      <p className="font-black text-rose-500">
+                        Slot Booked! {conflictResult.conflictingLeadName ? `Already booked for lead "${conflictResult.conflictingLeadName}".` : 'This time slot is already booked for another lead.'}
+                      </p>
+                      <p className="text-[11px] text-theme-text-muted mt-0.5">
+                        You cannot give this time slot to another lead. Please pick a free slot from the right panel or click Auto Schedule.
+                      </p>
                       {conflictResult.suggestedSlot && (
-                        <p className="text-[11px] font-mono text-amber-600 dark:text-amber-400 mt-1">
-                          Suggested free slot: {new Date(conflictResult.suggestedSlot).toLocaleString()}
+                        <p className="text-[11px] font-mono text-emerald-500 font-extrabold mt-1">
+                          Suggested free slot: {new Date(conflictResult.suggestedSlot).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       )}
                     </div>
@@ -218,14 +256,14 @@ export default function FollowUpModal({
                       <button
                         type="button"
                         onClick={() => applySuggestedSlot(conflictResult.suggestedSlot)}
-                        className="px-3 py-1 rounded-xl bg-amber-500 text-white font-bold text-[10px] shadow"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] shadow transition-all"
                       >
-                        Use Suggested Slot
+                        Use Suggested Free Slot
                       </button>
                       <button
                         type="button"
                         onClick={handleAutoSchedule}
-                        className="px-3 py-1 rounded-xl bg-blue-600 text-white font-bold text-[10px] shadow flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] shadow flex items-center gap-1 transition-all"
                       >
                         <Zap size={12} /> Auto Schedule
                       </button>
@@ -342,7 +380,7 @@ export default function FollowUpModal({
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting || Boolean(pastError) || Boolean(workingHoursError)}
+                    disabled={submitting || Boolean(pastError) || Boolean(workingHoursError) || Boolean(conflictResult?.hasConflict)}
                     className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 font-bold text-white shadow-lg shadow-blue-500/20 transition-all text-xs disabled:opacity-50"
                   >
                     {isReschedule ? 'Confirm Reschedule' : 'Save Schedule'}
