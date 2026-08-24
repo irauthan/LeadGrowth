@@ -128,9 +128,13 @@ export default function AdminDashboard() {
         </div>
 
         {/* Total Ad Spend */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        <Link
+          to="/campaigns"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-theme-primary/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+          title="Open Campaigns Analytics"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Ad Spend</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Total Ad Spend</span>
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500">
               <TrendingUp size={18} />
             </div>
@@ -140,12 +144,16 @@ export default function AdminDashboard() {
             <span>CPC</span>
             <span className="font-bold text-theme-text">{formatCurrency(data.cpc)}</span>
           </div>
-        </div>
+        </Link>
 
         {/* Blended ROAS */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        <Link
+          to="/campaigns"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-theme-primary/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+          title="Open Campaigns Analytics"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Blended ROAS</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Blended ROAS</span>
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-500">
               <Zap size={18} />
             </div>
@@ -155,7 +163,7 @@ export default function AdminDashboard() {
             <span>CTR</span>
             <span className="font-bold text-cyan-400">{data.ctr}%</span>
           </div>
-        </div>
+        </Link>
 
         {/* Total Leads & Conversions */}
         <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">

@@ -18,6 +18,21 @@ Thumbs.db
 antigravity-ide/
 
 # ==========================================
+# .NET / C# Backend (backend-dotnet)
+# ==========================================
+**/bin/
+**/obj/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+.vs/
+backend-dotnet/bin/
+backend-dotnet/obj/
+backend-dotnet/appsettings.Development.json
+scratch/
+
+# ==========================================
 # Backend (Java Spring Boot & Maven)
 # ==========================================
 backend/target/

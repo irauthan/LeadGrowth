@@ -256,7 +256,12 @@ export default function UserDashboard() {
                   </div>
                   <p className="text-[10px] text-theme-text-muted mt-1">{lead.email} • {lead.sourcePlatform || 'Meta'}</p>
                   {lead.campaignName && (
-                    <span className="text-[9px] text-theme-primary font-bold block mt-0.5">Campaign: {lead.campaignName}</span>
+                    <Link
+                      to="/campaigns"
+                      className="text-[9px] text-theme-primary hover:underline font-bold block mt-0.5"
+                    >
+                      Campaign: {lead.campaignName}
+                    </Link>
                   )}
                 </div>
 

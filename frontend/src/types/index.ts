@@ -33,15 +33,46 @@ export interface Workspace {
 export interface Campaign {
   id: number;
   name: string;
-  platform: string; // Meta, Google
-  status: string; // Active, Paused, Completed
+  platform: string; // Meta, Google, etc.
+  status: string; // ACTIVE, PAUSED, COMPLETED
+  budget?: number;
   spend: number;
   clicks: number;
   impressions: number;
   leadsCount: number;
   conversions: number;
   revenue: number;
+  personalRevenue?: number;
   createdAt: string;
+}
+
+export interface CampaignMetrics {
+  ctr: number;
+  cpc: number;
+  cpa: number;
+  roas: number;
+  conversionRate: number;
+  leadConversionRate: number;
+  profit: number;
+  budgetUsedPercent: number;
+}
+
+export interface CampaignLead {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  status: string;
+  dealValue?: number;
+  sourcePlatform?: string;
+  assignedToName?: string;
+  createdAt: string;
+}
+
+export interface CampaignDetails {
+  campaign: Campaign;
+  metrics: CampaignMetrics;
+  leads: CampaignLead[];
 }
 
 export type CommunicationType = 'PHONE_CALL' | 'WHATSAPP' | 'EMAIL' | 'GOOGLE_MEET' | 'ZOOM' | 'OFFICE_VISIT' | 'VIDEO_CALL' | 'OTHER';

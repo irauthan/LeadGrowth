@@ -91,14 +91,18 @@ NYAAR closes the gap between performance marketing spend and sales conversions. 
 - **Form Handling & Validation:** React Hook Form 7.x, Zod 4.x
 - **Linting & Tooling:** Oxlint, PostCSS 8.x
 
-### Backend API Service
-- **Framework:** Java 17, Spring Boot 3.3.1
-- **Security:** Spring Security, JWT (JJWT 0.12.5), Password Hashing (BCrypt)
-- **Data Access:** Spring Data JPA, Hibernate ORM
-- **Database:** MySQL 8.x
-- **Realtime / WebSockets:** Spring WebSocket + STOMP messaging broker
-- **Reporting Engines:** Apache POI 5.2.5 (Excel/CSV), iText 5.5.13 (PDF)
-- **Scheduler:** Spring `@Scheduled` cron execution framework
+### Backend API Services
+- **.NET 10 (C#) Backend (Primary Active Service):**
+  - **Framework:** .NET 10.0 / ASP.NET Core Web API
+  - **ORM & Data Access:** Entity Framework Core 10.0, Pomelo MySQL Provider
+  - **Security:** JWT Bearer Authentication, BCrypt password hashing, Policy-based RBAC
+  - **Realtime:** SignalR Hubs (`/hubs/notifications`)
+  - **Location:** `backend-dotnet/`
+- **Java Spring Boot Backend:**
+  - **Framework:** Java 17, Spring Boot 3.3.1
+  - **Security:** Spring Security, JWT (JJWT 0.12.5), BCrypt
+  - **Data Access:** Spring Data JPA, Hibernate ORM
+  - **Location:** `backend/`
 
 ---
 
@@ -106,19 +110,15 @@ NYAAR closes the gap between performance marketing spend and sales conversions. 
 
 ```mermaid
 graph TD
-    Client[React 19 + Vite SPA] -->|HTTPS REST API| Controller[Spring Boot 3.3 REST Controllers]
-    Client -->|STOMP / WebSocket| WS[Spring WebSocket Broker]
+    Client[React 19 + Vite SPA] -->|HTTPS REST API| DotNetAPI[ASP.NET Core .NET 10 Web API]
+    Client -->|SignalR / Realtime| Hubs[SignalR Hubs]
     
-    Controller -->|Authentication| Sec[Spring Security + JWT]
-    Controller -->|Business Logic| Service[Service Layer]
+    DotNetAPI -->|Authentication| Sec[JWT Authentication & RBAC]
+    DotNetAPI -->|Business Logic| Services[Lead, Followup, Calendar, Analytics Services]
     
-    Service -->|ORM / Queries| Repo[Spring Data JPA Repositories]
-    Repo -->|Persist Data| DB[(MySQL 8 Database)]
+    Services -->|EF Core 10| DB[(MySQL 8 Database)]
     
-    Service -->|Background Sync| Sched[Spring Schedulers]
-    Sched -->|Cron Jobs| External[Meta & Google Ad APIs]
-    
-    Service -->|Exports| POI[Apache POI & iText PDF]
+    DotNetAPI -->|Background Sync| Sched[Background Schedulers]
 ```
 
 ---
@@ -127,37 +127,27 @@ graph TD
 
 ```text
 LeadGrowth/
-├── docker-compose.yml              # Container orchestration (Frontend, Backend, MySQL)
-├── README.md                       # Project master documentation
-├── backend/                        # Java Spring Boot backend project
-│   ├── pom.xml                     # Maven dependencies & build configuration
-│   └── src/
-│       └── main/
-│           ├── java/com/leadgrowth/
-│           │   ├── config/         # Security, CORS, WebSocket, & JPA configs
-│           │   ├── controller/     # 27+ REST controllers handling platform routes
-│           │   ├── dto/            # Data transfer objects for requests/responses
-│           │   ├── entity/         # 34+ JPA entities (User, Lead, Campaign, Task, etc.)
-│           │   ├── exception/      # Global exception handling & custom errors
-│           │   ├── repository/     # Spring Data JPA interface repositories
-│           │   ├── scheduler/      # Auto-reassignment, Calendar & Sync schedulers
-│           │   ├── security/       # JWT filters, UserDetailsService, Token provider
-│           │   ├── service/        # Core business logic implementations
-│           │   └── websocket/      # STOMP message handlers & push service
-│           └── resources/
-│               └── application.properties # Spring configuration & environment defaults
-└── frontend/                       # React + TypeScript Vite frontend project
-    ├── package.json                # Frontend dependencies & scripts
+├── docker-compose.yml              # Container orchestration
+├── README.md                       # Master Documentation
+├── .gitignore                      # Git exclusion rules
+├── backend-dotnet/                 # .NET 10 C# Web API (Active Primary Backend)
+│   ├── Controllers/                # REST Controllers (Auth, Leads, Followup, Calendar, etc.)
+│   ├── Models/                     # EF Core Database Entities
+│   ├── Data/                       # ApplicationDbContext & Migrations
+│   ├── Services/                   # Business Logic & Algorithms
+│   ├── Hubs/                       # SignalR Realtime Hubs
+│   ├── Security/                   # JWT & Auth Handlers
+│   ├── Program.cs                  # Web application entrypoint & DI setup
+│   └── appsettings.json            # Database & JWT configurations
+├── backend/                        # Java Spring Boot 3.3 Backend
+└── frontend/                       # React 19 + TypeScript + Vite SPA
+    ├── package.json                # Frontend dependencies
     ├── vite.config.ts              # Vite server & proxy configuration
     └── src/
-        ├── components/             # Reusable UI elements, modals, cards, inputs
-        ├── hooks/                  # Custom React hooks (auth, websocket, theme)
-        ├── layouts/                # Main Dashboard & Auth page layouts
-        ├── pages/                  # 28+ Views (Dashboard, MyWork, Leads, Calendar, etc.)
-        │   └── dashboards/         # Role-specific dashboard layouts (Admin, Manager, User)
-        ├── services/               # Axios API clients & WebSocket connection managers
-        ├── store/                  # Zustand stores for auth, workspace, notifications
-        └── types/                  # TypeScript interfaces & domain models
+        ├── components/             # Reusable UI components & modals
+        ├── pages/                  # Application views (Dashboard, Pipelines, Scheduler, etc.)
+        ├── services/               # API clients & Axios interceptors
+        └── store/                  # Zustand state stores
 ```
 
 ---
@@ -250,23 +240,24 @@ Create the MySQL database manually:
 CREATE DATABASE leadgrowth;
 ```
 
-#### 2. Configure & Start Backend
-Navigate to the backend directory and build with Maven:
+#### 2. Start Primary .NET 10 Backend
+Navigate to the `backend-dotnet` directory and run:
 ```bash
-cd backend
-mvn clean package -DskipTests
-mvn spring-boot:run
+cd backend-dotnet
+dotnet run
 ```
-The backend server will start on [http://localhost:8080](http://localhost:8080) and automatically seed demo data.
+The .NET backend API server will start on [http://localhost:5000](http://localhost:5000) (or `8080`) and automatically connect to MySQL and seed initial data.
+
+*(Alternatively, for the Java Spring Boot backend: `cd backend && mvn spring-boot:run`)*
 
 #### 3. Start Frontend SPA
-In a separate terminal, navigate to the frontend directory:
+In a separate terminal, navigate to the `frontend` directory:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-The Vite development server will spin up on [http://localhost:5173](http://localhost:5173) (or [http://localhost:3000](http://localhost:3000)).
+The Vite development server will spin up on [http://localhost:5173](http://localhost:5173).
 
 ---
 

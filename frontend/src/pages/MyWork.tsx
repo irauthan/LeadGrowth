@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { 
   LayoutGrid, 
   Table as TableIcon, 
@@ -546,9 +546,13 @@ export default function MyWork() {
                               <span className="font-semibold text-theme-text flex items-center gap-1 truncate">
                                 <Phone size={10} className="text-theme-primary flex-shrink-0" /> {lead.phone || 'N/A'}
                               </span>
-                              <span className="text-[9px] font-extrabold text-theme-primary px-1.5 py-0.5 rounded bg-theme-primary/10 border border-theme-primary/20 truncate">
+                              <Link
+                                to="/campaigns"
+                                className="text-[9px] font-extrabold text-theme-primary hover:underline px-1.5 py-0.5 rounded bg-theme-primary/10 border border-theme-primary/20 truncate transition-colors"
+                                title="View Campaign Details"
+                              >
                                 {lead.campaignName || lead.sourcePlatform || 'Organic'}
-                              </span>
+                              </Link>
                             </div>
                             <div className="truncate text-theme-text-muted">
                               <Mail size={10} className="inline mr-1" /> {lead.email}
@@ -833,7 +837,13 @@ export default function MyWork() {
                         </td>
 
                         <td className="p-4">
-                          <span className="font-bold text-theme-text">{lead.campaignName || 'Direct'}</span>
+                          <Link
+                            to="/campaigns"
+                            className="font-bold text-theme-text hover:text-theme-primary hover:underline transition-colors block"
+                            title="Open Campaigns"
+                          >
+                            {lead.campaignName || 'Direct'}
+                          </Link>
                           <span className="block text-[10px] text-theme-text-muted">{lead.sourcePlatform || 'Web'}</span>
                         </td>
 
