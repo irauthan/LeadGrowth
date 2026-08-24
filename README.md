@@ -1,8 +1,8 @@
-# NYAAR — Enterprise Marketing Analytics & Lead Management SaaS Platform
+# LeadGrowth — Enterprise Marketing Analytics & Lead Management Platform
 
 > **Tagline:** "One Dashboard. Every Lead. Complete Growth."
 
-**NYAAR** is an enterprise-grade SaaS dashboard and Lead Management System (LMS) built for performance marketing teams, digital agencies, and sales operations. The platform centralizes campaign analytics, intelligent lead distribution, real-time activity feeds, executive productivity tracking, and reporting into a unified, high-performance web platform.
+**LeadGrowth** is an enterprise-grade SaaS platform and Lead Management System (LMS) built for performance marketing teams, digital agencies, and sales operations. The platform centralizes multi-platform ad campaign analytics, intelligent lead queues, interactive pipelines, follow-up scheduling, executive work monitoring, and multi-format reporting into a unified web application.
 
 ---
 
@@ -15,68 +15,59 @@
 - [Project Directory Structure](#project-directory-structure)
 - [Role-Based Access Control (RBAC) & Seed Accounts](#role-based-access-control-rbac--seed-accounts)
 - [Core API Endpoints Index](#core-api-endpoints-index)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Option 1: Docker Compose (Recommended)](#option-1-docker-compose-recommended)
-  - [Option 2: Local Development Setup](#option-2-local-development-setup)
+- [Getting Started & Local Setup](#getting-started--local-setup)
 - [Configuration & Environment Variables](#configuration--environment-variables)
-- [Background Schedulers & Real-time Layer](#background-schedulers--real-time-layer)
-- [Troubleshooting & FAQ](#troubleshooting--faq)
 - [License](#license)
 
 ---
 
 ## Platform Overview
 
-NYAAR closes the gap between performance marketing spend and sales conversions. By capturing leads from ad platforms (Meta Ads, Google Ads), automatically assigning them to sales representatives, tracking daily calls/tasks, and providing executive monitoring, NYAAR ensures no revenue opportunity is missed.
+LeadGrowth bridges the gap between performance marketing spend (Meta Ads, Google Ads) and sales conversion. By capturing incoming ad leads, automatically distributing them to sales representatives, tracking daily calls, tasks, and follow-ups, and delivering real-time executive visibility, LeadGrowth ensures maximum return on ad spend (ROAS).
 
 ### High-Level Workflow
-1. **Intake & Sync:** Marketing ad campaigns sync lead and spend data into NYAAR via automated schedulers or webhooks.
-2. **Smart Assignment:** Intelligent round-robin or workload-based queues assign incoming leads to sales reps based on availability and priority.
-3. **Execution & Engagement:** Sales reps utilize the **MyWork Workspace**, **Priority Center**, **Call History**, and **Interactive Calendar** to manage daily follow-ups.
-4. **Monitoring & Analytics:** Managers and Executives monitor real-time SLA compliance, team productivity metrics, and campaign ROI.
-5. **Reporting & Audit:** Exportable CSV, Excel, and PDF reports provide stakeholder visibility, backed by full immutable audit logs.
+1. **Ad Campaign Tracking & Sync:** Track ad sets, impressions, clicks, CTR, CPC, and ad spend across Meta and Google.
+2. **Lead Intake & Smart Assignment:** Ingest leads from webhooks/ad forms and auto-distribute via round-robin or workload scoring.
+3. **Sales Pipeline & Engagement:** Sales executives manage leads across Kanban stages, log calls, set reminders, and conduct follow-ups in **Pipelines (`/my-work`)**.
+4. **Calendar & Follow-Up Schedulers:** Schedule and preview customer calls, meetings, and follow-ups with conflict detection and automated notifications.
+5. **Executive Work Monitoring:** Track team availability, call logs, SLA compliance, and conversion efficiency.
+6. **Reporting & Auditing:** Export customized CSV, Excel, and PDF performance reports backed by immutable audit logs.
 
 ---
 
 ## Key Features & Modules
 
-### 1. Unified Executive Workspace ("MyWork")
-- **Personalized Rep Command Center:** Consolidates daily call queues, pending follow-up tasks, assigned leads, and calendar events into a single screen.
-- **Quick Action Triggers:** Log calls, add notes, reschedule tasks, or advance lead status in one click.
+### 1. Campaigns & Ad Analytics Hub (`/campaigns`)
+- **Full-Screen Dedicated Campaign Dashboard:** Detailed breakdown of spend, impressions, clicks, CTR, CPC, CPA, leads, and revenue.
+- **Conversion Funnel Pipeline:** Visualizes the journey from Impression ➔ Click ➔ Ingested Lead ➔ Closed Won Deal ➔ ROAS.
+- **Connected Leads Tracking:** View, search, and manage all leads originating from specific ad campaigns.
+- **Dual View Modes:** Toggle seamlessly between minimal card grid and data-rich table view.
+- **Campaign Control:** Create campaigns, toggle status (Active/Paused/Completed), and edit budget/metrics in real time.
 
-### 2. Smart Lead Management & Queue Distribution
-- **Automated Lead Scoring & Triage:** Priority matrix tags hot, warm, and cold leads based on interaction recency and campaign source.
-- **Smart Assignment Engine:** Auto-assigns leads using balanced workload or round-robin algorithms.
-- **Lead Reclamation & Auto-Reassignment:** Automated background scheduler reclaims uncontacted leads after configured SLA timeouts.
+### 2. Pipelines & Executive Workspace (`/my-work`)
+- **Multi-Stage Kanban Pipeline:** Drag-and-drop or one-click stage advancement (New, Contacted, In Progress, Qualified, Closed Won, Closed Lost).
+- **Executive Task Center:** Daily call queues, pending follow-ups, overdue tasks, and instant call-logging drawer.
+- **Comprehensive Lead Drawer:** Inspect lead timeline, communications history, client notes, priority rating, and deal values.
 
-### 3. Executive Work Monitoring & Team Analytics
-- **Live Team Operations Dashboard:** Real-time visibility into rep availability, call volumes, conversion rates, and SLA compliance.
-- **Productivity Scoring:** Tracks sales activities (calls, emails, meetings, notes) per agent over customizable timeframes.
+### 3. Workspace Leads Management (`/leads`)
+- **Lead Repository:** Search, filter by platform/status, bulk-select, and auto-assign unassigned leads.
+- **Lead Quality Matrix:** Dynamic lead quality tiers (`HOT`, `WARM`, `COLD`) and conversion probability scoring.
 
-### 4. Priority Center & SLA Monitoring
-- **Overdue Task Alerting:** Highlights leads with breached SLA response times or missed follow-ups.
-- **Urgent Lead Triage:** Direct access to unassigned or high-value leads requiring immediate intervention.
+### 4. Interactive Follow-up Scheduler & Calendar (`/scheduler`, `/followups`)
+- **Smart Scheduling:** Day, Week, and Month views with conflict checking and working hour validations.
+- **Automated Reminders:** Real-time WebSocket / SignalR alerts for upcoming calls and meetings.
 
-### 5. Multi-Channel Campaign & Ad Sync Engine
-- **Meta & Google Ads Integration:** Simulated and live API connectors to ingest spend, clicks, impressions, and lead events.
-- **Hourly & On-Demand Sync:** Automated sync scheduler backed by manual sync overrides on the Integrations page.
+### 5. Executive Work Monitoring & Team Management (`/admin/work-monitor`, `/admin/users`)
+- **Live Team Operations:** Monitor active reps, daily call logs, call durations, and workload distribution.
+- **Role Management:** Assign roles (`ROLE_ADMIN`, `ROLE_MANAGER`, `ROLE_USER`), manage invites, and set availability.
 
-### 6. Interactive Calendar & Reminder System
-- **Integrated Scheduling:** Plan demo calls, follow-ups, and customer meetings with full day/week/month grid views.
-- **Automated Event Reminders:** `CalendarReminderScheduler` emits real-time WebSocket notifications prior to scheduled events.
+### 6. Command Center Dashboards (`/dashboard`)
+- **Admin Command Center:** High-level financials, total ad spend, blended ROAS, team call duration audit, and system metrics.
+- **Manager Operations Hub:** Queue triage, workload rebalancing, and task approval.
+- **User Productivity Hub:** Personal conversion stats, assigned leads, and daily task pipeline.
 
-### 7. Custom Reporting & Analytics Studio
-- **Multi-Format Export Engine:** Generate comprehensive campaign and lead reports in CSV, XLSX (Apache POI), and PDF (iText).
-- **Manager & User Analytics:** Visual funnel analysis, lead decay charts, revenue projections, and source performance breakdown.
-
-### 8. System Health & Security Monitoring Center
-- **System Metrics Monitoring:** Live tracking of server CPU usage, memory consumption, JVM thread counts, and API response times.
-- **Security Command Center:** Active user session monitoring, failed authentication tracking, IP whitelisting, and token management.
-
-### 9. Multi-Tenant Workspace & Member Management
-- **Agency Workspaces:** Isolated tenant data boundaries allowing agencies to manage distinct client organizations.
-- **Invite Management:** Secure invite code generation (`LEAD-GROWTH-2026`) and email onboarding flow.
+### 7. Custom Reporting & Multi-Format Exports (`/reports`)
+- **Multi-Format Export Engine:** Export Leads and Campaign performance data to **CSV**, **Excel (.xlsx)**, and **PDF**.
 
 ---
 
@@ -84,25 +75,20 @@ NYAAR closes the gap between performance marketing spend and sales conversions. 
 
 ### Frontend Application
 - **Framework & Runtime:** React 19.x, TypeScript 5.x, Vite 6.x
-- **State Management:** Zustand 5.x (persisted local state), TanStack React Query 5.x
+- **Routing:** React Router v7
+- **State Management:** Zustand 5.x (persisted stores), TanStack React Query 5.x
 - **Styling & UI:** Tailwind CSS 4.x, Glassmorphism design system, Framer Motion 12.x
 - **Data Visualization:** Recharts 3.x
 - **Icons:** Lucide React
-- **Form Handling & Validation:** React Hook Form 7.x, Zod 4.x
-- **Linting & Tooling:** Oxlint, PostCSS 8.x
+- **HTTP Client:** Axios with JWT Bearer interceptors
 
-### Backend API Services
-- **.NET 10 (C#) Backend (Primary Active Service):**
-  - **Framework:** .NET 10.0 / ASP.NET Core Web API
-  - **ORM & Data Access:** Entity Framework Core 10.0, Pomelo MySQL Provider
-  - **Security:** JWT Bearer Authentication, BCrypt password hashing, Policy-based RBAC
-  - **Realtime:** SignalR Hubs (`/hubs/notifications`)
-  - **Location:** `backend-dotnet/`
-- **Java Spring Boot Backend:**
-  - **Framework:** Java 17, Spring Boot 3.3.1
-  - **Security:** Spring Security, JWT (JJWT 0.12.5), BCrypt
-  - **Data Access:** Spring Data JPA, Hibernate ORM
-  - **Location:** `backend/`
+### Backend API (.NET 10 C# - Primary Active Service)
+- **Framework:** .NET 10.0 / ASP.NET Core Web API
+- **ORM & Data Access:** Entity Framework Core 10.0, Pomelo MySQL Provider
+- **Security:** JWT Bearer Authentication, BCrypt password hashing, Policy-based RBAC
+- **Real-Time Communication:** SignalR Hubs (`/hubs/notifications`)
+- **Export Engines:** ClosedXML (Excel), QuestPDF / iText (PDF), CsvHelper (CSV)
+- **Database:** MySQL 8.0+
 
 ---
 
@@ -110,15 +96,14 @@ NYAAR closes the gap between performance marketing spend and sales conversions. 
 
 ```mermaid
 graph TD
-    Client[React 19 + Vite SPA] -->|HTTPS REST API| DotNetAPI[ASP.NET Core .NET 10 Web API]
-    Client -->|SignalR / Realtime| Hubs[SignalR Hubs]
+    Client[React 19 + TypeScript Vite SPA] -->|HTTPS REST API| DotNetAPI[ASP.NET Core .NET 10 Web API]
+    Client -->|SignalR / WebSocket| Hubs[SignalR Realtime Hub]
     
-    DotNetAPI -->|Authentication| Sec[JWT Authentication & RBAC]
-    DotNetAPI -->|Business Logic| Services[Lead, Followup, Calendar, Analytics Services]
+    DotNetAPI -->|JWT Authentication & Policy RBAC| Sec[Security Layer]
+    DotNetAPI -->|Business Logic Services| Services[Campaign, Lead, Followup, Calendar, Report Services]
     
     Services -->|EF Core 10| DB[(MySQL 8 Database)]
-    
-    DotNetAPI -->|Background Sync| Sched[Background Schedulers]
+    DotNetAPI -->|Background Sync| Sched[Background Schedulers & Auto-Assignment]
 ```
 
 ---
@@ -127,27 +112,26 @@ graph TD
 
 ```text
 LeadGrowth/
-├── docker-compose.yml              # Container orchestration
 ├── README.md                       # Master Documentation
 ├── .gitignore                      # Git exclusion rules
-├── backend-dotnet/                 # .NET 10 C# Web API (Active Primary Backend)
-│   ├── Controllers/                # REST Controllers (Auth, Leads, Followup, Calendar, etc.)
-│   ├── Models/                     # EF Core Database Entities
-│   ├── Data/                       # ApplicationDbContext & Migrations
-│   ├── Services/                   # Business Logic & Algorithms
-│   ├── Hubs/                       # SignalR Realtime Hubs
+├── backend-dotnet/                 # .NET 10 C# Web API (Primary Backend)
+│   ├── Controllers/                # REST Controllers (Auth, Leads, Campaigns, Tasks, Calendar, etc.)
+│   ├── Models/                     # EF Core Database Entities (Campaign, Lead, User, Workspace, etc.)
+│   ├── Data/                       # LeadGrowthDbContext & EF Configurations
+│   ├── Services/                   # Business Logic & Export Handlers
+│   ├── Hubs/                       # SignalR Realtime Notification Hub
 │   ├── Security/                   # JWT & Auth Handlers
 │   ├── Program.cs                  # Web application entrypoint & DI setup
 │   └── appsettings.json            # Database & JWT configurations
-├── backend/                        # Java Spring Boot 3.3 Backend
-└── frontend/                       # React 19 + TypeScript + Vite SPA
-    ├── package.json                # Frontend dependencies
-    ├── vite.config.ts              # Vite server & proxy configuration
-    └── src/
-        ├── components/             # Reusable UI components & modals
-        ├── pages/                  # Application views (Dashboard, Pipelines, Scheduler, etc.)
-        ├── services/               # API clients & Axios interceptors
-        └── store/                  # Zustand state stores
+├── frontend/                       # React 19 + TypeScript + Vite SPA
+│   ├── package.json                # Frontend dependencies
+│   ├── vite.config.ts              # Vite server & proxy configuration
+│   └── src/
+│       ├── components/             # Reusable UI components & modals (CampaignDetailView, WorkDetailsPanel, etc.)
+│       ├── pages/                  # Views (Dashboard, Campaigns, Pipelines, Scheduler, Leads, etc.)
+│       ├── services/               # Typed API services (api.ts, campaignService.ts, followUpService.ts)
+│       └── store/                  # Zustand state stores (authStore, layoutStore)
+└── backend/                        # Java Spring Boot Backend (Reference/Legacy)
 ```
 
 ---
@@ -160,17 +144,18 @@ LeadGrowth implements strict RBAC across 3 primary roles:
 |---|:---:|:---:|:---:|
 | Full Workspace & Billing Settings | ✅ | ❌ | ❌ |
 | Team User Management & Invites | ✅ | ✅ | ❌ |
+| Campaign Management & Metrics Edit | ✅ | ✅ | View Only |
 | Executive Work Monitoring & System Logs | ✅ | ✅ | ❌ |
-| Integration Setup & Manual Sync Overrides | ✅ | ✅ | ❌ |
+| Integration Setup & Manual Sync | ✅ | ✅ | ❌ |
 | Custom Report Generation & Exports | ✅ | ✅ | ✅ (Own data) |
 | Manage All Assigned Leads & Reassignments | ✅ | ✅ | Assigned only |
-| Personal MyWork Workspace & Daily Tasks | ✅ | ✅ | ✅ |
+| Personal Pipelines & Daily Follow-ups | ✅ | ✅ | ✅ |
 
 ### Default Seed Accounts
 
-Upon first launch, the backend seeds the database with the following demo credentials:
+Upon initial launch, the backend automatically seeds the database with the following demo credentials:
 
-| Role | Email | Default Password | Workspace Invite Code |
+| Role | Email | Password | Workspace Invite Code |
 |---|---|---|---|
 | **Admin** | `admin@leadgrowth.com` | `Admin@123` | `LEAD-GROWTH-2026` |
 | **Manager** | `manager@leadgrowth.com` | `Manager@123` | `LEAD-GROWTH-2026` |
@@ -180,134 +165,84 @@ Upon first launch, the backend seeds the database with the following demo creden
 
 ## Core API Endpoints Index
 
-Below is a summary of key REST API modules available in the backend:
-
-| Base Route | Description | Key Operations |
+| Base Route | Description | Key Endpoints |
 |---|---|---|
-| `/api/auth` | Authentication & Security | Login, Register, Refresh Token, Password Reset, Email Verification |
-| `/api/users` | User Administration | List Users, Update Roles, Deactivate, User Profiles |
-| `/api/workspaces` | Multi-Tenant Workspaces | Create Workspace, Invite Team Members, Workspace Settings |
-| `/api/leads` | Lead Pipeline Management | Create Lead, Status Transition, Assign Lead, Lead Timeline |
-| `/api/lead-queue` | Smart Queue & Triage | Fetch Unassigned Leads, Auto-assign, Claim Lead |
-| `/api/tasks` | Task & Activity Tracking | Create Task, Log Call, Reschedule Task, Task History |
-| `/api/calendar` | Interactive Calendar | Fetch Events, Create Event, Reschedule Event, Reminders |
-| `/api/followups` | Follow-up Reminders | Schedule Followup, Mark Completed, Pending Reminders |
-| `/api/campaigns` | Ad Campaign Tracking | List Campaigns, Metric Summaries, Spend vs ROI |
-| `/api/integrations` | Meta/Google Integrations | Connect Integration, Trigger Manual Sync, View Sync Logs |
-| `/api/reports` | Custom Report Builder | Generate Report, Export to CSV / XLSX / PDF |
-| `/api/executive-monitoring` | Sales Executive Monitoring | Rep Availability, Productivity Scores, SLA Compliance |
-| `/api/system-monitoring` | Infrastructure Metrics | CPU/Memory Stats, Thread Count, Uptime Monitor |
-| `/api/security-center` | Security Command Center | Active Sessions, Failed Logins, Security Policies |
+| `/api/auth` | Authentication & Security | `POST /login`, `POST /register`, `POST /refresh-token` |
+| `/api/users` | User Administration | `GET /`, `GET /assignable`, `GET /me/dashboard` |
+| `/api/workspaces` | Multi-Tenant Workspaces | `GET /`, `POST /`, `POST /invite` |
+| `/api/campaigns` | Ad Campaigns & ROI | `GET /`, `GET /{id}`, `POST /`, `PUT /{id}`, `PATCH /{id}/status` |
+| `/api/leads` | Lead Management & Pipelines | `GET /`, `POST /`, `PUT /{id}/status`, `POST /{id}/assign` |
+| `/api/lead-queue` | Smart Queue & Triage | `GET /`, `POST /{id}/claim`, `POST /{id}/auto-assign` |
+| `/api/followups` | Follow-up Reminders | `GET /`, `POST /`, `PUT /{id}/complete`, `GET /conflicts` |
+| `/api/calendar` | Interactive Calendar | `GET /events`, `POST /events`, `PUT /events/{id}` |
+| `/api/reports` | Custom Report Builder | `GET /download/campaigns/{format}`, `GET /download/leads/{format}` |
+| `/api/calls` | Call Duration Analytics | `GET /user`, `GET /team`, `POST /log` |
+| `/api/executive-monitoring` | Executive Work Monitoring | `GET /overview`, `GET /agents` |
 
 ---
 
-## Getting Started
+## Getting Started & Local Setup
 
 ### Prerequisites
-
-- **Docker & Docker Compose** (Recommended for full stack execution)
-- **Node.js 18+ & npm 9+** (For local frontend development)
-- **JDK 17+ & Maven 3.8+** (For local backend development)
-- **MySQL 8.0+** (If running backend locally outside Docker)
+- **.NET 10 SDK** (For backend API)
+- **Node.js 18+ & npm** (For frontend SPA)
+- **MySQL 8.0+** (Database service)
 
 ---
 
-### Option 1: Docker Compose (Recommended)
-
-Run the entire application stack (Frontend, Backend, and MySQL) with a single command:
-
-```bash
-docker-compose up --build
-```
-
-**Services Deployed:**
-- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
-- **Backend Spring Boot API:** [http://localhost:8080](http://localhost:8080)
-- **MySQL Database:** `localhost:3306`
-
-To shut down containers and volumes:
-```bash
-docker-compose down -v
-```
-
----
-
-### Option 2: Local Development Setup
-
-#### 1. Setup MySQL Database
-Create the MySQL database manually:
+### Step 1: Start MySQL Database
+Ensure MySQL is running on `localhost:3306` and create the database:
 ```sql
 CREATE DATABASE leadgrowth;
 ```
 
-#### 2. Start Primary .NET 10 Backend
+---
+
+### Step 2: Start .NET 10 Backend
 Navigate to the `backend-dotnet` directory and run:
 ```bash
 cd backend-dotnet
 dotnet run
 ```
-The .NET backend API server will start on [http://localhost:5000](http://localhost:5000) (or `8080`) and automatically connect to MySQL and seed initial data.
+The backend API server will start on [http://localhost:5000](http://localhost:5000) (or `8080`), automatically applying database migrations and seeding initial roles, users, and campaigns.
 
-*(Alternatively, for the Java Spring Boot backend: `cd backend && mvn spring-boot:run`)*
+---
 
-#### 3. Start Frontend SPA
+### Step 3: Start Frontend SPA
 In a separate terminal, navigate to the `frontend` directory:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-The Vite development server will spin up on [http://localhost:5173](http://localhost:5173).
+The Vite development server will start on [http://localhost:5173](http://localhost:5173).
 
 ---
 
 ## Configuration & Environment Variables
 
-### Backend Configuration (`backend/src/main/resources/application.properties`)
-
-| Key | Default Value | Description |
-|---|---|---|
-| `server.port` | `8080` | HTTP port for backend server |
-| `spring.datasource.url` | `jdbc:mysql://localhost:3306/leadgrowth` | MySQL connection string |
-| `spring.datasource.username` | `root` | MySQL database username |
-| `spring.datasource.password` | `password` | MySQL database password |
-| `jwt.secret` | `404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970` | Secret key for signing JWT tokens |
-| `jwt.expiration` | `86400000` (24 Hours) | JWT access token validity in ms |
+### Backend Configuration (`backend-dotnet/appsettings.json`)
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=password;"
+  },
+  "Jwt": {
+    "Key": "YOUR_STRONG_JWT_SECRET_KEY_HERE",
+    "Issuer": "LeadGrowth",
+    "Audience": "LeadGrowthApp"
+  }
+}
+```
 
 ### Frontend Configuration (`frontend/.env`)
-
-| Key | Default Value | Description |
-|---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:8080/api` | Base URL for REST API requests |
-| `VITE_WS_BASE_URL` | `ws://localhost:8080/ws` | WebSocket connection endpoint |
-
----
-
-## Background Schedulers & Real-time Layer
-
-### Background Schedulers (`com.leadgrowth.scheduler`)
-- **`SyncScheduler`**: Executes hourly automated sync jobs with simulated ad networks (Meta/Google Ads).
-- **`AutoReassignmentScheduler`**: Periodically checks for leads uncontacted beyond configured SLA windows and reclaims them to the open lead queue.
-- **`CalendarReminderScheduler`**: Monitors upcoming calendar events and triggers notifications to attendees prior to event start.
-
-### Real-Time WebSocket Events (`/ws`)
-- Broadcasts instant lead assignments, call queue updates, and system alerts to active reps.
-- Client subscribes using STOMP topics: `/topic/leads`, `/topic/notifications`, `/user/queue/private`.
-
----
-
-## Troubleshooting & FAQ
-
-- **Backend Database Connection Refused:**
-  - Verify MySQL service is active on port `3306`.
-  - Confirm credentials in `application.properties` match your local MySQL installation.
-- **WebSocket Disconnections / CORS Errors:**
-  - Ensure CORS origin settings in `backend/src/main/java/com/leadgrowth/config/SecurityConfig.java` allow your frontend host origin.
-- **JWT Token Expiration:**
-  - If API calls return `401 Unauthorized`, log out and re-authenticate using a seed account.
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+VITE_WS_BASE_URL=ws://localhost:5000/ws
+```
 
 ---
 
 ## License
 
-This project is licensed for internal enterprise application and demonstration purposes. All rights reserved.
+This project is licensed for enterprise application and performance operations. All rights reserved.

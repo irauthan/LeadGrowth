@@ -1,40 +1,54 @@
-# Lead Growth - Enterprise Platform Git Ignore Configuration
+# ==========================================
+# LeadGrowth - Git Ignore Configuration
+# ==========================================
 
-# ==========================================
-# Root & Common IDE configurations
-# ==========================================
+# ------------------------------------------
+# Root & IDE Configurations
+# ------------------------------------------
 .idea/
 .vscode/
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
+*.sln.docstates
+*.user
+*.userosscache
 *.swp
 *~
 .DS_Store
 Thumbs.db
+.vs/
+
+# Antigravity & Agent Temp Artifacts
 .agents/
 .gemini/
 antigravity-ide/
-
-# ==========================================
-# .NET / C# Backend (backend-dotnet)
-# ==========================================
-**/bin/
-**/obj/
-*.user
-*.userosscache
-*.sln.docstates
-*.suo
-.vs/
-backend-dotnet/bin/
-backend-dotnet/obj/
-backend-dotnet/appsettings.Development.json
 scratch/
 
-# ==========================================
-# Backend (Java Spring Boot & Maven)
-# ==========================================
+# ------------------------------------------
+# .NET 10 / C# Backend (backend-dotnet)
+# ------------------------------------------
+**/bin/
+**/obj/
+backend-dotnet/bin/
+backend-dotnet/obj/
+backend-dotnet/publish/
+backend-dotnet/logs/
+backend-dotnet/TestResults/
+backend-dotnet/appsettings.Development.json
+backend-dotnet/appsettings.Local.json
+
+# ------------------------------------------
+# User Uploads & Media (Avatars, Attachments)
+# ------------------------------------------
+backend-dotnet/wwwroot/uploads/*
+!backend-dotnet/wwwroot/uploads/.gitkeep
+backend-dotnet/wwwroot/uploads/avatars/*
+!backend-dotnet/wwwroot/uploads/avatars/.gitkeep
+
+# ------------------------------------------
+# Backend (Java Spring Boot & Maven - Legacy)
+# ------------------------------------------
 backend/target/
 backend/release/
 backend/.mvn/
@@ -44,25 +58,25 @@ backend/*.zip
 backend/maven/
 backend/mvnw.cmd
 backend/mvnw
+backend/logs/
 
-# ==========================================
-# Frontend (React & Vite)
-# ==========================================
+# ------------------------------------------
+# Frontend (React 19 + TypeScript + Vite)
+# ------------------------------------------
 frontend/node_modules/
 frontend/dist/
 frontend/build/
-frontend/.svelte-kit/
-frontend/.next/
-frontend/out/
 frontend/.cache/
+frontend/out/
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/pnpm-debug.log*
+frontend/coverage/
 
-# ==========================================
-# Environment Configuration Files
-# ==========================================
+# ------------------------------------------
+# Environment & Secrets Configuration
+# ------------------------------------------
 .env
 .env.local
 .env.development.local
@@ -72,3 +86,10 @@ frontend/.env
 frontend/.env.local
 backend/.env
 backend/.env.local
+
+# ------------------------------------------
+# General Logs & Dumps
+# ------------------------------------------
+*.log
+*.sql.bak
+*.dump
