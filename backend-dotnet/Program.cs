@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Connection String & Database Context (EF Core + Pomelo MySQL 8.x)
 var connectionString = builder.Configuration.GetConnectionString("LeadGrowthDb") 
-    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=12345;";
+    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=123456";
 
 builder.Services.AddDbContext<LeadGrowthDbContext>(options =>
 {
@@ -45,6 +45,9 @@ builder.Services.AddScoped<IUserAnalyticsService, UserAnalyticsService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IExecutiveWorkMonitoringService, ExecutiveWorkMonitoringService>();
+builder.Services.AddScoped<IUserPresenceService, UserPresenceService>();
+builder.Services.AddScoped<ILeaveService, LeaveService>();
+builder.Services.AddScoped<IBulkAssignmentService, BulkAssignmentService>();
 
 // 2.5 Background Schedulers
 builder.Services.Configure<HostOptions>(options =>

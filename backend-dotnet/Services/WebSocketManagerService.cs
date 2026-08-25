@@ -37,4 +37,14 @@ public class WebSocketManagerService : IWebSocketManagerService
     {
         await _hubContext.Clients.Group($"Workspace_{workspaceId}").SendAsync("ReceiveCallSession", callSessionDto);
     }
+
+    public async Task BroadcastPresenceChangedAsync(long workspaceId, object presenceDto)
+    {
+        await _hubContext.Clients.Group($"Workspace_{workspaceId}").SendAsync("ReceiveUserPresenceChanged", presenceDto);
+    }
+
+    public async Task BroadcastWorkloadChangedAsync(long workspaceId, object workloadDto)
+    {
+        await _hubContext.Clients.Group($"Workspace_{workspaceId}").SendAsync("ReceiveWorkloadChanged", workloadDto);
+    }
 }

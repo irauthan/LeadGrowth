@@ -28,12 +28,15 @@ public class LeadController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<LeadDto>>> GetLeads()
+    public async Task<ActionResult<List<LeadDto>>> GetLeads(
+        [FromQuery] string? period,
+        [FromQuery] string? startDate,
+        [FromQuery] string? endDate)
     {
         var email = GetUserEmail();
         try
         {
-            var leads = await _leadService.GetLeadsAsync(email);
+            var leads = await _leadService.GetLeadsAsync(email, period, startDate, endDate);
             return Ok(leads);
         }
         catch (InvalidOperationException ex)

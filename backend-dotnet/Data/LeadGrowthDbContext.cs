@@ -43,6 +43,9 @@ public class LeadGrowthDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<SalesActivity> SalesActivities { get; set; } = null!;
     public DbSet<SalesActivityLog> SalesActivityLogs { get; set; } = null!;
+    public DbSet<LeaveRequest> LeaveRequests { get; set; } = null!;
+    public DbSet<BulkAssignmentJob> BulkAssignmentJobs { get; set; } = null!;
+    public DbSet<UserStatusLog> UserStatusLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -81,5 +84,17 @@ public class LeadGrowthDbContext : DbContext
         modelBuilder.Entity<Invitation>()
             .HasIndex(i => i.Token)
             .IsUnique();
+
+        // 6. Leave Request indexes
+        modelBuilder.Entity<LeaveRequest>()
+            .HasIndex(l => new { l.WorkspaceId, l.UserId, l.Status });
+
+        // 7. Bulk Assignment Job indexes
+        modelBuilder.Entity<BulkAssignmentJob>()
+            .HasIndex(b => new { b.WorkspaceId, b.Status });
+
+        // 8. User Status Log indexes
+        modelBuilder.Entity<UserStatusLog>()
+            .HasIndex(s => new { s.WorkspaceId, s.UserId, s.CreatedAtUtc });
     }
 }

@@ -29,11 +29,18 @@ public class AutoReassignmentBackgroundService : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<LeadGrowthDbContext>();
+                var presenceService = scope.ServiceProvider.GetRequiredService<IUserPresenceService>();
+                var bulkService = scope.ServiceProvider.GetRequiredService<IBulkAssignmentService>();
                 var taskService = scope.ServiceProvider.GetRequiredService<ITaskService>();
 
-                _logger.LogDebug("Sweep: Checking for tasks blocked by OFFLINE or ON_LEAVE users...");
-                var users = await dbContext.Users.ToListAsync(stoppingToken);
+                // 1. Reconcile expired manual Busy and Break statuses
+                await presenceService.ReconcileExpiredStatusesAsync(stoppingToken);
 
+                // 2. Process due Admin-scheduled Bulk Auto-Assign jobs
+                await bulkService.ProcessDueScheduledJobsAsync(stoppingToken);
+
+                // 3. Sweep for tasks blocked by offline/on_leave users
+                var users = await dbContext.Users.ToListAsync(stoppingToken);
                 foreach (var u in users)
                 {
                     if (string.Equals("SUSPENDED", u.Status, StringComparison.OrdinalIgnoreCase)) continue;
@@ -64,7 +71,7 @@ public class AutoReassignmentBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error occurred in AutoReassignmentBackgroundService");
             }
 
-            // Run every 1 minute
+            // Run reconciliation every 1 minute
             await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
         }
     }

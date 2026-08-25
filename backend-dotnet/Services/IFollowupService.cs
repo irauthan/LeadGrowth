@@ -4,7 +4,7 @@ namespace LeadGrowth.Services;
 
 public interface IFollowupService
 {
-    Task<List<Dictionary<string, object>>> GetFollowupsAsync(string userEmail);
+    Task<List<Dictionary<string, object>>> GetFollowupsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null);
     Task<List<Dictionary<string, object>>> GetTodayFollowupsAsync(string userEmail);
     Task<Dictionary<string, object>> CheckConflictAsync(long userId, string scheduledAt, long? excludeId);
     Task<Dictionary<string, object>> CreateFollowupAsync(long leadId, string userEmail, string scheduledAt, string type, string notes, string? outcome, string? nextFollowupDate, string? remarks, bool autoScheduleIfConflict);

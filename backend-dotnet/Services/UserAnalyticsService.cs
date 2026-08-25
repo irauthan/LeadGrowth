@@ -25,7 +25,8 @@ public class UserAnalyticsService : IUserAnalyticsService
             throw new KeyNotFoundException("User workspace not found");
         }
 
-        var (rangeStart, rangeEnd) = ParsePeriodRange(period, startDate, endDate);
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = !string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase);
 
         var myLeadsRaw = await _context.Leads
             .Where(l => l.WorkspaceId == user.WorkspaceId && l.AssignedToId == user.Id)
@@ -37,11 +38,11 @@ public class UserAnalyticsService : IUserAnalyticsService
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
 
-        var myLeads = !string.IsNullOrEmpty(period)
+        var myLeads = isFiltered
             ? myLeadsRaw.Where(l => l.CreatedAt >= rangeStart && l.CreatedAt <= rangeEnd).ToList()
             : myLeadsRaw;
 
-        var myTasks = !string.IsNullOrEmpty(period)
+        var myTasks = isFiltered
             ? myTasksRaw.Where(t => t.CreatedAt >= rangeStart && t.CreatedAt <= rangeEnd).ToList()
             : myTasksRaw;
 
@@ -60,18 +61,24 @@ public class UserAnalyticsService : IUserAnalyticsService
             string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase)
         );
 
-        var pendingFollowupsCount = await _context.FollowupReminders
+        var followupsQuery = _context.FollowupReminders
             .Where(f => f.WorkspaceId == user.WorkspaceId &&
                         f.Status != "COMPLETED" && f.Status != "CANCELLED" &&
-                        (f.AssignedToId == user.Id || (f.Lead != null && f.Lead.AssignedToId == user.Id)))
-            .CountAsync();
+                        (f.AssignedToId == user.Id || (f.Lead != null && f.Lead.AssignedToId == user.Id)));
+
+        if (isFiltered)
+        {
+            followupsQuery = followupsQuery.Where(f => (f.ScheduledAt >= rangeStart && f.ScheduledAt <= rangeEnd) || (f.CreatedAt >= rangeStart && f.CreatedAt <= rangeEnd));
+        }
+
+        var pendingFollowupsCount = await followupsQuery.CountAsync();
 
         // Calculate personal revenue from lead proposals/negotiations
         double personalRevenue = myLeads
             .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
             .Sum(l => l.ProposalAmount.Value);
 
-        if (personalRevenue <= 0.0)
+        if (personalRevenue <= 0.0 && conversionsCount > 0)
         {
             personalRevenue = conversionsCount * 2500.0;
         }
@@ -106,7 +113,8 @@ public class UserAnalyticsService : IUserAnalyticsService
             throw new KeyNotFoundException("User workspace not found");
         }
 
-        var (rangeStart, rangeEnd) = ParsePeriodRange(period, startDate, endDate);
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = !string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase);
 
         var myLeadsRaw = await _context.Leads
             .Where(l => l.WorkspaceId == user.WorkspaceId && l.AssignedToId == user.Id)
@@ -118,11 +126,11 @@ public class UserAnalyticsService : IUserAnalyticsService
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
 
-        var myLeads = !string.IsNullOrEmpty(period)
+        var myLeads = isFiltered
             ? myLeadsRaw.Where(l => l.CreatedAt >= rangeStart && l.CreatedAt <= rangeEnd).ToList()
             : myLeadsRaw;
 
-        var myTasks = !string.IsNullOrEmpty(period)
+        var myTasks = isFiltered
             ? myTasksRaw.Where(t => t.CreatedAt >= rangeStart && t.CreatedAt <= rangeEnd).ToList()
             : myTasksRaw;
 
@@ -175,70 +183,5 @@ public class UserAnalyticsService : IUserAnalyticsService
             { "funnel", funnel },
             { "taskAnalytics", taskAnalytics }
         };
-    }
-
-    private static (DateTime Start, DateTime End) ParsePeriodRange(string? period, string? startDate, string? endDate)
-    {
-        var now = DateTime.UtcNow;
-        DateTime start;
-        DateTime end = now;
-
-        if (string.IsNullOrWhiteSpace(period) || "all".Equals(period, StringComparison.OrdinalIgnoreCase))
-        {
-            start = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            return (start, end);
-        }
-
-        switch (period.ToLower().Trim())
-        {
-            case "daily":
-            case "today":
-                start = now.Date;
-                end = now.Date.AddDays(1).AddTicks(-1);
-                break;
-            case "weekly":
-            case "this week":
-            case "this_week":
-                int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
-                start = now.Date.AddDays(-1 * diff);
-                end = now.Date.AddDays(1).AddTicks(-1);
-                break;
-            case "monthly":
-            case "this month":
-            case "this_month":
-                start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-                end = now.Date.AddDays(1).AddTicks(-1);
-                break;
-            case "yearly":
-            case "this year":
-            case "this_year":
-                start = new DateTime(now.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                end = now.Date.AddDays(1).AddTicks(-1);
-                break;
-            case "custom":
-                if (!string.IsNullOrWhiteSpace(startDate) && DateTime.TryParse(startDate.Trim(), out var parsedStart))
-                {
-                    start = parsedStart;
-                }
-                else
-                {
-                    start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-                }
-
-                if (!string.IsNullOrWhiteSpace(endDate) && DateTime.TryParse(endDate.Trim(), out var parsedEnd))
-                {
-                    end = parsedEnd.Date.AddDays(1).AddTicks(-1);
-                }
-                else
-                {
-                    end = now;
-                }
-                break;
-            default:
-                start = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                break;
-        }
-
-        return (start, end);
     }
 }

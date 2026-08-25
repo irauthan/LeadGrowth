@@ -66,6 +66,31 @@ public class User
     [Column("is_email_verified")]
     public bool IsEmailVerified { get; set; } = false;
 
+    [Column("can_receive_leads")]
+    public bool CanReceiveLeads { get; set; } = true;
+
+    [Column("last_heartbeat_at")]
+    public DateTime? LastHeartbeatAt { get; set; }
+
+    [Column("manual_status")]
+    [MaxLength(20)]
+    public string? ManualStatus { get; set; }
+
+    [Column("manual_status_source")]
+    [MaxLength(20)]
+    public string? ManualStatusSource { get; set; } // SYSTEM, USER, ADMIN
+
+    [Column("manual_status_reason")]
+    [MaxLength(255)]
+    public string? ManualStatusReason { get; set; }
+
+    [Column("manual_status_expires_at")]
+    public DateTime? ManualStatusExpiresAt { get; set; }
+
+    [Column("max_capacity")]
+    public int? MaxCapacity { get; set; } = 30;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+

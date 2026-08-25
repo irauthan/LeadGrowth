@@ -351,3 +351,4 @@ C:\Users\LENOVO\Desktop\LeadGrowth\backend-dotnet\obj\Debug\net10.0\backend-dotn
 C:\Users\LENOVO\Desktop\LeadGrowth\backend-dotnet\obj\Debug\net10.0\backend-dotnet.genruntimeconfig.cache
 C:\Users\LENOVO\Desktop\LeadGrowth\backend-dotnet\obj\Debug\net10.0\ref\backend-dotnet.dll
 E:\WEB\LeadGrowth\backend-dotnet\bin\Debug\net10.0\backend-dotnet.staticwebassets.runtime.json
+C:\Users\LENOVO\Desktop\LeadGrowth\backend-dotnet\bin\Debug\net10.0\backend-dotnet.staticwebassets.runtime.json

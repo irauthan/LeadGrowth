@@ -68,8 +68,8 @@ export default function UserDashboard() {
 
       const [kpiRes, leadsRes, followupsRes, pendingRes, , callRes] = await Promise.all([
         api.get('/api/users/me/dashboard', { params }).catch(() => ({ data: null })),
-        api.get('/api/leads').catch(() => api.get('/api/leads/pipeline')),
-        api.get('/api/followups').catch(() => ({ data: [] })),
+        api.get('/api/leads', { params }).catch(() => api.get('/api/leads/pipeline', { params })),
+        api.get('/api/followups', { params }).catch(() => ({ data: [] })),
         api.get('/api/leads/pending-assigned').catch(() => ({ data: [] })),
         api.get('/api/leads/workflow-pending-counts').catch(() => ({ data: {} })),
         api.get('/api/calls/user').catch(() => ({ data: null }))
@@ -143,9 +143,6 @@ export default function UserDashboard() {
 
   const getStageCount = (targetStage: string) => {
     if (!myLeads || !Array.isArray(myLeads)) return 0;
-    const followupLeadIds = new Set(
-      (followups || []).map((f: any) => f.leadId || f.lead?.id).filter(Boolean)
-    );
 
     return myLeads.filter((lead: any) => {
       const st = (lead.status || '').trim();
@@ -178,9 +175,9 @@ export default function UserDashboard() {
   };
 
   const assignedLeadsCount = kpis?.myAssignedLeads ?? myLeads.length;
-  const pendingFollowupsCount = followups.length > 0 ? followups.length : (kpis?.myPendingFollowups ?? 0);
+  const pendingFollowupsCount = kpis?.myPendingFollowups ?? followups.length;
   const conversionsCount = kpis?.myConversions ?? getStageCount('Converted');
-  const personalRevenue = kpis?.myRevenueContribution ?? (conversionsCount * 2500);
+  const personalRevenue = kpis?.myRevenueContribution ?? 0;
 
   return (
     <div className="space-y-6">

@@ -13,7 +13,7 @@ public class CampaignService : ICampaignService
         _context = context;
     }
 
-    public async Task<List<Campaign>> GetCampaignsAsync(string email)
+    public async Task<List<Campaign>> GetCampaignsAsync(string email, string? period = null, string? startDate = null, string? endDate = null)
     {
         var userEmail = email.Trim().ToLower();
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
@@ -22,8 +22,17 @@ public class CampaignService : ICampaignService
             throw new KeyNotFoundException("User workspace not found");
         }
 
-        return await _context.Campaigns
-            .Where(c => c.WorkspaceId == user.WorkspaceId)
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = !string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase);
+
+        var query = _context.Campaigns.Where(c => c.WorkspaceId == user.WorkspaceId);
+
+        if (isFiltered)
+        {
+            query = query.Where(c => c.CreatedAt >= rangeStart && c.CreatedAt <= rangeEnd);
+        }
+
+        return await query
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
     }

@@ -9,4 +9,6 @@ public interface IWebSocketManagerService
     Task BroadcastNotificationAsync(long userId, object notificationDto);
     Task BroadcastWorkspaceNotificationAsync(long workspaceId, object notificationDto);
     Task BroadcastCallSessionAsync(long workspaceId, object callSessionDto);
+    Task BroadcastPresenceChangedAsync(long workspaceId, object presenceDto);
+    Task BroadcastWorkloadChangedAsync(long workspaceId, object workloadDto);
 }

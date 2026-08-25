@@ -14,7 +14,7 @@ public class FollowupService : IFollowupService
         _context = context;
     }
 
-    public async Task<List<Dictionary<string, object>>> GetFollowupsAsync(string userEmail)
+    public async Task<List<Dictionary<string, object>>> GetFollowupsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null)
     {
         var email = userEmail.Trim().ToLower();
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -23,10 +23,20 @@ public class FollowupService : IFollowupService
             throw new KeyNotFoundException("User not found");
         }
 
-        var followups = await _context.FollowupReminders
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = !string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase);
+
+        var query = _context.FollowupReminders
             .Include(f => f.Lead)
             .Include(f => f.AssignedTo)
-            .Where(f => f.WorkspaceId == user.WorkspaceId)
+            .Where(f => f.WorkspaceId == user.WorkspaceId);
+
+        if (isFiltered)
+        {
+            query = query.Where(f => (f.ScheduledAt >= rangeStart && f.ScheduledAt <= rangeEnd) || (f.CreatedAt >= rangeStart && f.CreatedAt <= rangeEnd));
+        }
+
+        var followups = await query
             .OrderByDescending(f => f.ScheduledAt)
             .ToListAsync();
 
@@ -99,13 +109,29 @@ public class FollowupService : IFollowupService
             throw new ArgumentException("Lead not found");
         }
 
+        if (lead.WorkspaceId != user.WorkspaceId)
+        {
+            throw new UnauthorizedAccessException("Cannot schedule follow-up for a lead in another workspace.");
+        }
+
+        var terminalStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "CONVERTED", "CLOSED WON", "WON", "REJECTED", "CLOSED LOST", "LOST",
+            "CLOSED", "DELETED", "ARCHIVED", "DROPPED", "LEAD_LOST", "LEAD LOST"
+        };
+
+        if (lead.Status != null && terminalStatuses.Contains(lead.Status.Trim()))
+        {
+            throw new InvalidOperationException($"Cannot schedule a follow-up for a terminal/closed lead (Status: {lead.Status}).");
+        }
+
         // P3 RULE: Check if an active follow-up already exists for this lead
         var existingActive = await _context.FollowupReminders
             .FirstOrDefaultAsync(f => f.LeadId == leadId && f.Status != "COMPLETED" && f.Status != "CANCELLED");
 
         if (existingActive != null)
         {
-            throw new InvalidOperationException($"An active follow-up for '{lead.Name}' is already scheduled for {existingActive.ScheduledAt:dd MMM, hh:mm tt}. You must complete or reschedule the existing follow-up before scheduling a new one.");
+            throw new InvalidOperationException($"409 Conflict: An active follow-up for '{lead.Name}' is already scheduled for {existingActive.ScheduledAt:dd MMM, hh:mm tt}. You must complete or reschedule the existing follow-up before scheduling a new one.");
         }
 
         if (!DateTime.TryParse(scheduledAt, out var dt))

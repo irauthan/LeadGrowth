@@ -18,10 +18,13 @@ public class FollowupController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Dictionary<string, object>>>> GetFollowups()
+    public async Task<ActionResult<List<Dictionary<string, object>>>> GetFollowups(
+        [FromQuery] string? period,
+        [FromQuery] string? startDate,
+        [FromQuery] string? endDate)
     {
         var email = GetUserEmail();
-        var list = await _followupService.GetFollowupsAsync(email);
+        var list = await _followupService.GetFollowupsAsync(email, period, startDate, endDate);
         return Ok(list);
     }
 

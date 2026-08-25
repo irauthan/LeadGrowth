@@ -79,7 +79,7 @@ export default function AdminDashboard() {
         api.get('/api/users/members'),
         api.get('/api/leads'),
         api.get('/api/calls/team'),
-        api.get('/api/campaigns')
+        api.get('/api/campaigns', { params })
       ]);
 
       if (dashRes.status === 'fulfilled' && dashRes.value?.data) {

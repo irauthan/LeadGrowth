@@ -14,7 +14,7 @@ public class LeadService : ILeadService
         _context = context;
     }
 
-    public async Task<List<LeadDto>> GetLeadsAsync(string userEmail)
+    public async Task<List<LeadDto>> GetLeadsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null)
     {
         var email = userEmail.Trim().ToLower();
         var user = await _context.Users
@@ -32,31 +32,24 @@ public class LeadService : ILeadService
             throw new InvalidOperationException("User does not belong to a workspace");
         }
 
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = !string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase);
+
         bool isUserOnly = IsUserOnly(user);
 
-        List<Lead> leads;
-        if (isUserOnly)
+        var query = _context.Leads
+            .Include(l => l.Workspace)
+            .Include(l => l.Campaign)
+            .Include(l => l.AssignedTo)
+            .Include(l => l.AssignedBy)
+            .Where(l => isUserOnly ? l.AssignedToId == user.Id : l.WorkspaceId == user.WorkspaceId);
+
+        if (isFiltered)
         {
-            leads = await _context.Leads
-                .Include(l => l.Workspace)
-                .Include(l => l.Campaign)
-                .Include(l => l.AssignedTo)
-                .Include(l => l.AssignedBy)
-                .Where(l => l.AssignedToId == user.Id)
-                .OrderByDescending(l => l.CreatedAt)
-                .ToListAsync();
+            query = query.Where(l => l.CreatedAt >= rangeStart && l.CreatedAt <= rangeEnd);
         }
-        else
-        {
-            leads = await _context.Leads
-                .Include(l => l.Workspace)
-                .Include(l => l.Campaign)
-                .Include(l => l.AssignedTo)
-                .Include(l => l.AssignedBy)
-                .Where(l => l.WorkspaceId == user.WorkspaceId)
-                .OrderByDescending(l => l.CreatedAt)
-                .ToListAsync();
-        }
+
+        var leads = await query.OrderByDescending(l => l.CreatedAt).ToListAsync();
 
         var dtos = new List<LeadDto>();
         foreach (var l in leads)

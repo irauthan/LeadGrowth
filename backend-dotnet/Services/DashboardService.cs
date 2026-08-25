@@ -24,9 +24,16 @@ public class DashboardService : IDashboardService
             throw new KeyNotFoundException("User workspace not found");
         }
 
-        var leads = await _leadService.GetLeadsAsync(email);
-        var campaigns = await _context.Campaigns.Where(c => c.WorkspaceId == user.WorkspaceId).ToListAsync();
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = !string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase);
+
+        var allLeads = await _leadService.GetLeadsAsync(email);
+        var allCampaigns = await _context.Campaigns.Where(c => c.WorkspaceId == user.WorkspaceId).ToListAsync();
         var users = await _context.Users.Where(u => u.WorkspaceId == user.WorkspaceId && !string.Equals("SUSPENDED", u.Status)).ToListAsync();
+
+        var leads = isFiltered
+            ? allLeads.Where(l => l.CreatedAt >= rangeStart && l.CreatedAt <= rangeEnd).ToList()
+            : allLeads;
 
         var totalLeads = leads.Count;
         var converted = leads.Count(l => string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase));
@@ -36,13 +43,17 @@ public class DashboardService : IDashboardService
             .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
             .Sum(l => (decimal)l.ProposalAmount.Value);
 
+        var campaigns = isFiltered
+            ? allCampaigns.Where(c => c.CreatedAt >= rangeStart && c.CreatedAt <= rangeEnd).ToList()
+            : allCampaigns;
+
         var revenue = campaigns.Sum(c => c.Revenue) + leadProposalTotal;
         var spend = campaigns.Sum(c => c.Spend);
         var budget = campaigns.Sum(c => c.Budget);
         var clicks = campaigns.Sum(c => c.Clicks);
         var impressions = campaigns.Sum(c => c.Impressions);
-        var conversions = campaigns.Sum(c => c.Conversions);
-        var activeCampaigns = campaigns.Count(c => string.Equals("ACTIVE", c.Status, StringComparison.OrdinalIgnoreCase));
+        var conversions = campaigns.Sum(c => c.Conversions) + converted;
+        var activeCampaigns = allCampaigns.Count(c => string.Equals("ACTIVE", c.Status, StringComparison.OrdinalIgnoreCase));
 
         var roas = spend > 0 ? Math.Round((double)(revenue / spend), 2) : (revenue > 0 ? (double)revenue : 0.0);
         var cpc = clicks > 0 ? Math.Round((double)(spend / clicks), 2) : 0.0;
@@ -63,12 +74,20 @@ public class DashboardService : IDashboardService
         var now = DateTime.UtcNow;
         for (int i = 6; i >= 0; i--)
         {
-            var date = now.AddDays(-i).ToString("MMM dd");
+            var targetDay = now.AddDays(-i).Date;
+            var targetDayEnd = targetDay.AddDays(1).AddTicks(-1);
+            var dayLeads = allLeads.Where(l => l.CreatedAt >= targetDay && l.CreatedAt <= targetDayEnd).ToList();
+            var dayRevenue = dayLeads.Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0).Sum(l => (double)l.ProposalAmount.Value);
+            var dayCampaigns = allCampaigns.Where(c => c.CreatedAt >= targetDay && c.CreatedAt <= targetDayEnd).ToList();
+            dayRevenue += dayCampaigns.Sum(c => (double)c.Revenue);
+            var daySpend = dayCampaigns.Sum(c => (double)c.Spend);
+
             trends.Add(new Dictionary<string, object>
             {
-                { "date", date },
-                { "revenue", Math.Round((double)revenue / 7 * (7 - i), 2) },
-                { "spend", Math.Round((double)spend / 7 * (7 - i), 2) }
+                { "date", targetDay.ToString("MMM dd") },
+                { "revenue", Math.Round(dayRevenue, 2) },
+                { "spend", Math.Round(daySpend, 2) },
+                { "leads", dayLeads.Count }
             });
         }
 

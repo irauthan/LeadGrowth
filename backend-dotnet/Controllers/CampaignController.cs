@@ -19,10 +19,13 @@ public class CampaignController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Campaign>>> GetCampaigns()
+    public async Task<ActionResult<List<Campaign>>> GetCampaigns(
+        [FromQuery] string? period,
+        [FromQuery] string? startDate,
+        [FromQuery] string? endDate)
     {
         var email = GetUserEmail();
-        var campaigns = await _campaignService.GetCampaignsAsync(email);
+        var campaigns = await _campaignService.GetCampaignsAsync(email, period, startDate, endDate);
         return Ok(campaigns);
     }
 
