@@ -251,18 +251,10 @@ export default function MyWork() {
       {/* Top Header & Workspace Summary */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-              Enterprise Sales Workspace
-            </span>
-            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-              Unified Multi-Activity Pipeline
-            </span>
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1 flex items-center gap-2">
+          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
             <Briefcase size={22} className="text-theme-primary" /> My Work Pipeline
           </h1>
-          <p className="text-xs text-theme-text-muted mt-0.5">
+          <p className="text-xs text-theme-text-muted mt-1">
             Manage assigned leads, execute sales activities, complete client follow-ups, and auto-track progress from one interface.
           </p>
         </div>

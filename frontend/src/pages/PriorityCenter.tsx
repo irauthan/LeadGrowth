@@ -204,16 +204,11 @@ export default function PriorityCenter() {
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-              <Zap className="w-3.5 h-3.5" />
-              SMART PRIORITY ENGINE
-            </span>
-          </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
-            Priority Center
+            <Zap className="w-6 h-6 text-theme-primary" />
+            <span>Priority Center</span>
           </h1>
-          <p className="text-xs text-theme-text-muted">
+          <p className="text-xs text-theme-text-muted mt-1">
             Intelligently ranked lead queue sorted by urgency, due date, conversion probability, and high-impact actions. Click any KPI card to instantly filter records.
           </p>
         </div>

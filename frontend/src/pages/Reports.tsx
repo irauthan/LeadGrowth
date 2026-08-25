@@ -168,16 +168,11 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-              Connected Report System
-            </span>
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1">
+          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text">
             Daily Sales Reports & Export Console
           </h1>
-          <p className="text-xs text-theme-text-muted mt-0.5">
-Submit daily activity reports to your manager, monitor their review status, and access analytical database exports for deeper insights.
+          <p className="text-xs text-theme-text-muted mt-1">
+            Submit daily activity reports to your manager, monitor their review status, and access analytical database exports for deeper insights.
           </p>
         </div>
 

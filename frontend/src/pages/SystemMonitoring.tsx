@@ -164,8 +164,8 @@ export default function SystemMonitoring() {
             <Activity size={24} />
           </div>
           <div>
-            <h2 className="text-base font-extrabold uppercase tracking-wider text-theme-text">System Monitoring Dashboard</h2>
-            <p className="text-xs text-theme-text-muted mt-0.5">Real-time Spring Boot server metrics, HikariCP database pool, and error logs.</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">System Monitoring Dashboard</h2>
+            <p className="text-xs text-theme-text-muted mt-1">Real-time server metrics, database connection pool, and event error logs.</p>
           </div>
         </div>
         <button

@@ -26,6 +26,7 @@ import SecurityCenter from './pages/SecurityCenter';
 import MyWork from './pages/MyWork';
 import Calendar from './pages/Calendar';
 import ExecutiveWorkMonitor from './pages/ExecutiveWorkMonitor';
+import PriorityCenter from './pages/PriorityCenter';
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
         {/* Workspace core application routes */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/priority-center" element={<PriorityCenter />} />
           <Route path="/my-work" element={<MyWork />} />
           <Route path="/scheduler" element={<Calendar />} />
           <Route path="/calendar" element={<Navigate to="/scheduler" replace />} />

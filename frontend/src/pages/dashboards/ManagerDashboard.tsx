@@ -158,16 +158,12 @@ export default function ManagerDashboard() {
       {/* Header Operations Control Center Banner */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
             <Users size={28} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Team Leader</span>
-              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Operations Operations Hub</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text mt-1">Operations Control Center</h1>
-            <p className="text-xs text-theme-text-muted mt-0.5">Manage team workload, assign incoming lead queue, and review task submissions.</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Operations Control Center</h1>
+            <p className="text-xs text-theme-text-muted mt-1">Manage team workload, assign incoming lead queue, and review task submissions.</p>
           </div>
         </div>
 
@@ -192,57 +188,57 @@ export default function ManagerDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         
         {/* Team Members Count */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-blue-500/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Active Sales Team</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/10 text-theme-primary">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
               <Users size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-theme-text">{members.length} Members</h3>
-          <span className="text-[9px] font-bold text-emerald-500 block">Available for Lead Assignments</span>
+          <h3 className="text-2xl font-black text-theme-text">{members.length} Members</h3>
+          <span className="text-[10px] font-semibold text-blue-500 block">Available for Lead Assignments</span>
         </div>
 
         {/* Unassigned Lead Queue */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-amber-500/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Unassigned Lead Queue</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
               <Zap size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-theme-text">{leadQueue.length} Leads</h3>
-          <span className="text-[9px] font-bold text-amber-500 block">Requires Assignment</span>
+          <h3 className="text-2xl font-black text-theme-text">{leadQueue.length} Leads</h3>
+          <span className="text-[10px] font-semibold text-amber-500 block">Requires Assignment</span>
         </div>
 
         {/* Tasks Pending Approval */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-purple-500/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Pending Manager Review</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
               <CheckSquare size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-theme-text">{reviewTasks.length} Submissions</h3>
-          <span className="text-[9px] font-bold text-purple-400 block">Requires Quality Approval</span>
+          <h3 className="text-2xl font-black text-theme-text">{reviewTasks.length} Submissions</h3>
+          <span className="text-[10px] font-semibold text-purple-400 block">Requires Quality Approval</span>
         </div>
 
         {/* Active Workload Tasks */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2">
+        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-cyan-500/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Active Workload Tasks</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
               <Clock size={18} />
             </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-theme-text">{activeTasks.length} In Progress</h3>
-          <span className="text-[9px] font-bold text-cyan-400 block">Team Operations</span>
+          <h3 className="text-2xl font-black text-theme-text">{activeTasks.length} In Progress</h3>
+          <span className="text-[10px] font-semibold text-cyan-400 block">Team Operations</span>
         </div>
 
       </div>
 
       {/* Module 7: Manager Team Call Productivity & Leaderboard */}
-      <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-6">
+      <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-theme-border/40 pb-4">
           <div>
             <h3 className="text-base font-extrabold text-theme-text flex items-center gap-2">
@@ -257,22 +253,22 @@ export default function ManagerDashboard() {
                 setSelectedUserFilter({});
                 setIsCallModalOpen(true);
               }}
-              className="bg-theme-bg-alt border border-theme-border hover:border-rose-500/40 px-3 py-1.5 rounded-2xl text-xs font-extrabold text-theme-text transition-all cursor-pointer flex items-center gap-1.5 group"
+              className="bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 px-3 py-1.5 rounded-2xl text-xs font-bold text-rose-500 transition-all cursor-pointer flex items-center gap-1.5 group"
             >
               <span>Total Call Time:</span>
-              <span className="text-rose-400 font-mono font-black">{teamAnalytics?.totalTeamCallTimeFormatted || '00:00:00'}</span>
-              <Eye size={12} className="text-theme-text-muted group-hover:text-theme-text transition-colors" />
+              <span className="text-rose-500 font-mono font-black">{teamAnalytics?.totalTeamCallTimeFormatted || '00:00:00'}</span>
+              <Eye size={12} className="text-rose-500/70 group-hover:text-rose-500 transition-colors" />
             </button>
             <button
               onClick={() => {
                 setSelectedUserFilter({});
                 setIsCallModalOpen(true);
               }}
-              className="bg-theme-bg-alt border border-theme-border hover:border-cyan-500/40 px-3 py-1.5 rounded-2xl text-xs font-extrabold text-theme-text transition-all cursor-pointer flex items-center gap-1.5 group"
+              className="bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 px-3 py-1.5 rounded-2xl text-xs font-bold text-cyan-500 transition-all cursor-pointer flex items-center gap-1.5 group"
             >
               <span>Calls Today:</span>
-              <span className="text-cyan-400 font-black">{teamAnalytics?.totalTeamCallsToday || 0}</span>
-              <Eye size={12} className="text-theme-text-muted group-hover:text-theme-text transition-colors" />
+              <span className="text-cyan-500 font-black">{teamAnalytics?.totalTeamCallsToday || 0}</span>
+              <Eye size={12} className="text-cyan-500/70 group-hover:text-cyan-500 transition-colors" />
             </button>
           </div>
         </div>

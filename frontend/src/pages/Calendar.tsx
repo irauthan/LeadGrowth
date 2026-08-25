@@ -20,7 +20,9 @@ import {
   ChevronDown,
   Tag,
   AlertTriangle,
-  Zap
+  Zap,
+  PanelLeft,
+  CalendarDays
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -532,57 +534,56 @@ export default function Calendar() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] flex-col bg-theme-bg text-theme-text rounded-3xl border border-theme-border shadow-2xl overflow-hidden">
+    <div className="flex flex-1 h-[calc(100vh-4rem)] w-full flex-col bg-theme-bg text-theme-text overflow-hidden">
       
-      {/* --- TOP GOOGLE CALENDAR HEADER --- */}
-      <header className="flex flex-wrap sm:flex-nowrap h-auto sm:h-16 items-center justify-between gap-2 border-b border-theme-border/60 bg-theme-card px-2 sm:px-4 py-2 sm:py-0 shrink-0 z-30">
+      {/* --- TOP SCHEDULER TOOLBAR HEADER --- */}
+      <header className="flex flex-wrap sm:flex-nowrap h-auto sm:h-14 items-center justify-between gap-2 border-b border-theme-border/60 bg-theme-card px-3 sm:px-5 py-2 sm:py-0 shrink-0 z-30">
         
-        {/* Left Section: Menu, Branding, Today, Nav, Title */}
-        <div className="flex items-center gap-1 sm:gap-3 shrink-0 order-1 min-w-0">
+        {/* Left Section: Panel Toggle, Today, Nav Arrows, Date Title */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 order-1 min-w-0">
+          
+          {/* Toggle Mini Calendar Panel */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors shrink-0"
-            title="Toggle main menu"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shrink-0 ${
+              isSidebarOpen
+                ? 'bg-blue-600/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
+                : 'bg-theme-bg-alt border-theme-border/60 text-theme-text-muted hover:text-theme-text'
+            }`}
+            title="Toggle mini calendar and category filters"
           >
-            <Menu size={20} />
+            <PanelLeft size={16} />
+            <span className="hidden sm:inline">{isSidebarOpen ? 'Hide Mini Panel' : 'Mini Panel'}</span>
           </button>
-
-          {/* Scheduler Logo Icon */}
-          <div className="flex items-center gap-2.5 mr-1 sm:mr-2 shrink-0">
-            <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-extrabold text-base sm:text-lg shadow-md shadow-blue-500/20">
-              <span>{new Date().getDate()}</span>
-            </div>
-            <span className="text-xl font-bold text-theme-text tracking-tight hidden sm:inline">Scheduler</span>
-          </div>
 
           {/* Today Button */}
           <button
             onClick={() => navigateDate('today')}
-            className="shrink-0 rounded-full border border-theme-border px-3 sm:px-5 py-1.5 sm:py-2 text-xs font-bold text-theme-text hover:bg-theme-bg-alt shadow-2xs transition-all"
+            className="shrink-0 rounded-xl border border-theme-border/60 bg-theme-bg-alt px-3 py-1.5 text-xs font-bold text-theme-text hover:bg-theme-card shadow-2xs transition-all"
           >
             Today
           </button>
 
           {/* Navigation Arrows */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0 bg-theme-bg-alt rounded-xl p-0.5 border border-theme-border/60">
             <button
               onClick={() => navigateDate('prev')}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-card transition-colors"
               title="Previous period"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={16} />
             </button>
             <button
               onClick={() => navigateDate('next')}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-theme-text-muted hover:bg-theme-bg-alt transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-theme-text-muted hover:text-theme-text hover:bg-theme-card transition-colors"
               title="Next period"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={16} />
             </button>
           </div>
 
           {/* Dynamic Header Date Range */}
-          <h2 className="text-sm sm:text-lg md:text-xl font-bold text-theme-text ml-1 sm:ml-2 tracking-tight truncate max-w-[90px] xs:max-w-[130px] sm:max-w-none">
+          <h2 className="text-sm sm:text-base md:text-lg font-extrabold text-theme-text ml-1 tracking-tight truncate max-w-[110px] xs:max-w-[150px] sm:max-w-none">
             {getHeaderTitle()}
           </h2>
         </div>
@@ -758,7 +759,7 @@ export default function Calendar() {
                         <div
                           key={idx}
                           onClick={() => openCreateModalWithDate(dayObj.date)}
-                          className={`bg-theme-card p-0.5 sm:p-1.5 flex flex-col justify-between overflow-hidden transition-all cursor-pointer hover:bg-theme-bg-alt/30 ${
+                          className={`bg-theme-card p-0.5 sm:p-1.5 flex flex-col justify-between overflow-hidden transition-colors cursor-pointer hover:bg-theme-bg-alt/30 ${
                             !dayObj.isCurrentMonth ? 'opacity-40 bg-theme-bg-alt/10' : ''
                           }`}
                         >
@@ -786,7 +787,7 @@ export default function Calendar() {
                           </div>
 
                           {/* sm and up: full event pills with titles */}
-                          <div className="hidden sm:block space-y-1 mt-1 flex-1 overflow-y-auto max-h-[100px]">
+                          <div className="hidden sm:block space-y-1 mt-1 flex-1 overflow-y-auto max-h-[100px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             {dayEvents.slice(0, 4).map((ev) => {
                               const style = getEventStyle(ev.eventType);
                               return (
@@ -796,7 +797,7 @@ export default function Calendar() {
                                     e.stopPropagation();
                                     setSelectedEvent(ev);
                                   }}
-                                  className={`w-full text-left px-2 py-0.5 rounded-md text-[11px] font-bold truncate flex items-center gap-1.5 shadow-2xs transition-transform hover:scale-[1.02] ${style.bg} ${style.text}`}
+                                  className={`w-full text-left px-2 py-0.5 rounded-md text-[11px] font-bold truncate flex items-center gap-1.5 shadow-2xs transition-colors hover:brightness-95 dark:hover:brightness-125 ${style.bg} ${style.text}`}
                                 >
                                   <span className={`h-2 w-2 rounded-full ${style.dot} shrink-0`} />
                                   <span className="truncate">{ev.title}</span>

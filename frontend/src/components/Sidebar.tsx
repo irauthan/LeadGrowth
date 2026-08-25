@@ -45,7 +45,7 @@ export default function Sidebar() {
     }
     const baseMobile = '-translate-x-full lg:translate-x-0';
     if (sidebarPosition === 'right') {
-      return `${baseMobile} lg:right-0 lg:left-auto lg:top-16 lg:bottom-0 lg:flex-col lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-theme-border/60 z-30`;
+      return `${baseMobile} lg:right-0 lg:left-auto lg:top-16 lg:bottom-0 lg:flex-col lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:border-theme-border/60 z-40`;
     }
     if (sidebarPosition === 'top') {
       return `-translate-x-full lg:top-16 lg:left-0 lg:right-0 lg:bottom-auto lg:flex-row lg:h-12 lg:w-full lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b lg:border-theme-border/60 z-30`;
@@ -53,7 +53,7 @@ export default function Sidebar() {
     if (sidebarPosition === 'bottom') {
       return `-translate-x-full lg:bottom-0 lg:left-0 lg:right-0 lg:top-auto lg:flex-row lg:h-12 lg:w-full lg:rounded-none lg:border-x-0 lg:border-b-0 lg:border-t lg:border-theme-border/60 z-30`;
     }
-    return `${baseMobile} lg:left-0 lg:right-auto lg:top-16 lg:bottom-0 lg:flex-col lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r lg:border-theme-border/60 z-30`;
+    return `${baseMobile} lg:left-0 lg:right-auto lg:top-16 lg:bottom-0 lg:flex-col lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r lg:border-theme-border/60 z-40`;
   };
 
   const generalMenu = [
@@ -251,18 +251,19 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* Desktop Collapse Toggle Button (Fixed on edge of sidebar card) */}
+          {/* Desktop Collapse Toggle Button (Fixed on edge of sidebar rail) */}
           {!isHorizontal && !isMobileOpen && (
             <button
               onClick={toggleCollapsed}
-              className={`absolute top-4 hidden lg:flex h-6 w-6 items-center justify-center rounded-full border border-theme-border bg-theme-card text-theme-text/80 shadow-md transition-all hover:bg-theme-bg-alt hover:scale-110 z-40 ${
-                sidebarPosition === 'right' ? '-left-3' : '-right-3'
+              className={`absolute top-5 hidden lg:flex h-7 w-7 items-center justify-center rounded-full border-2 border-theme-border bg-theme-card text-theme-text shadow-xl transition-all duration-200 hover:bg-theme-primary hover:text-white hover:border-theme-primary hover:scale-110 z-50 cursor-pointer ${
+                sidebarPosition === 'right' ? '-left-3.5' : '-right-3.5'
               }`}
               title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
               {sidebarPosition === 'right' 
-                ? (isCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />)
-                : (isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />)
+                ? (isCollapsed ? <ChevronLeft size={14} className="stroke-[2.5]" /> : <ChevronRight size={14} className="stroke-[2.5]" />)
+                : (isCollapsed ? <ChevronRight size={14} className="stroke-[2.5]" /> : <ChevronLeft size={14} className="stroke-[2.5]" />)
               }
             </button>
           )}

@@ -261,8 +261,8 @@ export default function UserManagement() {
             <UsersIcon size={24} />
           </div>
           <div>
-            <h2 className="text-lg font-extrabold text-theme-text uppercase tracking-wider">Team & User Management</h2>
-            <p className="text-xs text-theme-text-muted mt-0.5">Manage user roles, access permissions, live status availability, and team performance metrics.</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Team & User Management</h2>
+            <p className="text-xs text-theme-text-muted mt-1">Manage user roles, access permissions, live status availability, and team performance metrics.</p>
           </div>
         </div>
 

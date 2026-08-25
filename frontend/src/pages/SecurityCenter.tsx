@@ -64,8 +64,8 @@ export default function SecurityCenter() {
             <ShieldCheck size={24} />
           </div>
           <div>
-            <h2 className="text-base font-extrabold uppercase tracking-wider text-theme-text">Enterprise Security Center</h2>
-            <p className="text-xs text-theme-text-muted mt-0.5">Session monitoring, account lockout rules, login audit logs, and security policy enforcement.</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Enterprise Security Center</h2>
+            <p className="text-xs text-theme-text-muted mt-1">Session monitoring, account lockout rules, login audit logs, and security policy enforcement.</p>
           </div>
         </div>
 

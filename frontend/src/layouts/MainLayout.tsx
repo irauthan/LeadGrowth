@@ -55,6 +55,8 @@ export default function MainLayout() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const isFullScreen = location.pathname.startsWith('/scheduler') || location.pathname.startsWith('/calendar');
+
   const getMainDesktopPadding = () => {
     if (sidebarPosition === 'right') {
       return isCollapsed ? 'lg:pr-[72px] lg:pl-0' : 'lg:pr-[260px] lg:pl-0';
@@ -66,6 +68,11 @@ export default function MainLayout() {
   };
 
   const getMainContentPadding = () => {
+    if (isFullScreen) {
+      if (sidebarPosition === 'top') return 'pt-24 pb-0';
+      if (sidebarPosition === 'bottom') return 'pt-16 pb-16';
+      return 'pt-16 pb-0';
+    }
     if (sidebarPosition === 'top') {
       return 'pt-28 pb-24 lg:pb-8';
     }
@@ -80,10 +87,10 @@ export default function MainLayout() {
       <Sidebar />
       <div className={`flex flex-col min-h-screen max-w-full overflow-x-hidden transition-all duration-300 ${getMainDesktopPadding()}`}>
         <Navbar />
-        <main className={`flex-1 max-w-full overflow-x-hidden px-4 sm:px-8 py-6 ${getMainContentPadding()}`}>
+        <main className={`flex-1 max-w-full ${isFullScreen ? 'p-0 overflow-hidden flex flex-col' : 'overflow-x-hidden px-4 sm:px-8 py-6'} ${getMainContentPadding()}`}>
           <Outlet />
         </main>
-        <Footer />
+        {!isFullScreen && <Footer />}
       </div>
       <MobileBottomNav />
     </div>

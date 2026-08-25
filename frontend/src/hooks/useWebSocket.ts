@@ -1,106 +1,143 @@
 import { useEffect, useRef, useState } from 'react';
+import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
 import type { Lead } from '../types';
 import { API_BASE_URL } from '../services/api';
 
 interface UseWebSocketOptions {
   workspaceId?: number;
-  onLeadReceived: (lead: Lead) => void;
+  userId?: number;
+  onLeadReceived?: (lead: Lead) => void;
+  onTaskReceived?: (task: any) => void;
+  onNotificationReceived?: (notification: any) => void;
 }
 
-export const useWebSocket = ({ workspaceId, onLeadReceived }: UseWebSocketOptions) => {
+export const useWebSocket = ({
+  workspaceId,
+  userId,
+  onLeadReceived,
+  onTaskReceived,
+  onNotificationReceived,
+}: UseWebSocketOptions) => {
   const [isConnected, setIsConnected] = useState(false);
-  const socketRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
+  const connectionRef = useRef<HubConnection | null>(null);
+
+  // Keep latest callbacks in refs to avoid reconnecting on every render
+  const onLeadReceivedRef = useRef(onLeadReceived);
+  onLeadReceivedRef.current = onLeadReceived;
+
+  const onTaskReceivedRef = useRef(onTaskReceived);
+  onTaskReceivedRef.current = onTaskReceived;
+
+  const onNotificationReceivedRef = useRef(onNotificationReceived);
+  onNotificationReceivedRef.current = onNotificationReceived;
 
   useEffect(() => {
-    if (!workspaceId) return;
+    if (!workspaceId && !userId) return;
 
-    const connect = () => {
-      let wsUrl = '';
+    let hubUrl = '';
+    try {
+      const urlObj = new URL(API_BASE_URL.startsWith('http') ? API_BASE_URL : `http://${window.location.host}`);
+      hubUrl = `${urlObj.origin}/ws-leads`;
+    } catch {
+      hubUrl = 'http://localhost:5000/ws-leads';
+    }
+
+    const authStorage = localStorage.getItem('leadgrowth-auth');
+    let token = '';
+    if (authStorage) {
       try {
-        const urlObj = new URL(API_BASE_URL.startsWith('http') ? API_BASE_URL : `http://${window.location.host}`);
-        const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${wsProtocol}//${urlObj.host}/ws-leads`;
-      } catch (err) {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//localhost:5000/ws-leads`;
+        const parsed = JSON.parse(authStorage);
+        token = parsed?.state?.token || '';
+      } catch {
+        // ignore
       }
+    }
 
-      console.log(`Connecting to WebSocket: ${wsUrl}`);
-      const socket = new WebSocket(wsUrl);
-      socketRef.current = socket;
+    const connection = new HubConnectionBuilder()
+      .withUrl(hubUrl, {
+        accessTokenFactory: () => token,
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .configureLogging(LogLevel.Warning)
+      .build();
 
-      socket.onopen = () => {
-        console.log('WebSocket connected. Sending STOMP CONNECT frame.');
+    connectionRef.current = connection;
+
+    connection.on('ReceiveLead', (lead: Lead) => {
+      onLeadReceivedRef.current?.(lead);
+    });
+
+    connection.on('ReceiveTask', (task: any) => {
+      onTaskReceivedRef.current?.(task);
+    });
+
+    connection.on('ReceiveNotification', (notification: any) => {
+      onNotificationReceivedRef.current?.(notification);
+    });
+
+    connection.on('ReceiveWorkspaceNotification', (notification: any) => {
+      onNotificationReceivedRef.current?.(notification);
+    });
+
+    let isMounted = true;
+
+    const startConnection = async () => {
+      try {
+        await connection.start();
+        if (!isMounted) return;
         setIsConnected(true);
 
-        // Send STOMP CONNECT frame
-        const connectFrame = 
-          "CONNECT\n" +
-          "accept-version:1.1,1.0\n" +
-          "heart-beat:10000,10000\n" +
-          "\n" +
-          "\u0000";
-        socket.send(connectFrame);
-      };
-
-      socket.onmessage = (event) => {
-        const message = event.data;
-        
-        // Parse simple STOMP frame
-        if (message.startsWith('CONNECTED')) {
-          console.log('STOMP session connected. Subscribing to workspace: ' + workspaceId);
-          // Send STOMP SUBSCRIBE frame
-          const subscribeFrame = 
-            "SUBSCRIBE\n" +
-            "id:sub-0\n" +
-            `destination:/topic/workspace/${workspaceId}/leads\n` +
-            "ack:auto\n" +
-            "\n" +
-            "\u0000";
-          socket.send(subscribeFrame);
-        } else if (message.startsWith('MESSAGE')) {
-          // Extract body from STOMP frame
-          // Stomp frames end with a null character \u0000 and body is after double newline
-          const bodyIndex = message.indexOf('\n\n');
-          if (bodyIndex !== -1) {
-            const body = message.substring(bodyIndex + 2, message.length - 1).trim();
-            try {
-              const lead: Lead = JSON.parse(body);
-              onLeadReceived(lead);
-            } catch (e) {
-              console.error('Error parsing lead JSON from WebSocket', e);
-            }
-          }
+        if (workspaceId) {
+          await connection.invoke('JoinWorkspaceGroup', workspaceId);
         }
-      };
-
-      socket.onclose = (event) => {
-        console.log('WebSocket closed. Reason: ', event.reason);
-        setIsConnected(false);
-        // Retry connection after 5 seconds
-        reconnectTimeoutRef.current = window.setTimeout(() => {
-          connect();
-        }, 5000);
-      };
-
-      socket.onerror = (error) => {
-        console.error('WebSocket error: ', error);
-        socket.close();
-      };
+        if (userId) {
+          await connection.invoke('JoinUserGroup', userId);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setIsConnected(false);
+        }
+      }
     };
 
-    connect();
+    connection.onreconnected(async () => {
+      if (!isMounted) return;
+      setIsConnected(true);
+      try {
+        if (workspaceId) {
+          await connection.invoke('JoinWorkspaceGroup', workspaceId);
+        }
+        if (userId) {
+          await connection.invoke('JoinUserGroup', userId);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
+    connection.onreconnecting(() => {
+      if (isMounted) setIsConnected(false);
+    });
+
+    connection.onclose(() => {
+      if (isMounted) setIsConnected(false);
+    });
+
+    startConnection();
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
+      isMounted = false;
+      if (connection.state === HubConnectionState.Connected) {
+        if (workspaceId) {
+          connection.invoke('LeaveWorkspaceGroup', workspaceId).catch(() => {});
+        }
+        if (userId) {
+          connection.invoke('LeaveUserGroup', userId).catch(() => {});
+        }
       }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
+      connection.stop().catch(() => {});
     };
-  }, [workspaceId, onLeadReceived]);
+  }, [workspaceId, userId]);
 
   return { isConnected };
 };

@@ -188,16 +188,10 @@ export default function UserDashboard() {
       {/* Top Welcome Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-theme-primary uppercase tracking-wider">Sales Executive Hub</span>
-            <span className="flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-              <Award size={10} /> Productivity Score: {kpis?.productivityScore || 94}%
-            </span>
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text mt-1">
+          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text">
             Welcome back, {user?.fullName}!
           </h1>
-          <p className="text-xs text-theme-text-muted mt-0.5">
+          <p className="text-xs text-theme-text-muted mt-1">
             Manage your pipeline, advance workflow steps, complete client follow-ups, and drive conversions.
           </p>
         </div>
@@ -284,29 +278,33 @@ export default function UserDashboard() {
         {/* 1. My Assigned Leads -> /my-work */}
         <Link
           to="/my-work"
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-theme-primary/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-blue-500/50 hover:shadow-lg transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Assigned Leads</span>
-            <UserCheck size={16} className="text-theme-primary transition-transform group-hover:scale-110" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-blue-500 transition-colors">Assigned Leads</span>
+            <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <UserCheck size={17} />
+            </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-theme-text">{assignedLeadsCount}</h3>
-          <span className="text-[9px] font-bold text-theme-primary flex items-center gap-1">
-            Active Contacts <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
+          <h3 className="text-2xl font-black text-theme-text">{assignedLeadsCount}</h3>
+          <span className="text-[10px] font-semibold text-blue-500 flex items-center gap-1">
+            Active in Pipeline <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
 
         {/* 2. My Pending Follow-Ups -> /followups */}
         <Link
           to="/followups"
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-cyan-500/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-amber-500/50 hover:shadow-lg transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-cyan-400 transition-colors">Pending Follow-ups</span>
-            <Clock size={16} className="text-cyan-400 transition-transform group-hover:scale-110" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-amber-500 transition-colors">Pending Follow-ups</span>
+            <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Clock size={17} />
+            </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-theme-text">{pendingFollowupsCount}</h3>
-          <span className="text-[9px] font-bold text-cyan-400 flex items-center gap-1">
+          <h3 className="text-2xl font-black text-theme-text">{pendingFollowupsCount}</h3>
+          <span className="text-[10px] font-semibold text-amber-500 flex items-center gap-1">
             Scheduled Reminders <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
@@ -314,14 +312,16 @@ export default function UserDashboard() {
         {/* 3. My Conversions -> /my-work?stage=Converted */}
         <Link
           to="/my-work?stage=Converted"
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-rose-500/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-emerald-500/50 hover:shadow-lg transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-rose-400 transition-colors">My Conversions</span>
-            <Flame size={16} className="text-rose-500 transition-transform group-hover:scale-110" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-emerald-500 transition-colors">My Conversions</span>
+            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Flame size={17} />
+            </div>
           </div>
-          <h3 className="text-2xl font-extrabold text-theme-text">{conversionsCount}</h3>
-          <span className="text-[9px] font-bold text-rose-500 flex items-center gap-1">
+          <h3 className="text-2xl font-black text-theme-text">{conversionsCount}</h3>
+          <span className="text-[10px] font-semibold text-emerald-500 flex items-center gap-1">
             {kpis?.conversionRate || 0}% Conversion Rate <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
@@ -329,15 +329,17 @@ export default function UserDashboard() {
         {/* 4. My Revenue Contribution -> /analytics */}
         <Link
           to="/analytics"
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-emerald-500/60 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer group block"
+          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-indigo-500/50 hover:shadow-lg transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-emerald-400 transition-colors">Revenue Contribution</span>
-            <IndianRupee size={16} className="text-emerald-400 transition-transform group-hover:scale-110" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-indigo-500 transition-colors">Revenue Contribution</span>
+            <div className="h-9 w-9 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <IndianRupee size={17} />
+            </div>
           </div>
-          <h3 className="text-lg font-extrabold text-emerald-400">{formatCurrency(personalRevenue)}</h3>
-          <span className="text-[9px] font-bold text-emerald-500 flex items-center gap-1">
-            Closed Deals <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
+          <h3 className="text-2xl font-black text-indigo-500 dark:text-indigo-400">{formatCurrency(personalRevenue)}</h3>
+          <span className="text-[10px] font-semibold text-indigo-500 flex items-center gap-1">
+            Closed Deals Value <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
 
@@ -346,10 +348,10 @@ export default function UserDashboard() {
 
       {/* Call Duration Tracking Productivity Metrics */}
       {isCardEnabled('call_metrics') && (
-        <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
+        <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-extrabold">
+              <span className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 font-bold">
                 <Phone size={16} />
               </span>
               <div>
@@ -362,14 +364,14 @@ export default function UserDashboard() {
 
             <div className="flex items-center gap-3">
               {callAnalytics?.activeCallSession && (
-                <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black animate-pulse flex items-center gap-1.5">
+                <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[10px] font-black animate-pulse flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
                   Active Call Running
                 </span>
               )}
               <button
                 onClick={() => setIsCallModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-bold transition-all shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 text-xs font-bold transition-all shadow-2xs"
               >
                 <Eye size={14} />
                 <span>View Call Details</span>
@@ -381,13 +383,13 @@ export default function UserDashboard() {
             <button
               type="button"
               onClick={() => setIsCallModalOpen(true)}
-              className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-rose-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+              className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-rose-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Today's Call Time</span>
+                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-rose-500 transition-colors">Today's Call Time</span>
                 <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="text-xl font-mono font-black text-rose-400">
+              <div className="text-xl font-mono font-black text-rose-500">
                 {callAnalytics?.todayCallTimeFormatted || '00:00:00'}
               </div>
               <span className="text-[9px] text-theme-text-muted block">Click to view contacts talked to</span>
@@ -396,13 +398,13 @@ export default function UserDashboard() {
             <button
               type="button"
               onClick={() => setIsCallModalOpen(true)}
-              className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-cyan-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+              className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-cyan-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Today's Calls</span>
+                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-cyan-500 transition-colors">Today's Calls</span>
                 <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="text-xl font-extrabold text-cyan-400">
+              <div className="text-xl font-mono font-black text-cyan-500">
                 {callAnalytics?.todayCallsCount || 0}
               </div>
               <span className="text-[9px] text-theme-text-muted block">Click to view session log</span>
@@ -411,13 +413,13 @@ export default function UserDashboard() {
             <button
               type="button"
               onClick={() => setIsCallModalOpen(true)}
-              className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-emerald-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+              className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-emerald-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Avg Duration</span>
+                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-emerald-500 transition-colors">Avg Duration</span>
                 <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="text-xl font-mono font-extrabold text-emerald-400">
+              <div className="text-xl font-mono font-black text-emerald-500">
                 {callAnalytics?.avgDurationFormatted || '00:00:00'}
               </div>
               <span className="text-[9px] text-theme-text-muted block">Average per session</span>
@@ -426,13 +428,13 @@ export default function UserDashboard() {
             <button
               type="button"
               onClick={() => setIsCallModalOpen(true)}
-              className="p-4 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-amber-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+              className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-amber-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-theme-text transition-colors">Longest Call</span>
+                <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-amber-500 transition-colors">Longest Call</span>
                 <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="text-xl font-mono font-extrabold text-amber-400">
+              <div className="text-xl font-mono font-black text-amber-500">
                 {callAnalytics?.longestCallFormatted || '00:00:00'}
               </div>
               <span className="text-[9px] text-theme-text-muted block">Peak session length</span>
@@ -450,37 +452,39 @@ export default function UserDashboard() {
 
       {/* Workflow Stage-wise Active Breakdown Grid */}
       {isCardEnabled('workflow_queue') && (
-        <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-md space-y-4">
+        <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text flex items-center gap-2">
-              <Briefcase size={16} className="text-theme-primary" /> Workflow Stage Active Containers
+              <Briefcase size={16} className="text-theme-primary" /> Workflow Stage Breakdown
             </h3>
             <span className="text-[10px] font-bold text-theme-text-muted">
-              Live Active Leads Across Workflow Stages
+              Active Pipeline Leads by Stage
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {[
-              { label: 'New Leads', count: getStageCount('New'), color: 'text-blue-400', bg: 'bg-blue-500/10', targetStage: 'New' },
-              { label: 'Interaction', count: getStageCount('Interaction'), color: 'text-purple-400', bg: 'bg-purple-500/10', targetStage: 'Interaction' },
-              { label: 'Proposal Sent', count: getStageCount('Proposal Sent'), color: 'text-cyan-400', bg: 'bg-cyan-500/10', targetStage: 'Proposal Sent' },
-              { label: 'Negotiation', count: getStageCount('Negotiation'), color: 'text-rose-400', bg: 'bg-rose-500/10', targetStage: 'Negotiation' },
-              { label: 'Converted', count: getStageCount('Converted'), color: 'text-emerald-400', bg: 'bg-emerald-500/10', targetStage: 'Converted' }
+              { label: 'New Leads', count: getStageCount('New'), dot: 'bg-blue-500', targetStage: 'New' },
+              { label: 'Interaction', count: getStageCount('Interaction'), dot: 'bg-purple-500', targetStage: 'Interaction' },
+              { label: 'Proposal Sent', count: getStageCount('Proposal Sent'), dot: 'bg-cyan-500', targetStage: 'Proposal Sent' },
+              { label: 'Negotiation', count: getStageCount('Negotiation'), dot: 'bg-amber-500', targetStage: 'Negotiation' },
+              { label: 'Converted', count: getStageCount('Converted'), dot: 'bg-emerald-500', targetStage: 'Converted' }
             ].map((item, i) => (
               <Link
                 key={i}
                 to={`/my-work?stage=${encodeURIComponent(item.targetStage)}`}
-                className="p-3.5 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/60 hover:border-theme-primary/40 hover:bg-theme-bg transition-all group block"
+                className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-theme-primary/40 hover:bg-theme-bg-alt transition-all group block"
               >
-                <span className="text-[10px] font-bold text-theme-text-muted block truncate group-hover:text-theme-text">
-                  {item.label}
-                </span>
-                <div className="flex items-center justify-between mt-2">
-                  <span className={`text-xl font-black ${item.color}`}>
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${item.dot}`} />
+                  <span className="text-[10px] font-bold text-theme-text-muted block truncate group-hover:text-theme-text">
+                    {item.label}
+                  </span>
+                </div>
+                <div className="mt-1.5">
+                  <span className="text-xl font-black text-theme-text">
                     {item.count}
                   </span>
-                  <span className={`w-2 h-2 rounded-full ${item.bg}`} />
                 </div>
               </Link>
             ))}
