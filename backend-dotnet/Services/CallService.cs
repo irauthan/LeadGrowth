@@ -147,7 +147,7 @@ public class CallService : ICallService
         return calls.Select(ConvertToDto).ToList();
     }
 
-    public async Task<CallAnalyticsDto> GetUserCallAnalyticsAsync(string email)
+    public async Task<CallAnalyticsDto> GetUserCallAnalyticsAsync(string email, string? period = null, string? startDate = null, string? endDate = null)
     {
         var userEmail = email.Trim().ToLower();
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
@@ -156,20 +156,29 @@ public class CallService : ICallService
             throw new KeyNotFoundException("User not found");
         }
 
-        var calls = await _context.CallHistories
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = (!string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase)) ||
+                         !string.IsNullOrWhiteSpace(startDate) ||
+                         !string.IsNullOrWhiteSpace(endDate);
+
+        var allCalls = await _context.CallHistories
             .Include(c => c.Lead)
             .Include(c => c.User)
             .Where(c => c.UserId == user.Id)
             .OrderByDescending(c => c.StartTime)
             .ToListAsync();
 
+        var filteredCalls = isFiltered
+            ? allCalls.Where(c => c.StartTime >= rangeStart && c.StartTime <= rangeEnd).ToList()
+            : allCalls;
+
         var activeCall = await GetActiveCallAsync(email);
-        var analytics = BuildAnalytics(calls);
+        var analytics = BuildAnalytics(filteredCalls, allCalls);
         analytics.ActiveCallSession = activeCall;
         return analytics;
     }
 
-    public async Task<CallAnalyticsDto> GetTeamCallAnalyticsAsync(string email)
+    public async Task<CallAnalyticsDto> GetTeamCallAnalyticsAsync(string email, string? period = null, string? startDate = null, string? endDate = null)
     {
         var userEmail = email.Trim().ToLower();
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
@@ -178,17 +187,26 @@ public class CallService : ICallService
             throw new KeyNotFoundException("User workspace not found");
         }
 
-        var calls = await _context.CallHistories
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = (!string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase)) ||
+                         !string.IsNullOrWhiteSpace(startDate) ||
+                         !string.IsNullOrWhiteSpace(endDate);
+
+        var allCalls = await _context.CallHistories
             .Include(c => c.Lead)
             .Include(c => c.User)
             .Where(c => c.WorkspaceId == user.WorkspaceId)
             .OrderByDescending(c => c.StartTime)
             .ToListAsync();
 
-        return BuildAnalytics(calls);
+        var filteredCalls = isFiltered
+            ? allCalls.Where(c => c.StartTime >= rangeStart && c.StartTime <= rangeEnd).ToList()
+            : allCalls;
+
+        return BuildAnalytics(filteredCalls, allCalls);
     }
 
-    public async Task<List<CallSessionDto>> GetCallReportsAsync(string email, long? userId, string? startDate, string? endDate)
+    public async Task<List<CallSessionDto>> GetCallReportsAsync(string email, long? userId, string? period = null, string? startDate = null, string? endDate = null)
     {
         var userEmail = email.Trim().ToLower();
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
@@ -207,22 +225,23 @@ public class CallService : ICallService
             query = query.Where(c => c.UserId == userId.Value);
         }
 
-        if (DateTime.TryParse(startDate, out var start))
-        {
-            query = query.Where(c => c.StartTime >= start);
-        }
+        var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
+        var isFiltered = (!string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase)) ||
+                         !string.IsNullOrWhiteSpace(startDate) ||
+                         !string.IsNullOrWhiteSpace(endDate);
 
-        if (DateTime.TryParse(endDate, out var end))
+        if (isFiltered)
         {
-            query = query.Where(c => c.StartTime <= end);
+            query = query.Where(c => c.StartTime >= rangeStart && c.StartTime <= rangeEnd);
         }
 
         var list = await query.OrderByDescending(c => c.StartTime).ToListAsync();
         return list.Select(ConvertToDto).ToList();
     }
 
-    private static CallAnalyticsDto BuildAnalytics(List<CallHistory> calls)
+    private static CallAnalyticsDto BuildAnalytics(List<CallHistory> calls, List<CallHistory>? allCalls = null)
     {
+        var sourceForToday = allCalls ?? calls;
         var totalCalls = calls.Count;
         var totalDuration = calls.Sum(c => c.DurationSeconds ?? 0);
         var completed = calls.Count(c => c.Status == "COMPLETED");
@@ -230,9 +249,9 @@ public class CallService : ICallService
         var avgDuration = totalCalls > 0 ? (double)totalDuration / totalCalls : 0.0;
 
         var today = DateTime.UtcNow.Date;
-        var todayCalls = calls.Where(c => c.StartTime.Date == today).ToList();
+        var todayCalls = sourceForToday.Where(c => c.StartTime.Date == today).ToList();
         var todayDuration = todayCalls.Sum(c => c.DurationSeconds ?? 0);
-        var longestCall = calls.Count > 0 ? calls.Max(c => c.DurationSeconds ?? 0) : 0;
+        var longestCall = calls.Count > 0 ? calls.Max(c => c.DurationSeconds ?? 0) : (sourceForToday.Count > 0 ? sourceForToday.Max(c => c.DurationSeconds ?? 0) : 0);
 
         return new CallAnalyticsDto
         {

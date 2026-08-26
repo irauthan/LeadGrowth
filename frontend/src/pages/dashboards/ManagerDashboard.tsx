@@ -49,10 +49,10 @@ export default function ManagerDashboard() {
       if (timeFilter.endDate) params.endDate = timeFilter.endDate;
 
       const [tasksRes, queueRes, membersRes, callsRes, workloadRes] = await Promise.all([
-        api.get('/api/tasks'),
-        api.get('/api/leads/queue').catch(() => ({ data: [] })),
+        api.get('/api/tasks', { params }),
+        api.get('/api/leads/queue', { params }).catch(() => ({ data: [] })),
         api.get('/api/users/assignable').catch(() => api.get('/api/users/members')),
-        api.get('/api/calls/team').catch(() => ({ data: null })),
+        api.get('/api/calls/team', { params }).catch(() => ({ data: null })),
         api.get('/api/assignments/workload-scores').catch(() => ({ data: [] }))
       ]);
 
@@ -528,6 +528,9 @@ export default function ManagerDashboard() {
         initialUserId={selectedUserFilter.userId}
         userNameFilter={selectedUserFilter.userName}
         title={selectedUserFilter.userName ? `Call History for ${selectedUserFilter.userName}` : 'Team Call Activity Audit Logs'}
+        period={timeFilter.period}
+        startDate={timeFilter.startDate}
+        endDate={timeFilter.endDate}
       />
 
     </div>

@@ -68,38 +68,38 @@ public class CallController : ControllerBase
     }
 
     [HttpGet("user")]
-    public async Task<ActionResult<CallAnalyticsDto>> GetUserCallAnalytics()
+    public async Task<ActionResult<CallAnalyticsDto>> GetUserCallAnalytics([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate)
     {
         var email = GetUserEmail();
-        var analytics = await _callService.GetUserCallAnalyticsAsync(email);
+        var analytics = await _callService.GetUserCallAnalyticsAsync(email, period, startDate, endDate);
         return Ok(analytics);
     }
 
     [HttpGet("team")]
-    public async Task<ActionResult<CallAnalyticsDto>> GetTeamCallAnalytics()
+    public async Task<ActionResult<CallAnalyticsDto>> GetTeamCallAnalytics([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate)
     {
         var email = GetUserEmail();
-        var analytics = await _callService.GetTeamCallAnalyticsAsync(email);
+        var analytics = await _callService.GetTeamCallAnalyticsAsync(email, period, startDate, endDate);
         return Ok(analytics);
     }
 
     [HttpGet("dashboard")]
-    public async Task<ActionResult<CallAnalyticsDto>> GetDashboardCallAnalytics()
+    public async Task<ActionResult<CallAnalyticsDto>> GetDashboardCallAnalytics([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate)
     {
-        return await GetUserCallAnalytics();
+        return await GetUserCallAnalytics(period, startDate, endDate);
     }
 
     [HttpGet("analytics")]
-    public async Task<ActionResult<CallAnalyticsDto>> GetAnalytics()
+    public async Task<ActionResult<CallAnalyticsDto>> GetAnalytics([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate)
     {
-        return await GetTeamCallAnalytics();
+        return await GetTeamCallAnalytics(period, startDate, endDate);
     }
 
     [HttpGet("reports")]
-    public async Task<ActionResult<List<CallSessionDto>>> GetCallReports([FromQuery] long? userId, [FromQuery] string? startDate, [FromQuery] string? endDate)
+    public async Task<ActionResult<List<CallSessionDto>>> GetCallReports([FromQuery] long? userId, [FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate)
     {
         var email = GetUserEmail();
-        var list = await _callService.GetCallReportsAsync(email, userId, startDate, endDate);
+        var list = await _callService.GetCallReportsAsync(email, userId, period, startDate, endDate);
         return Ok(list);
     }
 

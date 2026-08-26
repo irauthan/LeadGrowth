@@ -56,6 +56,7 @@ public class LeadQueueService : ILeadQueueService
             if (lead != null && lead.WorkspaceId == actor.WorkspaceId)
             {
                 lead.AssignedToId = targetUser.Id;
+                lead.ProgressPercentage = LeadService.CalculateProgressPercentage(lead.Status, true);
                 lead.AssignedTo = targetUser;
                 lead.QueueStatus = "ASSIGNED";
                 await _context.SaveChangesAsync();
@@ -108,6 +109,7 @@ public class LeadQueueService : ILeadQueueService
         if (bestAssignee != null)
         {
             lead.AssignedToId = bestAssignee.Id;
+            lead.ProgressPercentage = LeadService.CalculateProgressPercentage(lead.Status, true);
             lead.AssignedTo = bestAssignee;
             lead.QueueStatus = "ASSIGNED";
             await _context.SaveChangesAsync();

@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
-  TrendingUp, 
-  DollarSign, 
   Users, 
-  MousePointer, 
-  Eye, 
-  Target, 
-  Sparkles, 
-  Layers, 
   CheckCircle, 
   PauseCircle, 
   PlayCircle, 
@@ -17,14 +10,12 @@ import {
   Trash2, 
   Save, 
   Loader2, 
-  ArrowRight,
   Calendar,
   Search,
-  RefreshCw,
-  Award
+  RefreshCw
 } from 'lucide-react';
 import { campaignService } from '../services/campaignService';
-import type { Campaign, CampaignDetails, CampaignLead } from '../types';
+import type { CampaignDetails, CampaignLead } from '../types';
 import { formatCurrency, formatNumber } from '../utils';
 import { useAuthStore } from '../store/authStore';
 

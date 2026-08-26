@@ -17,19 +17,13 @@ import {
   Trash2, 
   Save, 
   Loader2, 
-  ArrowRight,
-  ExternalLink,
-  Percent,
   Calendar,
-  Share2,
-  Activity,
-  ArrowUpRight,
   BarChart3,
   Flame,
   Award
 } from 'lucide-react';
 import { campaignService } from '../services/campaignService';
-import type { Campaign, CampaignDetails, CampaignLead } from '../types';
+import type { CampaignDetails, CampaignLead } from '../types';
 import { formatCurrency, formatNumber } from '../utils';
 import { useAuthStore } from '../store/authStore';
 

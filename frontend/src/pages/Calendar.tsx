@@ -10,21 +10,16 @@ import {
   User as UserIcon, 
   CheckCircle, 
   Trash2, 
-  ExternalLink, 
   Loader2, 
   X,
   Search,
   Settings,
-  HelpCircle,
-  Menu,
   ChevronDown,
   Tag,
   AlertTriangle,
   Zap,
-  PanelLeft,
-  CalendarDays
+  PanelLeft
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 import CalendarSettingsModal, { type CalendarCategory } from '../components/CalendarSettingsModal';
 import SchedulePreviewSidePanel from '../components/SchedulePreviewSidePanel';

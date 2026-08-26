@@ -24,8 +24,10 @@ import {
   ShieldCheck,
   Briefcase,
   Calendar,
+  ChevronDown,
   X
 } from 'lucide-react';
+import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useLayoutStore } from '../store/layoutStore';
 
@@ -56,6 +58,15 @@ export default function Sidebar() {
     return `${baseMobile} lg:left-0 lg:right-auto lg:top-16 lg:bottom-0 lg:flex-col lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r lg:border-theme-border/60 z-40`;
   };
 
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    management: true,
+    settings: true
+  });
+
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   const generalMenu = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Workspace', icon: UserCheck, path: '/leads' },
@@ -65,17 +76,20 @@ export default function Sidebar() {
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
     { name: 'Notifications', icon: Bell, path: '/notifications-page' },
-    { name: 'Settings', icon: Settings, path: '/settings' },
     { name: 'Follow-ups', icon: Clock, path: '/followups' },
-    { name: 'Team Management', icon: Users, path: '/admin/users' },
     { name: 'Activity Logs', icon: History, path: '/activity-logs' },
     { name: 'SaaS Billing', icon: CreditCard, path: '/billing' },
   ];
 
-  const adminMenu = [
+  const managementMenu = [
     { name: 'Executive Work Monitor', icon: Activity, path: '/admin/work-monitor', adminOnly: false },
+    { name: 'Team Management', icon: Users, path: '/admin/users', adminOnly: false },
     { name: 'Workspace Management', icon: Building2, path: '/admin/workspace', adminOnly: true },
     { name: 'API Management', icon: Key, path: '/admin/api', adminOnly: true },
+  ];
+
+  const settingsMenu = [
+    { name: 'General Settings', icon: Settings, path: '/settings', adminOnly: false },
     { name: 'System Monitoring', icon: Activity, path: '/admin/system', adminOnly: true },
     { name: 'Security Center', icon: ShieldCheck, path: '/admin/security', adminOnly: true },
     { name: 'Audit Logs', icon: ShieldAlert, path: '/admin/audit-logs', adminOnly: true },
@@ -83,15 +97,31 @@ export default function Sidebar() {
 
   const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
   const restrictedPaths = isUserOnly ? ['/billing', '/users', '/admin/users', '/activity-logs'] : (!isAdmin ? ['/billing'] : []);
-  const visibleGeneralMenu = generalMenu
-    .filter(item => (enabledNavItems.includes(item.path) || (item.path === '/scheduler' && enabledNavItems.includes('/calendar'))) && !restrictedPaths.includes(item.path))
-    .sort((a, b) => {
+  
+  const filterMenuItems = (menu: any[]) => {
+    return menu.filter(item => {
+      // Check restricted paths
+      if (restrictedPaths.includes(item.path)) return false;
+      // Check adminOnly flag
+      if (item.adminOnly && !isAdmin) return false;
+      // Check if feature is enabled
+      const isSettingsOrGeneral = item.path === '/settings' || item.path === '/notifications-page';
+      return isSettingsOrGeneral || enabledNavItems.includes(item.path) || (item.path === '/scheduler' && enabledNavItems.includes('/calendar'));
+    }).sort((a, b) => {
       const indexA = enabledNavItems.indexOf(a.path);
       const indexB = enabledNavItems.indexOf(b.path);
       if (indexA !== -1 && indexB !== -1) return indexA - indexB;
       return 0;
     });
-  const visibleAdminMenu = adminMenu.filter(item => enabledNavItems.includes(item.path) && (isAdmin || (!item.adminOnly && isManager)));
+  };
+
+  const visibleGeneralMenu = filterMenuItems(generalMenu);
+  const visibleManagementMenu = filterMenuItems(managementMenu);
+  const visibleSettingsMenu = filterMenuItems(settingsMenu);
+
+  // For horizontal dock compatibility
+  const horizontalGeneralItems = [...visibleGeneralMenu, ...visibleSettingsMenu.filter(i => !i.adminOnly)];
+  const horizontalAdminItems = [...visibleManagementMenu, ...visibleSettingsMenu.filter(i => i.adminOnly)];
 
   const tooltipPositionClass = sidebarPosition === 'top' ? 'top-full pt-2' : 'bottom-full pb-2';
   const sideTooltipClass = sidebarPosition === 'right' ? 'right-full mr-2' : 'left-full ml-2';
@@ -153,7 +183,7 @@ export default function Sidebar() {
 
             {/* General Menu Items (Icons Only) */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              {visibleGeneralMenu.map((item) => {
+              {horizontalGeneralItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
                   <div key={item.name} className="relative group flex-shrink-0">
@@ -179,11 +209,11 @@ export default function Sidebar() {
             </div>
 
             {/* Admin Menu Items (Icons Only) */}
-            {isAdmin && visibleAdminMenu.length > 0 && (
+            {horizontalAdminItems.length > 0 && (
               <>
                 <div className="h-6 w-[1px] bg-theme-border/40 mx-1 flex-shrink-0" />
                 <div className="flex items-center gap-1 bg-amber-500/5 p-1 rounded-2xl border border-amber-500/10 flex-shrink-0">
-                  {visibleAdminMenu.map((item) => {
+                  {horizontalAdminItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
                       <div key={item.name} className="relative group flex-shrink-0">
@@ -337,51 +367,121 @@ export default function Sidebar() {
               })}
             </div>
 
-            {/* Admin and Management items */}
-            {(isAdmin || isManager) && visibleAdminMenu.length > 0 && (
+            {/* Management Section */}
+            {visibleManagementMenu.length > 0 && (
               <div className="space-y-1 pt-2 border-t border-theme-border/30">
-                {(!isCollapsed || isMobileOpen) && (
-                  <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Management</span>
+                {(!isCollapsed || isMobileOpen) ? (
+                  <button 
+                    onClick={() => toggleSection('management')}
+                    className="w-full flex items-center justify-between px-3 py-1 group"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-text transition-colors">Management</span>
+                    <ChevronDown size={14} className={`text-theme-text-muted transition-transform duration-200 ${openSections.management ? '' : '-rotate-90'}`} />
+                  </button>
+                ) : (
+                  <div className="h-4" />
                 )}
-                {visibleAdminMenu.map((item) => {
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <div key={item.name} className="relative group">
-                      <Link
-                        to={item.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
-                          isCollapsed && !isMobileOpen 
-                            ? 'h-10 w-10 mx-auto justify-center' 
-                            : 'px-3.5 py-2.5'
-                        } ${
-                          isActive
-                            ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
-                            : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
-                        }`}
-                      >
-                        <item.icon
-                          size={18}
-                          className={`flex-shrink-0 transition-transform group-hover:scale-110 ${
-                            isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
-                          }`}
-                        />
-                        {(!isCollapsed || isMobileOpen) && (
-                          <span className="truncate text-xs font-semibold">{item.name}</span>
-                        )}
-                      </Link>
-
-                      {/* Tooltip for Collapsed Mode */}
-                      {isCollapsed && !isMobileOpen && (
-                        <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none ${sideTooltipClass}`}>
-                          <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
-                            {item.name} (Admin)
-                          </span>
+                
+                {((openSections.management && (!isCollapsed || isMobileOpen)) || (isCollapsed && !isMobileOpen)) && (
+                  <div className="space-y-1">
+                    {visibleManagementMenu.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <div key={item.name} className="relative group">
+                          <Link
+                            to={item.path}
+                            onClick={() => setMobileOpen(false)}
+                            className={`relative flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
+                              isCollapsed && !isMobileOpen 
+                                ? 'h-10 w-10 mx-auto justify-center' 
+                                : 'px-3.5 py-2.5 ml-2'
+                            } ${
+                              isActive
+                                ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
+                                : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
+                            }`}
+                          >
+                            <item.icon
+                              size={18}
+                              className={`flex-shrink-0 transition-transform group-hover:scale-110 ${
+                                isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
+                              }`}
+                            />
+                            {(!isCollapsed || isMobileOpen) && (
+                              <span className="truncate text-xs font-semibold">{item.name}</span>
+                            )}
+                          </Link>
+                          {isCollapsed && !isMobileOpen && (
+                            <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none ${sideTooltipClass}`}>
+                              <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                                {item.name} {item.adminOnly ? '(Admin)' : ''}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Settings Section */}
+            {visibleSettingsMenu.length > 0 && (
+              <div className="space-y-1 pt-2 border-t border-theme-border/30 pb-4">
+                {(!isCollapsed || isMobileOpen) ? (
+                  <button 
+                    onClick={() => toggleSection('settings')}
+                    className="w-full flex items-center justify-between px-3 py-1 group"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-text transition-colors">Settings</span>
+                    <ChevronDown size={14} className={`text-theme-text-muted transition-transform duration-200 ${openSections.settings ? '' : '-rotate-90'}`} />
+                  </button>
+                ) : (
+                  <div className="h-4" />
+                )}
+                
+                {((openSections.settings && (!isCollapsed || isMobileOpen)) || (isCollapsed && !isMobileOpen)) && (
+                  <div className="space-y-1">
+                    {visibleSettingsMenu.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <div key={item.name} className="relative group">
+                          <Link
+                            to={item.path}
+                            onClick={() => setMobileOpen(false)}
+                            className={`relative flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
+                              isCollapsed && !isMobileOpen 
+                                ? 'h-10 w-10 mx-auto justify-center' 
+                                : 'px-3.5 py-2.5 ml-2'
+                            } ${
+                              isActive
+                                ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
+                                : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
+                            }`}
+                          >
+                            <item.icon
+                              size={18}
+                              className={`flex-shrink-0 transition-transform group-hover:scale-110 ${
+                                isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
+                              }`}
+                            />
+                            {(!isCollapsed || isMobileOpen) && (
+                              <span className="truncate text-xs font-semibold">{item.name}</span>
+                            )}
+                          </Link>
+                          {isCollapsed && !isMobileOpen && (
+                            <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none ${sideTooltipClass}`}>
+                              <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                                {item.name} {item.adminOnly ? '(Admin)' : ''}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -113,8 +113,16 @@ public class ProductivityService : IProductivityService
             avgResponseTime = Math.Max(1.0, 4.0 - (0.1 * (completedTasks + completedLeads)));
         }
 
+        int leadProgressSum = 0;
+        if (totalLeads > 0)
+        {
+            leadProgressSum = await _context.Leads
+                .Where(l => l.AssignedToId == u.Id && allLeadStatuses.Contains(l.Status))
+                .SumAsync(l => l.ProgressPercentage ?? 0);
+        }
+
         double taskScore = totalTasks > 0 ? ((double)completedTasks / totalTasks) * 100 : 0.0;
-        double leadScore = totalLeads > 0 ? ((double)completedLeads / totalLeads) * 100 : 0.0;
+        double leadScore = totalLeads > 0 ? (double)leadProgressSum / totalLeads : 0.0;
         double conversionScore = conversionRate * 100;
 
         double score = 0.0;

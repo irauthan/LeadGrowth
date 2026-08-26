@@ -24,19 +24,46 @@ interface CallDetailsModalProps {
   initialUserId?: number;
   userNameFilter?: string;
   title?: string;
+  initialDateFilter?: 'ALL' | 'TODAY' | '7DAYS' | '30DAYS';
+  period?: string;
+  startDate?: string;
+  endDate?: string;
 }
+
+const formatLocalDate = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 export default function CallDetailsModal({
   isOpen,
   onClose,
   initialUserId,
   userNameFilter,
-  title = 'Call Activity Audit Logs & Contact History'
+  title = 'Call Activity Audit Logs & Contact History',
+  initialDateFilter,
+  period,
+  startDate: propStartDate,
+  endDate: propEndDate
 }: CallDetailsModalProps) {
+  const getInitialFilter = (): 'ALL' | 'TODAY' | '7DAYS' | '30DAYS' => {
+    if (initialDateFilter) return initialDateFilter;
+    if (period === 'today' || period === 'daily') return 'TODAY';
+    if (period === 'weekly') return '7DAYS';
+    if (period === 'monthly') return '30DAYS';
+    return 'ALL';
+  };
+
   const [calls, setCalls] = useState<CallSession[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | '7DAYS' | '30DAYS'>('ALL');
+  const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | '7DAYS' | '30DAYS'>(getInitialFilter());
+
+  useEffect(() => {
+    if (isOpen) {
+      setDateFilter(getInitialFilter());
+    }
+  }, [isOpen, initialDateFilter, period]);
 
   useEffect(() => {
     if (isOpen) {
@@ -52,20 +79,31 @@ export default function CallDetailsModal({
       const now = new Date();
 
       if (dateFilter === 'TODAY') {
-        startDate = now.toISOString().split('T')[0];
-        endDate = now.toISOString().split('T')[0];
+        startDate = formatLocalDate(now);
+        endDate = formatLocalDate(now);
       } else if (dateFilter === '7DAYS') {
-        const past = new Date(now.setDate(now.getDate() - 7));
-        startDate = past.toISOString().split('T')[0];
+        const past = new Date();
+        past.setDate(past.getDate() - 7);
+        startDate = formatLocalDate(past);
+        endDate = formatLocalDate(now);
       } else if (dateFilter === '30DAYS') {
-        const past = new Date(now.setDate(now.getDate() - 30));
-        startDate = past.toISOString().split('T')[0];
+        const past = new Date();
+        past.setDate(past.getDate() - 30);
+        startDate = formatLocalDate(past);
+        endDate = formatLocalDate(now);
+      } else if (propStartDate && propEndDate) {
+        startDate = propStartDate;
+        endDate = propEndDate;
       }
 
       const params: Record<string, any> = {};
       if (initialUserId) params.userId = initialUserId;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
+      if (dateFilter === 'TODAY') params.period = 'today';
+      else if (dateFilter === '7DAYS') params.period = 'weekly';
+      else if (dateFilter === '30DAYS') params.period = 'monthly';
+      else params.period = 'all';
 
       const res = await api.get('/api/calls/reports', { params });
       setCalls(res.data || []);

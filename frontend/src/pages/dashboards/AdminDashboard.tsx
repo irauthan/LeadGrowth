@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
-import type { DashboardKpis as KpiType, User as MemberType, Lead, Campaign } from '../../types';
+import type { DashboardKpis as KpiType, User as MemberType, Campaign } from '../../types';
 import { formatCurrency, formatNumber } from '../../utils';
 import CallDetailsModal from '../../components/CallDetailsModal';
 import WorkDetailsPanel from '../../components/WorkDetailsPanel';
 import { 
   IndianRupee, 
   TrendingUp, 
-  TrendingDown,
+  TrendingDown, 
   Users, 
   Shield, 
-  Clock, 
-  ExternalLink,
+  ExternalLink, 
   RefreshCw, 
   Zap, 
   PhoneCall, 
@@ -23,11 +22,11 @@ import {
   Coffee, 
   Activity, 
   Sparkles, 
-  ArrowRight,
-  Globe,
-  PlusCircle,
-  Layers,
-  PieChart as PieIcon
+  ArrowRight, 
+  Globe, 
+  PlusCircle, 
+  Layers, 
+  PieChart as PieIcon 
 } from 'lucide-react';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
@@ -39,10 +38,17 @@ const defaultKpis: KpiType = {
   cpc: 0,
   ctr: 0,
   totalLeads: 0,
+  totalClicks: 0,
+  totalImpressions: 0,
   totalConversions: 0,
   conversionRate: 0,
+  recentLeads: [],
+  platformLeadsShare: [],
+  platformRevenueShare: [],
   trends: [],
-  funnel: {}
+  funnel: {},
+  teamActivities: [],
+  workspaceStats: []
 };
 
 export default function AdminDashboard() {
@@ -50,13 +56,13 @@ export default function AdminDashboard() {
   const [data, setData] = useState<KpiType>(defaultKpis);
   const [teamCalls, setTeamCalls] = useState<any>(null);
   const [members, setMembers] = useState<MemberType[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignFilter, setCampaignFilter] = useState<'ALL' | 'PROFIT' | 'BLEEDING' | 'ACTIVE'>('ALL');
   
   // Modals state
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
-  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
+  const [selectedLeadId] = useState<number | null>(null);
   const [isLeadPanelOpen, setIsLeadPanelOpen] = useState(false);
   const [selectedAvailabilityFilter, setSelectedAvailabilityFilter] = useState<'AVAILABLE' | 'BUSY' | 'ON_BREAK' | 'OFFLINE' | 'CAPACITY' | null>(null);
 
@@ -77,8 +83,8 @@ export default function AdminDashboard() {
       const [dashRes, membersRes, leadsRes, callsRes, campaignsRes] = await Promise.allSettled([
         api.get('/api/dashboard', { params }),
         api.get('/api/users/members'),
-        api.get('/api/leads'),
-        api.get('/api/calls/team'),
+        api.get('/api/leads', { params }),
+        api.get('/api/calls/team', { params }),
         api.get('/api/campaigns', { params })
       ]);
 
@@ -102,11 +108,6 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleOpenLead = (leadId: number) => {
-    setSelectedLeadId(leadId);
-    setIsLeadPanelOpen(true);
   };
 
   if (loading && !data.totalRevenue && !data.totalLeads && members.length === 0) {
@@ -505,7 +506,7 @@ export default function AdminDashboard() {
                           </td>
 
                           <td className="py-3 px-3 text-theme-text font-medium">
-                            {member.designation || (member.roles && member.roles.length > 0 ? (typeof member.roles[0] === 'string' ? member.roles[0] : member.roles[0]?.name) : 'Sales Executive')}
+                            {member.designation || (member.roles && member.roles.length > 0 ? (typeof member.roles[0] === 'string' ? member.roles[0].replace('ROLE_', '') : (member.roles[0] as any)?.name?.replace('ROLE_', '') || 'Sales Executive') : 'Sales Executive')}
                           </td>
 
                           <td className="py-3 px-3">
@@ -867,6 +868,9 @@ export default function AdminDashboard() {
         isOpen={isCallModalOpen}
         onClose={() => setIsCallModalOpen(false)}
         title="Workspace Call Activity & Contact Details"
+        period={timeFilter.period}
+        startDate={timeFilter.startDate}
+        endDate={timeFilter.endDate}
       />
 
       {/* Slide-over Work Details Panel for Lead Actions */}
@@ -875,6 +879,9 @@ export default function AdminDashboard() {
         isOpen={isLeadPanelOpen}
         onClose={() => setIsLeadPanelOpen(false)}
         onLeadUpdated={fetchAdminData}
+        period={timeFilter.period}
+        startDate={timeFilter.startDate}
+        endDate={timeFilter.endDate}
       />
 
     </div>

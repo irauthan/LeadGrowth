@@ -6,7 +6,6 @@ import {
   UserCheck, 
   Phone, 
   Mail, 
-  Award, 
   Sparkles, 
   RefreshCw, 
   Flame,
@@ -72,7 +71,7 @@ export default function UserDashboard() {
         api.get('/api/followups', { params }).catch(() => ({ data: [] })),
         api.get('/api/leads/pending-assigned').catch(() => ({ data: [] })),
         api.get('/api/leads/workflow-pending-counts').catch(() => ({ data: {} })),
-        api.get('/api/calls/user').catch(() => ({ data: null }))
+        api.get('/api/calls/user', { params }).catch(() => ({ data: null }))
       ]);
 
       const rawPending = pendingRes.data || [];
@@ -274,7 +273,7 @@ export default function UserDashboard() {
         
         {/* 1. My Assigned Leads -> /my-work */}
         <Link
-          to="/my-work"
+          to={`/my-work?period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`}
           className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-blue-500/50 hover:shadow-lg transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
@@ -308,7 +307,7 @@ export default function UserDashboard() {
 
         {/* 3. My Conversions -> /my-work?stage=Converted */}
         <Link
-          to="/my-work?stage=Converted"
+          to={`/my-work?stage=Converted&period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`}
           className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-emerald-500/50 hover:shadow-lg transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
@@ -445,6 +444,9 @@ export default function UserDashboard() {
         isOpen={isCallModalOpen}
         onClose={() => setIsCallModalOpen(false)}
         title="Your Call Activity & Contact Details"
+        period={timeFilter.period}
+        startDate={timeFilter.startDate}
+        endDate={timeFilter.endDate}
       />
 
       {/* Workflow Stage-wise Active Breakdown Grid */}
@@ -469,7 +471,7 @@ export default function UserDashboard() {
             ].map((item, i) => (
               <Link
                 key={i}
-                to={`/my-work?stage=${encodeURIComponent(item.targetStage)}`}
+                to={`/my-work?stage=${encodeURIComponent(item.targetStage)}&period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`}
                 className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-theme-primary/40 hover:bg-theme-bg-alt transition-all group block"
               >
                 <div className="flex items-center gap-1.5">
@@ -500,7 +502,7 @@ export default function UserDashboard() {
               <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
                 <UserCheck size={16} className="text-theme-primary" /> Active Pipeline Contacts
               </h3>
-              <Link to="/my-work" className="text-xs font-bold text-theme-primary hover:underline flex items-center gap-1">
+              <Link to={`/my-work?period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`} className="text-xs font-bold text-theme-primary hover:underline flex items-center gap-1">
                 View My Workspace <ChevronRight size={14} />
               </Link>
             </div>
@@ -521,7 +523,7 @@ export default function UserDashboard() {
                     <tr key={lead.id} className="hover:bg-theme-bg-alt/40 transition-colors">
                       <td className="p-3 font-bold text-theme-text">
                         <Link 
-                          to={`/my-work?leadId=${lead.id}`}
+                          to={`/my-work?leadId=${lead.id}&period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`}
                           className="hover:text-theme-primary hover:underline transition-colors flex items-center gap-1.5 group/link"
                         >
                           <span>{lead.name}</span>

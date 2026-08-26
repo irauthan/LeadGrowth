@@ -11,7 +11,6 @@ import {
   Loader2, 
   LayoutGrid, 
   Table as TableIcon,
-  Eye, 
   PauseCircle,
   PlayCircle,
   Layers,

@@ -309,18 +309,11 @@ export default function Navbar() {
           {/* Subtle Vertical Divider */}
           <div className="h-5 w-[1px] bg-theme-border/60 mx-0.5 sm:mx-1" />
 
-          {/* Page Title & Breadcrumbs */}
-          <div className="flex flex-col">
-            <div className="hidden md:flex items-center gap-1 text-[11px] font-semibold text-theme-text-muted">
-              <span>Home</span>
-              {getBreadcrumbs().map((b) => (
-                <span key={b.path} className="flex items-center gap-1">
-                  <span className="text-[9px] opacity-60">/</span>
-                  <Link to={b.path} className="hover:text-theme-primary transition-colors">{b.label}</Link>
-                </span>
-              ))}
-            </div>
-            <h1 className="text-xs sm:text-sm md:text-base font-bold text-theme-text leading-tight truncate">{getPageTitle()}</h1>
+          {/* Page Title */}
+          <div className="flex items-center">
+            <h1 className="text-sm sm:text-base md:text-lg font-extrabold text-theme-text tracking-tight truncate">
+              {getPageTitle()}
+            </h1>
           </div>
         </div>
 

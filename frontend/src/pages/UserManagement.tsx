@@ -107,8 +107,8 @@ export default function UserManagement() {
           lastActiveAt: u.lastActiveAt ? u.lastActiveAt.split('T')[0] : 'N/A',
           profileImage: u.profileImage || '',
           availabilityStatus: u.availabilityStatus || 'OFFLINE',
-          productivityScore: prod?.productivityScore || 0,
-          performanceCategory: prod?.performanceCategory || 'Average Performer'
+          productivityScore: prod?.score || 0,
+          performanceCategory: prod?.category || 'Average Performer'
         };
       });
 

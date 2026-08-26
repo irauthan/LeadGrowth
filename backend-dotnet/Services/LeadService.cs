@@ -117,7 +117,7 @@ public class LeadService : ILeadService
             Priority = dto.Priority ?? "MEDIUM",
             Company = dto.Company,
             Location = dto.Location,
-            ProgressPercentage = 10,
+            ProgressPercentage = assignedTo != null ? 10 : 0,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -239,7 +239,7 @@ public class LeadService : ILeadService
 
         var oldStatus = lead.Status ?? "New Lead";
         lead.Status = status;
-        lead.ProgressPercentage = CalculateProgressPercentage(status);
+        lead.ProgressPercentage = CalculateProgressPercentage(status, lead.AssignedToId.HasValue);
 
         if (("Converted".Equals(status, StringComparison.OrdinalIgnoreCase) || "Closed Won".Equals(status, StringComparison.OrdinalIgnoreCase)) && lead.Campaign != null)
         {
@@ -309,6 +309,7 @@ public class LeadService : ILeadService
 
         var oldOwner = lead.AssignedTo;
         lead.AssignedToId = assignTarget.Id;
+        lead.ProgressPercentage = CalculateProgressPercentage(lead.Status, true);
         lead.AssignedById = user.Id;
         lead.AssignedDate = DateTime.UtcNow;
         lead.QueueStatus = assignTarget.Id == user.Id ? "IN_PIPELINE" : "ASSIGNED";
@@ -470,6 +471,7 @@ public class LeadService : ILeadService
 
                 if (availableCandidates.Count == 0)
                 {
+<<<<<<< Updated upstream
                     availableCandidates = pool;
                 }
 
@@ -515,6 +517,13 @@ public class LeadService : ILeadService
                         .Where(f => f.LeadId == lead.Id && f.Status != "COMPLETED" && f.Status != "CANCELLED")
                         .ToListAsync();
                     foreach (var f in activeFollowups)
+=======
+                    lead.AssignedToId = assignTarget.Id;
+                    lead.ProgressPercentage = CalculateProgressPercentage(lead.Status, true);
+                    lead.AssignedDate = DateTime.UtcNow;
+                    lead.QueueStatus = "ASSIGNED";
+                    if (assignTarget.WorkspaceId.HasValue)
+>>>>>>> Stashed changes
                     {
                         f.AssignedToId = assignTarget.Id;
                     }
@@ -697,6 +706,7 @@ public class LeadService : ILeadService
         if (lead.AssignedToId == null)
         {
             lead.AssignedToId = user.Id;
+            lead.ProgressPercentage = CalculateProgressPercentage(lead.Status, true);
             lead.AssignedTo = user;
         }
 
@@ -1498,8 +1508,9 @@ public class LeadService : ILeadService
         if (targetUser == null) return;
     }
 
-    private static int CalculateProgressPercentage(string? status)
+    public static int CalculateProgressPercentage(string? status, bool isAssigned = true)
     {
+        if (!isAssigned) return 0;
         if (string.IsNullOrWhiteSpace(status)) return 10;
         return status.Trim().ToLower() switch
         {

@@ -82,10 +82,14 @@ interface WorkDetailsPanelProps {
   leadId: number | null;
   isOpen: boolean;
   onClose: () => void;
-  onLeadUpdated: () => void;
+  onLeadUpdated?: () => void;
+  onUpdate?: () => void;
   inline?: boolean;
   isMaximized?: boolean;
   onToggleMaximize?: () => void;
+  period?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export default function WorkDetailsPanel({ 
@@ -93,10 +97,65 @@ export default function WorkDetailsPanel({
   isOpen, 
   onClose, 
   onLeadUpdated,
+  onUpdate,
   inline = false,
   isMaximized,
-  onToggleMaximize
+  onToggleMaximize,
+  period,
+  startDate,
+  endDate
 }: WorkDetailsPanelProps) {
+  const triggerUpdate = () => {
+    onLeadUpdated?.();
+    onUpdate?.();
+  };
+
+  const getInitialHistoryFilter = (): 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' => {
+    if (period === 'today' || period === 'daily') return 'TODAY';
+    if (period === 'weekly' || period === '7days') return 'WEEK';
+    if (period === 'monthly' || period === '30days') return 'MONTH';
+    return 'ALL';
+  };
+
+  const [historyDateFilter, setHistoryDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>(getInitialHistoryFilter());
+
+  useEffect(() => {
+    if (isOpen) {
+      setHistoryDateFilter(getInitialHistoryFilter());
+    }
+  }, [isOpen, period]);
+
+  const isWithinDateFilter = (dateVal?: string | Date | null) => {
+    if (!dateVal) return true;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return true;
+    const now = new Date();
+    
+    if (historyDateFilter === 'TODAY') {
+      return d.getFullYear() === now.getFullYear() &&
+             d.getMonth() === now.getMonth() &&
+             d.getDate() === now.getDate();
+    }
+    if (historyDateFilter === 'WEEK') {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - 7);
+      weekStart.setHours(0, 0, 0, 0);
+      return d >= weekStart && d <= now;
+    }
+    if (historyDateFilter === 'MONTH') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      return d >= monthStart && d <= now;
+    }
+    if (startDate && endDate) {
+      const s = new Date(startDate);
+      const e = new Date(endDate);
+      e.setHours(23, 59, 59, 999);
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+        return d >= s && d <= e;
+      }
+    }
+    return true;
+  };
   const [internalMaximized, setInternalMaximized] = useState(false);
   const maximized = isMaximized !== undefined ? isMaximized : internalMaximized;
   const toggleMaximize = onToggleMaximize || (() => setInternalMaximized(!internalMaximized));
@@ -204,7 +263,7 @@ export default function WorkDetailsPanel({
       }
       setTimeout(() => setAssignSuccessMsg(''), 4000);
       fetchLeadDetails();
-      onLeadUpdated();
+      triggerUpdate();
     } catch (err: any) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to assign lead.');
@@ -221,7 +280,7 @@ export default function WorkDetailsPanel({
       setAssignSuccessMsg('Lead successfully auto-assigned via Smart AI Hybrid Engine!');
       setTimeout(() => setAssignSuccessMsg(''), 4000);
       fetchLeadDetails();
-      onLeadUpdated();
+      triggerUpdate();
     } catch (err: any) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to auto-assign lead.');
@@ -308,7 +367,7 @@ export default function WorkDetailsPanel({
       await api.post(`/api/leads/${leadId}/workflow-steps/${addModalStepKey}/activities`, payload);
       setAddModalStepKey(null);
       fetchLeadDetails();
-      onLeadUpdated();
+      triggerUpdate();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to record activity log');
     } finally {
@@ -335,7 +394,7 @@ export default function WorkDetailsPanel({
       await api.post(`/api/leads/${leadId}/workflow-steps/${completeModalStepKey}/complete`, payload);
       setCompleteModalStepKey(null);
       fetchLeadDetails();
-      onLeadUpdated();
+      triggerUpdate();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to complete workflow step');
     } finally {
@@ -367,7 +426,7 @@ export default function WorkDetailsPanel({
       });
       setAutoSaveStatus('Proposal Details Saved');
       fetchLeadDetails();
-      onLeadUpdated();
+      triggerUpdate();
     } catch (e) {
       alert('Failed to save proposal');
     } finally {
@@ -422,7 +481,7 @@ export default function WorkDetailsPanel({
       setFollowupDate('');
       setFollowupNotes('');
       fetchLeadDetails();
-      onLeadUpdated();
+      triggerUpdate();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to schedule follow-up');
     } finally {
@@ -437,7 +496,7 @@ export default function WorkDetailsPanel({
       await followUpService.complete(leadActiveFollowup.id, 'Follow-up successfully completed.');
       setLeadActiveFollowup(null);
       fetchLeadDetails();
-      onLeadUpdated();
+      triggerUpdate();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to complete follow-up');
     } finally {
@@ -452,7 +511,7 @@ export default function WorkDetailsPanel({
       await followUpService.cancel(leadActiveFollowup.id);
       setLeadActiveFollowup(null);
       fetchLeadDetails();
-      onLeadUpdated();
+      triggerUpdate();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to cancel follow-up');
     }
@@ -522,7 +581,7 @@ export default function WorkDetailsPanel({
                   try {
                     await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
                     fetchLeadDetails();
-                    onLeadUpdated();
+                    triggerUpdate();
                   } catch (err) {
                     console.error('Failed to update stage', err);
                   }
@@ -620,7 +679,7 @@ export default function WorkDetailsPanel({
                   assignedToId={lead.assignedToId}
                   onCallEnded={() => {
                     fetchLeadDetails();
-                    onLeadUpdated();
+                    triggerUpdate();
                   }}
                 />
               )}
@@ -810,7 +869,7 @@ export default function WorkDetailsPanel({
                                 try {
                                   await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
                                   fetchLeadDetails();
-                                  onLeadUpdated();
+                                  triggerUpdate();
                                 } catch (err) {
                                   console.error(err);
                                 }
@@ -1245,6 +1304,12 @@ export default function WorkDetailsPanel({
                         </h3>
 
                         {/* Slot Conflict Banner */}
+                        {checkingConflict && (
+                          <div className="p-2.5 rounded-xl bg-theme-primary/10 border border-theme-primary/20 text-theme-primary text-xs flex items-center gap-2">
+                            <RefreshCw size={12} className="animate-spin" />
+                            <span>Checking slot availability...</span>
+                          </div>
+                        )}
                         {followupConflict?.hasConflict && (
                           <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs space-y-1">
                             <div className="flex items-center gap-1.5 font-extrabold">
@@ -1352,35 +1417,76 @@ export default function WorkDetailsPanel({
               {/* TAB 4: CLICKABLE CLIENT INTERACTION HISTORY TIMELINE */}
               {activeTab === 'timeline' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
                       <History size={16} className="text-theme-primary" /> Complete Audit Trail & Interactions
                     </h3>
 
-                    {/* Sub-tab toggle */}
-                    <div className="flex items-center gap-1 p-1 bg-theme-card border border-theme-border rounded-xl text-[10px]">
-                      <button
-                        onClick={() => setHistorySubTab('all')}
-                        className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                          historySubTab === 'all'
-                            ? 'bg-theme-primary text-white'
-                            : 'text-theme-text-muted hover:text-theme-text'
-                        }`}
-                      >
-                        All History ({timeline.length})
-                      </button>
-                      <button
-                        onClick={() => setHistorySubTab('attempts')}
-                        className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                          historySubTab === 'attempts'
-                            ? 'bg-theme-primary text-white'
-                            : 'text-theme-text-muted hover:text-theme-text'
-                        }`}
-                      >
-                        Call Attempts ({activityLogsHistory.length})
-                      </button>
+                    {/* Date filter & Sub-tab controls */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Date Filter Tabs */}
+                      <div className="flex items-center gap-1 p-1 bg-theme-bg-alt rounded-xl border border-theme-border text-[10px] font-bold">
+                        {(
+                          [
+                            { id: 'ALL', label: 'All Time' },
+                            { id: 'TODAY', label: "Today" },
+                            { id: 'WEEK', label: 'This Week' },
+                            { id: 'MONTH', label: 'This Month' }
+                          ] as const
+                        ).map((f) => (
+                          <button
+                            key={f.id}
+                            onClick={() => setHistoryDateFilter(f.id)}
+                            className={`px-2 py-1 rounded-lg transition-all ${
+                              historyDateFilter === f.id
+                                ? 'bg-theme-primary text-white shadow-xs'
+                                : 'text-theme-text-muted hover:text-theme-text'
+                            }`}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Sub-tab toggle */}
+                      <div className="flex items-center gap-1 p-1 bg-theme-card border border-theme-border rounded-xl text-[10px]">
+                        <button
+                          onClick={() => setHistorySubTab('all')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                            historySubTab === 'all'
+                              ? 'bg-theme-primary text-white'
+                              : 'text-theme-text-muted hover:text-theme-text'
+                          }`}
+                        >
+                          All History ({timeline.filter((item: any) => isWithinDateFilter(item.timestamp || item.createdAt || item.date)).length})
+                        </button>
+                        <button
+                          onClick={() => setHistorySubTab('attempts')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                            historySubTab === 'attempts'
+                              ? 'bg-theme-primary text-white'
+                              : 'text-theme-text-muted hover:text-theme-text'
+                          }`}
+                        >
+                          Call Attempts ({activityLogsHistory.filter((log: SalesActivityLog) => isWithinDateFilter(log.createdAt)).length})
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  {historyDateFilter !== 'ALL' && (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-theme-primary/10 border border-theme-primary/20 text-xs text-theme-primary font-bold">
+                      <span>
+                        Filtering interaction history for: <strong className="uppercase">{historyDateFilter === 'TODAY' ? "Today" : historyDateFilter === 'WEEK' ? "This Week" : "This Month"}</strong>
+                      </span>
+                      <button
+                        onClick={() => setHistoryDateFilter('ALL')}
+                        className="text-[11px] underline hover:text-theme-primary-hover cursor-pointer"
+                      >
+                        Show All History
+                      </button>
+                    </div>
+                  )}
 
                   <p className="text-[10px] text-theme-text-muted flex items-center gap-1.5">
                     <Lightbulb size={13} className="text-amber-400 flex-shrink-0" />
@@ -1391,99 +1497,125 @@ export default function WorkDetailsPanel({
                   {lead && <CallHistoryLog leadId={lead.id} />}
 
                   {/* Sub-tab 1: All System Audit & Multi-Activity Timeline */}
-                  {historySubTab === 'all' && (
-                    <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-theme-border">
-                      {timeline.map((item: any) => (
-                        <div
-                          key={item.id}
-                          onClick={() => setSelectedInteractionDetail({ ...item, typeName: item.activityType || 'Activity Event' })}
-                          className="relative group cursor-pointer"
-                        >
-                          <div className="absolute -left-[22px] top-1.5 w-3.5 h-3.5 rounded-full bg-theme-primary border-2 border-theme-bg group-hover:scale-125 transition-transform" />
-                          <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all space-y-2">
-                            <div className="flex items-center justify-between text-xs font-bold text-theme-text flex-wrap gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-theme-primary/10 border border-theme-primary/20 text-theme-primary text-[10px] font-extrabold uppercase">
-                                  {item.activityType || 'EVENT'}
-                                </span>
-                                <span className="text-theme-primary font-extrabold group-hover:underline flex items-center gap-1">
-                                  {item.action} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2 text-[10px] text-theme-text-muted">
-                                {item.duration && (
-                                  <span className="px-2 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border font-bold text-amber-400 flex items-center gap-1">
-                                    <Timer size={11} className="text-amber-400" />
-                                    <span>{item.duration}</span>
+                  {historySubTab === 'all' && (() => {
+                    const filteredTimeline = timeline.filter((item: any) => isWithinDateFilter(item.timestamp || item.createdAt || item.date));
+                    return (
+                      <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-theme-border">
+                        {filteredTimeline.map((item: any) => (
+                          <div
+                            key={item.id}
+                            onClick={() => setSelectedInteractionDetail({ ...item, typeName: item.activityType || 'Activity Event' })}
+                            className="relative group cursor-pointer"
+                          >
+                            <div className="absolute -left-[22px] top-1.5 w-3.5 h-3.5 rounded-full bg-theme-primary border-2 border-theme-bg group-hover:scale-125 transition-transform" />
+                            <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all space-y-2">
+                              <div className="flex items-center justify-between text-xs font-bold text-theme-text flex-wrap gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-0.5 rounded-md bg-theme-primary/10 border border-theme-primary/20 text-theme-primary text-[10px] font-extrabold uppercase">
+                                    {item.activityType || 'EVENT'}
                                   </span>
-                                )}
-                                <span className="font-semibold">{item.date || new Date(item.timestamp).toLocaleDateString()} at {item.time || new Date(item.timestamp).toLocaleTimeString()}</span>
+                                  <span className="text-theme-primary font-extrabold group-hover:underline flex items-center gap-1">
+                                    {item.action} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 text-[10px] text-theme-text-muted">
+                                  {item.duration && (
+                                    <span className="px-2 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border font-bold text-amber-400 flex items-center gap-1">
+                                      <Timer size={11} className="text-amber-400" />
+                                      <span>{item.duration}</span>
+                                    </span>
+                                  )}
+                                  <span className="font-semibold">{item.date || new Date(item.timestamp).toLocaleDateString()} at {item.time || new Date(item.timestamp).toLocaleTimeString()}</span>
+                                </div>
                               </div>
-                            </div>
 
-                            {/* Remarks / Description */}
-                            <p className="text-xs text-theme-text-muted leading-relaxed line-clamp-2 italic bg-theme-bg-alt/40 p-2.5 rounded-xl border border-theme-border/30">
-                              "{item.remarks || item.description || 'No detailed remark provided.'}"
-                            </p>
+                              {/* Remarks / Description */}
+                              <p className="text-xs text-theme-text-muted leading-relaxed line-clamp-2 italic bg-theme-bg-alt/40 p-2.5 rounded-xl border border-theme-border/30">
+                                "{item.remarks || item.description || 'No detailed remark provided.'}"
+                              </p>
 
-                            <div className="flex items-center justify-between text-[10px] text-theme-text-muted pt-1 border-t border-theme-border/20">
-                              <span>User: <strong className="text-theme-text font-bold">{item.performedByName || 'System'}</strong></span>
-                              <span className="font-bold text-emerald-400">Stage: {item.leadStage || lead?.status || 'New Lead'}</span>
+                              <div className="flex items-center justify-between text-[10px] text-theme-text-muted pt-1 border-t border-theme-border/20">
+                                <span>User: <strong className="text-theme-text font-bold">{item.performedByName || 'System'}</strong></span>
+                                <span className="font-bold text-emerald-400">Stage: {item.leadStage || lead?.status || 'New Lead'}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                      {timeline.length === 0 && (
-                        <p className="text-xs text-theme-text-muted text-center py-6">No historical activity records logged yet.</p>
-                      )}
-                    </div>
-                  )}
+                        ))}
+                        {filteredTimeline.length === 0 && (
+                          <div className="text-center py-6 text-xs text-theme-text-muted space-y-1">
+                            <p>No activity records logged for this period.</p>
+                            {historyDateFilter !== 'ALL' && (
+                              <button
+                                onClick={() => setHistoryDateFilter('ALL')}
+                                className="text-theme-primary font-bold underline"
+                              >
+                                View All-Time Activity
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Sub-tab 2: Activity Logs & Call Attempts */}
-                  {historySubTab === 'attempts' && (
-                    <div className="space-y-3">
-                      {activityLogsHistory.map((log: SalesActivityLog) => (
-                        <div
-                          key={log.id}
-                          onClick={() => setSelectedInteractionDetail({ ...log, typeName: 'Activity Call Log' })}
-                          className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer space-y-2.5 group"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-theme-bg-alt border border-theme-border flex items-center justify-center">
-                                {getCommIcon(log.communicationType)}
-                              </span>
-                              <span className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors flex items-center gap-1">
-                                Attempt #{log.activityNumber} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </span>
-                              <span className="text-[10px] text-theme-text-muted font-medium">
-                                ({log.communicationType?.replace('_', ' ')})
-                              </span>
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
-                                {log.outcome?.replace('_', ' ')}
-                              </span>
+                  {historySubTab === 'attempts' && (() => {
+                    const filteredAttempts = activityLogsHistory.filter((log: SalesActivityLog) => isWithinDateFilter(log.createdAt));
+                    return (
+                      <div className="space-y-3">
+                        {filteredAttempts.map((log: SalesActivityLog) => (
+                          <div
+                            key={log.id}
+                            onClick={() => setSelectedInteractionDetail({ ...log, typeName: 'Activity Call Log' })}
+                            className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer space-y-2.5 group"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-theme-bg-alt border border-theme-border flex items-center justify-center">
+                                  {getCommIcon(log.communicationType)}
+                                </span>
+                                <span className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors flex items-center gap-1">
+                                  Attempt #{log.activityNumber} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </span>
+                                <span className="text-[10px] text-theme-text-muted font-medium">
+                                  ({log.communicationType?.replace('_', ' ')})
+                                </span>
+                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
+                                  {log.outcome?.replace('_', ' ')}
+                                </span>
+                              </div>
+
+                              <span className="text-[10px] text-theme-text-muted">{new Date(log.createdAt).toLocaleString()}</span>
                             </div>
 
-                            <span className="text-[10px] text-theme-text-muted">{new Date(log.createdAt).toLocaleString()}</span>
+                            <p className="text-xs text-theme-text/90 bg-theme-bg-alt/40 p-3 rounded-xl border border-theme-border/30 italic">
+                              "{log.remarks || 'No detailed remark provided.'}"
+                            </p>
+
+                            <div className="flex items-center justify-between text-[10px] text-theme-text-muted">
+                              <span>Logged by: <strong className="text-theme-text font-bold">{log.loggedByName || 'Sales Rep'}</strong></span>
+                              <span className="text-theme-primary font-bold">Click to inspect →</span>
+                            </div>
                           </div>
+                        ))}
 
-                          <p className="text-xs text-theme-text/90 bg-theme-bg-alt/40 p-3 rounded-xl border border-theme-border/30 italic">
-                            "{log.remarks || 'No detailed remark provided.'}"
-                          </p>
-
-                          <div className="flex items-center justify-between text-[10px] text-theme-text-muted">
-                            <span>Logged by: <strong className="text-theme-text font-bold">{log.loggedByName || 'Sales Rep'}</strong></span>
-                            <span className="text-theme-primary font-bold">Click to inspect →</span>
+                        {filteredAttempts.length === 0 && (
+                          <div className="text-center py-6 text-xs text-theme-text-muted space-y-1">
+                            <p>No call attempts or interaction logs recorded for this period.</p>
+                            {historyDateFilter !== 'ALL' && (
+                              <button
+                                onClick={() => setHistoryDateFilter('ALL')}
+                                className="text-theme-primary font-bold underline"
+                              >
+                                View All-Time Attempts
+                              </button>
+                            )}
                           </div>
-                        </div>
-                      ))}
-
-                      {activityLogsHistory.length === 0 && (
-                        <p className="text-xs text-theme-text-muted text-center py-6">No call attempts or interaction logs recorded yet.</p>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -1818,7 +1950,7 @@ export default function WorkDetailsPanel({
               onSuccess={() => {
                 setShowRescheduleModal(false);
                 fetchLeadDetails();
-                onLeadUpdated();
+                triggerUpdate();
               }}
             />
           )}

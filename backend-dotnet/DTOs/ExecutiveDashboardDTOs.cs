@@ -31,30 +31,48 @@ public class SearchResultDto
 public class ExecutiveWorkSummaryDto
 {
     public long UserId { get; set; }
-    public string FullName { get; set; } = string.Empty;
-    public string? Designation { get; set; }
-    public int TotalWorkUnits { get; set; }
-    public int CallsCount { get; set; }
-    public int TasksCompletedCount { get; set; }
-    public int StageUpdatesCount { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string UserEmail { get; set; } = string.Empty;
+    public string UserRole { get; set; } = string.Empty;
+    public string? ProfileImage { get; set; }
+    public string Timeframe { get; set; } = string.Empty;
+
+    public int TotalAssignedLeads { get; set; }
+    public int TotalActivitiesLogged { get; set; }
+    public int TotalCallsMade { get; set; }
+    public int TotalMeetingsHeld { get; set; }
+    public int TotalEmailsSent { get; set; }
+    public int TotalWhatsappSent { get; set; }
+    public int CompletedFollowupsCount { get; set; }
+    public int OverdueFollowupsCount { get; set; }
+    public int TotalConvertedLeads { get; set; }
+
+    public double ConversionRate { get; set; }
+    public double ActivityCompletionRate { get; set; }
+
     public List<ExecutiveDayBreakdownDto> DailyBreakdown { get; set; } = new();
-    public List<ExecutiveLeadWorkDto> LeadWork { get; set; } = new();
+    public List<ExecutiveLeadWorkDto> LeadWorkList { get; set; } = new();
 }
 
 public class ExecutiveDayBreakdownDto
 {
-    public DateOnly Date { get; set; }
-    public int WorkUnits { get; set; }
-    public int Calls { get; set; }
-    public int TasksCompleted { get; set; }
-    public int StageUpdates { get; set; }
+    public string Date { get; set; } = string.Empty;
+    public string DayOfWeek { get; set; } = string.Empty;
+    public int CallsCount { get; set; }
+    public int MeetingsCount { get; set; }
+    public int EmailsCount { get; set; }
+    public int WhatsappCount { get; set; }
+    public int TotalActivitiesCount { get; set; }
+    public int FollowupsCompletedCount { get; set; }
 }
 
 public class ExecutiveLeadWorkDto
 {
     public long LeadId { get; set; }
     public string LeadName { get; set; } = string.Empty;
-    public string? Status { get; set; }
+    public string? LeadPhone { get; set; }
+    public string LeadStatus { get; set; } = string.Empty;
+    public string AssignedToName { get; set; } = string.Empty;
     public int ActivityCount { get; set; }
     public DateTime LastWorkedAt { get; set; }
 }

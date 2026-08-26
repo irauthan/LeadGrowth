@@ -6,7 +6,7 @@ export interface User {
   bio?: string;
   profileImage?: string;
   phone?: string;
-  roles: string[];
+  roles: (string | { id?: number; name?: string } | any)[];
   workspaceId?: number;
   workspaceName?: string;
   workspaceSlug?: string;

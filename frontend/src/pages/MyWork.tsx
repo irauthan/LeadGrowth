@@ -50,12 +50,8 @@ export default function MyWork() {
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
-
-  // Contacts Section collapse & full-width toggle state
-  const [isContactsCollapsed, setIsContactsCollapsed] = useState(false);
   const [isContactsFullWidth, setIsContactsFullWidth] = useState(false);
 
-  // Selected lead for work details side panel
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
@@ -83,10 +79,18 @@ export default function MyWork() {
   const [sweepMessage, setSweepMessage] = useState('');
 
   const [searchParams] = useSearchParams();
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(searchParams.get('period') || 'all');
+
+  useEffect(() => {
+    const paramPeriod = searchParams.get('period');
+    if (paramPeriod) {
+      setSelectedPeriod(paramPeriod);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchMyWorkLeads();
-  }, []);
+  }, [selectedPeriod, searchParams]);
 
   useEffect(() => {
     const paramLeadId = searchParams.get('leadId');
@@ -107,8 +111,16 @@ export default function MyWork() {
   const fetchMyWorkLeads = async () => {
     setLoading(true);
     try {
+      const params: any = {};
+      const currentPeriod = searchParams.get('period') || selectedPeriod;
+      if (currentPeriod && currentPeriod !== 'all') params.period = currentPeriod;
+      const start = searchParams.get('startDate');
+      const end = searchParams.get('endDate');
+      if (start) params.startDate = start;
+      if (end) params.endDate = end;
+
       const [leadsRes, contactsRes] = await Promise.all([
-        api.get('/api/leads').catch(() => api.get('/api/leads/pipeline')),
+        api.get('/api/leads', { params }).catch(() => api.get('/api/leads/pipeline', { params })),
         api.get('/api/leads/contacts').catch(() => ({ data: [] }))
       ]);
       setLeads(leadsRes.data || []);
@@ -319,6 +331,17 @@ export default function MyWork() {
 
         {/* Filters */}
         <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto no-scrollbar">
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-primary focus:outline-none focus:border-theme-primary"
+          >
+            <option value="all">Time: All Time</option>
+            <option value="today">Time: Today</option>
+            <option value="weekly">Time: This Week</option>
+            <option value="monthly">Time: This Month</option>
+          </select>
+
           <select
             value={selectedStage}
             onChange={(e) => setSelectedStage(e.target.value)}
@@ -921,6 +944,9 @@ export default function MyWork() {
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}
         onLeadUpdated={fetchMyWorkLeads}
+        period={selectedPeriod}
+        startDate={searchParams.get('startDate') || undefined}
+        endDate={searchParams.get('endDate') || undefined}
       />
 
     </div>
