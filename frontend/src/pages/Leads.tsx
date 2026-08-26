@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import type { Lead, User } from '../types';
@@ -23,6 +24,7 @@ import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
 export default function Leads() {
+  const [searchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,17 @@ export default function Leads() {
       const res = await api.get('/api/leads');
       const data = Array.isArray(res.data) ? res.data : [];
       setLeads(data);
+      
+      const paramId = searchParams.get('id') || searchParams.get('leadId');
+      if (paramId && data.length > 0) {
+        const targetId = parseInt(paramId, 10);
+        const match = data.find((l) => l.id === targetId);
+        if (match) {
+          setSelectedLead(match);
+          return;
+        }
+      }
+
       if (data.length > 0) {
         setSelectedLead(data[0]);
       }
@@ -78,6 +91,40 @@ export default function Leads() {
       setLoading(false);
     }
   };
+
+  // Sync selectedLead and search query when URL search params change
+  useEffect(() => {
+    const paramId = searchParams.get('id') || searchParams.get('leadId');
+    const paramSearch = searchParams.get('search');
+
+    if (paramSearch && paramSearch !== search) {
+      setSearch(paramSearch);
+    }
+
+    if (paramId && leads.length > 0) {
+      const targetId = parseInt(paramId, 10);
+      if (!isNaN(targetId)) {
+        const match = leads.find((l) => l.id === targetId);
+        if (match) {
+          setSelectedLead(match);
+          // If the match was filtered out, reset filters so it's clearly visible
+          if (statusFilter !== 'All' && match.status !== statusFilter) {
+            setStatusFilter('All');
+          }
+          if (platformFilter !== 'All' && match.sourcePlatform !== platformFilter) {
+            setPlatformFilter('All');
+          }
+          // Smoothly scroll to the target lead card
+          setTimeout(() => {
+            const el = document.getElementById(`lead-card-${targetId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 150);
+        }
+      }
+    }
+  }, [searchParams, leads]);
 
   const fetchMembers = async () => {
     try {
@@ -547,6 +594,7 @@ export default function Leads() {
                 return (
                   <button
                     key={lead.id}
+                    id={`lead-card-${lead.id}`}
                     onClick={() => handleLeadSelect(lead)}
                     className={`w-full rounded-2xl border p-4 text-left transition-all ${
                       isSelected

@@ -16,9 +16,15 @@ import {
   UserCheck,
   CheckSquare,
   Menu,
-  X
+  X,
+  Layers,
+  Compass,
+  Clock,
+  Calendar as CalendarIcon,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useLayoutStore } from '../store/layoutStore';
 import { getProfileImageUrl } from '../utils/imageUrl';
@@ -63,28 +69,100 @@ export default function Navbar() {
 
   // Global layout and search state
   const { toggleMobileOpen } = useLayoutStore();
+  const navigate = useNavigate();
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [globalSearchResults, setGlobalSearchResults] = useState<{title: string, type: string, subtitle: string, url: string}[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchCategory, setSearchCategory] = useState<'ALL' | 'LEAD' | 'USER' | 'CAMPAIGN' | 'PAGE' | 'FOLLOWUP'>('ALL');
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
     if (!globalSearchQuery.trim()) {
       setGlobalSearchResults([]);
+      setSearchLoading(false);
       return;
     }
 
+    setSearchLoading(true);
     const timer = setTimeout(async () => {
       try {
         const res = await api.get(`/api/dashboard/search?q=${encodeURIComponent(globalSearchQuery)}`);
-        setGlobalSearchResults(res.data);
+        setGlobalSearchResults(res.data || []);
         setShowSearchResults(true);
       } catch (err) {
         console.error('Global search failed', err);
+      } finally {
+        setSearchLoading(false);
       }
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [globalSearchQuery]);
+
+  const filteredSearchResults = globalSearchResults.filter(r => {
+    if (searchCategory === 'ALL') return true;
+    if (searchCategory === 'LEAD') return r.type === 'LEAD';
+    if (searchCategory === 'USER') return r.type === 'USER';
+    if (searchCategory === 'CAMPAIGN') return r.type === 'CAMPAIGN';
+    if (searchCategory === 'PAGE') return r.type === 'PAGE';
+    if (searchCategory === 'FOLLOWUP') return r.type === 'FOLLOWUP' || r.type === 'TASK' || r.type === 'EVENT';
+    return r.type === searchCategory;
+  });
+
+  const getSearchTypeBadge = (type: string) => {
+    switch (type) {
+      case 'LEAD':
+        return {
+          icon: <UserIcon size={12} className="text-emerald-500" />,
+          bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+          label: 'Lead'
+        };
+      case 'USER':
+        return {
+          icon: <UserCheck size={12} className="text-cyan-400" />,
+          bg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          label: 'Team'
+        };
+      case 'CAMPAIGN':
+        return {
+          icon: <Layers size={12} className="text-blue-400" />,
+          bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+          label: 'Campaign'
+        };
+      case 'FOLLOWUP':
+        return {
+          icon: <Clock size={12} className="text-indigo-400" />,
+          bg: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+          label: 'Follow-up'
+        };
+      case 'EVENT':
+        return {
+          icon: <CalendarIcon size={12} className="text-pink-400" />,
+          bg: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
+          label: 'Event'
+        };
+      case 'TASK':
+        return {
+          icon: <CheckSquare size={12} className="text-amber-400" />,
+          bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+          label: 'Task'
+        };
+      case 'PAGE':
+      default:
+        return {
+          icon: <Compass size={12} className="text-purple-400" />,
+          bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+          label: 'Page'
+        };
+    }
+  };
+
+  const handleSearchResultClick = (url: string) => {
+    setShowSearchResults(false);
+    setShowMobileSearch(false);
+    setGlobalSearchQuery('');
+    navigate(url);
+  };
 
   useEffect(() => {
     const handleOutsideClick = () => {
@@ -240,9 +318,17 @@ export default function Navbar() {
               <input
                 type="text"
                 autoFocus
-                placeholder="Search leads, campaigns, users..."
+                placeholder="Search leads, users, campaigns, pages..."
                 value={globalSearchQuery}
                 onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setShowMobileSearch(false);
+                    setGlobalSearchQuery('');
+                  } else if (e.key === 'Enter' && filteredSearchResults.length > 0) {
+                    handleSearchResultClick(filteredSearchResults[0].url);
+                  }
+                }}
                 className="w-full rounded-2xl border border-theme-border bg-theme-card py-2.5 pl-10 pr-4 text-sm outline-none focus:border-theme-primary text-theme-text"
               />
             </div>
@@ -254,35 +340,69 @@ export default function Navbar() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto pt-4 space-y-2">
-            {globalSearchResults.length > 0 ? (
-              globalSearchResults.map((r, idx) => (
-                <Link
-                  key={idx}
-                  to={r.url}
-                  onClick={() => {
-                    setShowMobileSearch(false);
-                    setGlobalSearchQuery('');
-                  }}
-                  className="flex flex-col gap-1 rounded-2xl border border-theme-border/40 bg-theme-card p-3 shadow-sm active:bg-theme-bg-alt"
+          {/* Quick Filter Chips (Mobile) */}
+          {globalSearchQuery.trim() && (
+            <div className="flex items-center gap-1.5 overflow-x-auto py-2.5 no-scrollbar border-b border-theme-border/20">
+              {[
+                { id: 'ALL', label: 'All Results' },
+                { id: 'LEAD', label: 'Leads' },
+                { id: 'USER', label: 'Team' },
+                { id: 'CAMPAIGN', label: 'Campaigns' },
+                { id: 'PAGE', label: 'Pages' },
+                { id: 'FOLLOWUP', label: 'Follow-ups' },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSearchCategory(c.id as any)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                    searchCategory === c.id
+                      ? 'bg-theme-primary text-white shadow-xs'
+                      : 'bg-theme-bg-alt text-theme-text-muted hover:text-theme-text'
+                  }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-theme-text">{r.title}</span>
-                    <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                      r.type === 'LEAD' ? 'bg-emerald-500/10 text-emerald-500' :
-                      r.type === 'CAMPAIGN' ? 'bg-blue-500/10 text-theme-primary' :
-                      r.type === 'USER' ? 'bg-cyan-500/10 text-cyan-400' :
-                      'bg-purple-500/10 text-purple-400'
-                    }`}>{r.type}</span>
-                  </div>
-                  <p className="text-xs text-theme-text-muted">{r.subtitle}</p>
-                </Link>
-              ))
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto pt-3 space-y-2">
+            {searchLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-theme-text-muted">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-theme-primary border-t-transparent" />
+                <span className="text-xs">Searching records...</span>
+              </div>
+            ) : filteredSearchResults.length > 0 ? (
+              filteredSearchResults.map((r, idx) => {
+                const badge = getSearchTypeBadge(r.type);
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSearchResultClick(r.url)}
+                    className="w-full text-left flex items-start gap-3 rounded-2xl border border-theme-border/40 bg-theme-card p-3 shadow-xs active:bg-theme-bg-alt hover:border-theme-primary/40 transition-all"
+                  >
+                    <div className="p-2 rounded-xl bg-theme-bg-alt flex-shrink-0 mt-0.5">
+                      {badge.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-bold text-theme-text truncate">{r.title}</span>
+                        <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border flex-shrink-0 ${badge.bg}`}>
+                          {badge.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-theme-text-muted truncate mt-0.5">{r.subtitle}</p>
+                    </div>
+                  </button>
+                );
+              })
             ) : globalSearchQuery.trim() ? (
-              <p className="py-8 text-center text-xs text-theme-text-muted italic">No matching records found for "{globalSearchQuery}"</p>
+              <p className="py-10 text-center text-xs text-theme-text-muted italic">No matching records found for "{globalSearchQuery}"</p>
             ) : (
-              <div className="py-6 text-center text-xs text-theme-text-muted">
-                Type above to search across all leads, campaigns, reports & team members.
+              <div className="py-8 text-center text-xs text-theme-text-muted space-y-1">
+                <p className="font-semibold text-theme-text">Search anything across your workspace</p>
+                <p>Type above to search leads, team members, campaigns, pages & follow-ups.</p>
               </div>
             )}
           </div>
@@ -329,22 +449,32 @@ export default function Navbar() {
           </button>
 
           {/* Desktop Search Bar */}
-          <div className="relative hidden w-56 md:w-64 md:block" onClick={(e) => e.stopPropagation()}>
-            <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
-              <Search size={16} />
+          <div className="relative hidden w-64 md:w-72 lg:w-80 md:block" onClick={(e) => e.stopPropagation()}>
+            <span className="absolute inset-y-0 left-3.5 flex items-center text-theme-text-muted">
+              <Search size={15} />
             </span>
             <input
               type="text"
-              placeholder="Quick search..."
+              placeholder="Search leads, users, campaigns, pages..."
               value={globalSearchQuery}
               onChange={(e) => setGlobalSearchQuery(e.target.value)}
               onFocus={() => setShowSearchResults(true)}
-              className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 py-2 pl-10 pr-4 text-xs font-medium outline-none transition-all placeholder:text-theme-text-muted focus:border-theme-primary focus:bg-theme-card text-theme-text"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setShowSearchResults(false);
+                } else if (e.key === 'Enter' && filteredSearchResults.length > 0) {
+                  handleSearchResultClick(filteredSearchResults[0].url);
+                }
+              }}
+              className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/60 py-2 pl-10 pr-4 text-xs font-medium outline-none transition-all placeholder:text-theme-text-muted focus:border-theme-primary focus:bg-theme-card text-theme-text shadow-2xs"
             />
             {showSearchResults && globalSearchQuery.trim() && (
-              <div className="absolute left-0 mt-3 w-80 rounded-2xl border border-theme-border bg-theme-card p-2 shadow-2xl z-50 max-h-96 overflow-y-auto">
-                <div className="flex items-center justify-between border-b border-theme-border/20 px-3 py-1.5 mb-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Search Results</span>
+              <div className="absolute left-0 mt-2.5 w-96 rounded-2xl border border-theme-border bg-theme-card p-3 shadow-2xl z-50 max-h-[480px] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-theme-border/30 pb-2 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-theme-primary" />
+                    <span className="text-[11px] font-black uppercase tracking-wider text-theme-text">Search Results ({filteredSearchResults.length})</span>
+                  </div>
                   <button
                     onClick={() => { setGlobalSearchQuery(''); setShowSearchResults(false); }}
                     className="text-[10px] text-rose-500 font-bold hover:underline"
@@ -352,32 +482,67 @@ export default function Navbar() {
                     Clear
                   </button>
                 </div>
+
+                {/* Category Chips (Desktop) */}
+                <div className="flex items-center gap-1 overflow-x-auto pb-2 mb-1.5 no-scrollbar">
+                  {[
+                    { id: 'ALL', label: 'All' },
+                    { id: 'LEAD', label: 'Leads' },
+                    { id: 'USER', label: 'Team' },
+                    { id: 'CAMPAIGN', label: 'Campaigns' },
+                    { id: 'PAGE', label: 'Pages' },
+                    { id: 'FOLLOWUP', label: 'Follow-ups' },
+                  ].map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setSearchCategory(c.id as any)}
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all ${
+                        searchCategory === c.id
+                          ? 'bg-theme-primary text-white shadow-2xs'
+                          : 'bg-theme-bg-alt text-theme-text-muted hover:text-theme-text'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="space-y-1">
-                  {globalSearchResults.length > 0 ? (
-                    globalSearchResults.map((r, idx) => (
-                      <Link
-                        key={idx}
-                        to={r.url}
-                        onClick={() => {
-                          setShowSearchResults(false);
-                          setGlobalSearchQuery('');
-                        }}
-                        className="flex flex-col gap-0.5 rounded-xl px-3 py-2 hover:bg-theme-bg-alt/50 transition-colors text-left"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-theme-text truncate max-w-[180px]">{r.title}</span>
-                          <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
-                            r.type === 'LEAD' ? 'bg-emerald-500/10 text-emerald-500' :
-                            r.type === 'CAMPAIGN' ? 'bg-blue-500/10 text-theme-primary' :
-                            r.type === 'USER' ? 'bg-cyan-500/10 text-cyan-400' :
-                            'bg-purple-500/10 text-purple-400'
-                          }`}>{r.type}</span>
-                        </div>
-                        <p className="text-[10px] text-theme-text-muted truncate mt-0.5">{r.subtitle}</p>
-                      </Link>
-                    ))
+                  {searchLoading ? (
+                    <div className="py-6 flex items-center justify-center gap-2 text-theme-text-muted text-xs">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-theme-primary border-t-transparent" />
+                      <span>Searching...</span>
+                    </div>
+                  ) : filteredSearchResults.length > 0 ? (
+                    filteredSearchResults.map((r, idx) => {
+                      const badge = getSearchTypeBadge(r.type);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSearchResultClick(r.url)}
+                          className="w-full text-left flex items-start gap-2.5 rounded-xl px-2.5 py-2 hover:bg-theme-bg-alt/70 transition-all group"
+                        >
+                          <div className="p-1.5 rounded-lg bg-theme-bg-alt group-hover:bg-theme-primary/10 transition-colors flex-shrink-0 mt-0.5">
+                            {badge.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="text-xs font-bold text-theme-text truncate group-hover:text-theme-primary transition-colors">
+                                {r.title}
+                              </span>
+                              <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-full border flex-shrink-0 ${badge.bg}`}>
+                                {badge.label}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-theme-text-muted truncate mt-0.5">{r.subtitle}</p>
+                          </div>
+                          <ArrowRight size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity self-center flex-shrink-0" />
+                        </button>
+                      );
+                    })
                   ) : (
-                    <p className="p-3 text-center text-xs text-theme-text-muted italic">No records found matching "{globalSearchQuery}"</p>
+                    <p className="p-4 text-center text-xs text-theme-text-muted italic">No records found matching "{globalSearchQuery}"</p>
                   )}
                 </div>
               </div>

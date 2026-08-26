@@ -1,26 +1,26 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Search, 
-  CheckCircle,
-  Mail,
-  UserPlus,
-  Loader2,
-  Trash2,
-  Key,
-  ShieldAlert,
-  Edit2,
-  UserCheck,
-  Building,
-  ChevronLeft,
-  ChevronRight,
-  BarChart3,
-  Smartphone,
-  Award,
-  Users as UsersIcon,
-  LayoutGrid,
-  ListFilter,
-  Shield
+  CheckCircle, 
+  Mail, 
+  UserPlus, 
+  Loader2, 
+  Trash2, 
+  Key, 
+  ShieldAlert, 
+  Edit2, 
+  UserCheck, 
+  Building, 
+  ChevronLeft, 
+  ChevronRight, 
+  BarChart3, 
+  Smartphone, 
+  Award, 
+  Users as UsersIcon, 
+  LayoutGrid, 
+  ListFilter, 
+  Shield 
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -45,6 +45,7 @@ export interface ManagedUser {
 }
 
 export default function UserManagement() {
+  const [searchParams] = useSearchParams();
   const currentUser = useAuthStore((state) => state.user);
   const isAdmin = currentUser?.roles.includes('ROLE_ADMIN');
   const isManager = currentUser?.roles.includes('ROLE_MANAGER');
@@ -80,6 +81,13 @@ export default function UserManagement() {
   useEffect(() => {
     fetchUsersData();
   }, []);
+
+  useEffect(() => {
+    const paramSearch = searchParams.get('search');
+    if (paramSearch && paramSearch !== searchQuery) {
+      setSearchQuery(paramSearch);
+    }
+  }, [searchParams]);
 
   const fetchUsersData = async () => {
     try {

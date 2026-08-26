@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import api from "../services/api";
 import type { Campaign } from "../types";
 import { formatCurrency, formatNumber } from "../utils";
-import { 
-  Search, 
-  ArrowUpDown, 
-  Download, 
-  Plus, 
-  Loader2, 
-  LayoutGrid, 
+import {
+  Search,
+  ArrowUpDown,
+  Download,
+  Plus,
+  Loader2,
+  LayoutGrid,
   Table as TableIcon,
+  Eye,
   PauseCircle,
   PlayCircle,
   Layers,
@@ -21,6 +23,7 @@ import CampaignDetailView from "../components/CampaignDetailView";
 import { campaignService } from "../services/campaignService";
 
 export default function Campaigns() {
+  const [searchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,13 +73,39 @@ export default function Campaigns() {
     fetchCampaigns();
   }, []);
 
+  // Sync URL search params
+  useEffect(() => {
+    const paramId = searchParams.get("id");
+    const paramSearch = searchParams.get("search");
+
+    if (paramSearch && paramSearch !== search) {
+      setSearch(paramSearch);
+    }
+
+    if (paramId && campaigns.length > 0) {
+      const targetId = parseInt(paramId, 10);
+      if (!isNaN(targetId)) {
+        setSelectedCampaignId(targetId);
+      }
+    }
+  }, [searchParams, campaigns]);
+
   const fetchCampaigns = async () => {
     try {
       const endpoint = isUserOnly
         ? "/api/campaigns/user-view"
         : "/api/campaigns";
       const res = await api.get(endpoint);
-      setCampaigns(Array.isArray(res.data) ? res.data : []);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setCampaigns(data);
+
+      const paramId = searchParams.get("id");
+      if (paramId && data.length > 0) {
+        const targetId = parseInt(paramId, 10);
+        if (!isNaN(targetId) && data.some(c => c.id === targetId)) {
+          setSelectedCampaignId(targetId);
+        }
+      }
     } catch (e) {
       console.error("Error fetching campaigns", e);
     } finally {
@@ -226,11 +255,10 @@ export default function Campaigns() {
           <div className="flex items-center rounded-xl border border-theme-border bg-theme-card p-1">
             <button
               onClick={() => setViewMode("grid")}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                viewMode === "grid"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === "grid"
                   ? "bg-theme-bg-alt text-theme-text font-semibold shadow-xs"
                   : "text-theme-text-muted hover:text-theme-text"
-              }`}
+                }`}
               title="Grid View"
             >
               <LayoutGrid size={14} />
@@ -238,11 +266,10 @@ export default function Campaigns() {
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                viewMode === "table"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === "table"
                   ? "bg-theme-bg-alt text-theme-text font-semibold shadow-xs"
                   : "text-theme-text-muted hover:text-theme-text"
-              }`}
+                }`}
               title="Table View"
             >
               <TableIcon size={14} />
@@ -424,13 +451,12 @@ export default function Campaigns() {
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-theme-bg-alt border border-theme-border text-theme-text">
                         {c.platform}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
-                        isActive
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${isActive
                           ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
                           : isPaused
-                          ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
-                          : "bg-slate-500/10 border-slate-500/20 text-slate-500"
-                      }`}>
+                            ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
+                            : "bg-slate-500/10 border-slate-500/20 text-slate-500"
+                        }`}>
                         {c.status || "ACTIVE"}
                       </span>
                     </div>
@@ -443,11 +469,10 @@ export default function Campaigns() {
                     <button
                       type="button"
                       onClick={(e) => handleQuickStatusChange(e, c.id, c.status || "ACTIVE")}
-                      className={`p-1.5 rounded-lg text-xs transition-colors ${
-                        isActive 
-                          ? "text-amber-500 hover:bg-amber-500/10" 
+                      className={`p-1.5 rounded-lg text-xs transition-colors ${isActive
+                          ? "text-amber-500 hover:bg-amber-500/10"
                           : "text-emerald-500 hover:bg-emerald-500/10"
-                      }`}
+                        }`}
                       title={isActive ? "Pause Campaign" : "Activate Campaign"}
                     >
                       {isActive ? <PauseCircle size={17} /> : <PlayCircle size={17} />}
@@ -547,11 +572,10 @@ export default function Campaigns() {
                         </span>
                       </td>
                       <td className="py-3.5 px-3">
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${
-                          (c.status || "ACTIVE").toUpperCase() === "ACTIVE"
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${(c.status || "ACTIVE").toUpperCase() === "ACTIVE"
                             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                             : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                        }`}>
+                          }`}>
                           {c.status || "ACTIVE"}
                         </span>
                       </td>

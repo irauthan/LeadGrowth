@@ -65,7 +65,45 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
                 LeadStatus = l.Status,
                 AssignedToName = targetUser.FullName,
                 ActivityCount = _context.SalesActivityLogs.Count(a => a.LeadId == l.Id),
-                LastWorkedAt = l.CreatedAt
+                LastWorkedAt = l.CreatedAt,
+                ActivityLogs = _context.SalesActivityLogs
+                    .Where(a => a.LeadId == l.Id)
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Select(a => new ExecutiveActivityLogDto
+                    {
+                        Id = a.Id,
+                        ActivityNumber = a.ActivityNumber,
+                        CommunicationType = a.CommunicationType,
+                        Outcome = a.Outcome,
+                        Duration = a.Duration,
+                        Remarks = a.Remarks,
+                        CreatedAt = a.CreatedAt,
+                        LoggedByName = a.LoggedBy != null ? a.LoggedBy.FullName : "System"
+                    }).ToList(),
+                Followups = _context.FollowupReminders
+                    .Where(f => f.LeadId == l.Id)
+                    .OrderByDescending(f => f.ScheduledAt)
+                    .Select(f => new ExecutiveFollowupDto
+                    {
+                        Id = f.Id,
+                        Status = f.Status,
+                        Type = f.Type,
+                        Notes = f.Notes,
+                        ScheduledAt = f.ScheduledAt,
+                        CompletedAt = f.Status == "COMPLETED" ? f.CreatedAt : null,
+                        IsOverdue = f.Status != "COMPLETED" && f.ScheduledAt < DateTime.UtcNow
+                    }).ToList(),
+                TimelineHistory = _context.LeadHistories
+                    .Where(h => h.LeadId == l.Id)
+                    .OrderByDescending(h => h.Timestamp)
+                    .Select(h => new ExecutiveTimelineHistoryDto
+                    {
+                        Id = h.Id,
+                        Action = h.Action,
+                        Details = h.Description,
+                        CreatedAt = h.Timestamp,
+                        PerformedByName = h.PerformedBy != null ? h.PerformedBy.FullName : "System"
+                    }).ToList()
             })
             .ToListAsync();
 

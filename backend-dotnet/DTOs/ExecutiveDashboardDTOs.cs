@@ -75,4 +75,40 @@ public class ExecutiveLeadWorkDto
     public string AssignedToName { get; set; } = string.Empty;
     public int ActivityCount { get; set; }
     public DateTime LastWorkedAt { get; set; }
+
+    public List<ExecutiveActivityLogDto> ActivityLogs { get; set; } = new();
+    public List<ExecutiveFollowupDto> Followups { get; set; } = new();
+    public List<ExecutiveTimelineHistoryDto> TimelineHistory { get; set; } = new();
+}
+
+public class ExecutiveActivityLogDto
+{
+    public long Id { get; set; }
+    public int ActivityNumber { get; set; }
+    public string CommunicationType { get; set; } = string.Empty;
+    public string Outcome { get; set; } = string.Empty;
+    public string? Duration { get; set; }
+    public string? Remarks { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public string LoggedByName { get; set; } = string.Empty;
+}
+
+public class ExecutiveFollowupDto
+{
+    public long Id { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public DateTime? ScheduledAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public bool IsOverdue { get; set; }
+}
+
+public class ExecutiveTimelineHistoryDto
+{
+    public long Id { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string? Details { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public string PerformedByName { get; set; } = string.Empty;
 }
