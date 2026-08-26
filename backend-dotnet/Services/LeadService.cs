@@ -471,7 +471,6 @@ public class LeadService : ILeadService
 
                 if (availableCandidates.Count == 0)
                 {
-<<<<<<< Updated upstream
                     availableCandidates = pool;
                 }
 
@@ -491,6 +490,7 @@ public class LeadService : ILeadService
             if (assignTarget != null)
             {
                 lead.AssignedToId = assignTarget.Id;
+                lead.ProgressPercentage = CalculateProgressPercentage(lead.Status, true);
                 lead.AssignedById = user.Id;
                 lead.AssignedDate = DateTime.UtcNow;
                 lead.QueueStatus = assignTarget.Id == user.Id ? "IN_PIPELINE" : "ASSIGNED";
@@ -517,13 +517,6 @@ public class LeadService : ILeadService
                         .Where(f => f.LeadId == lead.Id && f.Status != "COMPLETED" && f.Status != "CANCELLED")
                         .ToListAsync();
                     foreach (var f in activeFollowups)
-=======
-                    lead.AssignedToId = assignTarget.Id;
-                    lead.ProgressPercentage = CalculateProgressPercentage(lead.Status, true);
-                    lead.AssignedDate = DateTime.UtcNow;
-                    lead.QueueStatus = "ASSIGNED";
-                    if (assignTarget.WorkspaceId.HasValue)
->>>>>>> Stashed changes
                     {
                         f.AssignedToId = assignTarget.Id;
                     }
