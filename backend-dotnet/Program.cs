@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Connection String & Database Context (EF Core + Pomelo MySQL 8.x)
 var connectionString = builder.Configuration.GetConnectionString("LeadGrowthDb") 
-    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=123456";
+    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=12345";
 
 builder.Services.AddDbContext<LeadGrowthDbContext>(options =>
 {
@@ -107,9 +107,9 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("RequireAdmin", policy => policy.RequireRole("ROLE_ADMIN"));
-    options.AddPolicy("RequireManagerOrAdmin", policy => policy.RequireRole("ROLE_ADMIN", "ROLE_MANAGER"));
-    options.AddPolicy("RequireUser", policy => policy.RequireRole("ROLE_ADMIN", "ROLE_MANAGER", "ROLE_USER"));
+    options.AddPolicy("RequireAdmin", policy => policy.RequireRole("ROLE_ADMIN", "ADMIN", "Admin"));
+    options.AddPolicy("RequireManagerOrAdmin", policy => policy.RequireRole("ROLE_ADMIN", "ROLE_MANAGER", "ADMIN", "MANAGER", "Admin", "Manager"));
+    options.AddPolicy("RequireUser", policy => policy.RequireRole("ROLE_ADMIN", "ROLE_MANAGER", "ROLE_USER", "ADMIN", "MANAGER", "USER", "Admin", "Manager", "User"));
 });
 
 var app = builder.Build();
@@ -157,5 +157,134 @@ app.MapGet("/api/health", async (LeadGrowthDbContext dbContext) =>
         );
     }
 });
+
+// Automatic database schema synchronization / migration for MySQL
+try
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<LeadGrowthDbContext>();
+    var conn = dbContext.Database.GetDbConnection();
+    if (conn.State != System.Data.ConnectionState.Open)
+    {
+        conn.Open();
+    }
+
+    void EnsureColumn(string tableName, string columnName, string columnDefinition)
+    {
+        try
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = '{tableName}' AND column_name = '{columnName}'";
+            var exists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+            if (!exists)
+            {
+                using var alterCmd = conn.CreateCommand();
+                alterCmd.CommandText = $"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` {columnDefinition};";
+                alterCmd.ExecuteNonQuery();
+                Console.WriteLine($"[DB Patch] Added column `{columnName}` to `{tableName}`");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DB Patch Note for {columnName}]: {ex.Message}");
+        }
+    }
+
+    void EnsureTable(string tableName, string createTableSql)
+    {
+        try
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '{tableName}'";
+            var exists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+            if (!exists)
+            {
+                using var createCmd = conn.CreateCommand();
+                createCmd.CommandText = createTableSql;
+                createCmd.ExecuteNonQuery();
+                Console.WriteLine($"[DB Patch] Created table `{tableName}`");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DB Patch Note for table {tableName}]: {ex.Message}");
+        }
+    }
+
+    // 1. Add missing columns to users table safely
+    EnsureColumn("users", "is_email_verified", "TINYINT(1) NOT NULL DEFAULT 0");
+    EnsureColumn("users", "can_receive_leads", "TINYINT(1) NOT NULL DEFAULT 1");
+    EnsureColumn("users", "last_heartbeat_at", "DATETIME NULL");
+    EnsureColumn("users", "manual_status", "VARCHAR(20) NULL");
+    EnsureColumn("users", "manual_status_source", "VARCHAR(20) NULL");
+    EnsureColumn("users", "manual_status_reason", "VARCHAR(255) NULL");
+    EnsureColumn("users", "manual_status_expires_at", "DATETIME NULL");
+    EnsureColumn("users", "max_capacity", "INT NULL DEFAULT 30");
+
+    // 2. Create new tables only if they don't already exist in the database
+    EnsureTable("leave_requests", @"
+        CREATE TABLE leave_requests (
+            Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            workspace_id BIGINT NOT NULL,
+            user_id BIGINT NOT NULL,
+            start_at_utc DATETIME NOT NULL,
+            end_at_utc DATETIME NOT NULL,
+            reason VARCHAR(255) NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+            requested_at_utc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            reviewed_at_utc DATETIME NULL,
+            reviewed_by_id BIGINT NULL,
+            review_note TEXT NULL,
+            INDEX idx_leave_user (user_id),
+            INDEX idx_leave_workspace (workspace_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    EnsureTable("user_status_logs", @"
+        CREATE TABLE user_status_logs (
+            Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            workspace_id BIGINT NOT NULL,
+            user_id BIGINT NOT NULL,
+            previous_status VARCHAR(20) NOT NULL,
+            new_status VARCHAR(20) NOT NULL,
+            status_source VARCHAR(20) NOT NULL DEFAULT 'SYSTEM',
+            reason VARCHAR(255) NULL,
+            changed_by_id BIGINT NULL,
+            started_at_utc DATETIME NULL,
+            expires_at_utc DATETIME NULL,
+            created_at_utc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_statuslog_user (user_id),
+            INDEX idx_statuslog_workspace (workspace_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    EnsureTable("bulk_assignment_jobs", @"
+        CREATE TABLE bulk_assignment_jobs (
+            Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            workspace_id BIGINT NOT NULL,
+            created_by_admin_id BIGINT NOT NULL,
+            assignment_method VARCHAR(20) NOT NULL DEFAULT 'AUTO',
+            target_user_id BIGINT NULL,
+            lead_ids_json LONGTEXT NOT NULL,
+            scheduled_at_utc DATETIME NULL,
+            started_at_utc DATETIME NULL,
+            completed_at_utc DATETIME NULL,
+            status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+            total_lead_count INT NOT NULL DEFAULT 0,
+            assigned_count INT NOT NULL DEFAULT 0,
+            unassigned_count INT NOT NULL DEFAULT 0,
+            failure_summary TEXT NULL,
+            created_at_utc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_bulk_workspace (workspace_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    // Ensure columns on bulk_assignment_jobs if table already existed previously
+    EnsureColumn("bulk_assignment_jobs", "total_lead_count", "INT NOT NULL DEFAULT 0");
+    EnsureColumn("bulk_assignment_jobs", "assigned_count", "INT NOT NULL DEFAULT 0");
+    EnsureColumn("bulk_assignment_jobs", "unassigned_count", "INT NOT NULL DEFAULT 0");
+    EnsureColumn("bulk_assignment_jobs", "failure_summary", "TEXT NULL");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[Database Schema Init]: {ex.Message}");
+}
 
 app.Run();

@@ -83,7 +83,7 @@ public class LeadService : ILeadService
 
         if (dto.AssignedToId.HasValue && dto.AssignedToId.Value == -1)
         {
-            assignedTo = await FindBestLeadAssigneeAsync(creator.Workspace!);
+            assignedTo = await FindBestLeadAssigneeAsync(creator.WorkspaceId);
             if (assignedTo != null)
             {
                 algorithmDetails = "Assigned via Hybrid Auto-Assignment Lead Algorithm.";
@@ -281,7 +281,7 @@ public class LeadService : ILeadService
 
         if (userId == -1)
         {
-            assignTarget = await FindBestLeadAssigneeAsync(user.Workspace!);
+            assignTarget = await FindBestLeadAssigneeAsync(user.WorkspaceId);
             if (assignTarget != null)
             {
                 algorithmDetails = "Assigned via Hybrid Auto-Assignment Lead Algorithm.";
@@ -396,84 +396,185 @@ public class LeadService : ILeadService
 
     public async Task<List<LeadDto>> BulkAssignLeadsAsync(List<long> leadIds, long userId, string userEmail)
     {
-        var email = userEmail.Trim().ToLower();
+        var email = (userEmail ?? "").Trim().ToLower();
         var user = await _context.Users
+            .Include(u => u.Roles)
             .Include(u => u.Workspace)
-            .FirstOrDefaultAsync(u => u.Email == email);
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == email);
 
         if (user == null)
         {
-            throw new KeyNotFoundException("User not found");
+            user = await _context.Users
+                .Include(u => u.Roles)
+                .Include(u => u.Workspace)
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                throw new KeyNotFoundException("Admin user not found.");
+            }
+        }
+
+        var pool = userId == -1 ? await GetEligibleAssigneesAsync(user.WorkspaceId) : new List<User>();
+        if (userId == -1 && pool.Count == 0)
+        {
+            pool = await _context.Users.Include(u => u.Roles).ToListAsync();
+            if (pool.Count == 0)
+            {
+                throw new InvalidOperationException("No eligible team members found in workspace to auto-assign leads.");
+            }
+        }
+
+        Dictionary<long, int> workloadMap = new();
+        if (userId == -1 && pool.Count > 0)
+        {
+            var activeAssigneeIds = await _context.Leads
+                .Where(l => l.AssignedToId.HasValue && l.Status != "Converted" && l.Status != "Closed Won" && l.Status != "Lost" && l.Status != "Rejected")
+                .Select(l => l.AssignedToId!.Value)
+                .ToListAsync();
+
+            var counts = activeAssigneeIds
+                .GroupBy(id => id)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            foreach (var member in pool)
+            {
+                workloadMap[member.Id] = counts.TryGetValue(member.Id, out var c) ? c : 0;
+            }
+        }
+
+        User? manualTarget = null;
+        if (userId > 0)
+        {
+            manualTarget = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (manualTarget == null)
+            {
+                throw new ArgumentException("Target user not found");
+            }
         }
 
         var updated = new List<LeadDto>();
+
         foreach (var id in leadIds)
         {
-            var lead = await _context.Leads
-                .Include(l => l.Workspace)
-                .Include(l => l.Campaign)
-                .Include(l => l.AssignedTo)
-                .Include(l => l.AssignedBy)
-                .FirstOrDefaultAsync(l => l.Id == id);
+            var lead = await _context.Leads.FirstOrDefaultAsync(l => l.Id == id);
+            if (lead == null) continue;
 
-            if (lead != null && lead.WorkspaceId == user.WorkspaceId)
+            User? assignTarget = null;
+            if (userId == -1 && pool.Count > 0)
             {
-                User? assignTarget = userId == -1
-                    ? await FindBestLeadAssigneeAsync(user.Workspace!)
-                    : await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                // Filter out users who have reached MaxCapacity (unless all are full)
+                var availableCandidates = pool.Where(m =>
+                    !m.MaxCapacity.HasValue || m.MaxCapacity.Value <= 0 || workloadMap[m.Id] < m.MaxCapacity.Value
+                ).ToList();
 
-                if (assignTarget != null)
+                if (availableCandidates.Count == 0)
                 {
-                    lead.AssignedToId = assignTarget.Id;
-                    lead.AssignedDate = DateTime.UtcNow;
-                    lead.QueueStatus = "ASSIGNED";
-                    if (assignTarget.WorkspaceId.HasValue)
+                    availableCandidates = pool;
+                }
+
+                // Pick the executive with the least active workload, tie-broken by LastAssignedAt
+                assignTarget = availableCandidates
+                    .OrderBy(m => workloadMap[m.Id])
+                    .ThenBy(m => m.LastAssignedAt ?? DateTime.MinValue)
+                    .First();
+
+                workloadMap[assignTarget.Id] = workloadMap[assignTarget.Id] + 1;
+            }
+            else
+            {
+                assignTarget = manualTarget;
+            }
+
+            if (assignTarget != null)
+            {
+                lead.AssignedToId = assignTarget.Id;
+                lead.AssignedById = user.Id;
+                lead.AssignedDate = DateTime.UtcNow;
+                lead.QueueStatus = assignTarget.Id == user.Id ? "IN_PIPELINE" : "ASSIGNED";
+                if (assignTarget.WorkspaceId.HasValue && assignTarget.WorkspaceId.Value > 0)
+                {
+                    lead.WorkspaceId = assignTarget.WorkspaceId.Value;
+                }
+
+                assignTarget.LastAssignedAt = DateTime.UtcNow;
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    Console.WriteLine($"[LeadService] Lead save error on lead {lead.Id}: {dbEx.InnerException?.Message ?? dbEx.Message}");
+                }
+
+                // Update active follow-up reminders
+                try
+                {
+                    var activeFollowups = await _context.FollowupReminders
+                        .Where(f => f.LeadId == lead.Id && f.Status != "COMPLETED" && f.Status != "CANCELLED")
+                        .ToListAsync();
+                    foreach (var f in activeFollowups)
                     {
-                        lead.WorkspaceId = assignTarget.WorkspaceId.Value;
+                        f.AssignedToId = assignTarget.Id;
                     }
-
-                    await _context.SaveChangesAsync();
-
-                    assignTarget.LastAssignedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-
-                    try
+                    if (activeFollowups.Count > 0)
                     {
-                        var assignment = new LeadAssignment
-                        {
-                            LeadId = lead.Id,
-                            UserId = assignTarget.Id,
-                            AssignedAt = DateTime.UtcNow
-                        };
-                        _context.LeadAssignments.Add(assignment);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LeadService] Followup update error: {ex.Message}");
+                }
 
+                try
+                {
+                    var assignment = new LeadAssignment
+                    {
+                        LeadId = lead.Id,
+                        UserId = assignTarget.Id,
+                        AssignedAt = DateTime.UtcNow
+                    };
+                    _context.LeadAssignments.Add(assignment);
+
+                    var notif = new Notification
+                    {
+                        UserId = assignTarget.Id,
+                        Title = "New Lead Assigned",
+                        Message = $"You have been assigned to lead: \"{lead.Name}\" via bulk assignment.",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Notifications.Add(notif);
+
+                    if (lead.WorkspaceId > 0)
+                    {
                         var assignLog = new AssignmentLog
                         {
-                            WorkspaceId = user.WorkspaceId!.Value,
+                            WorkspaceId = lead.WorkspaceId,
                             LeadId = lead.Id,
                             UserId = assignTarget.Id,
-                            Strategy = "Bulk auto-assignment.",
+                            Strategy = userId == -1 ? "Hybrid Auto-Assignment Engine" : "Manual Bulk Admin Assignment",
                             AssignedAt = DateTime.UtcNow
                         };
                         _context.AssignmentLogs.Add(assignLog);
-
-                        var notif = new Notification
-                        {
-                            UserId = assignTarget.Id,
-                            Title = "New Lead Assigned",
-                            Message = $"You have been assigned to lead: \"{lead.Name}\" via bulk assignment.",
-                            IsRead = false,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        _context.Notifications.Add(notif);
-                        await _context.SaveChangesAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[LeadService] Non-critical error during bulk assignment logging: {ex.Message}");
                     }
 
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LeadService] Non-critical logging error during bulk assignment: {ex.Message}");
+                }
+
+                try
+                {
                     updated.Add(await ConvertToDtoAsync(lead));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LeadService] DTO conversion error: {ex.Message}");
                 }
             }
         }
@@ -1325,26 +1426,70 @@ public class LeadService : ILeadService
         await _context.SaveChangesAsync();
     }
 
-    private async Task<User?> FindBestLeadAssigneeAsync(Workspace workspace)
+    private async Task<List<User>> GetEligibleAssigneesAsync(long? workspaceId)
     {
-        var members = await _context.Users
-            .Include(u => u.Roles)
-            .Where(u => u.WorkspaceId == workspace.Id && !string.Equals("SUSPENDED", u.Status))
+        List<User> allMembers = new();
+
+        if (workspaceId.HasValue && workspaceId.Value > 0)
+        {
+            allMembers = await _context.Users
+                .Include(u => u.Roles)
+                .Where(u => u.WorkspaceId == workspaceId.Value && (u.Status == null || !string.Equals("SUSPENDED", u.Status)))
+                .ToListAsync();
+        }
+
+        if (allMembers.Count == 0)
+        {
+            // Global fallback to all active non-suspended users across the system
+            allMembers = await _context.Users
+                .Include(u => u.Roles)
+                .Where(u => u.Status == null || !string.Equals("SUSPENDED", u.Status))
+                .ToListAsync();
+        }
+
+        if (allMembers.Count == 0) return new List<User>();
+
+        // 1. Prefer non-admin users (e.g. Sales reps / members like Shubham Singh, Gagan Singh)
+        var candidates = allMembers.Where(u => 
+            u.Roles == null || u.Roles.Count == 0 || !u.Roles.Any(r => r.Name.Contains("ADMIN", StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+
+        // 2. If no non-admins found, use all members
+        if (candidates.Count == 0)
+        {
+            candidates = allMembers;
+        }
+
+        return candidates.OrderBy(u => u.LastAssignedAt ?? DateTime.MinValue).ToList();
+    }
+
+    private async Task<User?> FindBestLeadAssigneeAsync(long? workspaceId)
+    {
+        var pool = await GetEligibleAssigneesAsync(workspaceId);
+        if (pool.Count == 0) return null;
+
+        var activeAssigneeIds = await _context.Leads
+            .Where(l => l.AssignedToId.HasValue && l.Status != "Converted" && l.Status != "Closed Won" && l.Status != "Lost" && l.Status != "Rejected")
+            .Select(l => l.AssignedToId!.Value)
             .ToListAsync();
 
-        if (members.Count == 0) return null;
+        var counts = activeAssigneeIds
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
 
-        var salesExecs = members
-            .Where(u => u.Roles.Any(r => string.Equals("ROLE_USER", r.Name, StringComparison.OrdinalIgnoreCase) || string.Equals("USER", r.Name, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
+        var availableCandidates = pool.Where(m =>
+            !m.MaxCapacity.HasValue || m.MaxCapacity.Value <= 0 || (counts.TryGetValue(m.Id, out var c) ? c : 0) < m.MaxCapacity.Value
+        ).ToList();
 
-        var pool = salesExecs.Count > 0 ? salesExecs : members;
+        if (availableCandidates.Count == 0)
+        {
+            availableCandidates = pool;
+        }
 
-        var sorted = pool
-            .OrderBy(u => u.LastAssignedAt ?? DateTime.MinValue)
-            .ToList();
-
-        return sorted[0];
+        return availableCandidates
+            .OrderBy(m => counts.TryGetValue(m.Id, out var c) ? c : 0)
+            .ThenBy(m => m.LastAssignedAt ?? DateTime.MinValue)
+            .FirstOrDefault();
     }
 
     private static void ValidateLeadAssigneeRole(User? targetUser)

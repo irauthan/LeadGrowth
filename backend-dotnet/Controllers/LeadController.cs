@@ -165,28 +165,67 @@ public class LeadController : ControllerBase
 
     [HttpPost("bulk-assign")]
     [Authorize(Policy = "RequireManagerOrAdmin")]
-    public async Task<ActionResult<List<LeadDto>>> BulkAssign([FromQuery] List<long> leadIds, [FromQuery] long userId)
+    public async Task<ActionResult<List<LeadDto>>> BulkAssign([FromQuery] string? leadIds, [FromQuery] long userId = -1)
     {
         var email = GetUserEmail();
-        var leads = await _leadService.BulkAssignLeadsAsync(leadIds, userId, email);
-        return Ok(leads);
+        var ids = ExtractLeadIds(leadIds);
+        if (ids.Count == 0)
+        {
+            return BadRequest(new { message = "No valid lead IDs provided for assignment." });
+        }
+        try
+        {
+            var leads = await _leadService.BulkAssignLeadsAsync(ids, userId, email);
+            return Ok(leads);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LeadController] BulkAssign error: {ex}");
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("bulk-random-assign")]
     [Authorize(Policy = "RequireManagerOrAdmin")]
-    public async Task<ActionResult<List<LeadDto>>> BulkRandomAssign([FromQuery] List<long> leadIds)
+    public async Task<ActionResult<List<LeadDto>>> BulkRandomAssign([FromQuery] string? leadIds)
     {
         var email = GetUserEmail();
-        var leads = await _leadService.BulkRandomAssignLeadsAsync(leadIds, email);
-        return Ok(leads);
+        var ids = ExtractLeadIds(leadIds);
+        if (ids.Count == 0)
+        {
+            return BadRequest(new { message = "No valid lead IDs provided for assignment." });
+        }
+        try
+        {
+            var leads = await _leadService.BulkRandomAssignLeadsAsync(ids, email);
+            return Ok(leads);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LeadController] BulkRandomAssign error: {ex}");
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("bulk-status")]
-    public async Task<ActionResult<List<LeadDto>>> BulkStatus([FromQuery] List<long> leadIds, [FromQuery] string status)
+    public async Task<ActionResult<List<LeadDto>>> BulkStatus([FromQuery] string? leadIds, [FromQuery] string status)
     {
         var email = GetUserEmail();
-        var leads = await _leadService.BulkUpdateLeadStatusAsync(leadIds, status, email);
-        return Ok(leads);
+        var ids = ExtractLeadIds(leadIds);
+        if (ids.Count == 0)
+        {
+            return BadRequest(new { message = "No valid lead IDs provided for status update." });
+        }
+        try
+        {
+            var leads = await _leadService.BulkUpdateLeadStatusAsync(ids, status, email);
+            return Ok(leads);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LeadController] BulkStatus error: {ex}");
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("{id}/auto-assign")]
@@ -346,5 +385,29 @@ public class LeadController : ControllerBase
     private string GetUserEmail()
     {
         return User.FindFirstValue(ClaimTypes.Name) ?? User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
+    }
+
+    private List<long> ExtractLeadIds(string? paramLeadIds)
+    {
+        var result = new HashSet<long>();
+        if (!string.IsNullOrWhiteSpace(paramLeadIds))
+        {
+            foreach (var part in paramLeadIds.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (long.TryParse(part.Trim(), out var id) && id > 0) result.Add(id);
+            }
+        }
+        if (Request.Query.TryGetValue("leadIds", out var queryVals))
+        {
+            foreach (var val in queryVals)
+            {
+                if (string.IsNullOrWhiteSpace(val)) continue;
+                foreach (var part in val.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (long.TryParse(part.Trim(), out var id) && id > 0) result.Add(id);
+                }
+            }
+        }
+        return result.ToList();
     }
 }

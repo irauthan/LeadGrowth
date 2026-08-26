@@ -10,7 +10,7 @@ import {
 
 export default function AuditLogsView() {
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.roles.includes('ROLE_ADMIN');
+  const isAdmin = user?.roles?.some(r => r.toUpperCase().includes('ADMIN')) || user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ADMIN');
 
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,11 +22,18 @@ export default function AuditLogsView() {
   }, [isAdmin]);
 
   const fetchAuditLogs = async () => {
+    setLoading(true);
     try {
       const res = await api.get('/api/admin/audit-logs');
-      setLogs(res.data);
+      setLogs(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch audit logs', err);
+      try {
+        const res2 = await api.get('/api/audit-logs');
+        setLogs(Array.isArray(res2.data) ? res2.data : []);
+      } catch {
+        setLogs([]);
+      }
     } finally {
       setLoading(false);
     }

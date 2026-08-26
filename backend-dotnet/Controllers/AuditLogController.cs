@@ -8,6 +8,7 @@ namespace LeadGrowth.Controllers;
 
 [ApiController]
 [Route("api/audit-logs")]
+[Route("api/admin/audit-logs")]
 [Authorize(Policy = "RequireManagerOrAdmin")]
 public class AuditLogController : ControllerBase
 {

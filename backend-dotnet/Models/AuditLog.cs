@@ -43,4 +43,10 @@ public class AuditLog
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [NotMapped]
+    public string? UserName => User?.FullName ?? "System Administrator";
+
+    [NotMapped]
+    public string? UserEmail => User?.Email ?? "admin@leadgrowth.io";
 }

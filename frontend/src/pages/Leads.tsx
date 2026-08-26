@@ -199,8 +199,9 @@ export default function Leads() {
       setSelectedLeadIds([]);
       fetchLeads();
     } catch (err: any) {
-      console.error(err);
-      alert(err.response?.data?.message || 'Failed to bulk auto-assign leads.');
+      console.error('Bulk auto-assign error:', err);
+      const msg = err.response?.data?.message || err.response?.data?.title || err.message || 'Failed to bulk auto-assign leads.';
+      alert(msg);
     } finally {
       setBulkAssigning(false);
     }
@@ -215,8 +216,9 @@ export default function Leads() {
       setSelectedLeadIds([]);
       fetchLeads();
     } catch (err: any) {
-      console.error(err);
-      alert(err.response?.data?.message || 'Failed to bulk assign leads.');
+      console.error('Bulk manual assign error:', err);
+      const msg = err.response?.data?.message || err.response?.data?.title || err.message || 'Failed to bulk assign leads.';
+      alert(msg);
     } finally {
       setBulkAssigning(false);
     }
