@@ -3,22 +3,25 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import type { Lead, User } from '../types';
-import { formatShortDate } from '../utils';
+import { formatShortDate, isLeadAssigned, isLeadFresh } from '../utils';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { 
   Search, 
   Download, 
   MessageSquare, 
-  Plus,
-  Loader2,
-  AlertTriangle,
-  Flame,
-  Zap,
-  Briefcase,
-  AlertCircle,
-  CheckSquare,
-  Square,
-  XCircle
+  Plus, 
+  Loader2, 
+  AlertTriangle, 
+  Flame, 
+  Zap, 
+  Briefcase, 
+  AlertCircle, 
+  CheckSquare, 
+  Square, 
+  XCircle,
+  UserCheck,
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
@@ -590,6 +593,8 @@ export default function Leads() {
                 const isLostLead = lead.status === 'Lost' || lead.status === 'Rejected';
                 const isOverdue = isLeadOverdue(lead);
                 const isChecked = selectedLeadIds.includes(lead.id);
+                const assigned = isLeadAssigned(lead);
+                const fresh = isLeadFresh(lead);
 
                 return (
                   <button
@@ -634,22 +639,37 @@ export default function Leads() {
                       </div>
                     )}
                     
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                        lead.sourcePlatform === 'Meta' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
-                      }`}>
-                        {lead.sourcePlatform}
-                      </span>
+                    {/* Tags row: Source, Fresh, Assigned (Admin only), Status */}
+                    <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                          lead.sourcePlatform === 'Meta' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
+                        }`}>
+                          {lead.sourcePlatform || 'Direct'}
+                        </span>
 
-                      <div className="flex items-center gap-1.5">
+                        {fresh && (
+                          <span className="rounded-full px-2 py-0.5 text-[9px] font-extrabold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 inline-flex items-center gap-1">
+                            <Sparkles size={10} /> Fresh
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {isManagementUser && (
-                          <div
-                            onClick={(e) => handleSingleAutoAssign(e, lead.id)}
-                            className="flex items-center gap-1 text-[9px] font-extrabold text-theme-primary bg-theme-primary/10 hover:bg-theme-primary/20 px-2 py-0.5 rounded-lg border border-theme-primary/20 transition-all cursor-pointer"
-                            title="Auto-Assign this single lead using Smart AI Engine"
-                          >
-                            <Zap size={10} /> Auto-Assign
-                          </div>
+                          assigned ? (
+                            <span className="rounded-lg px-2 py-0.5 text-[9px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1" title={lead.assignedToName ? `Assigned to ${lead.assignedToName}` : 'Assigned'}>
+                              <UserCheck size={10} /> Assigned{lead.assignedToName && lead.assignedToName !== 'Unassigned' ? `: ${lead.assignedToName}` : ''}
+                            </span>
+                          ) : (
+                            <div
+                              onClick={(e) => handleSingleAutoAssign(e, lead.id)}
+                              className="flex items-center gap-1 text-[9px] font-extrabold text-theme-primary bg-theme-primary/10 hover:bg-theme-primary/20 px-2 py-0.5 rounded-lg border border-theme-primary/20 transition-all cursor-pointer"
+                              title="Auto-Assign this single lead using Smart AI Engine"
+                            >
+                              <Zap size={10} /> Auto-Assign
+                            </div>
+                          )
                         )}
 
                         <span className={`rounded px-2 py-0.5 text-[9px] font-extrabold inline-flex items-center gap-1 ${

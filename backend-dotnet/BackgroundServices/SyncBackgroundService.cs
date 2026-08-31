@@ -20,8 +20,15 @@ public class SyncBackgroundService : BackgroundService
         await Task.Yield();
         _logger.LogInformation("SyncBackgroundService started.");
 
-        // Wait 1 minute initial delay to allow Web Host startup
-        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        try
+        {
+            // Wait 1 minute initial delay to allow Web Host startup
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -58,8 +65,15 @@ public class SyncBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error occurred in SyncBackgroundService");
             }
 
-            // Wait 1 hour between runs
-            await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+            try
+            {
+                // Wait 1 hour between runs
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 }

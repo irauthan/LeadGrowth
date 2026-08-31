@@ -194,18 +194,10 @@ export default function Navbar() {
         title: n.title,
         message: n.message || n.desc || '',
         time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (n.time || 'Recent'),
-        read: n.isRead || n.read || false,
+        read: n.isRead ?? n.read ?? false,
         type: n.type
       }));
-      if (list.length > 0) {
-        setNotifications(list);
-      } else {
-        setNotifications([
-          { id: 101, title: 'New lead qualified', message: 'Lead assigned and pending pipeline review.', time: '5m ago', read: false },
-          { id: 102, title: 'Task assigned', message: 'You have been assigned to workspace operation tasks.', time: '1h ago', read: false },
-          { id: 103, title: 'Campaign Synced', message: 'Marketing APIs synced successfully.', time: '2h ago', read: true }
-        ]);
-      }
+      setNotifications(list);
     } catch (err) {
       console.error('Failed to fetch navbar notifications', err);
     }
@@ -688,26 +680,34 @@ export default function Navbar() {
                     </div>
                   </div>
                   <div className="max-h-60 overflow-y-auto py-1">
-                    {notifications.map((item) => (
-                      <Link
-                        key={item.id}
-                        to={getNotificationTargetUrl(item.title, item.message)}
-                        onClick={() => handleNotificationClick(item)}
-                        className={`flex flex-col gap-0.5 rounded-xl px-3 py-2.5 transition-colors cursor-pointer block hover:bg-theme-bg-alt/60 ${
-                          !item.read ? 'bg-theme-bg-alt/40 font-semibold' : 'opacity-80'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-theme-text">{item.title}</span>
-                          <span className="text-[9px] text-theme-text-muted">{item.time}</span>
-                        </div>
-                        <p className="text-[11px] text-theme-text-muted mt-0.5 line-clamp-2">{item.message}</p>
-                      </Link>
-                    ))}
+                    {notifications.length > 0 ? (
+                      notifications.map((item) => (
+                        <Link
+                          key={item.id}
+                          to={getNotificationTargetUrl(item.title, item.message)}
+                          onClick={() => handleNotificationClick(item)}
+                          className={`flex flex-col gap-0.5 rounded-xl px-3 py-2.5 transition-colors cursor-pointer block hover:bg-theme-bg-alt/60 ${
+                            !item.read ? 'bg-theme-bg-alt/40 font-semibold' : 'opacity-80'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-theme-text">{item.title}</span>
+                            <span className="text-[9px] text-theme-text-muted">{item.time}</span>
+                          </div>
+                          <p className="text-[11px] text-theme-text-muted mt-0.5 line-clamp-2">{item.message}</p>
+                        </Link>
+                      ))
+                    ) : (
+                      <div className="py-6 px-4 text-center">
+                        <Bell size={22} className="mx-auto text-theme-text-muted/40 mb-1.5" />
+                        <p className="text-xs font-bold text-theme-text">No New Alerts</p>
+                        <p className="text-[10px] text-theme-text-muted mt-0.5">You are caught up on everything!</p>
+                      </div>
+                    )}
                   </div>
                   <div className="border-t border-theme-border/20 p-2 text-center">
                     <Link to="/notifications-page" onClick={() => setShowNotifications(false)} className="text-[10px] font-bold text-theme-primary hover:underline">
-                      View All Activity
+                      View Notifications Center
                     </Link>
                   </div>
                 </div>

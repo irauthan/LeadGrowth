@@ -45,7 +45,7 @@ public class LeadService : ILeadService
             .Include(l => l.AssignedTo)
             .Include(l => l.AssignedBy)
             .Where(l => isUserOnly 
-                ? (l.AssignedToId == user.Id && (l.QueueStatus == "IN_PIPELINE" || l.QueueStatus == null || l.QueueStatus == "")) 
+                ? (l.AssignedToId == user.Id) 
                 : l.WorkspaceId == user.WorkspaceId);
 
         if (isFiltered)
@@ -1349,9 +1349,29 @@ public class LeadService : ILeadService
         await _context.SaveChangesAsync();
 
         var desc = "Workspace auto-saved/updated.";
-        if (updateDto.Status != null && !updateDto.Status.Equals(oldStatus))
+        if (updateDto.Status != null && !updateDto.Status.Equals(oldStatus, StringComparison.OrdinalIgnoreCase))
         {
             desc = $"Lead status transitioned from {oldStatus} to {updateDto.Status}";
+
+            if (updateDto.Status.Equals("Converted", StringComparison.OrdinalIgnoreCase) || updateDto.Status.Equals("Closed Won", StringComparison.OrdinalIgnoreCase))
+            {
+                var notifUserId = lead.AssignedToId ?? user.Id;
+                var convertNotif = new Notification
+                {
+                    UserId = notifUserId,
+                    Title = "🎉 Lead Converted!",
+                    Message = $"Lead '{lead.Name}' was successfully marked as CONVERTED by {user.FullName}.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Notifications.Add(convertNotif);
+
+                try
+                {
+                    _ = _webSocketManager.BroadcastNotificationAsync(notifUserId, convertNotif);
+                }
+                catch {}
+            }
         }
 
         var history = new LeadHistory
@@ -1763,6 +1783,17 @@ public class LeadService : ILeadService
             Console.WriteLine($"[LeadService] Non-critical error loading followup reminders: {ex.Message}");
         }
 
+        string assignedToName = "Unassigned";
+        if (lead.AssignedTo != null)
+        {
+            assignedToName = lead.AssignedTo.FullName;
+        }
+        else if (lead.AssignedToId.HasValue && lead.AssignedToId.Value > 0)
+        {
+            var u = await _context.Users.FindAsync(lead.AssignedToId.Value);
+            if (u != null) assignedToName = u.FullName;
+        }
+
         return new LeadDto
         {
             Id = lead.Id,
@@ -1775,7 +1806,7 @@ public class LeadService : ILeadService
             CampaignName = lead.CampaignName,
             Status = lead.Status,
             AssignedToId = lead.AssignedToId,
-            AssignedToName = lead.AssignedTo != null ? lead.AssignedTo.FullName : "Unassigned",
+            AssignedToName = assignedToName,
             AssignedById = lead.AssignedById,
             AssignedByName = lead.AssignedBy != null ? lead.AssignedBy.FullName : "System Queue",
             AssignedDate = lead.AssignedDate ?? lead.CreatedAt,

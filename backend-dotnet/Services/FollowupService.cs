@@ -8,10 +8,12 @@ namespace LeadGrowth.Services;
 public class FollowupService : IFollowupService
 {
     private readonly LeadGrowthDbContext _context;
+    private readonly IWebSocketManagerService _webSocketManager;
 
-    public FollowupService(LeadGrowthDbContext context)
+    public FollowupService(LeadGrowthDbContext context, IWebSocketManagerService webSocketManager)
     {
         _context = context;
+        _webSocketManager = webSocketManager;
     }
 
     public async Task<List<Dictionary<string, object>>> GetFollowupsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null)
@@ -192,7 +194,24 @@ public class FollowupService : IFollowupService
             lead.ClientNotes = notes;
         }
 
+        var notifUserId = lead.AssignedToId ?? user.Id;
+        var notif = new Notification
+        {
+            UserId = notifUserId,
+            Title = "Follow-up Scheduled",
+            Message = $"Follow-up ({followup.Type}) scheduled for '{lead.Name}' on {dt:dd MMM, hh:mm tt}.",
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.Notifications.Add(notif);
+
         await _context.SaveChangesAsync();
+
+        try
+        {
+            await _webSocketManager.BroadcastNotificationAsync(notifUserId, notif);
+        }
+        catch {}
 
         return ConvertToDict(followup);
     }
@@ -232,12 +251,12 @@ public class FollowupService : IFollowupService
 
         if (followup == null)
         {
-            throw new ArgumentException("Follow-up not found");
+            throw new ArgumentException("Follow-up reminder not found");
         }
 
         if (!DateTime.TryParse(newScheduledAt, out var dt))
         {
-            throw new ArgumentException("Invalid schedule time");
+            throw new ArgumentException("Invalid new scheduled date format");
         }
 
         // P2 RULE: Conflict check excluding this followup
@@ -275,6 +294,20 @@ public class FollowupService : IFollowupService
         }
 
         followup.Status = "UPCOMING";
+
+        if (followup.AssignedToId.HasValue && followup.AssignedToId.Value > 0)
+        {
+            var reschedNotif = new Notification
+            {
+                UserId = followup.AssignedToId.Value,
+                Title = "Follow-up Rescheduled",
+                Message = $"Follow-up for '{followup.Lead?.Name ?? "Lead"}' rescheduled to {dt:dd MMM, hh:mm tt}.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Notifications.Add(reschedNotif);
+        }
+
         await _context.SaveChangesAsync();
 
         return ConvertToDict(followup);

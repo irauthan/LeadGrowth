@@ -21,8 +21,15 @@ public class CalendarReminderBackgroundService : BackgroundService
         await Task.Yield();
         _logger.LogInformation("CalendarReminderBackgroundService started.");
 
-        // Wait 10 seconds initial delay to allow Web Host startup
-        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+        try
+        {
+            // Wait 10 seconds initial delay to allow Web Host startup
+            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -44,8 +51,15 @@ public class CalendarReminderBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error occurred in CalendarReminderBackgroundService");
             }
 
-            // Run every 1 minute
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            try
+            {
+                // Run every 1 minute
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 

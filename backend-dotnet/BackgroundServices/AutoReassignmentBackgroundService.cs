@@ -20,8 +20,15 @@ public class AutoReassignmentBackgroundService : BackgroundService
         await Task.Yield();
         _logger.LogInformation("AutoReassignmentBackgroundService started.");
 
-        // Wait 15 seconds initial delay to allow Web Host startup
-        await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+        try
+        {
+            // Wait 15 seconds initial delay to allow Web Host startup
+            await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -71,8 +78,15 @@ public class AutoReassignmentBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error occurred in AutoReassignmentBackgroundService");
             }
 
-            // Run reconciliation every 1 minute
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            try
+            {
+                // Run reconciliation every 1 minute
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 }

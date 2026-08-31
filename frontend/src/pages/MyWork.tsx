@@ -22,9 +22,12 @@ import {
   Maximize2,
   Minimize2,
   Users,
-  Flame
+  Flame,
+  Clock,
+  UserCheck
 } from 'lucide-react';
 import api from '../services/api';
+import { isLeadAssigned, isLeadFresh } from '../utils';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
 const KANBAN_STAGES = [
@@ -520,15 +523,23 @@ export default function MyWork() {
                           onClick={() => openDetails(lead.id)}
                           className="group p-4 rounded-2xl border border-theme-border/80 bg-theme-card/90 hover:border-theme-primary/80 shadow-xs hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-grab active:cursor-grabbing space-y-3 backdrop-blur-xs relative overflow-hidden"
                         >
-                          {/* Priority and Tier Top Badges */}
-                          <div className="flex items-center justify-between gap-2">
-                            <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${
-                              lead.priority === 'HIGH' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                              lead.priority === 'LOW' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' :
-                              'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                            }`}>
-                              {lead.priority || 'MEDIUM'}
-                            </span>
+                          {/* Priority, Fresh and Tier Top Badges */}
+                          <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${
+                                lead.priority === 'HIGH' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                                lead.priority === 'LOW' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' :
+                                'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              }`}>
+                                {lead.priority || 'MEDIUM'}
+                              </span>
+
+                              {isLeadFresh(lead) && (
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center gap-1">
+                                  <Sparkles size={9} /> Fresh
+                                </span>
+                              )}
+                            </div>
 
                             <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
                               lead.qualityTier === 'HOT' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
@@ -874,16 +885,23 @@ export default function MyWork() {
                           </div>
                         </td>
 
-                        <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-4 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                           <select
                             value={lead.status || 'New'}
                             onChange={(e) => handleStageChange(lead.id, e.target.value)}
-                            className="bg-theme-bg-alt border border-theme-border/50 rounded-xl px-2.5 py-1 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                            className="bg-theme-bg-alt border border-theme-border/50 rounded-xl px-2.5 py-1 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary block"
                           >
                             {STAGES_TABLE_LIST.map((st) => (
                               <option key={st} value={st}>{st}</option>
                             ))}
                           </select>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {isLeadFresh(lead) && (
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 inline-flex items-center gap-0.5">
+                                <Sparkles size={9} /> Fresh
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         <td className="p-4">

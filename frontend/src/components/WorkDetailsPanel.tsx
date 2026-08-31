@@ -33,12 +33,14 @@ import {
   Timer,
   AlertTriangle,
   RefreshCw,
-  Ban
+  Ban,
+  Sparkles
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { downloadSingleLeadPdf } from '../services/reportService';
 import { followUpService, type FollowUp, type ConflictCheckResult } from '../services/followUpService';
+import { isLeadAssigned, isLeadFresh } from '../utils';
 import FollowUpModal from './FollowUpModal';
 import type { SalesActivity, SalesActivityLog } from '../types';
 import CallTimerWidget from './CallTimerWidget';
@@ -571,8 +573,10 @@ export default function WorkDetailsPanel({
             {lead?.name?.substring(0, 2).toUpperCase() || 'LD'}
           </div>
           <div>
-            <h2 className="text-base font-extrabold text-theme-text flex items-center gap-2">
-              {lead?.name || 'Lead Work Container'}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-extrabold text-theme-text flex items-center gap-2">
+                {lead?.name || 'Lead Work Container'}
+              </h2>
               <select
                 value={lead?.status || 'New'}
                 onChange={async (e) => {
@@ -595,8 +599,20 @@ export default function WorkDetailsPanel({
                 <option value="Converted">CONVERTED</option>
                 <option value="Lost">LOST (DROP LEAD)</option>
               </select>
-            </h2>
-            <p className="text-xs text-theme-text-muted">
+
+              {isLeadFresh(lead) && (
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 inline-flex items-center gap-1">
+                  <Sparkles size={10} /> FRESH
+                </span>
+              )}
+
+              {isManagementUser && isLeadAssigned(lead) && (
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                  <UserCheck size={10} /> ASSIGNED
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-theme-text-muted mt-0.5">
               {lead?.company || 'No Company'} • {lead?.email} • {lead?.phone || 'No Phone'}
             </p>
           </div>
@@ -658,7 +674,10 @@ export default function WorkDetailsPanel({
               <div className="h-6 w-px bg-theme-border" />
               <div>
                 <span className="text-[10px] font-bold text-theme-text-muted block">ASSIGNED REP</span>
-                <span className="font-bold text-theme-text">{lead?.assignedToName || 'Unassigned'}</span>
+                <span className={`font-bold flex items-center gap-1 ${isLeadAssigned(lead) ? 'text-emerald-400' : 'text-theme-text-muted'}`}>
+                  {isLeadAssigned(lead) && <UserCheck size={12} className="text-emerald-400 inline" />}
+                  {lead?.assignedToName && lead.assignedToName !== 'Unassigned' ? lead.assignedToName : 'Unassigned'}
+                </span>
               </div>
             </div>
           </div>
