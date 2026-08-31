@@ -110,30 +110,30 @@ public class ReportController : ControllerBase
     }
 
     // --- Lead Export Endpoints ---
-
+ 
     [HttpGet("leads/csv")]
-    public async Task<IActionResult> DownloadLeadsCsv([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate)
+    public async Task<IActionResult> DownloadLeadsCsv([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate, [FromQuery] long? userId)
     {
         var email = GetUserEmail();
-        var leads = await _leadService.GetLeadsAsync(email);
+        var leads = await _leadService.GetLeadsAsync(email, period, startDate, endDate, userId);
         var data = _exportService.ExportLeadsToCsv(leads);
         return File(data, "text/csv", "leads.csv");
     }
 
     [HttpGet("leads/excel")]
-    public async Task<IActionResult> DownloadLeadsExcel([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate)
+    public async Task<IActionResult> DownloadLeadsExcel([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate, [FromQuery] long? userId)
     {
         var email = GetUserEmail();
-        var leads = await _leadService.GetLeadsAsync(email);
+        var leads = await _leadService.GetLeadsAsync(email, period, startDate, endDate, userId);
         var data = _exportService.ExportLeadsToExcel(leads);
         return File(data, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "leads.xlsx");
     }
 
     [HttpGet("leads/pdf")]
-    public async Task<IActionResult> DownloadLeadsPdf([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate)
+    public async Task<IActionResult> DownloadLeadsPdf([FromQuery] string? period, [FromQuery] string? startDate, [FromQuery] string? endDate, [FromQuery] long? userId)
     {
         var email = GetUserEmail();
-        var leads = await _leadService.GetLeadsAsync(email);
+        var leads = await _leadService.GetLeadsAsync(email, period, startDate, endDate, userId);
         var workspace = await _workspaceService.GetCurrentWorkspaceAsync(email);
         var data = _exportService.ExportLeadsToPdf(leads, workspace.Name);
         return File(data, "application/pdf", "leads.pdf");

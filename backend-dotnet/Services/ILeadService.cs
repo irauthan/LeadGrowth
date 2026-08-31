@@ -5,7 +5,7 @@ namespace LeadGrowth.Services;
 
 public interface ILeadService
 {
-    Task<List<LeadDto>> GetLeadsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null);
+    Task<List<LeadDto>> GetLeadsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null, long? assignedToId = null);
     Task<LeadDto> CreateLeadAsync(LeadDto dto, string userEmail);
     Task<LeadDto> GetLeadByIdAsync(long leadId);
     Task<LeadDto> UpdateStatusAsync(long leadId, string status, string userEmail);

@@ -117,11 +117,44 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
         var meetingsCount = activities.Count(a => a.CommunicationType == "MEETING" || a.CommunicationType == "DEMO");
         var whatsappCount = activities.Count(a => a.CommunicationType == "WHATSAPP");
 
-        var leadWorkList = await _context.Leads
+        var leads = await _context.Leads
             .Where(l => l.AssignedToId == targetUserId && l.WorkspaceId == actor.WorkspaceId)
             .OrderByDescending(l => l.CreatedAt)
             .Take(100)
-            .Select(l => new ExecutiveLeadWorkDto
+            .ToListAsync();
+
+        var leadIds = leads.Select(l => l.Id).ToList();
+
+        var allActivityLogs = leadIds.Count > 0
+            ? await _context.SalesActivityLogs
+                .Include(a => a.LoggedBy)
+                .Where(a => leadIds.Contains(a.LeadId))
+                .OrderByDescending(a => a.CreatedAt)
+                .ToListAsync()
+            : new List<SalesActivityLog>();
+
+        var allFollowups = leadIds.Count > 0
+            ? await _context.FollowupReminders
+                .Where(f => leadIds.Contains(f.LeadId))
+                .OrderByDescending(f => f.ScheduledAt)
+                .ToListAsync()
+            : new List<FollowupReminder>();
+
+        var allHistories = leadIds.Count > 0
+            ? await _context.LeadHistories
+                .Include(h => h.PerformedBy)
+                .Where(h => leadIds.Contains(h.LeadId))
+                .OrderByDescending(h => h.Timestamp)
+                .ToListAsync()
+            : new List<LeadHistory>();
+
+        var leadWorkList = leads.Select(l =>
+        {
+            var leadActivities = allActivityLogs.Where(a => a.LeadId == l.Id).ToList();
+            var leadFollowups = allFollowups.Where(f => f.LeadId == l.Id).ToList();
+            var leadTimeline = allHistories.Where(h => h.LeadId == l.Id).ToList();
+
+            return new ExecutiveLeadWorkDto
             {
                 LeadId = l.Id,
                 LeadName = l.Name,
@@ -131,56 +164,47 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
                 Priority = l.Priority ?? "MEDIUM",
                 AssignedToName = targetUser.FullName,
                 AssignedToId = targetUser.Id,
-                ActivityCount = _context.SalesActivityLogs.Count(a => a.LeadId == l.Id),
-                TotalActivitiesCount = _context.SalesActivityLogs.Count(a => a.LeadId == l.Id),
+                ActivityCount = leadActivities.Count,
+                TotalActivitiesCount = leadActivities.Count,
                 LastWorkedAt = l.CreatedAt,
                 LastActivityAt = l.CreatedAt,
-                ActivityLogs = _context.SalesActivityLogs
-                    .Where(a => a.LeadId == l.Id)
-                    .OrderByDescending(a => a.CreatedAt)
-                    .Select(a => new ExecutiveActivityLogDto
-                    {
-                        Id = a.Id,
-                        ActivityNumber = a.ActivityNumber,
-                        CommunicationType = a.CommunicationType,
-                        Outcome = a.Outcome,
-                        Duration = a.Duration,
-                        Remarks = a.Remarks,
-                        CreatedAt = a.CreatedAt,
-                        LoggedByName = a.LoggedBy != null ? a.LoggedBy.FullName : targetUser.FullName
-                    }).ToList(),
-                Followups = _context.FollowupReminders
-                    .Where(f => f.LeadId == l.Id)
-                    .OrderByDescending(f => f.ScheduledAt)
-                    .Select(f => new ExecutiveFollowupDto
-                    {
-                        Id = f.Id,
-                        Status = f.Status,
-                        Type = f.Type,
-                        Notes = f.Notes,
-                        Remarks = f.Notes,
-                        Outcome = f.Status,
-                        ScheduledAt = f.ScheduledAt,
-                        CompletedAt = f.Status == "COMPLETED" ? f.CreatedAt : null,
-                        IsOverdue = f.Status != "COMPLETED" && f.ScheduledAt < DateTime.UtcNow
-                    }).ToList(),
-                TimelineHistory = _context.LeadHistories
-                    .Where(h => h.LeadId == l.Id)
-                    .OrderByDescending(h => h.Timestamp)
-                    .Select(h => new ExecutiveTimelineHistoryDto
-                    {
-                        Id = h.Id,
-                        Action = h.Action,
-                        Description = h.Description,
-                        Details = h.Description,
-                        PreviousStatus = h.PreviousStatus,
-                        NewStatus = h.NewStatus,
-                        Timestamp = h.Timestamp,
-                        CreatedAt = h.Timestamp,
-                        PerformedByName = h.PerformedBy != null ? h.PerformedBy.FullName : "System"
-                    }).ToList()
-            })
-            .ToListAsync();
+                ActivityLogs = leadActivities.Select(a => new ExecutiveActivityLogDto
+                {
+                    Id = a.Id,
+                    ActivityNumber = a.ActivityNumber,
+                    CommunicationType = a.CommunicationType,
+                    Outcome = a.Outcome,
+                    Duration = a.Duration,
+                    Remarks = a.Remarks,
+                    CreatedAt = a.CreatedAt,
+                    LoggedByName = a.LoggedBy != null ? a.LoggedBy.FullName : targetUser.FullName
+                }).ToList(),
+                Followups = leadFollowups.Select(f => new ExecutiveFollowupDto
+                {
+                    Id = f.Id,
+                    Status = f.Status,
+                    Type = f.Type,
+                    Notes = f.Notes,
+                    Remarks = f.Notes,
+                    Outcome = f.Status,
+                    ScheduledAt = f.ScheduledAt,
+                    CompletedAt = f.Status == "COMPLETED" ? f.CreatedAt : null,
+                    IsOverdue = f.Status != "COMPLETED" && f.ScheduledAt < DateTime.UtcNow
+                }).ToList(),
+                TimelineHistory = leadTimeline.Select(h => new ExecutiveTimelineHistoryDto
+                {
+                    Id = h.Id,
+                    Action = h.Action,
+                    Description = h.Description,
+                    Details = h.Description,
+                    PreviousStatus = h.PreviousStatus,
+                    NewStatus = h.NewStatus,
+                    Timestamp = h.Timestamp,
+                    CreatedAt = h.Timestamp,
+                    PerformedByName = h.PerformedBy != null ? h.PerformedBy.FullName : "System"
+                }).ToList()
+            };
+        }).ToList();
 
         var breakdown = new List<ExecutiveDayBreakdownDto>();
         int daysCount = timeframe == "TODAY" ? 1 : (timeframe == "YESTERDAY" ? 2 : (timeframe == "THIS_WEEK" ? 7 : 14));

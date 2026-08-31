@@ -5,13 +5,15 @@ export const downloadReport = async (
   format: 'csv' | 'excel' | 'pdf',
   period?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  userId?: number
 ): Promise<void> => {
   try {
     const params: any = {};
     if (period) params.period = period;
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
+    if (userId && userId > 0) params.userId = userId;
 
     const response = await api.get(`/api/reports/${type}/${format}`, {
       responseType: 'blob',

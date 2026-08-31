@@ -8,11 +8,9 @@ import {
   Check, 
   Loader2,
   Bell,
-  ArrowRight,
   Clock,
   Sparkles,
   Trophy,
-  Filter,
   Search,
   CheckCheck
 } from 'lucide-react';

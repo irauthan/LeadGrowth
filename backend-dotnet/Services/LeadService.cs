@@ -16,7 +16,7 @@ public class LeadService : ILeadService
         _webSocketManager = webSocketManager;
     }
 
-    public async Task<List<LeadDto>> GetLeadsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null)
+    public async Task<List<LeadDto>> GetLeadsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null, long? assignedToId = null)
     {
         var email = userEmail.Trim().ToLower();
         var user = await _context.Users
@@ -47,6 +47,11 @@ public class LeadService : ILeadService
             .Where(l => isUserOnly 
                 ? (l.AssignedToId == user.Id) 
                 : l.WorkspaceId == user.WorkspaceId);
+
+        if (!isUserOnly && assignedToId.HasValue && assignedToId.Value > 0)
+        {
+            query = query.Where(l => l.AssignedToId == assignedToId.Value);
+        }
 
         if (isFiltered)
         {

@@ -20,8 +20,7 @@ import {
   Square, 
   XCircle,
   UserCheck,
-  Sparkles,
-  Clock
+  Sparkles
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';

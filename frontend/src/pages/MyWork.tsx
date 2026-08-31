@@ -22,12 +22,10 @@ import {
   Maximize2,
   Minimize2,
   Users,
-  Flame,
-  Clock,
-  UserCheck
+  Flame
 } from 'lucide-react';
 import api from '../services/api';
-import { isLeadAssigned, isLeadFresh } from '../utils';
+import { isLeadFresh } from '../utils';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
 const KANBAN_STAGES = [
