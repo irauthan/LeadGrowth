@@ -247,6 +247,7 @@ export default function Leads() {
       await api.post(`/api/leads/bulk-assign?leadIds=${selectedLeadIds.join(',')}&userId=-1`);
       alert(`Successfully auto-assigned ${selectedLeadIds.length} lead(s) via Smart Hybrid Engine!`);
       setSelectedLeadIds([]);
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchLeads();
     } catch (err: any) {
       console.error('Bulk auto-assign error:', err);
@@ -264,6 +265,7 @@ export default function Leads() {
       await api.post(`/api/leads/bulk-assign?leadIds=${selectedLeadIds.join(',')}&userId=${targetUserId}`);
       alert(`Successfully assigned ${selectedLeadIds.length} lead(s) to selected team member!`);
       setSelectedLeadIds([]);
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchLeads();
     } catch (err: any) {
       console.error('Bulk manual assign error:', err);
@@ -279,6 +281,7 @@ export default function Leads() {
     try {
       await api.post(`/api/leads/${leadId}/auto-assign`);
       alert('Lead successfully auto-assigned via Smart Hybrid Engine!');
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchLeads();
     } catch (err: any) {
       console.error(err);

@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import type { AppTheme } from '../store/themeStore';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { useWebSocket } from '../hooks/useWebSocket';
 import { 
   Bell, 
   Search, 
@@ -182,9 +183,29 @@ export default function Navbar() {
   // Real Notifications
   const [notifications, setNotifications] = useState<any[]>([]);
 
+  useWebSocket({
+    workspaceId: user?.workspaceId,
+    userId: user?.id,
+    onNotificationReceived: () => {
+      fetchNavbarNotifications();
+    },
+    onLeadReceived: () => {
+      fetchNavbarNotifications();
+    }
+  });
+
   useEffect(() => {
     fetchNavbarNotifications();
-  }, []);
+    const interval = setInterval(fetchNavbarNotifications, 15000);
+    const handleNotificationUpdate = () => {
+      fetchNavbarNotifications();
+    };
+    window.addEventListener('leadgrowth-notification-updated', handleNotificationUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('leadgrowth-notification-updated', handleNotificationUpdate);
+    };
+  }, [user?.id, user?.workspaceId]);
 
   const fetchNavbarNotifications = async () => {
     try {

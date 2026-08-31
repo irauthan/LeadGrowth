@@ -369,14 +369,38 @@ public class BulkAssignmentService : IBulkAssignmentService
 
         await _context.SaveChangesAsync();
 
-        // Broadcast realtime SignalR updates
-        await _webSocketService.BroadcastWorkspaceNotificationAsync(workspaceId, new
+        // Broadcast realtime SignalR updates to assigned users and workspace
+        try
         {
-            type = "BULK_ASSIGNMENT_COMPLETED",
-            assignedCount,
-            unassignedCount,
-            status = executionStatus
-        });
+            foreach (var assignedLead in assignedList)
+            {
+                if (assignedLead.AssignedToId.HasValue)
+                {
+                    await _webSocketService.BroadcastNotificationAsync(assignedLead.AssignedToId.Value, new
+                    {
+                        title = "New Lead Assigned",
+                        message = $"You have been assigned lead '{assignedLead.Name}' via Bulk Auto-Assign.",
+                        leadId = assignedLead.Id,
+                        createdAt = now,
+                        type = "LEAD"
+                    });
+                    await _webSocketService.BroadcastLeadAsync(workspaceId, assignedLead);
+                }
+            }
+
+            await _webSocketService.BroadcastWorkspaceNotificationAsync(workspaceId, new
+            {
+                type = "BULK_ASSIGNMENT_COMPLETED",
+                assignedCount,
+                unassignedCount,
+                status = executionStatus,
+                message = $"Bulk Auto-Assign completed: {assignedCount} lead(s) assigned."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to broadcast bulk auto-assign websocket updates");
+        }
 
         return new BulkAssignExecutionResult
         {
@@ -477,6 +501,37 @@ public class BulkAssignmentService : IBulkAssignmentService
         _context.AuditLogs.Add(auditLog);
 
         await _context.SaveChangesAsync();
+
+        // Realtime broadcasts
+        try
+        {
+            foreach (var assignedLead in assignedList)
+            {
+                await _webSocketService.BroadcastNotificationAsync(targetUser.Id, new
+                {
+                    title = "New Lead Assigned",
+                    message = $"You have been manually assigned lead '{assignedLead.Name}' by {admin.FullName}.",
+                    leadId = assignedLead.Id,
+                    createdAt = now,
+                    type = "LEAD"
+                });
+                await _webSocketService.BroadcastLeadAsync(workspaceId, assignedLead);
+            }
+
+            await _webSocketService.BroadcastWorkspaceNotificationAsync(workspaceId, new
+            {
+                type = "BULK_MANUAL_ASSIGN_COMPLETED",
+                targetUserId = targetUser.Id,
+                targetUserName = targetUser.FullName,
+                assignedCount = assignedList.Count,
+                assignedByName = admin.FullName,
+                message = $"Admin {admin.FullName} assigned {assignedList.Count} leads to {targetUser.FullName}."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to broadcast bulk manual assign websocket updates");
+        }
 
         var counts = new Dictionary<string, int> { { targetUser.FullName, assignedList.Count } };
 

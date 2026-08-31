@@ -8,10 +8,12 @@ namespace LeadGrowth.Services;
 public class TaskService : ITaskService
 {
     private readonly LeadGrowthDbContext _context;
+    private readonly IWebSocketManagerService _webSocketManager;
 
-    public TaskService(LeadGrowthDbContext context)
+    public TaskService(LeadGrowthDbContext context, IWebSocketManagerService webSocketManager)
     {
         _context = context;
+        _webSocketManager = webSocketManager;
     }
 
     public async Task<List<TaskDto>> GetTasksAsync(string userEmail)
@@ -143,6 +145,23 @@ public class TaskService : ITaskService
             };
             _context.Notifications.Add(notif);
             await _context.SaveChangesAsync();
+
+            try
+            {
+                await _webSocketManager.BroadcastNotificationAsync(assignedTo.Id, new
+                {
+                    id = notif.Id,
+                    title = notif.Title,
+                    message = notif.Message,
+                    createdAt = notif.CreatedAt,
+                    type = "TASK"
+                });
+                if (task.WorkspaceId > 0)
+                {
+                    await _webSocketManager.BroadcastTaskAsync(task.WorkspaceId, ConvertToDto(task));
+                }
+            }
+            catch {}
         }
 
         return ConvertToDto(task);
@@ -187,6 +206,37 @@ public class TaskService : ITaskService
 
         _context.Tasks.Add(task);
         await _context.SaveChangesAsync();
+
+        if (task.AssignedToId.HasValue)
+        {
+            var notif = new Notification
+            {
+                UserId = task.AssignedToId.Value,
+                Title = "New Task Assigned",
+                Message = $"You have been assigned to task: \"{task.Title}\".",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Notifications.Add(notif);
+            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _webSocketManager.BroadcastNotificationAsync(task.AssignedToId.Value, new
+                {
+                    id = notif.Id,
+                    title = notif.Title,
+                    message = notif.Message,
+                    createdAt = notif.CreatedAt,
+                    type = "TASK"
+                });
+                if (task.WorkspaceId > 0)
+                {
+                    await _webSocketManager.BroadcastTaskAsync(task.WorkspaceId, ConvertToDto(task));
+                }
+            }
+            catch {}
+        }
 
         return ConvertToDto(task);
     }

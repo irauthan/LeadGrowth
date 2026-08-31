@@ -209,7 +209,14 @@ public class FollowupService : IFollowupService
 
         try
         {
-            await _webSocketManager.BroadcastNotificationAsync(notifUserId, notif);
+            await _webSocketManager.BroadcastNotificationAsync(notifUserId, new
+            {
+                id = notif.Id,
+                title = notif.Title,
+                message = notif.Message,
+                createdAt = notif.CreatedAt,
+                type = "FOLLOWUP"
+            });
         }
         catch {}
 
@@ -295,9 +302,10 @@ public class FollowupService : IFollowupService
 
         followup.Status = "UPCOMING";
 
+        Notification? reschedNotif = null;
         if (followup.AssignedToId.HasValue && followup.AssignedToId.Value > 0)
         {
-            var reschedNotif = new Notification
+            reschedNotif = new Notification
             {
                 UserId = followup.AssignedToId.Value,
                 Title = "Follow-up Rescheduled",
@@ -309,6 +317,22 @@ public class FollowupService : IFollowupService
         }
 
         await _context.SaveChangesAsync();
+
+        if (reschedNotif != null && followup.AssignedToId.HasValue)
+        {
+            try
+            {
+                await _webSocketManager.BroadcastNotificationAsync(followup.AssignedToId.Value, new
+                {
+                    id = reschedNotif.Id,
+                    title = reschedNotif.Title,
+                    message = reschedNotif.Message,
+                    createdAt = reschedNotif.CreatedAt,
+                    type = "FOLLOWUP"
+                });
+            }
+            catch {}
+        }
 
         return ConvertToDict(followup);
     }

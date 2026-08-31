@@ -17,6 +17,8 @@ import {
   CheckCheck
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuthStore } from '../store/authStore';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 interface AlertItem {
   id: number;
@@ -31,21 +33,42 @@ interface AlertItem {
 }
 
 export default function NotificationsPage() {
+  const user = useAuthStore((state) => state.user);
   const [notifications, setNotifications] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ALL' | 'UNREAD' | 'LEADS' | 'FOLLOWUPS' | 'TASKS'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
+  useWebSocket({
+    workspaceId: user?.workspaceId,
+    userId: user?.id,
+    onNotificationReceived: () => {
+      fetchNotifications();
+    },
+    onLeadReceived: () => {
+      fetchNotifications();
+    }
+  });
+
   useEffect(() => {
     fetchNotifications();
-  }, []);
+    const interval = setInterval(fetchNotifications, 15000);
+    const handleNotificationUpdate = () => {
+      fetchNotifications();
+    };
+    window.addEventListener('leadgrowth-notification-updated', handleNotificationUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('leadgrowth-notification-updated', handleNotificationUpdate);
+    };
+  }, [user?.id, user?.workspaceId]);
 
   const detectType = (n: any): string => {
     if (n.type) return n.type.toUpperCase();
     const t = (n.title || '').toLowerCase();
     const m = (n.message || n.desc || '').toLowerCase();
     if (t.includes('convert') || m.includes('convert') || t.includes('won')) return 'CONVERTED';
-    if (t.includes('lead') || m.includes('lead') || t.includes('pipeline')) return 'LEAD';
+    if (t.includes('lead') || m.includes('lead') || t.includes('pipeline') || t.includes('accept') || m.includes('accept')) return 'LEAD';
     if (t.includes('follow') || m.includes('follow') || t.includes('schedule') || t.includes('calendar')) return 'FOLLOWUP';
     if (t.includes('task') || m.includes('task')) return 'TASK';
     if (t.includes('campaign') || m.includes('campaign')) return 'CAMPAIGN';

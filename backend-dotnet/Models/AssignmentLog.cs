@@ -39,7 +39,7 @@ public class AssignmentLog
     [JsonIgnore]
     public virtual User? User { get; set; }
 
-    [MaxLength(50)]
+    [MaxLength(500)]
     public string? Strategy { get; set; }
 
     [Column("assigned_at")]

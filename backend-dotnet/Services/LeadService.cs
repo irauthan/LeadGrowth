@@ -118,6 +118,8 @@ public class LeadService : ILeadService
             CampaignName = dto.CampaignName,
             Status = "New",
             AssignedToId = assignedTo?.Id,
+            AssignedById = assignedTo != null ? creator.Id : null,
+            AssignedDate = assignedTo != null ? DateTime.UtcNow : null,
             Priority = dto.Priority ?? "MEDIUM",
             Company = dto.Company,
             Location = dto.Location,
@@ -158,18 +160,33 @@ public class LeadService : ILeadService
                     Strategy = algorithmDetails,
                     AssignedAt = DateTime.UtcNow
                 };
-                _context.AssignmentLogs.Add(assignLog);
-
-                var notification = new Notification
+                try
                 {
-                    UserId = assignedTo.Id,
-                    Title = "New Lead Assigned",
-                    Message = $"You have been assigned to lead: \"{lead.Name}\" from source \"{lead.SourcePlatform}\".",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _context.Notifications.Add(notification);
-                await _context.SaveChangesAsync();
+                    _context.AssignmentLogs.Add(assignLog);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception logEx)
+                {
+                    Console.WriteLine($"[LeadService] Assignment log error: {logEx.Message}");
+                }
+
+                try
+                {
+                    var notification = new Notification
+                    {
+                        UserId = assignedTo.Id,
+                        Title = "New Lead Assigned",
+                        Message = $"You have been assigned to lead: \"{lead.Name}\" from source \"{lead.SourcePlatform}\".",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Notifications.Add(notification);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception notifEx)
+                {
+                    Console.WriteLine($"[LeadService] Notification create error: {notifEx.Message}");
+                }
             }
             else
             {
@@ -200,9 +217,10 @@ public class LeadService : ILeadService
                 await _webSocketManager.BroadcastNotificationAsync(assignedTo.Id, new
                 {
                     title = "New Lead Assigned",
-                    message = $"You have been assigned to lead: \"{lead.Name}\"",
+                    message = $"You have been assigned to lead: \"{lead.Name}\" from source \"{lead.SourcePlatform}\".",
                     leadId = lead.Id,
-                    createdAt = DateTime.UtcNow
+                    createdAt = DateTime.UtcNow,
+                    type = "LEAD"
                 });
             }
         }
@@ -266,13 +284,68 @@ public class LeadService : ILeadService
         lead.Status = status;
         lead.ProgressPercentage = CalculateProgressPercentage(status, lead.AssignedToId.HasValue);
 
-        if (("Converted".Equals(status, StringComparison.OrdinalIgnoreCase) || "Closed Won".Equals(status, StringComparison.OrdinalIgnoreCase)) && lead.Campaign != null)
+        bool isConverted = "Converted".Equals(status, StringComparison.OrdinalIgnoreCase) 
+            || "Closed Won".Equals(status, StringComparison.OrdinalIgnoreCase) 
+            || "Won".Equals(status, StringComparison.OrdinalIgnoreCase);
+
+        if (isConverted && lead.Campaign != null)
         {
             lead.Campaign.Conversions += 1;
         }
 
         await _context.SaveChangesAsync();
         await ResolveOverdueFollowupsForLeadAsync(lead, $"Stage updated from '{oldStatus}' to '{status}'");
+
+        if (isConverted)
+        {
+            var notifRecipients = new HashSet<long>();
+            if (lead.AssignedToId.HasValue) notifRecipients.Add(lead.AssignedToId.Value);
+            if (lead.AssignedById.HasValue) notifRecipients.Add(lead.AssignedById.Value);
+
+            foreach (var rId in notifRecipients)
+            {
+                try
+                {
+                    var convertedNotif = new Notification
+                    {
+                        UserId = rId,
+                        Title = "🎉 Lead Converted!",
+                        Message = $"Lead '{lead.Name}' was successfully marked as CONVERTED by {user.FullName}.",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Notifications.Add(convertedNotif);
+                    await _context.SaveChangesAsync();
+
+                    await _webSocketManager.BroadcastNotificationAsync(rId, new
+                    {
+                        id = convertedNotif.Id,
+                        title = convertedNotif.Title,
+                        message = convertedNotif.Message,
+                        leadId = lead.Id,
+                        createdAt = convertedNotif.CreatedAt,
+                        type = "CONVERTED"
+                    });
+                }
+                catch {}
+            }
+
+            if (lead.WorkspaceId > 0)
+            {
+                try
+                {
+                    await _webSocketManager.BroadcastWorkspaceNotificationAsync(lead.WorkspaceId, new
+                    {
+                        type = "LEAD_CONVERTED",
+                        leadId = lead.Id,
+                        leadName = lead.Name,
+                        convertedByName = user.FullName,
+                        message = $"Lead '{lead.Name}' was CONVERTED by {user.FullName}."
+                    });
+                }
+                catch {}
+            }
+        }
 
         return await ConvertToDtoAsync(lead);
     }
@@ -357,41 +430,14 @@ public class LeadService : ILeadService
         assignTarget.LastAssignedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
+        Notification? notif = null;
         try
         {
-            var assignment = new LeadAssignment
-            {
-                LeadId = lead.Id,
-                UserId = assignTarget.Id,
-                AssignedAt = DateTime.UtcNow
-            };
-            _context.LeadAssignments.Add(assignment);
-
-            var history = new LeadAssignmentHistory
-            {
-                LeadId = lead.Id,
-                AssignedById = user.Id,
-                AssignedToId = assignTarget.Id,
-                Reason = algorithmDetails,
-                AssignedAt = DateTime.UtcNow
-            };
-            _context.LeadAssignmentHistories.Add(history);
-
-            var assignLog = new AssignmentLog
-            {
-                WorkspaceId = user.WorkspaceId!.Value,
-                LeadId = lead.Id,
-                UserId = assignTarget.Id,
-                Strategy = algorithmDetails,
-                AssignedAt = DateTime.UtcNow
-            };
-            _context.AssignmentLogs.Add(assignLog);
-
-            var notif = new Notification
+            notif = new Notification
             {
                 UserId = assignTarget.Id,
                 Title = "New Lead Assigned",
-                Message = $"You are now the sole active owner of lead: \"{lead.Name}\" (Lead #{lead.Id}).",
+                Message = $"You are now the active owner of lead: \"{lead.Name}\" (Lead #{lead.Id}).",
                 IsRead = false,
                 CreatedAt = DateTime.UtcNow
             };
@@ -412,22 +458,91 @@ public class LeadService : ILeadService
 
             await _context.SaveChangesAsync();
         }
+        catch (Exception notifEx)
+        {
+            Console.WriteLine($"[LeadService] Notification create error in AssignLeadAsync: {notifEx.Message}");
+        }
+
+        try
+        {
+            var assignment = new LeadAssignment
+            {
+                LeadId = lead.Id,
+                UserId = assignTarget.Id,
+                AssignedAt = DateTime.UtcNow
+            };
+            _context.LeadAssignments.Add(assignment);
+
+            var history = new LeadAssignmentHistory
+            {
+                LeadId = lead.Id,
+                AssignedById = user.Id,
+                AssignedToId = assignTarget.Id,
+                Reason = algorithmDetails,
+                AssignedAt = DateTime.UtcNow
+            };
+            _context.LeadAssignmentHistories.Add(history);
+
+            if (user.WorkspaceId.HasValue)
+            {
+                var assignLog = new AssignmentLog
+                {
+                    WorkspaceId = user.WorkspaceId.Value,
+                    LeadId = lead.Id,
+                    UserId = assignTarget.Id,
+                    Strategy = algorithmDetails,
+                    AssignedAt = DateTime.UtcNow
+                };
+                _context.AssignmentLogs.Add(assignLog);
+            }
+
+            await _context.SaveChangesAsync();
+        }
         catch (Exception ex)
         {
-            Console.WriteLine($"[LeadService] Non-critical error during post-assignment logging: {ex.Message}");
+            Console.WriteLine($"[LeadService] Non-critical logging error during assignment: {ex.Message}");
         }
 
         var resultDto = await ConvertToDtoAsync(lead);
         try
         {
-            await _webSocketManager.BroadcastLeadAsync(lead.WorkspaceId, resultDto);
+            if (lead.WorkspaceId > 0)
+            {
+                await _webSocketManager.BroadcastLeadAsync(lead.WorkspaceId, resultDto);
+                await _webSocketManager.BroadcastWorkspaceNotificationAsync(lead.WorkspaceId, new
+                {
+                    type = "LEAD_ASSIGNED",
+                    leadId = lead.Id,
+                    leadName = lead.Name,
+                    assignedToId = assignTarget.Id,
+                    assignedToName = assignTarget.FullName,
+                    assignedById = user.Id,
+                    assignedByName = user.FullName,
+                    message = $"{user.FullName} assigned lead \"{lead.Name}\" to {assignTarget.FullName}."
+                });
+            }
+
             await _webSocketManager.BroadcastNotificationAsync(assignTarget.Id, new
             {
+                id = notif?.Id ?? 0,
                 title = "New Lead Assigned",
                 message = $"You have been assigned to lead: \"{lead.Name}\" (Lead #{lead.Id})",
                 leadId = lead.Id,
-                createdAt = DateTime.UtcNow
+                createdAt = DateTime.UtcNow,
+                type = "LEAD"
             });
+
+            if (oldOwner != null && oldOwner.Id != assignTarget.Id)
+            {
+                await _webSocketManager.BroadcastNotificationAsync(oldOwner.Id, new
+                {
+                    title = "Lead Reassigned",
+                    message = $"Lead \"{lead.Name}\" (Lead #{lead.Id}) has been reassigned to {assignTarget.FullName}.",
+                    leadId = lead.Id,
+                    createdAt = DateTime.UtcNow,
+                    type = "LEAD"
+                });
+            }
         }
         catch (Exception wsEx)
         {
@@ -574,14 +689,6 @@ public class LeadService : ILeadService
 
                 try
                 {
-                    var assignment = new LeadAssignment
-                    {
-                        LeadId = lead.Id,
-                        UserId = assignTarget.Id,
-                        AssignedAt = DateTime.UtcNow
-                    };
-                    _context.LeadAssignments.Add(assignment);
-
                     var notif = new Notification
                     {
                         UserId = assignTarget.Id,
@@ -591,6 +698,22 @@ public class LeadService : ILeadService
                         CreatedAt = DateTime.UtcNow
                     };
                     _context.Notifications.Add(notif);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception nEx)
+                {
+                    Console.WriteLine($"[LeadService] Notification create error: {nEx.Message}");
+                }
+
+                try
+                {
+                    var assignment = new LeadAssignment
+                    {
+                        LeadId = lead.Id,
+                        UserId = assignTarget.Id,
+                        AssignedAt = DateTime.UtcNow
+                    };
+                    _context.LeadAssignments.Add(assignment);
 
                     if (lead.WorkspaceId > 0)
                     {
@@ -638,9 +761,20 @@ public class LeadService : ILeadService
                         title = "New Lead Assigned",
                         message = $"You have been assigned to lead: \"{updatedLead.Name}\"",
                         leadId = updatedLead.Id,
-                        createdAt = DateTime.UtcNow
+                        createdAt = DateTime.UtcNow,
+                        type = "LEAD"
                     });
                 }
+            }
+            if (user.WorkspaceId.HasValue)
+            {
+                await _webSocketManager.BroadcastWorkspaceNotificationAsync(user.WorkspaceId.Value, new
+                {
+                    type = "BULK_ASSIGNMENT_COMPLETED",
+                    assignedCount = updated.Count,
+                    assignedByName = user.FullName,
+                    message = $"{user.FullName} assigned {updated.Count} lead(s)."
+                });
             }
         }
         catch (Exception wsEx)
@@ -777,7 +911,79 @@ public class LeadService : ILeadService
         }
 
         await _context.SaveChangesAsync();
-        return await ConvertToDtoAsync(lead);
+
+        // 1. Determine all admin/manager recipient IDs to notify
+        var recipientUserIds = new HashSet<long>();
+        if (lead.AssignedById.HasValue && lead.AssignedById.Value != user.Id)
+        {
+            recipientUserIds.Add(lead.AssignedById.Value);
+        }
+        else if (user.WorkspaceId.HasValue)
+        {
+            var workspaceAdmins = await _context.Users
+                .Include(u => u.Roles)
+                .Where(u => u.WorkspaceId == user.WorkspaceId && u.Id != user.Id)
+                .ToListAsync();
+
+            foreach (var adm in workspaceAdmins)
+            {
+                if (adm.Roles.Any(r => r.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase) || r.Name.Equals("MANAGER", StringComparison.OrdinalIgnoreCase)))
+                {
+                    recipientUserIds.Add(adm.Id);
+                }
+            }
+        }
+
+        foreach (var rId in recipientUserIds)
+        {
+            try
+            {
+                var notif = new Notification
+                {
+                    UserId = rId,
+                    Title = "Lead Accepted",
+                    Message = $"{user.FullName} accepted lead \"{lead.Name}\" (Lead #{lead.Id}) and added it to active pipeline.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Notifications.Add(notif);
+                await _context.SaveChangesAsync();
+
+                await _webSocketManager.BroadcastNotificationAsync(rId, new
+                {
+                    id = notif.Id,
+                    title = notif.Title,
+                    message = notif.Message,
+                    createdAt = notif.CreatedAt,
+                    type = "LEAD"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LeadService] Notification error to recipient {rId}: {ex.Message}");
+            }
+        }
+
+        var resultDto = await ConvertToDtoAsync(lead);
+        try
+        {
+            await _webSocketManager.BroadcastLeadAsync(lead.WorkspaceId, resultDto);
+            await _webSocketManager.BroadcastWorkspaceNotificationAsync(lead.WorkspaceId, new
+            {
+                type = "LEAD_ACCEPTED",
+                leadId = lead.Id,
+                leadName = lead.Name,
+                userId = user.Id,
+                userName = user.FullName,
+                message = $"{user.FullName} accepted lead \"{lead.Name}\" into pipeline."
+            });
+        }
+        catch (Exception wsEx)
+        {
+            Console.WriteLine($"[LeadService] WebSocket broadcast error: {wsEx.Message}");
+        }
+
+        return resultDto;
     }
 
     public async Task<List<LeadDto>> BulkAddToPipelineAsync(List<long> leadIds, string userEmail)
@@ -811,6 +1017,11 @@ public class LeadService : ILeadService
             leadsToProcess = allPendingLeads;
         }
 
+        if (leadsToProcess.Count == 0)
+        {
+            return new List<LeadDto>();
+        }
+
         foreach (var lead in leadsToProcess)
         {
             lead.AssignedToId = user.Id;
@@ -825,10 +1036,120 @@ public class LeadService : ILeadService
 
         await _context.SaveChangesAsync();
 
+        // Notify each assigner about accepted leads
+        var assignerGroups = leadsToProcess
+            .Where(l => l.AssignedById.HasValue && l.AssignedById.Value != user.Id)
+            .GroupBy(l => l.AssignedById!.Value)
+            .ToList();
+
+        var unassignedCount = leadsToProcess.Count(l => !l.AssignedById.HasValue || l.AssignedById.Value == user.Id);
+
+        foreach (var group in assignerGroups)
+        {
+            var assignerId = group.Key;
+            var acceptedCount = group.Count();
+            var leadNames = string.Join(", ", group.Take(3).Select(l => $"\"{l.Name}\"")) + (acceptedCount > 3 ? $" and {acceptedCount - 3} more" : "");
+
+            try
+            {
+                var notif = new Notification
+                {
+                    UserId = assignerId,
+                    Title = "Leads Accepted into Pipeline",
+                    Message = $"{user.FullName} accepted {acceptedCount} assigned lead(s) into their active pipeline ({leadNames}).",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Notifications.Add(notif);
+                await _context.SaveChangesAsync();
+
+                await _webSocketManager.BroadcastNotificationAsync(assignerId, new
+                {
+                    id = notif.Id,
+                    title = notif.Title,
+                    message = notif.Message,
+                    createdAt = notif.CreatedAt,
+                    type = "LEAD"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LeadService] Notification error to assigner {assignerId}: {ex.Message}");
+            }
+        }
+
+        if (assignerGroups.Count == 0 && unassignedCount > 0 && user.WorkspaceId.HasValue)
+        {
+            var workspaceAdmins = await _context.Users
+                .Include(u => u.Roles)
+                .Where(u => u.WorkspaceId == user.WorkspaceId && u.Id != user.Id)
+                .ToListAsync();
+
+            var leadNames = string.Join(", ", leadsToProcess.Take(3).Select(l => $"\"{l.Name}\"")) + (leadsToProcess.Count > 3 ? $" and {leadsToProcess.Count - 3} more" : "");
+
+            foreach (var adm in workspaceAdmins)
+            {
+                if (adm.Roles.Any(r => r.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase) || r.Name.Equals("MANAGER", StringComparison.OrdinalIgnoreCase)))
+                {
+                    try
+                    {
+                        var notif = new Notification
+                        {
+                            UserId = adm.Id,
+                            Title = "Leads Accepted into Pipeline",
+                            Message = $"{user.FullName} accepted {leadsToProcess.Count} assigned lead(s) into active pipeline ({leadNames}).",
+                            IsRead = false,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.Notifications.Add(notif);
+                        await _context.SaveChangesAsync();
+
+                        await _webSocketManager.BroadcastNotificationAsync(adm.Id, new
+                        {
+                            id = notif.Id,
+                            title = notif.Title,
+                            message = notif.Message,
+                            createdAt = notif.CreatedAt,
+                            type = "LEAD"
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[LeadService] Notification error to admin {adm.Id}: {ex.Message}");
+                    }
+                }
+            }
+        }
+
         var result = new List<LeadDto>();
         foreach (var lead in leadsToProcess)
         {
-            result.Add(await ConvertToDtoAsync(lead));
+            var dto = await ConvertToDtoAsync(lead);
+            result.Add(dto);
+            if (lead.WorkspaceId > 0)
+            {
+                try
+                {
+                    await _webSocketManager.BroadcastLeadAsync(lead.WorkspaceId, dto);
+                }
+                catch {}
+            }
+        }
+
+        if (user.WorkspaceId.HasValue)
+        {
+            try
+            {
+                await _webSocketManager.BroadcastWorkspaceNotificationAsync(user.WorkspaceId.Value, new
+                {
+                    type = "LEADS_BULK_ACCEPTED",
+                    count = leadsToProcess.Count,
+                    userId = user.Id,
+                    userName = user.FullName,
+                    message = $"{user.FullName} accepted {leadsToProcess.Count} leads into active pipeline."
+                });
+            }
+            catch {}
         }
 
         return result;

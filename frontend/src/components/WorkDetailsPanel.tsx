@@ -264,6 +264,7 @@ export default function WorkDetailsPanel({
         setAssignSuccessMsg('Lead successfully assigned!');
       }
       setTimeout(() => setAssignSuccessMsg(''), 4000);
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchLeadDetails();
       triggerUpdate();
     } catch (err: any) {
@@ -281,6 +282,7 @@ export default function WorkDetailsPanel({
       await api.post(`/api/leads/${leadId}/auto-assign`);
       setAssignSuccessMsg('Lead successfully auto-assigned via Smart AI Hybrid Engine!');
       setTimeout(() => setAssignSuccessMsg(''), 4000);
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchLeadDetails();
       triggerUpdate();
     } catch (err: any) {

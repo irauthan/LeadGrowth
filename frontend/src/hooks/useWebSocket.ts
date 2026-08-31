@@ -42,20 +42,20 @@ export const useWebSocket = ({
       hubUrl = 'http://localhost:5000/ws-leads';
     }
 
-    const authStorage = localStorage.getItem('leadgrowth-auth');
-    let token = '';
-    if (authStorage) {
-      try {
-        const parsed = JSON.parse(authStorage);
-        token = parsed?.state?.token || '';
-      } catch {
-        // ignore
-      }
-    }
-
     const connection = new HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => token,
+        accessTokenFactory: () => {
+          const authStorage = localStorage.getItem('leadgrowth-auth');
+          if (authStorage) {
+            try {
+              const parsed = JSON.parse(authStorage);
+              return parsed?.state?.token || '';
+            } catch {
+              return '';
+            }
+          }
+          return '';
+        },
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .configureLogging(LogLevel.Warning)

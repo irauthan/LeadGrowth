@@ -54,9 +54,11 @@ export default function UserDashboard() {
     userId: user?.id,
     onLeadReceived: () => {
       fetchUserData();
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
     },
     onNotificationReceived: () => {
       fetchUserData();
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
     }
   });
 
@@ -133,6 +135,7 @@ export default function UserDashboard() {
       );
       setIdleMessage(`Lead "${leadName}" added to your Pipelines!`);
       setTimeout(() => setIdleMessage(''), 4000);
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchUserData();
     } catch (e: any) {
       fetchUserData();
@@ -154,6 +157,7 @@ export default function UserDashboard() {
       await api.post('/api/leads/bulk-add-to-pipeline', targetIds);
       setIdleMessage(`${targetIds.length} lead${targetIds.length > 1 ? 's' : ''} added to your Pipelines!`);
       setTimeout(() => setIdleMessage(''), 4000);
+      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchUserData();
     } catch (e: any) {
       fetchUserData();

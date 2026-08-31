@@ -92,7 +92,6 @@ public class CalendarReminderBackgroundService : BackgroundService
                         var notification = new Notification
                         {
                             UserId = user.Id,
-                            User = user,
                             Title = title,
                             Message = message,
                             IsRead = false,
@@ -102,7 +101,14 @@ public class CalendarReminderBackgroundService : BackgroundService
                         dbContext.Notifications.Add(notification);
                         await dbContext.SaveChangesAsync();
 
-                        await wsManager.BroadcastNotificationAsync(user.Id, notification);
+                        await wsManager.BroadcastNotificationAsync(user.Id, new
+                        {
+                            id = notification.Id,
+                            title = notification.Title,
+                            message = notification.Message,
+                            createdAt = notification.CreatedAt,
+                            type = "CALENDAR"
+                        });
                         _logger.LogInformation("Sent calendar reminder notification to user ID {UserId} for event ID {EventId}", user.Id, calEvent.Id);
                     }
                 }
@@ -133,7 +139,6 @@ public class CalendarReminderBackgroundService : BackgroundService
                 var notification = new Notification
                 {
                     UserId = f.AssignedTo.Id,
-                    User = f.AssignedTo,
                     Title = "Overdue Follow-up Alert",
                     Message = $"Follow-up for '{leadName}' was scheduled for {f.ScheduledAt:yyyy-MM-dd HH:mm} and is now OVERDUE.",
                     IsRead = false,
@@ -143,7 +148,14 @@ public class CalendarReminderBackgroundService : BackgroundService
                 dbContext.Notifications.Add(notification);
                 await dbContext.SaveChangesAsync();
 
-                await wsManager.BroadcastNotificationAsync(f.AssignedTo.Id, notification);
+                await wsManager.BroadcastNotificationAsync(f.AssignedTo.Id, new
+                {
+                    id = notification.Id,
+                    title = notification.Title,
+                    message = notification.Message,
+                    createdAt = notification.CreatedAt,
+                    type = "FOLLOWUP"
+                });
                 _logger.LogInformation("Marked follow-up ID {FollowupId} OVERDUE for lead {LeadName}", f.Id, leadName);
             }
         }

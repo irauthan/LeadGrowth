@@ -8,10 +8,12 @@ namespace LeadGrowth.Services;
 public class LeadQueueService : ILeadQueueService
 {
     private readonly LeadGrowthDbContext _context;
+    private readonly IWebSocketManagerService _webSocketService;
 
-    public LeadQueueService(LeadGrowthDbContext context)
+    public LeadQueueService(LeadGrowthDbContext context, IWebSocketManagerService webSocketService)
     {
         _context = context;
+        _webSocketService = webSocketService;
     }
 
     public async Task<List<LeadDto>> GetUnassignedLeadQueueAsync(long workspaceId)
@@ -58,6 +60,8 @@ public class LeadQueueService : ILeadQueueService
                 lead.AssignedToId = targetUser.Id;
                 lead.ProgressPercentage = LeadService.CalculateProgressPercentage(lead.Status, true);
                 lead.AssignedTo = targetUser;
+                lead.AssignedById = actor.Id;
+                lead.AssignedDate = DateTime.UtcNow;
                 lead.QueueStatus = "ASSIGNED";
                 await _context.SaveChangesAsync();
 
@@ -72,10 +76,56 @@ public class LeadQueueService : ILeadQueueService
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.AuditLogs.Add(log);
+
+                var notif = new Notification
+                {
+                    UserId = targetUser.Id,
+                    Title = "New Lead Assigned",
+                    Message = $"You have been assigned lead '{lead.Name}' by {actor.FullName}.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Notifications.Add(notif);
                 await _context.SaveChangesAsync();
 
-                assignedList.Add(ConvertToDto(lead));
+                var dto = ConvertToDto(lead);
+                assignedList.Add(dto);
+
+                try
+                {
+                    await _webSocketService.BroadcastNotificationAsync(targetUser.Id, new
+                    {
+                        id = notif.Id,
+                        title = notif.Title,
+                        message = notif.Message,
+                        leadId = lead.Id,
+                        createdAt = notif.CreatedAt,
+                        type = "LEAD"
+                    });
+                    if (lead.WorkspaceId > 0)
+                    {
+                        await _webSocketService.BroadcastLeadAsync(lead.WorkspaceId, dto);
+                    }
+                }
+                catch {}
             }
+        }
+
+        if (actor.WorkspaceId.HasValue)
+        {
+            try
+            {
+                await _webSocketService.BroadcastWorkspaceNotificationAsync(actor.WorkspaceId.Value, new
+                {
+                    type = "QUEUE_LEADS_ASSIGNED",
+                    count = assignedList.Count,
+                    targetUserId = targetUser.Id,
+                    targetUserName = targetUser.FullName,
+                    assignedByName = actor.FullName,
+                    message = $"{actor.FullName} assigned {assignedList.Count} lead(s) to {targetUser.FullName}."
+                });
+            }
+            catch {}
         }
 
         return assignedList;
@@ -111,6 +161,8 @@ public class LeadQueueService : ILeadQueueService
             lead.AssignedToId = bestAssignee.Id;
             lead.ProgressPercentage = LeadService.CalculateProgressPercentage(lead.Status, true);
             lead.AssignedTo = bestAssignee;
+            lead.AssignedById = actor.Id;
+            lead.AssignedDate = DateTime.UtcNow;
             lead.QueueStatus = "ASSIGNED";
             await _context.SaveChangesAsync();
 
@@ -146,9 +198,38 @@ public class LeadQueueService : ILeadQueueService
                 CreatedAt = DateTime.UtcNow
             };
             _context.AuditLogs.Add(auditLog);
+
+            var notif = new Notification
+            {
+                UserId = bestAssignee.Id,
+                Title = "New Lead Assigned",
+                Message = $"You have been auto-assigned lead '{lead.Name}'.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Notifications.Add(notif);
             await _context.SaveChangesAsync();
 
-            return ConvertToDto(lead);
+            var dto = ConvertToDto(lead);
+            try
+            {
+                await _webSocketService.BroadcastNotificationAsync(bestAssignee.Id, new
+                {
+                    id = notif.Id,
+                    title = notif.Title,
+                    message = notif.Message,
+                    leadId = lead.Id,
+                    createdAt = notif.CreatedAt,
+                    type = "LEAD"
+                });
+                if (lead.WorkspaceId > 0)
+                {
+                    await _webSocketService.BroadcastLeadAsync(lead.WorkspaceId, dto);
+                }
+            }
+            catch {}
+
+            return dto;
         }
         else
         {
@@ -215,8 +296,37 @@ public class LeadQueueService : ILeadQueueService
             _context.AssignmentLogs.Add(assignLog);
         }
 
+        var notif = new Notification
+        {
+            UserId = user.Id,
+            Title = "Lead Assigned via Idle Sweep",
+            Message = $"You picked up queue lead '{leadToAssign.Name}' via Idle Prevention Sweep.",
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.Notifications.Add(notif);
         await _context.SaveChangesAsync();
-        return ConvertToDto(leadToAssign);
+
+        var dto = ConvertToDto(leadToAssign);
+        try
+        {
+            await _webSocketService.BroadcastNotificationAsync(user.Id, new
+            {
+                id = notif.Id,
+                title = notif.Title,
+                message = notif.Message,
+                leadId = leadToAssign.Id,
+                createdAt = notif.CreatedAt,
+                type = "LEAD"
+            });
+            if (leadToAssign.WorkspaceId > 0)
+            {
+                await _webSocketService.BroadcastLeadAsync(leadToAssign.WorkspaceId, dto);
+            }
+        }
+        catch {}
+
+        return dto;
     }
 
     private async Task<User?> FindBestAssigneeAsync(long workspaceId)

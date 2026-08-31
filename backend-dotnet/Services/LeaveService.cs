@@ -81,6 +81,39 @@ public class LeaveService : ILeaveService
 
         await _context.SaveChangesAsync();
 
+        // Notify workspace admins about new leave request
+        try
+        {
+            var admins = await _context.Users
+                .Include(u => u.Roles)
+                .Where(u => u.WorkspaceId == user.WorkspaceId && u.Id != user.Id)
+                .ToListAsync();
+
+            foreach (var adm in admins.Where(a => a.Roles.Any(r => r.Name.Equals("ROLE_ADMIN", StringComparison.OrdinalIgnoreCase) || r.Name.Equals("ROLE_MANAGER", StringComparison.OrdinalIgnoreCase) || r.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase) || r.Name.Equals("MANAGER", StringComparison.OrdinalIgnoreCase))))
+            {
+                var notif = new Notification
+                {
+                    UserId = adm.Id,
+                    Title = "New Leave Request",
+                    Message = $"{user.FullName} submitted a leave request from {dto.StartAtUtc:dd MMM} to {dto.EndAtUtc:dd MMM}.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Notifications.Add(notif);
+                await _context.SaveChangesAsync();
+
+                await _webSocketService.BroadcastNotificationAsync(adm.Id, new
+                {
+                    id = notif.Id,
+                    title = notif.Title,
+                    message = notif.Message,
+                    createdAt = notif.CreatedAt,
+                    type = "LEAVE"
+                });
+            }
+        }
+        catch {}
+
         return MapToDto(leave, user);
     }
 
@@ -197,16 +230,34 @@ public class LeaveService : ILeaveService
         };
         _context.AuditLogs.Add(auditLog);
 
+        var leaveNotif = new Notification
+        {
+            UserId = leave.UserId,
+            Title = dto.Approve ? "Leave Request Approved" : "Leave Request Rejected",
+            Message = $"Your leave request from {leave.StartAtUtc:dd MMM} to {leave.EndAtUtc:dd MMM} was {(dto.Approve ? "APPROVED" : "REJECTED")} by {reviewer.FullName}.",
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.Notifications.Add(leaveNotif);
+
         await _context.SaveChangesAsync();
 
         var resultDto = MapToDto(leave, leave.User, reviewer);
 
-        // Broadcast notification to workspace
-        await _webSocketService.BroadcastNotificationAsync(leave.UserId, new
+        // Broadcast notification to workspace and target user
+        try
         {
-            type = "LEAVE_STATUS_CHANGED",
-            leave = resultDto
-        });
+            await _webSocketService.BroadcastNotificationAsync(leave.UserId, new
+            {
+                id = leaveNotif.Id,
+                title = leaveNotif.Title,
+                message = leaveNotif.Message,
+                createdAt = leaveNotif.CreatedAt,
+                type = "LEAVE",
+                leave = resultDto
+            });
+        }
+        catch {}
 
         return resultDto;
     }

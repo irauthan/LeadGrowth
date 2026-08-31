@@ -15,11 +15,10 @@ public class NotificationService : INotificationService
 
     public async Task<List<Notification>> GetNotificationsForUserAsync(string email)
     {
-        var userEmail = email.Trim().ToLower();
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        var user = await ResolveUserAsync(email);
         if (user == null)
         {
-            throw new KeyNotFoundException("User not found");
+            return new List<Notification>();
         }
 
         return await _context.Notifications
@@ -30,8 +29,7 @@ public class NotificationService : INotificationService
 
     public async Task<Notification> MarkAsReadAsync(long notificationId, string email)
     {
-        var userEmail = email.Trim().ToLower();
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        var user = await ResolveUserAsync(email);
         if (user == null)
         {
             throw new KeyNotFoundException("User not found");
@@ -53,8 +51,7 @@ public class NotificationService : INotificationService
 
     public async Task MarkAllAsReadAsync(string email)
     {
-        var userEmail = email.Trim().ToLower();
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        var user = await ResolveUserAsync(email);
         if (user == null)
         {
             throw new KeyNotFoundException("User not found");
@@ -70,5 +67,19 @@ public class NotificationService : INotificationService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    private async Task<User?> ResolveUserAsync(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+
+        if (long.TryParse(identifier.Trim(), out var userId))
+        {
+            var userById = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (userById != null) return userById;
+        }
+
+        var normalizedEmail = identifier.Trim().ToLower();
+        return await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
     }
 }
