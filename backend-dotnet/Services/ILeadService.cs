@@ -16,6 +16,7 @@ public interface ILeadService
     Task AddNoteAsync(long leadId, LeadNoteRequest request, string userEmail);
     Task<List<LeadNote>> GetNotesAsync(long leadId);
     Task<LeadDto> AddToPipelineAsync(long leadId, string userEmail);
+    Task<List<LeadDto>> BulkAddToPipelineAsync(List<long> leadIds, string userEmail);
     Task<List<LeadDto>> GetPipelineLeadsAsync(string userEmail);
     Task<List<LeadDto>> GetPendingAssignedLeadsAsync(string userEmail);
     Task<LeadDto> UpdateLeadActivityAsync(long leadId, string activityKey, string status, string? remarks, string userEmail);

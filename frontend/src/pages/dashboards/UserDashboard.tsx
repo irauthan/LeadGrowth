@@ -15,7 +15,12 @@ import {
   ChevronRight,
   Briefcase,
   Eye,
-  Bell
+  Bell,
+  CheckSquare,
+  Square,
+  CheckCheck,
+  X,
+  Layers
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
@@ -37,18 +42,22 @@ export default function UserDashboard() {
   const [myLeads, setMyLeads] = useState<any[]>([]);
   const [followups, setFollowups] = useState<any[]>([]);
   const [pendingLeads, setPendingLeads] = useState<any[]>([]);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<number[]>([]);
+  const [isAcceptModalOpen, setIsAcceptModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [idleMessage, setIdleMessage] = useState('');
   const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
 
-
-
   // Live WebSocket sync for real-time KPI updates
   useWebSocket({
     workspaceId: user?.workspaceId,
+    userId: user?.id,
     onLeadReceived: () => {
       fetchUserData();
     },
+    onNotificationReceived: () => {
+      fetchUserData();
+    }
   });
 
   useEffect(() => {
@@ -75,17 +84,22 @@ export default function UserDashboard() {
       ]);
 
       const rawPending = pendingRes.data || [];
-      const myLeadIds = new Set((leadsRes.data || []).map((l: any) => l.id));
-      // Deduplicate by unique id and filter out any leads already in pipeline
-      const uniquePending = rawPending
-        .filter((l: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.id === l.id) === idx)
-        .filter((l: any) => !myLeadIds.has(l.id));
 
       setKpis(kpiRes.data);
       setMyLeads(leadsRes.data || []);
       const activeFollowupList = (followupsRes.data || []).filter((f: any) => f.status !== 'COMPLETED' && f.status !== 'CANCELLED');
       setFollowups(activeFollowupList);
-      setPendingLeads(uniquePending);
+      setPendingLeads(rawPending);
+      
+      // Auto select all pending leads and show modal if new leads arrived
+      if (rawPending.length > 0) {
+        setSelectedLeadIds(rawPending.map((l: any) => l.id));
+        setIsAcceptModalOpen(true);
+      } else {
+        setSelectedLeadIds([]);
+        setIsAcceptModalOpen(false);
+      }
+
       setCallAnalytics(callRes.data);
     } catch (err) {
       console.error('Failed to load User Productivity Hub data', err);
@@ -94,10 +108,25 @@ export default function UserDashboard() {
     }
   };
 
+  const toggleSelectAll = () => {
+    if (selectedLeadIds.length === pendingLeads.length) {
+      setSelectedLeadIds([]);
+    } else {
+      setSelectedLeadIds(pendingLeads.map((l) => l.id));
+    }
+  };
+
+  const toggleSelectLead = (id: number) => {
+    setSelectedLeadIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   const handleAcceptPipeline = async (leadId: number, leadName: string) => {
     if (!user) return;
     // Optimistically remove from pending leads immediately
     setPendingLeads((prev) => prev.filter((l) => l.id !== leadId));
+    setSelectedLeadIds((prev) => prev.filter((id) => id !== leadId));
     try {
       await api.post(`/api/leads/${leadId}/add-to-pipeline`).catch(() =>
         api.patch(`/api/leads/${leadId}/assign?userId=${user.id}`)
@@ -108,6 +137,27 @@ export default function UserDashboard() {
     } catch (e: any) {
       fetchUserData();
       alert(e.response?.data?.message || 'Failed to add lead to pipeline');
+    }
+  };
+
+  const handleBulkAcceptPipeline = async (customIds?: number[]) => {
+    if (!user) return;
+    const targetIds = customIds && customIds.length > 0 ? customIds : selectedLeadIds;
+    if (targetIds.length === 0) return;
+
+    // Optimistically remove from pending leads immediately
+    setPendingLeads((prev) => prev.filter((l) => !targetIds.includes(l.id)));
+    setSelectedLeadIds([]);
+    setIsAcceptModalOpen(false);
+
+    try {
+      await api.post('/api/leads/bulk-add-to-pipeline', targetIds);
+      setIdleMessage(`${targetIds.length} lead${targetIds.length > 1 ? 's' : ''} added to your Pipelines!`);
+      setTimeout(() => setIdleMessage(''), 4000);
+      fetchUserData();
+    } catch (e: any) {
+      fetchUserData();
+      alert(e.response?.data?.message || 'Failed to add leads to pipeline');
     }
   };
 
@@ -215,10 +265,171 @@ export default function UserDashboard() {
         </div>
       )}
 
-      {/* Newly Assigned Leads - Pending Pipeline Acceptance Card */}
+      {/* NEW LEADS ASSIGNED POPUP MODAL */}
+      {isAcceptModalOpen && pendingLeads.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div 
+            className="relative w-full max-w-3xl rounded-3xl bg-theme-card border border-amber-500/40 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-6 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border-b border-theme-border/60 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-amber-500/20 text-amber-500 border border-amber-500/30 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <Bell size={20} className="animate-bounce" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-theme-text">
+                      Newly Assigned Leads ({pendingLeads.length} Lead{pendingLeads.length > 1 ? 's' : ''})
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                      Action Required
+                    </span>
+                  </div>
+                  <p className="text-xs text-theme-text-muted mt-0.5">
+                    Select the leads you wish to add into your Active Pipelines workspace.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAcceptModalOpen(false)}
+                className="p-2 rounded-xl text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-colors"
+                title="Close and view on dashboard"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Toolbar (Select All & Quick Actions) */}
+            <div className="p-4 bg-theme-bg-alt/50 border-b border-theme-border/60 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={toggleSelectAll}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-theme-card border border-theme-border hover:border-amber-500/50 text-xs font-bold text-theme-text transition-all"
+                >
+                  {selectedLeadIds.length === pendingLeads.length ? (
+                    <CheckSquare size={16} className="text-amber-500" />
+                  ) : (
+                    <Square size={16} className="text-theme-text-muted" />
+                  )}
+                  <span>Select All ({selectedLeadIds.length}/{pendingLeads.length})</span>
+                </button>
+
+                {selectedLeadIds.length > 0 && (
+                  <span className="text-xs font-bold text-amber-500">
+                    {selectedLeadIds.length} lead{selectedLeadIds.length > 1 ? 's' : ''} selected
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleBulkAcceptPipeline(pendingLeads.map((l) => l.id))}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-extrabold transition-all flex items-center gap-1.5"
+                >
+                  <CheckCheck size={14} />
+                  <span>Add All to Pipelines ({pendingLeads.length})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Scrollable Lead Grid */}
+            <div className="p-6 overflow-y-auto space-y-3 flex-1 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {pendingLeads.map((lead) => {
+                  const isSelected = selectedLeadIds.includes(lead.id);
+                  return (
+                    <div
+                      key={lead.id}
+                      onClick={() => toggleSelectLead(lead.id)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                        isSelected
+                          ? 'border-amber-500/60 bg-amber-500/5 shadow-md shadow-amber-500/5'
+                          : 'border-theme-border/70 bg-theme-bg-alt/30 hover:border-theme-border hover:bg-theme-bg-alt/60'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`flex-shrink-0 transition-colors ${isSelected ? 'text-amber-500' : 'text-theme-text-muted'}`}>
+                              {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                            </div>
+                            <h4 className="text-xs font-extrabold text-theme-text">{lead.name}</h4>
+                          </div>
+                          <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex-shrink-0">
+                            {lead.qualityTier || 'WARM'} ({lead.qualityScore || 75} pts)
+                          </span>
+                        </div>
+
+                        <div className="mt-2 space-y-0.5 text-[11px] text-theme-text-muted pl-6">
+                          <p className="truncate">Email: <strong className="text-theme-text">{lead.email}</strong></p>
+                          {lead.phone && <p>Phone: <strong className="text-theme-text font-mono">{lead.phone}</strong></p>}
+                          <p>Source: <span className="font-semibold text-theme-text">{lead.sourcePlatform || 'Website / Direct'}</span></p>
+                          {lead.campaignName && (
+                            <p className="text-theme-primary font-bold text-[10px]">Campaign: {lead.campaignName}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-theme-border/40 flex items-center justify-between gap-2 pl-6">
+                        <span className="text-[10px] text-theme-text-muted font-bold">Single Action:</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAcceptPipeline(lead.id, lead.name);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-[11px] font-bold shadow-xs transition-all flex items-center gap-1"
+                        >
+                          <Briefcase size={12} /> Add to Pipeline
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-theme-bg-alt border-t border-theme-border/60 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setIsAcceptModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-theme-text-muted hover:text-theme-text hover:bg-theme-card transition-all"
+              >
+                Decide Later
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={selectedLeadIds.length === 0}
+                  onClick={() => handleBulkAcceptPipeline()}
+                  className={`px-5 py-2.5 rounded-2xl text-xs font-extrabold shadow-lg transition-all flex items-center gap-2 ${
+                    selectedLeadIds.length > 0
+                      ? 'bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white shadow-theme-primary/25 cursor-pointer scale-100'
+                      : 'bg-theme-bg-alt text-theme-text-muted border border-theme-border/60 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <Briefcase size={14} />
+                  <span>Add Selected ({selectedLeadIds.length}) to Pipelines</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Newly Assigned Leads - Pending Pipeline Acceptance Dashboard Card */}
       {isCardEnabled('pending_leads') && pendingLeads.length > 0 && (
         <div className="p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent shadow-lg space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="flex h-3 w-3 rounded-full bg-amber-500 animate-ping" />
               <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-1.5">
@@ -226,43 +437,131 @@ export default function UserDashboard() {
                 <span>Newly Received Leads ({pendingLeads.length} Lead{pendingLeads.length > 1 ? 's' : ''} Assigned)</span>
               </h3>
             </div>
-            <span className="text-[10px] font-bold text-amber-500 uppercase px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-              Pending Pipeline Acceptance
-            </span>
+            
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsAcceptModalOpen(true)}
+                className="px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 text-[10px] font-extrabold uppercase transition-all flex items-center gap-1"
+              >
+                <Layers size={12} /> Open Popup View
+              </button>
+              <span className="text-[10px] font-bold text-amber-500 uppercase px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                Pending Acceptance
+              </span>
+            </div>
           </div>
+
           <p className="text-xs text-theme-text-muted">
-            You have received a new lead assignment! Click <b>"Add To Pipelines"</b> below to activate it in your Open Pipelines workspace.
+            You have received new lead assignments! Select leads and click <b>"Add To Pipelines"</b> to activate them in your Pipelines workspace.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
-            {pendingLeads.map((lead) => (
-              <div key={lead.id} className="p-4 rounded-2xl bg-theme-card border border-theme-border/60 shadow-sm space-y-3 flex flex-col justify-between hover:border-amber-500/40 transition-all">
-                <div>
-                  <div className="flex items-start justify-between">
-                    <h4 className="text-xs font-extrabold text-theme-text">{lead.name}</h4>
-                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                      {lead.qualityTier || 'WARM'} ({lead.qualityScore || 75} pts)
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-theme-text-muted mt-1">{lead.email} • {lead.sourcePlatform || 'Meta'}</p>
-                  {lead.campaignName && (
-                    <Link
-                      to="/campaigns"
-                      className="text-[9px] text-theme-primary hover:underline font-bold block mt-0.5"
-                    >
-                      Campaign: {lead.campaignName}
-                    </Link>
-                  )}
-                </div>
+          {/* Batch Actions Header Bar */}
+          <div className="p-3 bg-theme-card/80 border border-theme-border rounded-2xl flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-theme-bg-alt border border-theme-border hover:border-amber-500/40 text-xs font-bold text-theme-text transition-all"
+              >
+                {selectedLeadIds.length === pendingLeads.length ? (
+                  <CheckSquare size={16} className="text-amber-500" />
+                ) : (
+                  <Square size={16} className="text-theme-text-muted" />
+                )}
+                <span>Select All ({selectedLeadIds.length}/{pendingLeads.length})</span>
+              </button>
 
-                <button
-                  onClick={() => handleAcceptPipeline(lead.id, lead.name)}
-                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-bold shadow-md shadow-theme-primary/20 transition-all"
+              {selectedLeadIds.length > 0 && (
+                <span className="text-xs font-bold text-amber-500">
+                  {selectedLeadIds.length} lead{selectedLeadIds.length > 1 ? 's' : ''} selected
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleBulkAcceptPipeline(pendingLeads.map((l) => l.id))}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <CheckCheck size={14} />
+                <span>Add All ({pendingLeads.length})</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={selectedLeadIds.length === 0}
+                onClick={() => handleBulkAcceptPipeline()}
+                className={`px-4 py-1.5 rounded-xl text-xs font-extrabold shadow-md transition-all flex items-center gap-1.5 ${
+                  selectedLeadIds.length > 0
+                    ? 'bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white shadow-theme-primary/20 cursor-pointer'
+                    : 'bg-theme-bg-alt text-theme-text-muted border border-theme-border/60 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <Briefcase size={13} />
+                <span>Add Selected ({selectedLeadIds.length})</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Lead Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+            {pendingLeads.map((lead) => {
+              const isSelected = selectedLeadIds.includes(lead.id);
+              return (
+                <div 
+                  key={lead.id} 
+                  onClick={() => toggleSelectLead(lead.id)}
+                  className={`p-4 rounded-2xl border shadow-sm space-y-3 flex flex-col justify-between transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-theme-card border-amber-500/60 ring-2 ring-amber-500/20'
+                      : 'bg-theme-card border-theme-border/60 hover:border-amber-500/40'
+                  }`}
                 >
-                  <Briefcase size={14} /> Add To Pipelines
-                </button>
-              </div>
-            ))}
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`flex-shrink-0 transition-colors ${isSelected ? 'text-amber-500' : 'text-theme-text-muted'}`}>
+                          {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                        </div>
+                        <h4 className="text-xs font-extrabold text-theme-text">{lead.name}</h4>
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex-shrink-0">
+                        {lead.qualityTier || 'WARM'} ({lead.qualityScore || 75} pts)
+                      </span>
+                    </div>
+
+                    <div className="mt-2 space-y-0.5 text-[10px] text-theme-text-muted pl-6">
+                      <p className="truncate">{lead.email} • {lead.sourcePlatform || 'Meta'}</p>
+                      {lead.phone && <p className="font-mono text-theme-text">{lead.phone}</p>}
+                      {lead.campaignName && (
+                        <Link
+                          to="/campaigns"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[9px] text-theme-primary hover:underline font-bold block mt-0.5"
+                        >
+                          Campaign: {lead.campaignName}
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-theme-border/40 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAcceptPipeline(lead.id, lead.name);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-bold shadow-md shadow-theme-primary/20 transition-all"
+                    >
+                      <Briefcase size={14} /> Add To Pipelines
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

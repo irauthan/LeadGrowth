@@ -109,9 +109,16 @@ interface ExecutiveWorkSummary {
   leadWorkList: LeadWorkItem[];
 }
 
+import { useAuthStore } from '../store/authStore';
+
 export default function ExecutiveWorkMonitor() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialUserId = searchParams.get('userId') ? parseInt(searchParams.get('userId')!, 10) : 0;
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isManager = user?.roles?.includes('ROLE_MANAGER');
+  const isPrivileged = isAdmin || isManager;
+
+  const initialUserId = searchParams.get('userId') ? parseInt(searchParams.get('userId')!, 10) : (isPrivileged ? 0 : (user?.id || 0));
 
   const [members, setMembers] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number>(initialUserId);
@@ -129,8 +136,10 @@ export default function ExecutiveWorkMonitor() {
   const [activeLeadSubTab, setActiveLeadSubTab] = useState<Record<number, 'logs' | 'followups' | 'timeline'>>({});
 
   useEffect(() => {
-    fetchMembers();
-  }, []);
+    if (isPrivileged) {
+      fetchMembers();
+    }
+  }, [isPrivileged]);
 
   useEffect(() => {
     fetchWorkSummary();
@@ -214,38 +223,52 @@ export default function ExecutiveWorkMonitor() {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-extrabold uppercase tracking-wider border border-purple-500/20 flex items-center gap-1">
-              <Sparkles size={12} /> Admin Executive Work Monitor
+              <Sparkles size={12} /> {isPrivileged ? 'Admin Executive Work Monitor' : 'My Performance & Work Monitor'}
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-theme-text mt-1 font-sans">
-            Executive Activity & Lead Work Monitor
+            {isPrivileged ? 'Executive Activity & Lead Work Monitor' : 'My Activity & Lead Performance'}
           </h1>
           <p className="text-xs text-theme-text-muted mt-0.5">
-            Empirical day-wise and month-wise audit tracking of all activities, outreach calls, and step progress for every lead.
+            {isPrivileged 
+              ? 'Empirical day-wise and month-wise audit tracking of all activities, outreach calls, and step progress for every lead.'
+              : 'Track your daily calls, meetings, follow-ups, and lead progress in real-time.'}
           </p>
         </div>
 
-        {/* Member Selector */}
+        {/* Member Selector / User Badge */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-theme-bg-alt/70 p-1.5 rounded-2xl border border-theme-border">
-            <UserIcon size={14} className="text-theme-primary ml-1.5" />
-            <select
-              value={selectedUserId}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                setSelectedUserId(val);
-                setSearchParams(val > 0 ? { userId: String(val) } : {});
-              }}
-              className="bg-transparent text-xs font-bold text-theme-text outline-none pr-2"
-            >
-              <option value={0}>All Staff & Executive Team Members</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.fullName} ({m.roles?.[0]?.name?.replace('ROLE_', '') || m.roles?.[0]?.replace('ROLE_', '') || 'STAFF'})
-                </option>
-              ))}
-            </select>
-          </div>
+          {isPrivileged ? (
+            <div className="flex items-center gap-2 bg-theme-bg-alt/70 p-1.5 rounded-2xl border border-theme-border">
+              <UserIcon size={14} className="text-theme-primary ml-1.5" />
+              <select
+                value={selectedUserId}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setSelectedUserId(val);
+                  setSearchParams(val > 0 ? { userId: String(val) } : {});
+                }}
+                className="bg-transparent text-xs font-bold text-theme-text outline-none pr-2"
+              >
+                <option value={0}>All Staff & Executive Team Members</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.fullName} ({m.roles?.[0]?.name?.replace('ROLE_', '') || m.roles?.[0]?.replace('ROLE_', '') || 'STAFF'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5 bg-theme-bg-alt/70 px-3.5 py-2 rounded-2xl border border-theme-border shadow-xs">
+              <div className="h-7 w-7 rounded-full bg-theme-primary/20 text-theme-primary flex items-center justify-center text-xs font-extrabold">
+                {user?.fullName ? user.fullName[0].toUpperCase() : 'U'}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-theme-text leading-tight">{user?.fullName || 'Executive'}</p>
+                <p className="text-[10px] text-theme-text-muted font-medium">{user?.email || ''}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

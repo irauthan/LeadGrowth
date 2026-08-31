@@ -8,10 +8,12 @@ namespace LeadGrowth.Services;
 public class LeadService : ILeadService
 {
     private readonly LeadGrowthDbContext _context;
+    private readonly IWebSocketManagerService _webSocketManager;
 
-    public LeadService(LeadGrowthDbContext context)
+    public LeadService(LeadGrowthDbContext context, IWebSocketManagerService webSocketManager)
     {
         _context = context;
+        _webSocketManager = webSocketManager;
     }
 
     public async Task<List<LeadDto>> GetLeadsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null)
@@ -42,7 +44,9 @@ public class LeadService : ILeadService
             .Include(l => l.Campaign)
             .Include(l => l.AssignedTo)
             .Include(l => l.AssignedBy)
-            .Where(l => isUserOnly ? l.AssignedToId == user.Id : l.WorkspaceId == user.WorkspaceId);
+            .Where(l => isUserOnly 
+                ? (l.AssignedToId == user.Id && (l.QueueStatus == "IN_PIPELINE" || l.QueueStatus == null || l.QueueStatus == "")) 
+                : l.WorkspaceId == user.WorkspaceId);
 
         if (isFiltered)
         {
@@ -118,6 +122,7 @@ public class LeadService : ILeadService
             Company = dto.Company,
             Location = dto.Location,
             ProgressPercentage = assignedTo != null ? 10 : 0,
+            QueueStatus = (assignedTo != null && assignedTo.Id != creator.Id) ? "ASSIGNED" : "IN_PIPELINE",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -186,7 +191,27 @@ public class LeadService : ILeadService
             Console.WriteLine($"[LeadService] Non-critical error during post-lead creation logging: {ex.Message}");
         }
 
-        return await ConvertToDtoAsync(lead);
+        var resultDto = await ConvertToDtoAsync(lead);
+        try
+        {
+            await _webSocketManager.BroadcastLeadAsync(lead.WorkspaceId, resultDto);
+            if (assignedTo != null)
+            {
+                await _webSocketManager.BroadcastNotificationAsync(assignedTo.Id, new
+                {
+                    title = "New Lead Assigned",
+                    message = $"You have been assigned to lead: \"{lead.Name}\"",
+                    leadId = lead.Id,
+                    createdAt = DateTime.UtcNow
+                });
+            }
+        }
+        catch (Exception wsEx)
+        {
+            Console.WriteLine($"[LeadService] WebSocket broadcast error: {wsEx.Message}");
+        }
+
+        return resultDto;
     }
 
     public async Task<LeadDto> GetLeadByIdAsync(long leadId)
@@ -392,7 +417,24 @@ public class LeadService : ILeadService
             Console.WriteLine($"[LeadService] Non-critical error during post-assignment logging: {ex.Message}");
         }
 
-        return await ConvertToDtoAsync(lead);
+        var resultDto = await ConvertToDtoAsync(lead);
+        try
+        {
+            await _webSocketManager.BroadcastLeadAsync(lead.WorkspaceId, resultDto);
+            await _webSocketManager.BroadcastNotificationAsync(assignTarget.Id, new
+            {
+                title = "New Lead Assigned",
+                message = $"You have been assigned to lead: \"{lead.Name}\" (Lead #{lead.Id})",
+                leadId = lead.Id,
+                createdAt = DateTime.UtcNow
+            });
+        }
+        catch (Exception wsEx)
+        {
+            Console.WriteLine($"[LeadService] WebSocket broadcast error: {wsEx.Message}");
+        }
+
+        return resultDto;
     }
 
     public async Task<List<LeadDto>> BulkAssignLeadsAsync(List<long> leadIds, long userId, string userEmail)
@@ -581,6 +623,31 @@ public class LeadService : ILeadService
             }
         }
 
+        try
+        {
+            foreach (var updatedLead in updated)
+            {
+                if (updatedLead.WorkspaceId > 0)
+                {
+                    await _webSocketManager.BroadcastLeadAsync(updatedLead.WorkspaceId, updatedLead);
+                }
+                if (updatedLead.AssignedToId.HasValue)
+                {
+                    await _webSocketManager.BroadcastNotificationAsync(updatedLead.AssignedToId.Value, new
+                    {
+                        title = "New Lead Assigned",
+                        message = $"You have been assigned to lead: \"{updatedLead.Name}\"",
+                        leadId = updatedLead.Id,
+                        createdAt = DateTime.UtcNow
+                    });
+                }
+            }
+        }
+        catch (Exception wsEx)
+        {
+            Console.WriteLine($"[LeadService] Bulk WebSocket broadcast error: {wsEx.Message}");
+        }
+
         return updated;
     }
 
@@ -711,6 +778,60 @@ public class LeadService : ILeadService
 
         await _context.SaveChangesAsync();
         return await ConvertToDtoAsync(lead);
+    }
+
+    public async Task<List<LeadDto>> BulkAddToPipelineAsync(List<long> leadIds, string userEmail)
+    {
+        var email = userEmail.Trim().ToLower();
+        var user = await _context.Users
+            .Include(u => u.Workspace)
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (user == null)
+        {
+            throw new KeyNotFoundException("User not found");
+        }
+
+        var allPendingLeads = await _context.Leads
+            .Include(l => l.Workspace)
+            .Include(l => l.Campaign)
+            .Include(l => l.AssignedTo)
+            .Include(l => l.AssignedBy)
+            .Where(l => l.AssignedToId == user.Id && l.QueueStatus == "ASSIGNED")
+            .ToListAsync();
+
+        List<Lead> leadsToProcess;
+        if (leadIds != null && leadIds.Count > 0)
+        {
+            var idSet = new HashSet<long>(leadIds);
+            leadsToProcess = allPendingLeads.Where(l => idSet.Contains(l.Id)).ToList();
+        }
+        else
+        {
+            leadsToProcess = allPendingLeads;
+        }
+
+        foreach (var lead in leadsToProcess)
+        {
+            lead.AssignedToId = user.Id;
+            lead.ProgressPercentage = CalculateProgressPercentage(lead.Status, true);
+            lead.AssignedTo = user;
+            lead.QueueStatus = "IN_PIPELINE";
+            if (user.WorkspaceId.HasValue)
+            {
+                lead.WorkspaceId = user.WorkspaceId.Value;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        var result = new List<LeadDto>();
+        foreach (var lead in leadsToProcess)
+        {
+            result.Add(await ConvertToDtoAsync(lead));
+        }
+
+        return result;
     }
 
     public async Task<List<LeadDto>> GetPipelineLeadsAsync(string userEmail)

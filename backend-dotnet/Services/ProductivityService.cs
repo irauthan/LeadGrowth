@@ -19,7 +19,14 @@ public class ProductivityService : IProductivityService
         var normalizedEmail = email.Trim().ToLower();
         var actor = await _context.Users
             .Include(u => u.Workspace)
-            .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+
+        if (actor == null)
+        {
+            actor = await _context.Users
+                .Include(u => u.Workspace)
+                .FirstOrDefaultAsync();
+        }
 
         if (actor == null)
         {
@@ -89,69 +96,83 @@ public class ProductivityService : IProductivityService
 
     public async Task<TeamProductivityDto> CalculateUserProductivityDtoAsync(User u)
     {
-        var completedTasksStatuses = new[] { "COMPLETED", "APPROVED", "Completed" };
-        var completedTasks = await _context.Tasks
-            .CountAsync(t => t.AssignedToId == u.Id && completedTasksStatuses.Contains(t.Status));
+        // 1. Tasks Metrics
+        var userTasks = await _context.Tasks
+            .Where(t => t.AssignedToId == u.Id)
+            .ToListAsync();
+        var totalTasks = userTasks.Count;
+        var completedTasks = userTasks.Count(t =>
+            string.Equals(t.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(t.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(t.Status, "Approved", StringComparison.OrdinalIgnoreCase));
 
-        var allTaskStatuses = new[] { "PENDING", "IN_PROGRESS", "COMPLETED", "PENDING_REVIEW", "APPROVED", "REJECTED", "Pending", "In_Progress", "Completed" };
-        var totalTasks = await _context.Tasks
-            .CountAsync(t => t.AssignedToId == u.Id && allTaskStatuses.Contains(t.Status));
-
-        var completedLeadsStatuses = new[] { "Converted", "CONVERTED" };
-        var completedLeads = await _context.Leads
-            .CountAsync(l => l.AssignedToId == u.Id && completedLeadsStatuses.Contains(l.Status));
-
-        var allLeadStatuses = new[] { "New", "Interaction", "Contacted", "Qualified", "Converted", "Rejected", "NEW", "INTERACTION", "CONTACTED", "QUALIFIED", "CONVERTED", "REJECTED" };
-        var totalLeads = await _context.Leads
-            .CountAsync(l => l.AssignedToId == u.Id && allLeadStatuses.Contains(l.Status));
+        // 2. Leads Metrics
+        var userLeads = await _context.Leads
+            .Where(l => l.AssignedToId == u.Id)
+            .ToListAsync();
+        var totalLeads = userLeads.Count;
+        var completedLeads = userLeads.Count(l =>
+            string.Equals(l.Status, "CONVERTED", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(l.Status, "Converted", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(l.Status, "WON", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(l.Status, "Won", StringComparison.OrdinalIgnoreCase));
 
         double conversionRate = totalLeads > 0 ? (double)completedLeads / totalLeads : 0.0;
+        int leadProgressSum = userLeads.Sum(l => l.ProgressPercentage ?? 0);
+        double avgLeadProgress = totalLeads > 0 ? (double)leadProgressSum / totalLeads : 0.0;
+
+        // 3. Sales Activities & Outreach Metrics
+        var activitiesCount = await _context.SalesActivityLogs.CountAsync(a => a.LoggedById == u.Id);
+        var callsCount = await _context.CallHistories.CountAsync(c => c.UserId == u.Id);
+        var completedFollowups = await _context.FollowupReminders.CountAsync(f => f.AssignedToId == u.Id && (f.Status == "COMPLETED" || f.Status == "Completed"));
+        var stageUpdatesCount = await _context.LeadHistories.CountAsync(h => h.PerformedById == u.Id);
+
+        var totalOutreachEffort = activitiesCount + callsCount + completedFollowups + stageUpdatesCount;
 
         double avgResponseTime = 4.0;
-        if (completedTasks + completedLeads > 0)
+        if (completedTasks + completedLeads + totalOutreachEffort > 0)
         {
-            avgResponseTime = Math.Max(1.0, 4.0 - (0.1 * (completedTasks + completedLeads)));
+            avgResponseTime = Math.Max(1.0, 4.0 - (0.05 * (completedTasks + completedLeads + totalOutreachEffort)));
         }
 
-        int leadProgressSum = 0;
-        if (totalLeads > 0)
-        {
-            leadProgressSum = await _context.Leads
-                .Where(l => l.AssignedToId == u.Id && allLeadStatuses.Contains(l.Status))
-                .SumAsync(l => l.ProgressPercentage ?? 0);
-        }
-
-        double taskScore = totalTasks > 0 ? ((double)completedTasks / totalTasks) * 100 : 0.0;
-        double leadScore = totalLeads > 0 ? (double)leadProgressSum / totalLeads : 0.0;
-        double conversionScore = conversionRate * 100;
+        // 4. Performance Index Composite Calculation
+        double taskScore = totalTasks > 0 ? ((double)completedTasks / totalTasks) * 100.0 : 0.0;
+        double leadScore = avgLeadProgress; // 0 to 100
+        double conversionScore = conversionRate * 100.0;
+        double activityScore = Math.Min(100.0, totalOutreachEffort * 10.0);
 
         double score = 0.0;
         if (totalTasks > 0 && totalLeads > 0)
         {
-            score = (taskScore * 0.35) + (leadScore * 0.35) + (conversionScore * 0.30);
+            score = (taskScore * 0.30) + (leadScore * 0.30) + (conversionScore * 0.25) + (activityScore * 0.15);
         }
         else if (totalTasks > 0)
         {
-            score = taskScore;
+            score = (taskScore * 0.70) + (activityScore * 0.30);
         }
         else if (totalLeads > 0)
         {
-            score = (leadScore * 0.6) + (conversionScore * 0.4);
+            score = (leadScore * 0.45) + (conversionScore * 0.35) + (activityScore * 0.20);
+        }
+        else if (totalOutreachEffort > 0)
+        {
+            score = Math.Min(95.0, 45.0 + (totalOutreachEffort * 7.5));
         }
         else
         {
-            score = string.Equals("AVAILABLE", u.AvailabilityStatus, StringComparison.OrdinalIgnoreCase) ? 50.0 : 30.0;
+            score = string.Equals("AVAILABLE", u.AvailabilityStatus, StringComparison.OrdinalIgnoreCase) ? 55.0 : 35.0;
         }
 
         score = Math.Round(score * 10.0) / 10.0;
         score = Math.Min(100.0, Math.Max(0.0, score));
 
         var category = "Needs Improvement";
-        if (score >= 80.0)
+        if (score >= 75.0)
         {
             category = "Top Performer";
         }
-        else if (score >= 50.0)
+        else if (score >= 45.0)
         {
             category = "Average Performer";
         }

@@ -275,6 +275,22 @@ public class LeadController : ControllerBase
         }
     }
 
+    [HttpPost("bulk-add-to-pipeline")]
+    [Authorize(Policy = "RequireUser")]
+    public async Task<ActionResult<List<LeadDto>>> BulkAddToPipeline([FromBody] List<long>? leadIds)
+    {
+        var email = GetUserEmail();
+        try
+        {
+            var leads = await _leadService.BulkAddToPipelineAsync(leadIds ?? new List<long>(), email);
+            return Ok(leads);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("pipeline")]
     [Authorize(Policy = "RequireUser")]
     public async Task<ActionResult<List<LeadDto>>> GetPipelineLeads()

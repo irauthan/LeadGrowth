@@ -175,12 +175,18 @@ public class UserController : ControllerBase
 
     [HttpPost("{userId}/reset-password")]
     [Authorize(Policy = "RequireAdmin")]
-    public async Task<ActionResult<User>> ResetUserPassword(long userId, [FromBody] PasswordResetConfirmRequest request)
+    public async Task<ActionResult<User>> ResetUserPassword(long userId, [FromBody] PasswordResetConfirmRequest? request, [FromQuery] string? newPassword)
     {
         var email = GetUserEmail();
+        var pwd = !string.IsNullOrWhiteSpace(request?.NewPassword) ? request.NewPassword : newPassword;
+        if (string.IsNullOrWhiteSpace(pwd))
+        {
+            return BadRequest(new { message = "New password is required" });
+        }
+
         try
         {
-            var user = await _userService.ResetUserPasswordAsync(userId, request.NewPassword, email);
+            var user = await _userService.ResetUserPasswordAsync(userId, pwd, email);
             return Ok(user);
         }
         catch (ArgumentException ex)
@@ -188,6 +194,10 @@ public class UserController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
         {
             return BadRequest(new { message = ex.Message });
         }
@@ -237,7 +247,7 @@ public class UserController : ControllerBase
             var productivity = await _productivityService.GetTeamProductivityAsync(email);
             return Ok(productivity);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
             return BadRequest(new { message = ex.Message });
         }

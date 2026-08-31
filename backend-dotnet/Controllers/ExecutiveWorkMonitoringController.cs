@@ -8,7 +8,7 @@ namespace LeadGrowth.Controllers;
 
 [ApiController]
 [Route("api/admin/executive-work")]
-[Authorize(Policy = "RequireManagerOrAdmin")]
+[Authorize]
 public class ExecutiveWorkMonitoringController : ControllerBase
 {
     private readonly IExecutiveWorkMonitoringService _executiveWorkMonitoringService;

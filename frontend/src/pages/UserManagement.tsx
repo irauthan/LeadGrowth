@@ -20,7 +20,9 @@ import {
   Users as UsersIcon, 
   LayoutGrid, 
   ListFilter, 
-  Shield 
+  Shield,
+  User as UserIcon,
+  ExternalLink
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -97,10 +99,17 @@ export default function UserManagement() {
         api.get('/api/users/productivity').catch(() => ({ data: [] }))
       ]);
 
-      const prodMap = new Map((prodRes.data || []).map((p: any) => [p.userId, p]));
+      const prodMap = new Map<any, any>();
+      (prodRes.data || []).forEach((p: any) => {
+        if (p.userId != null) {
+          prodMap.set(p.userId, p);
+          prodMap.set(Number(p.userId), p);
+          prodMap.set(String(p.userId), p);
+        }
+      });
 
       const mapped = (membersRes.data || []).map((u: any) => {
-        const prod = prodMap.get(u.id) as any;
+        const prod = prodMap.get(u.id) || prodMap.get(Number(u.id)) || prodMap.get(String(u.id));
         return {
           id: u.id,
           fullName: u.fullName,
@@ -115,7 +124,7 @@ export default function UserManagement() {
           lastActiveAt: u.lastActiveAt ? u.lastActiveAt.split('T')[0] : 'N/A',
           profileImage: u.profileImage || '',
           availabilityStatus: u.availabilityStatus || 'OFFLINE',
-          productivityScore: prod?.score || 0,
+          productivityScore: prod?.score != null ? prod.score : 50,
           performanceCategory: prod?.category || 'Average Performer'
         };
       });
@@ -418,104 +427,175 @@ export default function UserManagement() {
           {/* ========================================================================= */}
           {viewMode === 'DIRECTORY' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedUsers.map((item) => (
-                <div key={item.id} className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-xl space-y-4 flex flex-col justify-between hover:border-theme-primary/30 transition-all">
-                  <div className="space-y-4">
-                    {/* Header info */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary font-extrabold text-base border border-theme-primary/20 overflow-hidden shadow-2xs">
-                          {item.profileImage ? (
-                            <img src={getProfileImageUrl(item.profileImage)} alt={item.fullName} className="h-full w-full object-cover" />
-                          ) : (
-                            getInitials(item.fullName)
-                          )}
-                          {/* Live Availability dot */}
-                          <span className={`absolute -bottom-0.5 -right-0.5 block h-3.5 w-3.5 rounded-full border-2 border-theme-card ${
-                            item.availabilityStatus === 'AVAILABLE' ? 'bg-emerald-500' :
-                            item.availabilityStatus === 'BUSY' ? 'bg-amber-500' :
-                            item.availabilityStatus === 'ON_BREAK' ? 'bg-blue-400' :
-                            'bg-slate-500'
-                          }`} />
+              {paginatedUsers.map((item) => {
+                const isItemAdmin = item.role === 'ADMIN';
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`rounded-3xl border p-6 shadow-xl space-y-4 flex flex-col justify-between transition-all ${
+                      isItemAdmin
+                        ? 'border-purple-500/30 bg-theme-card hover:border-purple-500/60 shadow-purple-500/5'
+                        : 'border-theme-border bg-theme-card hover:border-theme-primary/30'
+                    }`}
+                  >
+                    <div className="space-y-4">
+                      {/* Header info */}
+                      <div className="flex items-center justify-between gap-3">
+                        <Link
+                          to={isItemAdmin ? '/profile' : `/admin/work-monitor?userId=${item.id}`}
+                          className="flex items-center gap-3 group/user flex-1 min-w-0"
+                          title={isItemAdmin ? 'Click to view Admin Profile' : 'Click to view Work Monitor'}
+                        >
+                          <div className={`relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl font-extrabold text-base border overflow-hidden shadow-2xs transition-transform group-hover/user:scale-105 ${
+                            isItemAdmin
+                              ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                              : 'bg-theme-primary/10 text-theme-primary border-theme-primary/20'
+                          }`}>
+                            {item.profileImage ? (
+                              <img src={getProfileImageUrl(item.profileImage)} alt={item.fullName} className="h-full w-full object-cover" />
+                            ) : (
+                              getInitials(item.fullName)
+                            )}
+                            {/* Live Availability dot */}
+                            <span className={`absolute -bottom-0.5 -right-0.5 block h-3.5 w-3.5 rounded-full border-2 border-theme-card ${
+                              item.availabilityStatus === 'AVAILABLE' ? 'bg-emerald-500' :
+                              item.availabilityStatus === 'BUSY' ? 'bg-amber-500' :
+                              item.availabilityStatus === 'ON_BREAK' ? 'bg-blue-400' :
+                              'bg-slate-500'
+                            }`} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="text-xs font-extrabold text-theme-text leading-tight group-hover/user:text-theme-primary transition-colors truncate">{item.fullName}</h4>
+                              {isItemAdmin && <ExternalLink size={10} className="text-purple-400 opacity-60 flex-shrink-0" />}
+                            </div>
+                            <p className="text-[10px] text-theme-text-muted font-bold uppercase tracking-wider mt-0.5 truncate">{item.designation || (isItemAdmin ? 'Workspace Owner' : 'CRM Specialist')}</p>
+                          </div>
+                        </Link>
+
+                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold flex-shrink-0 ${
+                          isItemAdmin ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30 shadow-xs' :
+                          item.role === 'MANAGER' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                          'bg-theme-bg-alt text-theme-text-muted border border-theme-border'
+                        }`}>
+                          {item.role}
+                        </span>
+                      </div>
+
+                      {/* Card Middle Metric / Status Box */}
+                      {isItemAdmin ? (
+                        /* ADMIN IDENTITY BADGE - No work monitor required */
+                        <Link
+                          to="/profile"
+                          className="bg-gradient-to-r from-purple-500/10 via-indigo-500/5 to-transparent border border-purple-500/25 hover:border-purple-500/50 rounded-2xl p-3 flex items-center justify-between shadow-inner transition-all group/adminbadge cursor-pointer"
+                          title="Click to manage Admin Profile & Credentials"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 font-extrabold">
+                              <Shield size={16} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[9px] text-purple-400 font-extrabold uppercase tracking-wider">Workspace Administrator</span>
+                              <span className="text-xs font-black text-theme-text group-hover/adminbadge:text-purple-400 transition-colors">Full System & Management</span>
+                            </div>
+                          </div>
+                          <span className="rounded-xl px-2.5 py-1 text-[8px] font-extrabold uppercase tracking-wide bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                            Profile <ChevronRight size={10} />
+                          </span>
+                        </Link>
+                      ) : (
+                        /* EMPLOYEE PERFORMANCE INDEX */
+                        <div className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl p-3 flex flex-col gap-2 shadow-inner">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Award size={16} className="text-theme-primary" />
+                              <div className="flex flex-col">
+                                <span className="text-[9px] text-theme-text-muted font-bold uppercase tracking-wider">Performance Index</span>
+                                <span className="text-xs font-black text-theme-text">{Math.round(item.productivityScore || 0)}% Score</span>
+                              </div>
+                            </div>
+                            <span className={`rounded-xl px-2.5 py-1 text-[8px] font-extrabold uppercase tracking-wide ${
+                              item.performanceCategory === 'Top Performer' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                              item.performanceCategory === 'Average Performer' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                              'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            }`}>
+                              {item.performanceCategory}
+                            </span>
+                          </div>
+                          {/* Visual progress meter */}
+                          <div className="w-full bg-theme-border/40 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                (item.productivityScore || 0) >= 75 ? 'bg-emerald-500' :
+                                (item.productivityScore || 0) >= 45 ? 'bg-amber-500' :
+                                'bg-rose-500'
+                              }`}
+                              style={{ width: `${Math.max(8, Math.min(100, item.productivityScore || 0))}%` }}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-extrabold text-theme-text leading-tight">{item.fullName}</h4>
-                          <p className="text-[10px] text-theme-text-muted font-bold uppercase tracking-wider mt-0.5">{item.designation || 'CRM Specialist'}</p>
+                      )}
+
+                      {/* Contact details */}
+                      <div className="space-y-2 border-t border-theme-border/40 pt-3">
+                        <div className="flex items-center gap-2 text-theme-text-muted">
+                          <Mail size={13} className="text-theme-text-muted opacity-70" />
+                          <span className="text-[10px] font-mono truncate">{item.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-theme-text-muted">
+                          <Smartphone size={13} className="text-theme-text-muted opacity-70" />
+                          <span className="text-[10px]">{item.phone || 'No phone listed'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-theme-text-muted">
+                          <Building size={13} className="text-theme-text-muted opacity-70" />
+                          <span className="text-[10px] font-semibold text-theme-text-muted">Department: {item.department}</span>
                         </div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
-                        item.role === 'ADMIN' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                        item.role === 'MANAGER' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                        'bg-theme-bg-alt text-theme-text-muted border border-theme-border'
-                      }`}>
-                        {item.role}
-                      </span>
                     </div>
 
-                    {/* Productivity Score */}
-                    <div className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl p-3 flex items-center justify-between shadow-inner">
-                      <div className="flex items-center gap-2">
-                        <Award size={16} className="text-theme-primary" />
-                        <div className="flex flex-col">
-                          <span className="text-[9px] text-theme-text-muted font-bold uppercase tracking-wider">Performance Index</span>
-                          <span className="text-xs font-black text-theme-text">{Math.round(item.productivityScore || 0)}% Score</span>
-                        </div>
-                      </div>
-                      <span className={`rounded-xl px-2.5 py-1 text-[8px] font-extrabold uppercase tracking-wide ${
-                        item.performanceCategory === 'Top Performer' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                        item.performanceCategory === 'Average Performer' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
-                        'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    {/* Actions footer */}
+                    <div className="flex items-center justify-between border-t border-theme-border/40 pt-3 text-[10px] font-bold">
+                      <span className={`px-2 py-0.5 rounded-full ${
+                        item.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                       }`}>
-                        {item.performanceCategory}
+                        {item.status}
                       </span>
-                    </div>
+                      
+                      <div className="flex items-center gap-1.5">
+                        {isItemAdmin ? (
+                          /* Admin Profile link */
+                          <Link
+                            to="/profile"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 transition-all font-extrabold text-[10px] shadow-xs"
+                            title="Open Profile & Personal Details"
+                          >
+                            <UserIcon size={12} /> {item.id === currentUser?.id ? 'My Profile' : 'Profile'}
+                          </Link>
+                        ) : (
+                          /* Executive Work Monitor for employee */
+                          <Link
+                            to={`/admin/work-monitor?userId=${item.id}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 transition-all font-extrabold text-[10px]"
+                            title="View Executive Work & Activity Audit Monitor"
+                          >
+                            <BarChart3 size={11} /> Work Monitor
+                          </Link>
+                        )}
 
-                    {/* Contact details */}
-                    <div className="space-y-2 border-t border-theme-border/40 pt-3">
-                      <div className="flex items-center gap-2 text-theme-text-muted">
-                        <Mail size={13} className="text-theme-text-muted opacity-70" />
-                        <span className="text-[10px] font-mono truncate">{item.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-theme-text-muted">
-                        <Smartphone size={13} className="text-theme-text-muted opacity-70" />
-                        <span className="text-[10px]">{item.phone || 'No phone listed'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-theme-text-muted">
-                        <Building size={13} className="text-theme-text-muted opacity-70" />
-                        <span className="text-[10px] font-semibold text-theme-text-muted">Department: {item.department}</span>
+                        <button
+                          onClick={() => setEditUser(item)}
+                          disabled={isManager && item.role === 'ADMIN'}
+                          className="p-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border disabled:opacity-30"
+                          title="Edit Details"
+                        >
+                          <Edit2 size={12} />
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  {/* Actions footer */}
-                  <div className="flex items-center justify-between border-t border-theme-border/40 pt-3 text-[10px] font-bold">
-                    <span className={`px-2 py-0.5 rounded-full ${
-                      item.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                    }`}>
-                      {item.status}
-                    </span>
-                    
-                    <div className="flex items-center gap-1.5">
-                      <Link
-                        to={`/admin/work-monitor?userId=${item.id}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 transition-all font-extrabold text-[10px]"
-                        title="View Executive Work & Activity Audit Monitor"
-                      >
-                        <BarChart3 size={11} /> Work Monitor
-                      </Link>
-
-                      <button
-                        onClick={() => setEditUser(item)}
-                        disabled={isManager && item.role === 'ADMIN'}
-                        className="p-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border disabled:opacity-30"
-                        title="Edit Details"
-                      >
-                        <Edit2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {paginatedUsers.length === 0 && (
                 <div className="col-span-full py-12 text-center text-theme-text-muted italic">No workspace members match the filters.</div>
@@ -542,137 +622,163 @@ export default function UserManagement() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-theme-border/40 font-medium">
-                    {paginatedUsers.map((item) => (
-                      <tr key={item.id} className="hover:bg-theme-bg-alt/50 transition-colors">
-                        <td className="p-4 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary font-extrabold flex-shrink-0">
-                              {item.profileImage ? (
-                                <img
-                                  src={getProfileImageUrl(item.profileImage)}
-                                  alt={item.fullName}
-                                  className="h-9 w-9 rounded-xl object-cover border border-theme-border shadow-2xs"
-                                />
-                              ) : (
-                                getInitials(item.fullName)
-                              )}
-                              <span className={`absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full border border-theme-card ${
-                                item.availabilityStatus === 'AVAILABLE' ? 'bg-emerald-500' :
-                                item.availabilityStatus === 'BUSY' ? 'bg-amber-500' :
-                                item.availabilityStatus === 'ON_BREAK' ? 'bg-blue-400' :
-                                'bg-slate-500'
-                              }`} />
-                            </div>
-                            <div>
-                              <div className="font-bold text-theme-text text-xs">{item.fullName}</div>
-                              <div className="text-[10px] text-theme-text-muted">{item.designation || 'Specialist'}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 whitespace-nowrap">
-                          <div className="text-theme-text font-mono text-[11px]">{item.email}</div>
-                          <div className="text-[10px] text-theme-text-muted">{item.phone || 'No phone'}</div>
-                        </td>
-                        <td className="p-4 whitespace-nowrap text-theme-text">{item.department}</td>
-                        <td className="p-4 whitespace-nowrap">
-                          <select
-                            value={item.role}
-                            disabled={!isAdmin || item.id === currentUser?.id}
-                            onChange={(e) => handleChangeRole(item.id, e.target.value as any)}
-                            className="bg-theme-bg-alt border border-theme-border rounded-xl px-2 py-1 text-[10px] font-bold outline-none focus:border-theme-primary text-theme-text disabled:opacity-50"
-                          >
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="MANAGER">MANAGER</option>
-                            <option value="USER">USER</option>
-                          </select>
-                        </td>
-                        <td className="p-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-theme-text text-[11px]">{Math.round(item.productivityScore || 0)}%</span>
-                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
-                              item.performanceCategory === 'Top Performer' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-theme-bg-alt text-theme-text-muted'
-                            }`}>
-                              {item.performanceCategory}
+                    {paginatedUsers.map((item) => {
+                      const isItemAdmin = item.role === 'ADMIN';
+
+                      return (
+                        <tr key={item.id} className="hover:bg-theme-bg-alt/50 transition-colors">
+                          <td className="p-4 whitespace-nowrap">
+                            <Link
+                              to={isItemAdmin ? '/profile' : `/admin/work-monitor?userId=${item.id}`}
+                              className="flex items-center gap-3 group/user"
+                              title={isItemAdmin ? 'View Profile' : 'View Work Monitor'}
+                            >
+                              <div className={`relative flex h-9 w-9 items-center justify-center rounded-xl font-extrabold flex-shrink-0 ${
+                                isItemAdmin ? 'bg-purple-500/15 text-purple-400' : 'bg-theme-primary/10 text-theme-primary'
+                              }`}>
+                                {item.profileImage ? (
+                                  <img
+                                    src={getProfileImageUrl(item.profileImage)}
+                                    alt={item.fullName}
+                                    className="h-9 w-9 rounded-xl object-cover border border-theme-border shadow-2xs"
+                                  />
+                                ) : (
+                                  getInitials(item.fullName)
+                                )}
+                                <span className={`absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full border border-theme-card ${
+                                  item.availabilityStatus === 'AVAILABLE' ? 'bg-emerald-500' :
+                                  item.availabilityStatus === 'BUSY' ? 'bg-amber-500' :
+                                  item.availabilityStatus === 'ON_BREAK' ? 'bg-blue-400' :
+                                  'bg-slate-500'
+                                }`} />
+                              </div>
+                              <div>
+                                <div className="font-bold text-theme-text text-xs group-hover/user:text-theme-primary transition-colors">{item.fullName}</div>
+                                <div className="text-[10px] text-theme-text-muted">{item.designation || (isItemAdmin ? 'Workspace Owner' : 'Specialist')}</div>
+                              </div>
+                            </Link>
+                          </td>
+                          <td className="p-4 whitespace-nowrap">
+                            <div className="text-theme-text font-mono text-[11px]">{item.email}</div>
+                            <div className="text-[10px] text-theme-text-muted">{item.phone || 'No phone'}</div>
+                          </td>
+                          <td className="p-4 whitespace-nowrap text-theme-text">{item.department}</td>
+                          <td className="p-4 whitespace-nowrap">
+                            <select
+                              value={item.role}
+                              disabled={!isAdmin || item.id === currentUser?.id}
+                              onChange={(e) => handleChangeRole(item.id, e.target.value as any)}
+                              className="bg-theme-bg-alt border border-theme-border rounded-xl px-2 py-1 text-[10px] font-bold outline-none focus:border-theme-primary text-theme-text disabled:opacity-50"
+                            >
+                              <option value="ADMIN">ADMIN</option>
+                              <option value="MANAGER">MANAGER</option>
+                              <option value="USER">USER</option>
+                            </select>
+                          </td>
+                          <td className="p-4 whitespace-nowrap">
+                            {isItemAdmin ? (
+                              <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 inline-flex items-center gap-1.5">
+                                <Shield size={11} /> Administrator
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-theme-text text-[11px]">{Math.round(item.productivityScore || 0)}%</span>
+                                <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                  item.performanceCategory === 'Top Performer' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-theme-bg-alt text-theme-text-muted'
+                                }`}>
+                                  {item.performanceCategory}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-4 whitespace-nowrap">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                              {item.status}
                             </span>
-                          </div>
-                        </td>
-                        <td className="p-4 whitespace-nowrap">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="p-4 whitespace-nowrap text-right space-x-1.5">
-                          {/* Work Monitor Link */}
-                          <Link
-                            to={`/admin/work-monitor?userId=${item.id}`}
-                            className="inline-flex items-center p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 transition-all"
-                            title="View Work Monitor"
-                          >
-                            <BarChart3 size={12} />
-                          </Link>
-
-                          {/* Edit Details */}
-                          <button
-                            onClick={() => setEditUser(item)}
-                            disabled={isManager && item.role === 'ADMIN'}
-                            className="p-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border disabled:opacity-30"
-                            title="Edit Details"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-
-                          {/* Reset Password */}
-                          <button
-                            onClick={() => setResetUser(item)}
-                            disabled={isManager && item.role === 'ADMIN'}
-                            className="p-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border disabled:opacity-30"
-                            title="Reset Password"
-                          >
-                            <Key size={12} />
-                          </button>
-
-                          {item.id !== currentUser?.id && (
-                            <>
-                              {/* Suspend / Reactivate */}
-                              <button
-                                onClick={() => handleToggleStatus(item.id)}
-                                disabled={isManager && item.role === 'ADMIN'}
-                                className={`p-2 rounded-xl border transition-colors disabled:opacity-30 ${
-                                  item.status === 'ACTIVE'
-                                    ? 'border-rose-500/20 text-rose-500 hover:bg-rose-500/10'
-                                    : 'border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10'
-                                }`}
-                                title={item.status === 'ACTIVE' ? 'Suspend Account' : 'Reactivate Account'}
+                          </td>
+                          <td className="p-4 whitespace-nowrap text-right space-x-1.5">
+                            {/* Profile (for Admin) or Work Monitor (for Staff) */}
+                            {isItemAdmin ? (
+                              <Link
+                                to="/profile"
+                                className="inline-flex items-center p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 transition-all"
+                                title="View Profile"
                               >
-                                <ShieldAlert size={12} />
-                              </button>
+                                <UserIcon size={12} />
+                              </Link>
+                            ) : (
+                              <Link
+                                to={`/admin/work-monitor?userId=${item.id}`}
+                                className="inline-flex items-center p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 transition-all"
+                                title="View Work Monitor"
+                              >
+                                <BarChart3 size={12} />
+                              </Link>
+                            )}
 
-                              {/* Delete User - Admin Only */}
-                              {isAdmin && (
-                                <button
-                                  onClick={() => handleDeleteUser(item.id)}
-                                  className="p-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400"
-                                  title="Remove User"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              )}
+                            {/* Edit Details */}
+                            <button
+                              onClick={() => setEditUser(item)}
+                              disabled={isManager && item.role === 'ADMIN'}
+                              className="p-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border disabled:opacity-30"
+                              title="Edit Details"
+                            >
+                              <Edit2 size={12} />
+                            </button>
 
-                              {/* Transfer Ownership - Admin Only */}
-                              {isAdmin && (
+                            {/* Reset Password */}
+                            <button
+                              onClick={() => setResetUser(item)}
+                              disabled={isManager && item.role === 'ADMIN'}
+                              className="p-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-theme-text-muted hover:text-theme-text border border-theme-border disabled:opacity-30"
+                              title="Reset Password"
+                            >
+                              <Key size={12} />
+                            </button>
+
+                            {item.id !== currentUser?.id && (
+                              <>
+                                {/* Suspend / Reactivate */}
                                 <button
-                                  onClick={() => setTransferUser(item)}
-                                  className="p-2 rounded-xl bg-amber-600/10 hover:bg-amber-600/20 text-amber-400"
-                                  title="Transfer Admin Ownership"
+                                  onClick={() => handleToggleStatus(item.id)}
+                                  disabled={isManager && item.role === 'ADMIN'}
+                                  className={`p-2 rounded-xl border transition-colors disabled:opacity-30 ${
+                                    item.status === 'ACTIVE'
+                                      ? 'border-rose-500/20 text-rose-500 hover:bg-rose-500/10'
+                                      : 'border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10'
+                                  }`}
+                                  title={item.status === 'ACTIVE' ? 'Suspend Account' : 'Reactivate Account'}
                                 >
-                                  <UserCheck size={12} />
+                                  <ShieldAlert size={12} />
                                 </button>
-                              )}
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+
+                                {/* Delete User - Admin Only */}
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => handleDeleteUser(item.id)}
+                                    className="p-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400"
+                                    title="Remove User"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+
+                                {/* Transfer Ownership - Admin Only */}
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => setTransferUser(item)}
+                                    className="p-2 rounded-xl bg-amber-600/10 hover:bg-amber-600/20 text-amber-400"
+                                    title="Transfer Admin Ownership"
+                                  >
+                                    <UserCheck size={12} />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
 
                     {paginatedUsers.length === 0 && (
                       <tr>
