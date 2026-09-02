@@ -90,6 +90,7 @@ export default function Leads() {
       if (data.length > 0) {
         setSelectedLead(data[0]);
       }
+      await new Promise(r => setTimeout(r, 1200));
     } catch (e) {
       console.error(e);
       setLeads([]);

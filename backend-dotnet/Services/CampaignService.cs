@@ -39,21 +39,83 @@ public class CampaignService : ICampaignService
 
     public async Task<List<Dictionary<string, object>>> GetUserCampaignsAsync(string email)
     {
-        var campaigns = await GetCampaignsAsync(email);
-        return campaigns.Select(c => new Dictionary<string, object>
+        var userEmail = email.Trim().ToLower();
+        var user = await _context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Email == userEmail);
+
+        if (user == null || user.WorkspaceId == null)
         {
-            { "id", c.Id },
-            { "name", c.Name },
-            { "platform", c.Platform },
-            { "status", c.Status ?? "ACTIVE" },
-            { "budget", c.Budget },
-            { "spend", c.Spend },
-            { "clicks", c.Clicks },
-            { "impressions", c.Impressions },
-            { "leadsCount", c.LeadsCount },
-            { "conversions", c.Conversions },
-            { "revenue", c.Revenue },
-            { "createdAt", c.CreatedAt.ToString("o") }
+            throw new KeyNotFoundException("User workspace not found");
+        }
+
+        var campaigns = await GetCampaignsAsync(email);
+        var isAdminOrManager = user.Roles.Any(r => 
+            r.Name.ToUpper().Contains("ADMIN") || 
+            r.Name.ToUpper().Contains("MANAGER")
+        );
+
+        if (isAdminOrManager)
+        {
+            return campaigns.Select(c => new Dictionary<string, object>
+            {
+                { "id", c.Id },
+                { "name", c.Name },
+                { "platform", c.Platform },
+                { "status", c.Status ?? "ACTIVE" },
+                { "budget", c.Budget },
+                { "spend", c.Spend },
+                { "clicks", c.Clicks },
+                { "impressions", c.Impressions },
+                { "leadsCount", c.LeadsCount },
+                { "conversions", c.Conversions },
+                { "revenue", c.Revenue },
+                { "createdAt", c.CreatedAt.ToString("o") }
+            }).ToList();
+        }
+
+        // For regular user: Calculate personal revenue & conversions from user's assigned leads
+        var userLeads = await _context.Leads
+            .Where(l => l.WorkspaceId == user.WorkspaceId && l.AssignedToId == user.Id)
+            .ToListAsync();
+
+        return campaigns.Select(c =>
+        {
+            var myLeads = userLeads.Where(l => 
+                l.CampaignId == c.Id || 
+                (l.CampaignName != null && l.CampaignName.Equals(c.Name, StringComparison.OrdinalIgnoreCase))
+            ).ToList();
+
+            var myConverted = myLeads.Where(l => 
+                l.Status != null && (
+                    l.Status.Equals("CONVERTED", StringComparison.OrdinalIgnoreCase) ||
+                    l.Status.Equals("Closed Won", StringComparison.OrdinalIgnoreCase) ||
+                    l.Status.Equals("Closed_Won", StringComparison.OrdinalIgnoreCase) ||
+                    l.Status.Equals("Won", StringComparison.OrdinalIgnoreCase) ||
+                    l.Status.Equals("Payment Completed", StringComparison.OrdinalIgnoreCase) ||
+                    l.Status.Equals("Payment_Completed", StringComparison.OrdinalIgnoreCase)
+                )
+            ).ToList();
+
+            var myRevenue = (decimal)myConverted.Sum(l => l.ProposalAmount ?? 0.0);
+            var myConversions = myConverted.Count;
+            var myLeadsCount = myLeads.Count;
+
+            return new Dictionary<string, object>
+            {
+                { "id", c.Id },
+                { "name", c.Name },
+                { "platform", c.Platform },
+                { "status", c.Status ?? "ACTIVE" },
+                { "budget", 0m },
+                { "spend", 0m },
+                { "clicks", c.Clicks },
+                { "impressions", c.Impressions },
+                { "leadsCount", myLeadsCount },
+                { "conversions", myConversions },
+                { "revenue", myRevenue },
+                { "createdAt", c.CreatedAt.ToString("o") }
+            };
         }).ToList();
     }
 
@@ -79,7 +141,10 @@ public class CampaignService : ICampaignService
     public async Task<object?> GetCampaignDetailsAsync(long id, string email)
     {
         var userEmail = email.Trim().ToLower();
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        var user = await _context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Email == userEmail);
+
         if (user == null || user.WorkspaceId == null)
         {
             throw new KeyNotFoundException("User workspace not found");
@@ -93,10 +158,22 @@ public class CampaignService : ICampaignService
             return null;
         }
 
+        var isAdminOrManager = user.Roles.Any(r => 
+            r.Name.ToUpper().Contains("ADMIN") || 
+            r.Name.ToUpper().Contains("MANAGER")
+        );
+
         // Fetch leads tied to this campaign (by CampaignId or matching CampaignName)
-        var leads = await _context.Leads
+        var leadsQuery = _context.Leads
             .Include(l => l.AssignedTo)
-            .Where(l => l.WorkspaceId == user.WorkspaceId && (l.CampaignId == id || (l.CampaignName != null && l.CampaignName == campaign.Name)))
+            .Where(l => l.WorkspaceId == user.WorkspaceId && (l.CampaignId == id || (l.CampaignName != null && l.CampaignName == campaign.Name)));
+
+        if (!isAdminOrManager)
+        {
+            leadsQuery = leadsQuery.Where(l => l.AssignedToId == user.Id);
+        }
+
+        var leads = await leadsQuery
             .OrderByDescending(l => l.CreatedAt)
             .Take(50)
             .Select(l => new

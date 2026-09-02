@@ -28,6 +28,7 @@ import { useLayoutStore } from '../../store/layoutStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
+import HoosshBeeLoader from '../../components/HoosshBeeLoader';
 
 export default function UserDashboard() {
   const user = useAuthStore((state) => state.user);
@@ -231,6 +232,15 @@ export default function UserDashboard() {
   const pendingFollowupsCount = kpis?.myPendingFollowups ?? followups.length;
   const conversionsCount = kpis?.myConversions ?? getStageCount('Converted');
   const personalRevenue = kpis?.myRevenueContribution ?? 0;
+
+  if (loading && !kpis && myLeads.length === 0) {
+    return (
+      <HoosshBeeLoader 
+        text="Loading Sales Workspace..." 
+        subtext="Syncing your active pipelines, scheduled follow-ups and performance targets" 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -27,6 +27,7 @@ import {
 import api from '../services/api';
 import { isLeadFresh } from '../utils';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 const KANBAN_STAGES = [
   { key: 'New', title: 'New', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10', headerColor: 'from-blue-500/20 to-blue-500/5 text-blue-400', icon: Sparkles },
@@ -257,6 +258,15 @@ export default function MyWork() {
       return stLower === stageKey.toLowerCase();
     });
   };
+
+  if (loading && leads.length === 0) {
+    return (
+      <HoosshBeeLoader 
+        text="Loading My Work Pipeline..." 
+        subtext="Syncing assigned leads, pipeline stages and today's urgent actions" 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

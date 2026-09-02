@@ -268,14 +268,14 @@ public class AuthService : IAuthService
     {
         var refreshToken = await _context.RefreshTokens
             .Include(r => r.User)
-                .ThenInclude(u => u.Workspace)
+                .ThenInclude(u => u!.Workspace)
             .Include(r => r.User)
-                .ThenInclude(u => u.Roles)
+                .ThenInclude(u => u!.Roles)
             .FirstOrDefaultAsync(r => r.Token == token);
 
-        if (refreshToken == null)
+        if (refreshToken == null || refreshToken.User == null)
         {
-            throw new ArgumentException("Refresh token not found");
+            throw new ArgumentException("Refresh token not found or user invalid");
         }
 
         if (refreshToken.ExpiryDate < DateTime.UtcNow)
@@ -349,6 +349,11 @@ public class AuthService : IAuthService
         }
 
         var user = resetToken.User;
+        if (user == null)
+        {
+            throw new ArgumentException("User associated with reset token was not found");
+        }
+
         user.Password = _passwordHasher.HashPassword(request.NewPassword);
         _context.PasswordResetTokens.Remove(resetToken);
         await _context.SaveChangesAsync();
@@ -397,7 +402,10 @@ public class AuthService : IAuthService
         }
 
         var user = verificationToken.User;
-        user.IsEmailVerified = true;
+        if (user != null)
+        {
+            user.IsEmailVerified = true;
+        }
         _context.EmailVerificationTokens.Remove(verificationToken);
         await _context.SaveChangesAsync();
     }

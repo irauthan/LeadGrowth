@@ -19,6 +19,7 @@ import { downloadReport } from '../services/reportService';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import TimeFilterDropdown, { type TimeFilterState } from '../components/TimeFilterDropdown';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 interface DailyBreakdownItem {
   date: string;
@@ -544,10 +545,12 @@ export default function Reports() {
           </div>
 
           {loadingData ? (
-            <div className="flex h-48 items-center justify-center space-y-2 flex-col">
-              <Loader2 size={24} className="animate-spin text-theme-primary" />
-              <span className="text-xs text-theme-text-muted font-bold">Compiling automated activity records...</span>
-            </div>
+            <HoosshBeeLoader 
+              size="sm"
+              showBrand={false}
+              text="Compiling automated activity records..." 
+              subtext="Aggregating phone calls, demos, and completed follow-up workflows" 
+            />
           ) : (   
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">

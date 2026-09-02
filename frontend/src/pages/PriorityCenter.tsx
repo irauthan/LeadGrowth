@@ -20,6 +20,7 @@ import {
 import api from '../services/api';
 import type { PriorityItem, PriorityStats } from '../types';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 export default function PriorityCenter() {
   const [priorities, setPriorities] = useState<PriorityItem[]>([]);
@@ -198,6 +199,15 @@ export default function PriorityCenter() {
       default: return "All Priority Items";
     }
   };
+
+  if (loading && !stats) {
+    return (
+      <HoosshBeeLoader 
+        text="Loading Priority Queue..." 
+        subtext="Evaluating lead scores, urgent follow-ups and high-conversion opportunities" 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

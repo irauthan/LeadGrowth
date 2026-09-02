@@ -436,7 +436,7 @@ export default function Navbar() {
 
           {/* Compact App Brand Icon */}
           <Link to="/dashboard" className="flex items-center transition-transform hover:scale-105" title="Hoossh Lead Growth">
-            <HoosshLogo size={28} variant="icon-only" animated />
+            <HoosshLogo size={28} variant="full" animated />
           </Link>
 
           {/* Subtle Vertical Divider */}

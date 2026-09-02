@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
+import HoosshLogo from '../components/HoosshLogo';
 
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
@@ -91,9 +92,9 @@ export default function AcceptInvite() {
       <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl backdrop-blur-xl space-y-6">
         
         {/* Branding Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-lg mb-1">
-            <TrendingUp size={24} />
+        <div className="text-center space-y-2 flex flex-col items-center">
+          <div className="mb-2">
+            <HoosshLogo size={42} variant="full" animated showTagline tagline="Lead Growth" />
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-white">Join Workspace</h2>
           <p className="text-xs text-slate-400">Complete your profile setup to accept your workspace invitation.</p>

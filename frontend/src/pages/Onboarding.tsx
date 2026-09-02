@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PlusCircle, Users, ArrowLeft, Loader2, Globe, Compass, Users2, Landmark } from 'lucide-react';
+import HoosshLogo from '../components/HoosshLogo';
 
 export default function Onboarding() {
   const [step, setStep] = useState<'choose' | 'create' | 'join'>('choose');
@@ -113,9 +114,12 @@ export default function Onboarding() {
       <div className="absolute -right-40 bottom-0 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-indigo-300 to-rose-300 opacity-20 blur-[100px] dark:from-indigo-950/20 dark:to-rose-950/20" />
 
       <div className="relative z-10 w-full max-w-xl">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight">Let's Setup Your Workspace</h2>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-4">
+            <HoosshLogo size={46} variant="full" animated showTagline tagline="Lead Growth" />
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Let's Setup Your Workspace</h2>
+          <p className="mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Welcome, {user?.fullName}! Select an option below to configure your analytics dashboard.
           </p>
         </div>

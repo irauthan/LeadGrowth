@@ -90,7 +90,6 @@ export default function MainLayout() {
         <main className={`flex-1 max-w-full ${isFullScreen ? 'p-0 overflow-hidden flex flex-col' : 'overflow-x-hidden px-4 sm:px-8 py-6'} ${getMainContentPadding()}`}>
           <Outlet />
         </main>
-        {!isFullScreen && <Footer />}
       </div>
       <MobileBottomNav />
     </div>

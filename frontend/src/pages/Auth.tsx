@@ -305,15 +305,7 @@ export default function Auth() {
 
           {/* Header Branding */}
           <div className="relative z-10 flex items-center gap-3">
-            <HoosshLogo size={38} variant="icon-only" animated />
-            <div>
-              <span className="text-xl font-black tracking-tight text-slate-900 block">
-                Hoossh <span className="text-blue-600 font-black">Lead Growth</span>
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 -mt-0.5 block">
-                Enterprise CRM & Operations
-              </span>
-            </div>
+            <HoosshLogo size={46} variant="full" animated showTagline tagline="Lead Growth" />
           </div>
 
           {/* Middle Analytics Cards Showcase */}
@@ -390,11 +382,8 @@ export default function Auth() {
         <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 bg-white">
           
           {/* Mobile Header Logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <HoosshLogo size={36} variant="icon-only" animated />
-            <span className="text-xl font-black text-slate-900">
-              Hoossh <span className="text-blue-600">Lead Growth</span>
-            </span>
+          <div className="lg:hidden flex items-center justify-center mb-8">
+            <HoosshLogo size={42} variant="full" animated showTagline tagline="Lead Growth" />
           </div>
 
           <div className="w-full max-w-md space-y-6 bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 shadow-lg shadow-slate-100">

@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Connection String & Database Context (EF Core + Pomelo MySQL 8.x)
 var connectionString = builder.Configuration.GetConnectionString("LeadGrowthDb") 
-    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=123456";
+    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=12345";
 
 builder.Services.AddDbContext<LeadGrowthDbContext>(options =>
 {
@@ -212,6 +212,27 @@ try
         }
     }
 
+    void EnsureIndex(string tableName, string indexName, string columnsSql)
+    {
+        try
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = '{tableName}' AND index_name = '{indexName}'";
+            var exists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+            if (!exists)
+            {
+                using var createCmd = conn.CreateCommand();
+                createCmd.CommandText = $"CREATE INDEX `{indexName}` ON `{tableName}` ({columnsSql});";
+                createCmd.ExecuteNonQuery();
+                Console.WriteLine($"[DB Patch] Created index `{indexName}` on `{tableName}`");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DB Patch Note for index {indexName}]: {ex.Message}");
+        }
+    }
+
     // 1. Add missing columns to users table safely
     EnsureColumn("users", "is_email_verified", "TINYINT(1) NOT NULL DEFAULT 0");
     EnsureColumn("users", "can_receive_leads", "TINYINT(1) NOT NULL DEFAULT 1");
@@ -282,6 +303,41 @@ try
     EnsureColumn("bulk_assignment_jobs", "assigned_count", "INT NOT NULL DEFAULT 0");
     EnsureColumn("bulk_assignment_jobs", "unassigned_count", "INT NOT NULL DEFAULT 0");
     EnsureColumn("bulk_assignment_jobs", "failure_summary", "TEXT NULL");
+
+    // 3. Database Indexes for High Performance Query Execution & Dashboard Speeds
+    EnsureIndex("leads", "idx_leads_ws", "`workspace_id`");
+    EnsureIndex("leads", "idx_leads_ws_created", "`workspace_id`, `created_at`");
+    EnsureIndex("leads", "idx_leads_ws_status", "`workspace_id`, `Status`");
+    EnsureIndex("leads", "idx_leads_ws_assigned", "`workspace_id`, `assigned_to_id`");
+    EnsureIndex("leads", "idx_leads_assigned_created", "`assigned_to_id`, `created_at`");
+    EnsureIndex("leads", "idx_leads_campaign", "`campaign_id`");
+    EnsureIndex("leads", "idx_leads_phone", "`Phone`");
+    EnsureIndex("leads", "idx_leads_email", "`Email`");
+
+    EnsureIndex("campaigns", "idx_campaigns_ws_status", "`workspace_id`, `Status`");
+    EnsureIndex("campaigns", "idx_campaigns_ws_created", "`workspace_id`, `created_at`");
+
+    EnsureIndex("sales_activities", "idx_sales_act_lead", "`lead_id`");
+    EnsureIndex("sales_activities", "idx_sales_act_lead_key", "`lead_id`, `activity_key`");
+
+    EnsureIndex("sales_activity_logs", "idx_sales_log_lead_created", "`lead_id`, `created_at`");
+    EnsureIndex("sales_activity_logs", "idx_sales_log_activity", "`sales_activity_id`");
+
+    EnsureIndex("followup_reminders", "idx_followup_lead", "`lead_id`");
+    EnsureIndex("followup_reminders", "idx_followup_ws_sched", "`workspace_id`, `scheduled_at`");
+    EnsureIndex("followup_reminders", "idx_followup_ws_status", "`workspace_id`, `Status`");
+    EnsureIndex("followup_reminders", "idx_followup_assigned_status", "`assigned_to_id`, `Status`");
+
+    EnsureIndex("tasks", "idx_tasks_ws_status", "`workspace_id`, `Status`");
+    EnsureIndex("tasks", "idx_tasks_ws_assigned", "`workspace_id`, `assigned_to_id`");
+    EnsureIndex("tasks", "idx_tasks_ws_created", "`workspace_id`, `created_at`");
+
+    EnsureIndex("calendar_events", "idx_events_ws_start", "`workspace_id`, `start_time`");
+    EnsureIndex("calendar_events", "idx_events_user_start", "`assigned_user_id`, `start_time`");
+
+    EnsureIndex("activity_logs", "idx_actlogs_ws_created", "`workspace_id`, `created_at`");
+    EnsureIndex("audit_logs", "idx_auditlogs_ws_time", "`workspace_id`, `created_at`");
+    EnsureIndex("users", "idx_users_ws_status", "`workspace_id`, `Status`");
 }
 catch (Exception ex)
 {

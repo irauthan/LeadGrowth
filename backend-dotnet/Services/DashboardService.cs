@@ -18,7 +18,11 @@ public class DashboardService : IDashboardService
     public async Task<DashboardKpis> GetDashboardDataAsync(string email, string? period, string? startDate, string? endDate)
     {
         var userEmail = email.Trim().ToLower();
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        var user = await _context.Users
+            .Include(u => u.Roles)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email == userEmail);
+
         if (user == null || user.WorkspaceId == null)
         {
             throw new KeyNotFoundException("User workspace not found");
@@ -26,22 +30,40 @@ public class DashboardService : IDashboardService
 
         var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
         var isFiltered = !string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase);
+        bool isUserOnly = user.Roles.All(r => !r.Name.Contains("ADMIN", StringComparison.OrdinalIgnoreCase) && !r.Name.Contains("MANAGER", StringComparison.OrdinalIgnoreCase));
 
-        var allLeads = await _leadService.GetLeadsAsync(email);
-        var allCampaigns = await _context.Campaigns.Where(c => c.WorkspaceId == user.WorkspaceId).ToListAsync();
-        var users = await _context.Users.Where(u => u.WorkspaceId == user.WorkspaceId && !string.Equals("SUSPENDED", u.Status)).ToListAsync();
+        // 1. Optimized Lead Query with AsNoTracking (fetching only fields needed for aggregates, funnel & trends)
+        var leadsQuery = _context.Leads.AsNoTracking()
+            .Where(l => isUserOnly ? l.AssignedToId == user.Id : l.WorkspaceId == user.WorkspaceId);
 
-        var leads = isFiltered
-            ? allLeads.Where(l => l.CreatedAt >= rangeStart && l.CreatedAt <= rangeEnd).ToList()
-            : allLeads;
+        var allLeadsData = await leadsQuery
+            .Select(l => new {
+                l.Id,
+                l.Status,
+                l.ProposalAmount,
+                l.CreatedAt
+            })
+            .ToListAsync();
 
-        var totalLeads = leads.Count;
-        var converted = leads.Count(l => string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase));
+        var filteredLeadsData = isFiltered
+            ? allLeadsData.Where(l => l.CreatedAt >= rangeStart && l.CreatedAt <= rangeEnd).ToList()
+            : allLeadsData;
+
+        var totalLeads = filteredLeadsData.Count;
+        var converted = filteredLeadsData.Count(l => 
+            string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) || 
+            string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase));
         var conversionRate = totalLeads > 0 ? (double)converted / totalLeads * 100 : 0.0;
 
-        var leadProposalTotal = leads
+        var leadProposalTotal = filteredLeadsData
             .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
-            .Sum(l => (decimal)l.ProposalAmount.Value);
+            .Sum(l => (decimal)(l.ProposalAmount ?? 0));
+
+        // 2. Campaigns query (single fast query)
+        var campaignsQuery = _context.Campaigns.AsNoTracking()
+            .Where(c => c.WorkspaceId == user.WorkspaceId);
+
+        var allCampaigns = await campaignsQuery.ToListAsync();
 
         var campaigns = isFiltered
             ? allCampaigns.Where(c => c.CreatedAt >= rangeStart && c.CreatedAt <= rangeEnd).ToList()
@@ -59,25 +81,27 @@ public class DashboardService : IDashboardService
         var cpc = clicks > 0 ? Math.Round((double)(spend / clicks), 2) : 0.0;
         var ctr = impressions > 0 ? Math.Round((double)clicks / impressions * 100, 2) : 0.0;
 
+        // 3. Funnel counts (in memory from filteredLeadsData)
         var funnel = new Dictionary<string, int>
         {
-            { "New", leads.Count(l => string.Equals("New", l.Status, StringComparison.OrdinalIgnoreCase)) },
-            { "Interaction", leads.Count(l => string.Equals("Interaction", l.Status, StringComparison.OrdinalIgnoreCase)) },
-            { "Qualified", leads.Count(l => string.Equals("Qualified", l.Status, StringComparison.OrdinalIgnoreCase)) },
-            { "Proposal Sent", leads.Count(l => string.Equals("Proposal Sent", l.Status, StringComparison.OrdinalIgnoreCase)) },
-            { "Negotiation", leads.Count(l => string.Equals("Negotiation", l.Status, StringComparison.OrdinalIgnoreCase)) },
+            { "New", filteredLeadsData.Count(l => string.Equals("New", l.Status, StringComparison.OrdinalIgnoreCase)) },
+            { "Interaction", filteredLeadsData.Count(l => string.Equals("Interaction", l.Status, StringComparison.OrdinalIgnoreCase)) },
+            { "Qualified", filteredLeadsData.Count(l => string.Equals("Qualified", l.Status, StringComparison.OrdinalIgnoreCase)) },
+            { "Proposal Sent", filteredLeadsData.Count(l => string.Equals("Proposal Sent", l.Status, StringComparison.OrdinalIgnoreCase)) },
+            { "Negotiation", filteredLeadsData.Count(l => string.Equals("Negotiation", l.Status, StringComparison.OrdinalIgnoreCase)) },
             { "Converted", converted },
-            { "Lost", leads.Count(l => string.Equals("Lost", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Rejected", l.Status, StringComparison.OrdinalIgnoreCase)) }
+            { "Lost", filteredLeadsData.Count(l => string.Equals("Lost", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Rejected", l.Status, StringComparison.OrdinalIgnoreCase)) }
         };
 
+        // 4. Trends (in memory from allLeadsData and allCampaigns)
         var trends = new List<Dictionary<string, object>>();
         var now = DateTime.UtcNow;
         for (int i = 6; i >= 0; i--)
         {
             var targetDay = now.AddDays(-i).Date;
             var targetDayEnd = targetDay.AddDays(1).AddTicks(-1);
-            var dayLeads = allLeads.Where(l => l.CreatedAt >= targetDay && l.CreatedAt <= targetDayEnd).ToList();
-            var dayRevenue = dayLeads.Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0).Sum(l => (double)l.ProposalAmount.Value);
+            var dayLeads = allLeadsData.Where(l => l.CreatedAt >= targetDay && l.CreatedAt <= targetDayEnd).ToList();
+            var dayRevenue = dayLeads.Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0).Sum(l => (double)(l.ProposalAmount ?? 0));
             var dayCampaigns = allCampaigns.Where(c => c.CreatedAt >= targetDay && c.CreatedAt <= targetDayEnd).ToList();
             dayRevenue += dayCampaigns.Sum(c => (double)c.Revenue);
             var daySpend = dayCampaigns.Sum(c => (double)c.Spend);
@@ -89,6 +113,78 @@ public class DashboardService : IDashboardService
                 { "spend", Math.Round(daySpend, 2) },
                 { "leads", dayLeads.Count }
             });
+        }
+
+        // 5. Active Users count (fast count)
+        var activeUsersCount = await _context.Users.AsNoTracking()
+            .Where(u => u.WorkspaceId == user.WorkspaceId && u.Status != "SUSPENDED")
+            .CountAsync();
+
+        // 6. Recent 10 Leads ONLY (filtered by period if specified)
+        var recentQuery = isFiltered
+            ? leadsQuery.Where(l => l.CreatedAt >= rangeStart && l.CreatedAt <= rangeEnd)
+            : leadsQuery;
+
+        var recentLeadsRaw = await recentQuery
+            .Include(l => l.AssignedTo)
+            .Include(l => l.AssignedBy)
+            .OrderByDescending(l => l.CreatedAt)
+            .Take(10)
+            .ToListAsync();
+
+        var recentLeadDtos = new List<LeadDto>();
+        if (recentLeadsRaw.Count > 0)
+        {
+            var workspaceFollowups = await _context.FollowupReminders.AsNoTracking()
+                .Where(f => f.WorkspaceId == user.WorkspaceId)
+                .OrderByDescending(f => f.ScheduledAt)
+                .ToListAsync();
+
+            var recentLeadIdsSet = new HashSet<long>(recentLeadsRaw.Select(l => l.Id));
+            var followupsMap = workspaceFollowups
+                .Where(f => recentLeadIdsSet.Contains(f.LeadId))
+                .GroupBy(f => f.LeadId)
+                .ToDictionary(g => g.Key, g => g.FirstOrDefault());
+
+            foreach (var l in recentLeadsRaw)
+            {
+                followupsMap.TryGetValue(l.Id, out var f);
+                recentLeadDtos.Add(new LeadDto
+                {
+                    Id = l.Id,
+                    WorkspaceId = l.WorkspaceId,
+                    CampaignId = l.CampaignId,
+                    Name = l.Name,
+                    Email = l.Email,
+                    Phone = l.Phone,
+                    SourcePlatform = l.SourcePlatform,
+                    CampaignName = l.CampaignName,
+                    Status = l.Status,
+                    AssignedToId = l.AssignedToId,
+                    AssignedToName = l.AssignedTo?.FullName ?? "Unassigned",
+                    AssignedById = l.AssignedById,
+                    AssignedByName = l.AssignedBy?.FullName ?? "System Queue",
+                    AssignedDate = l.AssignedDate ?? l.CreatedAt,
+                    QualityScore = l.QualityScore ?? 75,
+                    QualityTier = l.QualityTier ?? "WARM",
+                    ConversionProbability = l.ConversionProbability ?? 75.0,
+                    QueueStatus = l.QueueStatus ?? (l.AssignedToId.HasValue ? "ASSIGNED" : "IN_QUEUE"),
+                    Company = l.Company ?? "N/A",
+                    Location = l.Location ?? "Remote / Unspecified",
+                    Priority = l.Priority ?? "MEDIUM",
+                    ProgressPercentage = l.ProgressPercentage ?? 0,
+                    LastFollowupDate = l.LastFollowupDate,
+                    DueDate = l.DueDate,
+                    ClientNotes = l.ClientNotes,
+                    ProposalAmount = l.ProposalAmount,
+                    ProposalStatus = l.ProposalStatus,
+                    CreatedAt = l.CreatedAt,
+                    NextFollowupDate = f?.ScheduledAt,
+                    FollowupNotes = f?.Notes,
+                    FollowupType = f?.Type ?? "CALL",
+                    FollowupStatus = f?.Status ?? "UPCOMING"
+                });
+            }
         }
 
         return new DashboardKpis
@@ -104,8 +200,8 @@ public class DashboardService : IDashboardService
             Cpc = cpc,
             Ctr = ctr,
             ActiveCampaigns = activeCampaigns,
-            ActiveUsers = users.Count,
-            RecentLeads = leads.Take(10).ToList(),
+            ActiveUsers = activeUsersCount,
+            RecentLeads = recentLeadDtos,
             Funnel = funnel,
             Trends = trends
         };

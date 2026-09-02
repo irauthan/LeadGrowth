@@ -23,6 +23,7 @@ import {
 
 import CalendarSettingsModal, { type CalendarCategory } from '../components/CalendarSettingsModal';
 import SchedulePreviewSidePanel from '../components/SchedulePreviewSidePanel';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 
 const formatLocalDateTime = (d: Date = new Date()): string => {
@@ -729,10 +730,10 @@ export default function Calendar() {
         <main className="flex-1 bg-theme-card overflow-auto relative">
           
           {loading ? (
-            <div className="flex h-full items-center justify-center space-y-3 flex-col">
-              <Loader2 size={36} className="animate-spin text-blue-600" />
-              <span className="text-xs font-bold text-theme-text-muted">Syncing Scheduler View...</span>
-            </div>
+            <HoosshBeeLoader 
+              text="Syncing Scheduler View..." 
+              subtext="Loading meetings, follow-up calls and calendar events" 
+            />
           ) : (
             <>
               {/* 1. MONTH VIEW */}

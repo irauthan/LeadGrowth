@@ -14,7 +14,13 @@ import {
   Filter,
   Flame,
   Zap,
-  Info
+  Info,
+  Trophy,
+  Clock,
+  CheckSquare,
+  Megaphone,
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import api from '../services/api';

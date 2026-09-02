@@ -19,12 +19,14 @@ public class ProductivityService : IProductivityService
         var normalizedEmail = email.Trim().ToLower();
         var actor = await _context.Users
             .Include(u => u.Workspace)
+            .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
         if (actor == null)
         {
             actor = await _context.Users
                 .Include(u => u.Workspace)
+                .AsNoTracking()
                 .FirstOrDefaultAsync();
         }
 
@@ -39,7 +41,36 @@ public class ProductivityService : IProductivityService
         }
 
         var members = await _context.Users
+            .AsNoTracking()
             .Where(u => u.WorkspaceId == actor.WorkspaceId)
+            .ToListAsync();
+
+        var wsId = actor.WorkspaceId.Value;
+
+        // Batch load workspace tasks, leads, activity logs, calls, followups
+        var allTasks = await _context.Tasks.AsNoTracking()
+            .Where(t => t.WorkspaceId == wsId && t.AssignedToId.HasValue)
+            .Select(t => new { t.AssignedToId, t.Status })
+            .ToListAsync();
+
+        var allLeads = await _context.Leads.AsNoTracking()
+            .Where(l => l.WorkspaceId == wsId && l.AssignedToId.HasValue)
+            .Select(l => new { l.AssignedToId, l.Status, Progress = l.ProgressPercentage ?? 0 })
+            .ToListAsync();
+
+        var allActivityLogs = await _context.SalesActivityLogs.AsNoTracking()
+            .Where(a => a.Lead != null && a.Lead.WorkspaceId == wsId && a.LoggedById.HasValue)
+            .Select(a => a.LoggedById!.Value)
+            .ToListAsync();
+
+        var allCalls = await _context.CallHistories.AsNoTracking()
+            .Where(c => c.WorkspaceId == wsId)
+            .Select(c => c.UserId)
+            .ToListAsync();
+
+        var allFollowups = await _context.FollowupReminders.AsNoTracking()
+            .Where(f => f.WorkspaceId == wsId && f.AssignedToId.HasValue && (f.Status == "COMPLETED" || f.Status == "Completed"))
+            .Select(f => f.AssignedToId!.Value)
             .ToListAsync();
 
         var dtos = new List<TeamProductivityDto>();
@@ -51,8 +82,82 @@ public class ProductivityService : IProductivityService
                 continue;
             }
 
-            var dto = await CalculateUserProductivityDtoAsync(user);
-            dtos.Add(dto);
+            var userTasks = allTasks.Where(t => t.AssignedToId == user.Id).ToList();
+            var totalTasks = userTasks.Count;
+            var completedTasks = userTasks.Count(t =>
+                string.Equals(t.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "Approved", StringComparison.OrdinalIgnoreCase));
+
+            var userLeads = allLeads.Where(l => l.AssignedToId == user.Id).ToList();
+            var totalLeads = userLeads.Count;
+            var completedLeads = userLeads.Count(l =>
+                string.Equals(l.Status, "CONVERTED", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(l.Status, "WON", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(l.Status, "Converted", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(l.Status, "Won", StringComparison.OrdinalIgnoreCase));
+
+            double conversionRate = totalLeads > 0 ? (double)completedLeads / totalLeads : 0.0;
+            int leadProgressSum = userLeads.Sum(l => l.Progress);
+            double avgLeadProgress = totalLeads > 0 ? (double)leadProgressSum / totalLeads : 0.0;
+
+            int activitiesCount = allActivityLogs.Count(id => id == user.Id);
+            int callsCount = allCalls.Count(id => id == user.Id);
+            int completedFollowups = allFollowups.Count(id => id == user.Id);
+            int totalOutreachEffort = activitiesCount + callsCount + completedFollowups;
+
+            double avgResponseTime = 4.0;
+            if (completedTasks + completedLeads + totalOutreachEffort > 0)
+            {
+                avgResponseTime = Math.Max(1.0, 4.0 - (0.05 * (completedTasks + completedLeads + totalOutreachEffort)));
+            }
+
+            double taskScore = totalTasks > 0 ? ((double)completedTasks / totalTasks) * 100.0 : 0.0;
+            double leadScore = avgLeadProgress;
+            double conversionScore = conversionRate * 100.0;
+            double activityScore = Math.Min(100.0, totalOutreachEffort * 10.0);
+
+            double score = 0.0;
+            if (totalTasks > 0 && totalLeads > 0)
+            {
+                score = (taskScore * 0.30) + (leadScore * 0.30) + (conversionScore * 0.25) + (activityScore * 0.15);
+            }
+            else if (totalTasks > 0)
+            {
+                score = (taskScore * 0.70) + (activityScore * 0.30);
+            }
+            else if (totalLeads > 0)
+            {
+                score = (leadScore * 0.45) + (conversionScore * 0.35) + (activityScore * 0.20);
+            }
+            else if (totalOutreachEffort > 0)
+            {
+                score = Math.Min(95.0, 45.0 + (totalOutreachEffort * 7.5));
+            }
+            else
+            {
+                score = string.Equals("AVAILABLE", user.AvailabilityStatus, StringComparison.OrdinalIgnoreCase) ? 55.0 : 35.0;
+            }
+
+            score = Math.Round(score * 10.0) / 10.0;
+            score = Math.Min(100.0, Math.Max(0.0, score));
+
+            var category = "Needs Improvement";
+            if (score >= 75.0) category = "Top Performer";
+            else if (score >= 45.0) category = "Average Performer";
+
+            dtos.Add(new TeamProductivityDto
+            {
+                UserId = user.Id,
+                FullName = user.FullName,
+                CompletedTasks = completedTasks,
+                CompletedLeads = completedLeads,
+                ConversionRate = conversionRate,
+                AverageResponseTime = avgResponseTime,
+                Score = score,
+                Category = category
+            });
         }
 
         return dtos;

@@ -215,7 +215,7 @@ public class PriorityController : ControllerBase
                 Email = lead.Email,
                 Phone = lead.Phone,
                 SourcePlatform = lead.SourcePlatform ?? "Organic",
-                CurrentStage = lead.Status,
+                CurrentStage = lead.Status ?? "NEW",
                 QualityScore = lead.QualityScore ?? 75,
                 QualityTier = lead.QualityTier ?? "WARM",
                 ConversionProbability = lead.ConversionProbability ?? 70.0,

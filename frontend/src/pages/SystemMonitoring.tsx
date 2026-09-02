@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 interface MetricPoint {
   time: string;
@@ -153,6 +154,15 @@ export default function SystemMonitoring() {
       </span>
     );
   };
+
+  if (loading && metrics.length === 0) {
+    return (
+      <HoosshBeeLoader 
+        text="Loading System Diagnostics..." 
+        subtext="Checking microservice latency, active database pools and CPU health" 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

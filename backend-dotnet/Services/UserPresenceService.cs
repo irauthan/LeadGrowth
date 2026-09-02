@@ -73,30 +73,30 @@ public class UserPresenceService : IUserPresenceService
             .Where(u => u.WorkspaceId == workspaceId && !string.Equals("SUSPENDED", u.Status))
             .ToListAsync();
 
-        var userIds = users.Select(u => u.Id).ToList();
+        var userIdsSet = new HashSet<long>(users.Select(u => u.Id));
         var now = DateTime.UtcNow;
 
         // Batch active leads count per user (excluding terminal statuses)
-        var leadsQuery = await _context.Leads
-            .Where(l => l.WorkspaceId == workspaceId && l.AssignedToId.HasValue && userIds.Contains(l.AssignedToId.Value))
+        var leadsRaw = await _context.Leads.AsNoTracking()
+            .Where(l => l.WorkspaceId == workspaceId && l.AssignedToId.HasValue)
             .Select(l => new { l.AssignedToId, l.Status })
             .ToListAsync();
 
-        var activeLeadsByUser = leadsQuery
-            .Where(l => l.Status == null || !TerminalLeadStatuses.Contains(l.Status.Trim()))
+        var activeLeadsByUser = leadsRaw
+            .Where(l => userIdsSet.Contains(l.AssignedToId!.Value) && (l.Status == null || !TerminalLeadStatuses.Contains(l.Status.Trim())))
             .GroupBy(l => l.AssignedToId!.Value)
             .ToDictionary(g => g.Key, g => g.Count());
 
         // Batch valid pending followups count per user (distinct LeadIds)
-        var followupsQuery = await _context.FollowupReminders
+        var followupsRaw = await _context.FollowupReminders.AsNoTracking()
             .Include(f => f.Lead)
-            .Where(f => f.WorkspaceId == workspaceId && f.AssignedToId.HasValue && userIds.Contains(f.AssignedToId.Value))
+            .Where(f => f.WorkspaceId == workspaceId && f.AssignedToId.HasValue)
             .Where(f => f.Status != "COMPLETED" && f.Status != "CANCELLED")
             .Select(f => new { f.AssignedToId, f.LeadId, LeadStatus = f.Lead != null ? f.Lead.Status : null })
             .ToListAsync();
 
-        var validFollowupsByUser = followupsQuery
-            .Where(f => f.LeadStatus == null || !TerminalLeadStatuses.Contains(f.LeadStatus.Trim()))
+        var validFollowupsByUser = followupsRaw
+            .Where(f => userIdsSet.Contains(f.AssignedToId!.Value) && (f.LeadStatus == null || !TerminalLeadStatuses.Contains(f.LeadStatus.Trim())))
             .GroupBy(f => f.AssignedToId!.Value)
             .ToDictionary(g => g.Key, g => g.Select(x => x.LeadId).Distinct().Count());
 

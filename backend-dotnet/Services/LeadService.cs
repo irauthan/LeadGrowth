@@ -60,13 +60,7 @@ public class LeadService : ILeadService
 
         var leads = await query.OrderByDescending(l => l.CreatedAt).ToListAsync();
 
-        var dtos = new List<LeadDto>();
-        foreach (var l in leads)
-        {
-            dtos.Add(await ConvertToDtoAsync(l));
-        }
-
-        return dtos;
+        return await ConvertToDtosAsync(leads);
     }
 
     public async Task<LeadDto> CreateLeadAsync(LeadDto dto, string userEmail)
@@ -2007,6 +2001,144 @@ public class LeadService : ILeadService
         ("PAYMENT_FOLLOWUP", "Payment Follow-up"),
         ("LEAD_LOST", "Lead Lost / Dropped")
     };
+
+    private async Task<List<LeadDto>> ConvertToDtosAsync(List<Lead> leads)
+    {
+        if (leads == null || leads.Count == 0) return new List<LeadDto>();
+
+        var workspaceId = leads.First().WorkspaceId;
+        var leadIdsSet = new HashSet<long>(leads.Select(l => l.Id));
+
+        // 1. Batch load all sales activities for workspace in ONE query
+        var allActivitiesRaw = await _context.SalesActivities.AsNoTracking()
+            .Where(a => a.Lead != null && a.Lead.WorkspaceId == workspaceId)
+            .OrderBy(a => a.Id)
+            .ToListAsync();
+        var activitiesByLead = allActivitiesRaw
+            .Where(a => leadIdsSet.Contains(a.LeadId))
+            .GroupBy(a => a.LeadId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // 2. Batch load all sales activity logs for workspace in ONE query
+        var allLogsRaw = await _context.SalesActivityLogs.AsNoTracking()
+            .Include(l => l.LoggedBy)
+            .Where(l => l.Lead != null && l.Lead.WorkspaceId == workspaceId)
+            .OrderBy(l => l.CreatedAt)
+            .ToListAsync();
+        var logsByLead = allLogsRaw
+            .Where(l => leadIdsSet.Contains(l.LeadId))
+            .GroupBy(l => l.LeadId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // 3. Batch load all followup reminders for workspace in ONE query
+        var allFollowupsRaw = await _context.FollowupReminders.AsNoTracking()
+            .Where(f => f.WorkspaceId == workspaceId)
+            .OrderByDescending(f => f.ScheduledAt)
+            .ToListAsync();
+        var followupsByLead = allFollowupsRaw
+            .Where(f => leadIdsSet.Contains(f.LeadId))
+            .GroupBy(f => f.LeadId)
+            .ToDictionary(g => g.Key, g => g.FirstOrDefault());
+
+        var dtos = new List<LeadDto>(leads.Count);
+        foreach (var lead in leads)
+        {
+            activitiesByLead.TryGetValue(lead.Id, out var leadActivities);
+            leadActivities ??= new List<SalesActivity>();
+
+            logsByLead.TryGetValue(lead.Id, out var leadLogs);
+            leadLogs ??= new List<SalesActivityLog>();
+
+            followupsByLead.TryGetValue(lead.Id, out var followup);
+
+            var activityDtos = new List<SalesActivityDto>();
+            var activityMap = leadActivities.ToDictionary(a => NormalizeActivityKey(a.ActivityName), a => a, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var (key, title) in StandardWorkflowStages)
+            {
+                activityMap.TryGetValue(key, out var act);
+                var stageLogs = leadLogs.Where(l => (act != null && l.SalesActivityId == act.Id) || string.Equals(NormalizeActivityKey(l.CommunicationType), key, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                var logDtos = stageLogs.Select((l, idx) => new SalesActivityLogDto
+                {
+                    Id = l.Id,
+                    SalesActivityId = act?.Id ?? l.SalesActivityId ?? 0,
+                    LeadId = lead.Id,
+                    ActivityNumber = l.ActivityNumber > 0 ? l.ActivityNumber : idx + 1,
+                    ActivityKey = key,
+                    Action = l.Outcome,
+                    CommunicationType = l.CommunicationType,
+                    Outcome = l.Outcome,
+                    Remarks = l.Remarks,
+                    Duration = l.Duration,
+                    Status = l.Status,
+                    NextFollowupDate = l.NextFollowupDate,
+                    Attachments = l.Attachments,
+                    LoggedById = l.LoggedById,
+                    LoggedByName = l.LoggedBy != null ? l.LoggedBy.FullName : "Sales Rep",
+                    CreatedAt = l.CreatedAt
+                }).ToList();
+
+                activityDtos.Add(new SalesActivityDto
+                {
+                    Id = act?.Id ?? 0,
+                    LeadId = lead.Id,
+                    ActivityKey = key,
+                    Title = title,
+                    Status = act?.Status ?? "PENDING",
+                    CompletedAt = act?.CompletedAt,
+                    CompletedById = act?.CompletedById,
+                    CompletedByName = act?.CompletedBy?.FullName,
+                    CompletionRemarks = act?.CompletionRemarks,
+                    Remarks = act?.Remarks,
+                    CreatedAt = act?.CreatedAt ?? lead.CreatedAt,
+                    ActivityLogs = logDtos,
+                    Logs = logDtos
+                });
+            }
+
+            string assignedToName = lead.AssignedTo != null ? lead.AssignedTo.FullName : "Unassigned";
+
+            dtos.Add(new LeadDto
+            {
+                Id = lead.Id,
+                WorkspaceId = lead.WorkspaceId,
+                CampaignId = lead.CampaignId,
+                Name = lead.Name,
+                Email = lead.Email,
+                Phone = lead.Phone,
+                SourcePlatform = lead.SourcePlatform,
+                CampaignName = lead.CampaignName,
+                Status = lead.Status,
+                AssignedToId = lead.AssignedToId,
+                AssignedToName = assignedToName,
+                AssignedById = lead.AssignedById,
+                AssignedByName = lead.AssignedBy != null ? lead.AssignedBy.FullName : "System Queue",
+                AssignedDate = lead.AssignedDate ?? lead.CreatedAt,
+                QualityScore = lead.QualityScore ?? 75,
+                QualityTier = lead.QualityTier ?? "WARM",
+                ConversionProbability = lead.ConversionProbability ?? 75.0,
+                QueueStatus = lead.QueueStatus ?? (lead.AssignedToId.HasValue ? "ASSIGNED" : "IN_QUEUE"),
+                Company = lead.Company ?? "N/A",
+                Location = lead.Location ?? "Remote / Unspecified",
+                Priority = lead.Priority ?? "MEDIUM",
+                ProgressPercentage = lead.ProgressPercentage ?? 0,
+                LastFollowupDate = lead.LastFollowupDate,
+                DueDate = lead.DueDate,
+                ClientNotes = lead.ClientNotes,
+                ProposalAmount = lead.ProposalAmount,
+                ProposalStatus = lead.ProposalStatus,
+                CreatedAt = lead.CreatedAt,
+                NextFollowupDate = followup?.ScheduledAt,
+                FollowupNotes = followup?.Notes,
+                FollowupType = followup?.Type ?? "CALL",
+                FollowupStatus = followup?.Status ?? "UPCOMING",
+                Activities = activityDtos
+            });
+        }
+
+        return dtos;
+    }
 
     private async Task<LeadDto> ConvertToDtoAsync(Lead lead)
     {

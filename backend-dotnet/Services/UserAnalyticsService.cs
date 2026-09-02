@@ -76,7 +76,7 @@ public class UserAnalyticsService : IUserAnalyticsService
         // Calculate personal revenue from lead proposals/negotiations
         double personalRevenue = myLeads
             .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
-            .Sum(l => l.ProposalAmount.Value);
+            .Sum(l => l.ProposalAmount ?? 0);
 
         if (personalRevenue <= 0.0 && conversionsCount > 0)
         {

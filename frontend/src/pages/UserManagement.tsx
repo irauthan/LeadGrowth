@@ -11,8 +11,7 @@ import {
   ShieldAlert, 
   Edit2, 
   UserCheck, 
-  Building, 
-  ChevronLeft, 
+  Building,  
   UserX,
   Sliders,
   ChevronLeft,
@@ -128,6 +127,7 @@ export default function UserManagement() {
       });
 
       setUsers(mapped);
+      await new Promise(r => setTimeout(r, 1200));
     } catch (err) {
       console.error('Failed to fetch user management data', err);
     } finally {

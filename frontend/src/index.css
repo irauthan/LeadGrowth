@@ -237,25 +237,51 @@
   0%, 100% {
     transform: translateY(0px) rotate(0deg) scale(1);
   }
-  25% {
-    transform: translateY(-8px) rotate(-3deg) scale(1.02);
+  20% {
+    transform: translateY(-10px) rotate(-3.5deg) scale(1.03);
   }
-  50% {
-    transform: translateY(-2px) rotate(2deg) scale(0.99);
+  45% {
+    transform: translateY(-3px) rotate(2deg) scale(0.98);
   }
-  75% {
-    transform: translateY(-10px) rotate(-1deg) scale(1.03);
+  70% {
+    transform: translateY(-12px) rotate(-2deg) scale(1.04);
+  }
+  85% {
+    transform: translateY(-4px) rotate(1deg) scale(1.01);
+  }
+}
+
+@keyframes bee-shadow-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  20% {
+    transform: scale(0.75);
+    opacity: 0.2;
+  }
+  45% {
+    transform: scale(0.95);
+    opacity: 0.35;
+  }
+  70% {
+    transform: scale(0.7);
+    opacity: 0.18;
+  }
+  85% {
+    transform: scale(0.92);
+    opacity: 0.32;
   }
 }
 
 @keyframes honey-glow-pulse {
   0%, 100% {
-    transform: scale(0.9);
-    opacity: 0.35;
+    transform: scale(0.88);
+    opacity: 0.4;
   }
   50% {
-    transform: scale(1.3);
-    opacity: 0.85;
+    transform: scale(1.35);
+    opacity: 0.9;
   }
 }
 
@@ -268,6 +294,15 @@
   }
 }
 
+@keyframes hex-counter-rotate-slow {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
 @keyframes shimmer-bar {
   0% {
     background-position: -200% 0;
@@ -277,20 +312,43 @@
   }
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .animate-bee-flutter {
-  animation: bee-flutter 2.8s ease-in-out infinite;
+  animation: bee-flutter 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.animate-bee-shadow {
+  animation: bee-shadow-pulse 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
 .animate-honey-glow {
-  animation: honey-glow-pulse 2.2s ease-in-out infinite;
+  animation: honey-glow-pulse 2.4s ease-in-out infinite;
 }
 
 .animate-hex-rotate {
-  animation: hex-rotate-slow 20s linear infinite;
+  animation: hex-rotate-slow 22s linear infinite;
+}
+
+.animate-hex-counter-rotate {
+  animation: hex-counter-rotate-slow 16s linear infinite;
 }
 
 .animate-shimmer-bar {
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.9) 50%, rgba(245, 158, 11, 0.2) 100%);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.95) 45%, rgba(6, 182, 212, 0.9) 55%, rgba(245, 158, 11, 0.2) 100%);
   background-size: 200% 100%;
-  animation: shimmer-bar 1.8s linear infinite;
+  animation: shimmer-bar 1.7s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

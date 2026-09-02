@@ -3,118 +3,91 @@ import React from 'react';
 interface HoosshBeeLoaderProps {
   /** If true, covers full viewport with backdrop blur. Default: false */
   fullscreen?: boolean;
-  /** Primary loading title */
-  text?: string;
-  /** Secondary helper text */
-  subtext?: string;
   /** Size of the Honey Bee icon */
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  /** Show Hoossh brand wordmark */
-  showBrand?: boolean;
   /** Custom extra classes */
   className?: string;
+  // Kept for backward compatibility with existing prop calls without errors
+  text?: string;
+  subtext?: string;
+  showBrand?: boolean;
 }
 
 export const HoosshBeeLoader: React.FC<HoosshBeeLoaderProps> = ({
   fullscreen = false,
-  text = 'Loading Workspace...',
-  subtext = 'Syncing real-time pipeline & lead intelligence',
   size = 'md',
-  showBrand = true,
   className = ''
 }) => {
   const sizeMap = {
-    sm: { bee: 40, hex: 70, bar: 'w-32' },
-    md: { bee: 64, hex: 100, bar: 'w-44' },
-    lg: { bee: 88, hex: 130, bar: 'w-56' },
-    xl: { bee: 110, hex: 160, bar: 'w-64' }
+    sm: { bee: 56, hex: 90 },
+    md: { bee: 84, hex: 130 },
+    lg: { bee: 110, hex: 160 },
+    xl: { bee: 140, hex: 200 }
   };
 
   const config = sizeMap[size];
 
   const content = (
-    <div className={`flex flex-col items-center justify-center select-none text-center ${className}`}>
+    <div className={`flex flex-col items-center justify-center select-none text-center relative z-10 ${className}`}>
       
       {/* Honey Bee + Hexagon Pulse Aura Container */}
-      <div className="relative flex items-center justify-center mb-5">
+      <div className="relative flex items-center justify-center">
         
-        {/* Golden Honey Ambient Glow Ripple */}
+        {/* Golden Honey & Cyan Ambient Glow Ripple */}
         <div 
-          className="absolute rounded-full bg-gradient-to-tr from-amber-500/30 via-yellow-400/20 to-indigo-500/20 blur-xl animate-honey-glow pointer-events-none"
-          style={{ width: `${config.hex * 1.5}px`, height: `${config.hex * 1.5}px` }}
+          className="absolute rounded-full bg-gradient-to-tr from-amber-500/35 via-orange-500/25 to-cyan-400/25 blur-2xl animate-honey-glow pointer-events-none"
+          style={{ width: `${config.hex * 1.6}px`, height: `${config.hex * 1.6}px` }}
         />
 
-        {/* Outer Hexagon Orbit Ring (Subtle SVG) */}
+        {/* Outer Hexagon Orbit Ring (Dashed Gold/Amber) */}
         <svg
-          className="absolute animate-hex-rotate pointer-events-none opacity-40 text-amber-500/40"
+          className="absolute animate-hex-rotate pointer-events-none opacity-50 text-amber-500"
           width={config.hex}
           height={config.hex}
           viewBox="0 0 100 100"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.5"
-          strokeDasharray="6 4"
+          strokeWidth="2"
+          strokeDasharray="8 6"
         >
-          <polygon points="50,3 93,25 93,75 50,97 7,75 7,25" />
+          <polygon points="50,4 92,26 92,74 50,96 8,74 8,26" />
         </svg>
 
-        {/* Inner Hexagon Ring */}
+        {/* Inner Counter-Rotating Hexagon Ring (Teal / Cyan) */}
         <svg
-          className="absolute pointer-events-none opacity-60 text-amber-400/50"
-          width={config.hex * 0.8}
-          height={config.hex * 0.8}
+          className="absolute animate-hex-counter-rotate pointer-events-none opacity-40 text-cyan-400"
+          width={config.hex * 0.78}
+          height={config.hex * 0.78}
           viewBox="0 0 100 100"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.2"
+          strokeWidth="1.5"
+          strokeDasharray="5 5"
         >
           <polygon points="50,6 88,27 88,73 50,94 12,73 12,27" />
         </svg>
 
-        {/* The Floating Honey Bee Icon */}
-        <div className="relative z-10 animate-bee-flutter flex items-center justify-center drop-shadow-[0_8px_16px_rgba(245,158,11,0.25)]">
+        {/* The 3D Floating Honey Bee Icon */}
+        <div className="relative z-10 animate-bee-flutter flex flex-col items-center justify-center">
           <img
             src="/assets/hoossh-icon.png"
-            alt="Hoossh Honey Bee"
+            alt="Hoossh 3D Bee"
             style={{ width: `${config.bee}px`, height: `${config.bee}px` }}
-            className="object-contain"
+            className="object-contain filter drop-shadow-[0_12px_24px_rgba(245,158,11,0.35)] transition-all"
             loading="eager"
           />
         </div>
 
-        {/* Small Sparkling Dots around the Bee */}
-        <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-amber-400 animate-ping opacity-75" />
-        <span className="absolute -bottom-2 -left-1 w-1.5 h-1.5 rounded-full bg-yellow-300 animate-pulse opacity-90" />
-      </div>
+        {/* Dynamic Bee Flight Shadow */}
+        <div 
+          className="absolute -bottom-3 rounded-full bg-amber-900/30 dark:bg-black/40 blur-sm animate-bee-shadow pointer-events-none"
+          style={{ width: `${config.bee * 0.65}px`, height: '8px' }}
+        />
 
-      {/* Brand & Loading Text */}
-      <div className="flex flex-col items-center gap-1.5 z-10">
-        {showBrand && (
-          <div className="flex items-center gap-1 text-sm sm:text-base font-extrabold tracking-tight text-theme-text">
-            <span>Hoossh</span>
-            <span className="text-amber-500 font-black">Lead Growth</span>
-          </div>
-        )}
-
-        <div className="text-xs sm:text-sm font-bold text-theme-text flex items-center gap-2">
-          <span>{text}</span>
-          <span className="flex gap-1">
-            <span className="w-1 h-1 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-1 h-1 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-1 h-1 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-          </span>
-        </div>
-
-        {subtext && (
-          <p className="text-[11px] text-theme-text-muted font-medium max-w-xs text-center">
-            {subtext}
-          </p>
-        )}
-      </div>
-
-      {/* Honey Shimmer Progress Bar */}
-      <div className={`mt-4 h-1.5 ${config.bar} rounded-full bg-theme-border/60 overflow-hidden relative shadow-inner`}>
-        <div className="absolute inset-0 animate-shimmer-bar rounded-full" />
+        {/* Sparkling Stars & Pollen Dots */}
+        <span className="absolute -top-2 -right-3 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 animate-ping opacity-80" />
+        <span className="absolute top-1/2 -left-4 w-2 h-2 rounded-full bg-cyan-300 animate-pulse opacity-90" />
+        <span className="absolute -bottom-1 -left-2 w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping opacity-75" style={{ animationDelay: '500ms' }} />
       </div>
 
     </div>
@@ -122,14 +95,14 @@ export const HoosshBeeLoader: React.FC<HoosshBeeLoaderProps> = ({
 
   if (fullscreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-theme-bg/85 backdrop-blur-md transition-all duration-300 animate-fade-in">
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-theme-bg/90 backdrop-blur-md transition-all duration-300 animate-fade-in p-4">
         {content}
       </div>
     );
   }
 
   return (
-    <div className="w-full py-12 flex items-center justify-center animate-fade-in">
+    <div className="w-full min-h-[75vh] flex flex-col items-center justify-center py-12 px-4 animate-fade-in">
       {content}
     </div>
   );

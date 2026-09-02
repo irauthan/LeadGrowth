@@ -83,9 +83,10 @@ export default function Integrations() {
 
   if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 size={36} className="animate-spin text-brand-500" />
-      </div>
+      <HoosshBeeLoader 
+        text="Loading Ad & CRM Integrations..." 
+        subtext="Syncing Meta Ads, Google Ads Webhooks and API Connectors" 
+      />
     );
   }
 

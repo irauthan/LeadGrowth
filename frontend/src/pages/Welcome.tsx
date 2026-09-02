@@ -161,15 +161,7 @@ export default function Welcome() {
           
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
-            <HoosshLogo size={36} variant="icon-only" animated />
-            <div className="flex flex-col">
-              <span className="text-lg font-black tracking-tight text-slate-900">
-                Hoossh <span className="text-blue-600 font-black">Lead Growth</span>
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 -mt-0.5">
-                CRM & Analytics
-              </span>
-            </div>
+            <HoosshLogo size={42} variant="full" animated showTagline tagline="Lead Growth" />
           </Link>
 
           {/* Nav Links */}
@@ -707,10 +699,7 @@ export default function Welcome() {
             {/* Logo & Description */}
             <div className="space-y-2 max-w-sm">
               <Link to="/" className="flex items-center gap-2.5">
-                <HoosshLogo size={28} variant="icon-only" animated />
-                <span className="text-base font-black tracking-tight text-slate-900">
-                  Hoossh <span className="text-blue-600 font-extrabold">Lead Growth</span>
-                </span>
+                <HoosshLogo size={32} variant="full" animated showTagline tagline="Lead Growth" />
               </Link>
               <p className="text-xs text-slate-500">
                 Enterprise lead management and sales CRM platform.

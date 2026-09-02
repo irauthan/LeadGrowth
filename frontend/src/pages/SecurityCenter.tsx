@@ -7,6 +7,7 @@ import {
   RefreshCw, 
   CheckCircle
 } from 'lucide-react';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 export default function SecurityCenter() {
   const user = useAuthStore((state) => state.user);
@@ -63,10 +64,10 @@ export default function SecurityCenter() {
 
   if (loading || !securityData) {
     return (
-      <div className="flex h-96 items-center justify-center space-y-3 flex-col">
-        <RefreshCw size={36} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-bold text-theme-text-muted">Loading Security Center Controls...</span>
-      </div>
+      <HoosshBeeLoader 
+        text="Loading Security Center Controls..." 
+        subtext="Auditing active sessions, IP addresses and lockout protections" 
+      />
     );
   }
 

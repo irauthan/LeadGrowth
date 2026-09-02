@@ -64,14 +64,14 @@ export default function Campaigns() {
 
   // User Role Permissions
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
-  const isAdmin = userRoles.includes("ROLE_ADMIN");
-  const isManager = userRoles.includes("ROLE_MANAGER");
-  const isUserOnly = userRoles.includes("ROLE_USER") && !isAdmin && !isManager;
+  const isAdmin = userRoles.some(r => r.toUpperCase().includes("ADMIN"));
+  const isManager = userRoles.some(r => r.toUpperCase().includes("MANAGER"));
+  const isUserOnly = !isAdmin && !isManager;
   const canEdit = isAdmin || isManager;
 
   useEffect(() => {
     fetchCampaigns();
-  }, []);
+  }, [isUserOnly]);
 
   // Sync URL search params
   useEffect(() => {
@@ -330,7 +330,7 @@ export default function Campaigns() {
 
         <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1">
           <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            Total Spend
+            {isUserOnly ? "Campaign Spend" : "Total Spend"}
           </span>
           <div className="text-xl font-bold text-theme-text">
             {formatCurrency(totalSpend)}
@@ -339,7 +339,7 @@ export default function Campaigns() {
 
         <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1">
           <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            Total Leads
+            {isUserOnly ? "My Assigned Leads" : "Total Leads"}
           </span>
           <div className="text-xl font-bold text-theme-primary">
             {formatNumber(totalLeads)}
@@ -348,7 +348,7 @@ export default function Campaigns() {
 
         <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1">
           <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            Conversions
+            {isUserOnly ? "My Conversions" : "Conversions"}
           </span>
           <div className="text-xl font-bold text-theme-text">
             {formatNumber(totalConversions)}
@@ -357,13 +357,17 @@ export default function Campaigns() {
 
         <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1 col-span-2 sm:col-span-1">
           <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            Revenue / ROAS
+            {isUserOnly ? "My Closed Revenue" : "Revenue / ROAS"}
           </span>
           <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
             {formatCurrency(totalRevenue)}
           </div>
           <div className="text-[11px] text-theme-text-muted font-medium">
-            ROAS: <strong className="text-emerald-600 dark:text-emerald-400">{overallRoas.toFixed(2)}x</strong>
+            {isUserOnly ? (
+              <span>{totalConversions} Closed Deals</span>
+            ) : (
+              <span>ROAS: <strong className="text-emerald-600 dark:text-emerald-400">{overallRoas.toFixed(2)}x</strong></span>
+            )}
           </div>
         </div>
       </div>
@@ -477,20 +481,41 @@ export default function Campaigns() {
 
                 {/* Metrics 3-box Grid */}
                 <div className="grid grid-cols-3 gap-2 pt-2 border-t border-theme-border/60">
-                  <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
-                    <span className="text-[10px] text-theme-text-muted font-medium uppercase block">Spend</span>
-                    <span className="text-sm font-bold text-theme-text">{formatCurrency(c.spend || 0)}</span>
-                  </div>
+                  {isUserOnly ? (
+                    <>
+                      <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
+                        <span className="text-[10px] text-theme-text-muted font-medium uppercase block">My Leads</span>
+                        <span className="text-sm font-bold text-theme-primary">{formatNumber(c.leadsCount || 0)}</span>
+                      </div>
 
-                  <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
-                    <span className="text-[10px] text-theme-text-muted font-medium uppercase block">Leads</span>
-                    <span className="text-sm font-bold text-theme-primary">{formatNumber(c.leadsCount || 0)}</span>
-                  </div>
+                      <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
+                        <span className="text-[10px] text-theme-text-muted font-medium uppercase block">Converted</span>
+                        <span className="text-sm font-bold text-theme-text">{formatNumber(c.conversions || 0)}</span>
+                      </div>
 
-                  <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
-                    <span className="text-[10px] text-theme-text-muted font-medium uppercase block">ROAS</span>
-                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{roas.toFixed(1)}x</span>
-                  </div>
+                      <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
+                        <span className="text-[10px] text-theme-text-muted font-medium uppercase block">My Revenue</span>
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(c.revenue || 0)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
+                        <span className="text-[10px] text-theme-text-muted font-medium uppercase block">Spend</span>
+                        <span className="text-sm font-bold text-theme-text">{formatCurrency(c.spend || 0)}</span>
+                      </div>
+
+                      <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
+                        <span className="text-[10px] text-theme-text-muted font-medium uppercase block">Leads</span>
+                        <span className="text-sm font-bold text-theme-primary">{formatNumber(c.leadsCount || 0)}</span>
+                      </div>
+
+                      <div className="rounded-xl bg-theme-bg-alt/40 p-2.5 space-y-0.5">
+                        <span className="text-[10px] text-theme-text-muted font-medium uppercase block">ROAS</span>
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{roas.toFixed(1)}x</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Footer */}

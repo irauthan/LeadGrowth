@@ -11,6 +11,7 @@ import {
   Loader2, 
   CheckCircle2
 } from 'lucide-react';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 export default function Billing() {
   const user = useAuthStore((state) => state.user);
@@ -68,10 +69,10 @@ export default function Billing() {
 
   if (loading || !billingInfo) {
     return (
-      <div className="flex h-96 items-center justify-center space-y-3 flex-col">
-        <Loader2 size={36} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-bold text-theme-text-muted">Loading Workspace Billing & Subscriptions...</span>
-      </div>
+      <HoosshBeeLoader 
+        text="Loading Workspace Billing & Subscriptions..." 
+        subtext="Syncing current tenant limits, seats usage and storage metrics" 
+      />
     );
   }
 

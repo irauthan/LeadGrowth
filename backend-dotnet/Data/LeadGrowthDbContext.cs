@@ -96,5 +96,92 @@ public class LeadGrowthDbContext : DbContext
         // 8. User Status Log indexes
         modelBuilder.Entity<UserStatusLog>()
             .HasIndex(s => new { s.WorkspaceId, s.UserId, s.CreatedAtUtc });
+
+        // 9. Lead indexes
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => l.WorkspaceId);
+
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => new { l.WorkspaceId, l.CreatedAt });
+
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => new { l.WorkspaceId, l.Status });
+
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => new { l.WorkspaceId, l.AssignedToId });
+
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => new { l.AssignedToId, l.CreatedAt });
+
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => l.CampaignId);
+
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => l.Phone);
+
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => l.Email);
+
+        // 10. Campaign indexes
+        modelBuilder.Entity<Campaign>()
+            .HasIndex(c => new { c.WorkspaceId, c.Status });
+
+        modelBuilder.Entity<Campaign>()
+            .HasIndex(c => new { c.WorkspaceId, c.CreatedAt });
+
+        // 11. Sales Activity indexes
+        modelBuilder.Entity<SalesActivity>()
+            .HasIndex(a => a.LeadId);
+
+        modelBuilder.Entity<SalesActivity>()
+            .HasIndex(a => new { a.LeadId, a.ActivityName });
+
+        // 12. Sales Activity Log indexes
+        modelBuilder.Entity<SalesActivityLog>()
+            .HasIndex(l => new { l.LeadId, l.CreatedAt });
+
+        modelBuilder.Entity<SalesActivityLog>()
+            .HasIndex(l => l.SalesActivityId);
+
+        // 13. Followup Reminder indexes
+        modelBuilder.Entity<FollowupReminder>()
+            .HasIndex(f => f.LeadId);
+
+        modelBuilder.Entity<FollowupReminder>()
+            .HasIndex(f => new { f.WorkspaceId, f.ScheduledAt });
+
+        modelBuilder.Entity<FollowupReminder>()
+            .HasIndex(f => new { f.WorkspaceId, f.Status });
+
+        modelBuilder.Entity<FollowupReminder>()
+            .HasIndex(f => new { f.AssignedToId, f.Status });
+
+        // 14. Task indexes
+        modelBuilder.Entity<TaskModel>()
+            .HasIndex(t => new { t.WorkspaceId, t.Status });
+
+        modelBuilder.Entity<TaskModel>()
+            .HasIndex(t => new { t.AssignedToId, t.Status });
+
+        modelBuilder.Entity<TaskModel>()
+            .HasIndex(t => new { t.WorkspaceId, t.CreatedAt });
+
+        // 15. Calendar Event indexes
+        modelBuilder.Entity<CalendarEvent>()
+            .HasIndex(e => new { e.WorkspaceId, e.StartTime });
+
+        modelBuilder.Entity<CalendarEvent>()
+            .HasIndex(e => new { e.AssignedUserId, e.StartTime });
+
+        // 16. ActivityLog & AuditLog indexes
+        modelBuilder.Entity<ActivityLog>()
+            .HasIndex(a => new { a.WorkspaceId, a.CreatedAt });
+
+        modelBuilder.Entity<AuditLog>()
+            .HasIndex(a => new { a.WorkspaceId, a.CreatedAt });
+
+        // 17. User indexes
+        modelBuilder.Entity<User>()
+            .HasIndex(u => new { u.WorkspaceId, u.Status });
     }
 }

@@ -7,6 +7,7 @@ import {
   Search, 
   RefreshCw
 } from 'lucide-react';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 export default function AuditLogsView() {
   const user = useAuthStore((state) => state.user);
@@ -58,6 +59,15 @@ export default function AuditLogsView() {
     (l.description && l.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (l.userName && l.userName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  if (loading && logs.length === 0) {
+    return (
+      <HoosshBeeLoader 
+        text="Loading Security Audit Trail..." 
+        subtext="Retrieving immutable audit history, user actions and security mutations" 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

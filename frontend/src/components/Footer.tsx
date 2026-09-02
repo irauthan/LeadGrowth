@@ -27,8 +27,7 @@ export default function Footer({ variant = 'authenticated' }: FooterProps) {
         {/* Right Side: Product Branding & Version */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 font-bold text-theme-text">
-            <HoosshLogo size={24} variant="icon-only" animated />
-            <span>Hoossh Lead Growth</span>
+            <HoosshLogo size={22} variant="full" animated />
           </div>
 
           <span className="h-3 w-px bg-theme-border hidden sm:block" />

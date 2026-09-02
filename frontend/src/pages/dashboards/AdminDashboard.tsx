@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
+import HoosshBeeLoader from '../../components/HoosshBeeLoader';
 
 const defaultKpis: KpiType = {
   totalRevenue: 0,
@@ -103,6 +104,8 @@ export default function AdminDashboard() {
       if (campaignsRes.status === 'fulfilled' && campaignsRes.value?.data) {
         setCampaigns(Array.isArray(campaignsRes.value.data) ? campaignsRes.value.data : []);
       }
+      // Smooth viewing duration for loader
+      await new Promise(r => setTimeout(r, 1200));
     } catch (err) {
       console.error('Failed to load Admin Command Center data', err);
     } finally {
@@ -110,12 +113,12 @@ export default function AdminDashboard() {
     }
   };
 
-  if (loading && !data.totalRevenue && !data.totalLeads && members.length === 0) {
+  if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center space-y-3 flex-col">
-        <RefreshCw size={36} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-bold text-theme-text-muted">Loading Business Command Center...</span>
-      </div>
+      <HoosshBeeLoader 
+        text="Loading Admin Command Center..." 
+        subtext="Syncing KPIs, live revenue, team presence and multi-channel campaign intelligence" 
+      />
     );
   }
 

@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import CallDetailsModal from '../../components/CallDetailsModal';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
+import HoosshBeeLoader from '../../components/HoosshBeeLoader';
 
 export default function ManagerDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -141,10 +142,10 @@ export default function ManagerDashboard() {
 
   if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center space-y-3 flex-col">
-        <RefreshCw size={36} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-bold text-theme-text-muted">Loading Operations Control Center...</span>
-      </div>
+      <HoosshBeeLoader 
+        text="Loading Operations Control Center..." 
+        subtext="Syncing sales executive workloads, tasks board and approval queues" 
+      />
     );
   }
 
