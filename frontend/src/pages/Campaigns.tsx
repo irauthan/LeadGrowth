@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import api from "../services/api";
 import type { Campaign } from "../types";
 import { formatCurrency, formatNumber } from "../utils";
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import {
   Search,
   ArrowUpDown,
@@ -222,12 +223,7 @@ export default function Campaigns() {
   }
 
   if (loading) {
-    return (
-      <div className="flex h-96 flex-col items-center justify-center space-y-3">
-        <Loader2 size={32} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-semibold text-theme-text-muted">Loading Campaigns...</span>
-      </div>
-    );
+    return <HoosshBeeLoader text="Loading Campaigns & Ad Sets..." subtext="Syncing multi-platform ad spend, ROAS and conversions" />;
   }
 
   return (

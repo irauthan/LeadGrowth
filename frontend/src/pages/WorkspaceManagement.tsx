@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { 
-  Building, 
-  RefreshCw, 
+  Building2, 
+  ShieldCheck, 
   Users, 
-  Database, 
-  ShieldAlert,
-  ArrowRight,
-  Check,
-  Zap,
-  Loader2
+  Trash2, 
+  Save, 
+  Check, 
+  Copy, 
+  AlertTriangle, 
+  RefreshCw, 
+  Plus, 
+  Loader2,
+  Sparkles
 } from 'lucide-react';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import api from '../services/api';
 
 export default function WorkspaceManagement() {
@@ -113,11 +117,7 @@ export default function WorkspaceManagement() {
   };
 
   if (loadingWorkspace) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 size={36} className="animate-spin text-theme-primary" />
-      </div>
-    );
+    return <HoosshBeeLoader text="Loading Workspace Configuration..." subtext="Retrieving security, member seats and tenant quotas" />;
   }
 
   return (

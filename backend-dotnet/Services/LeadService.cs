@@ -1585,15 +1585,10 @@ public class LeadService : ILeadService
             throw new KeyNotFoundException("User not found");
         }
 
-        List<Lead> leads;
-        if (user.Roles.Any(r => r.Name == "ROLE_ADMIN" || r.Name == "ROLE_MANAGER"))
-        {
-            leads = await _context.Leads.Where(l => l.WorkspaceId == user.WorkspaceId).ToListAsync();
-        }
-        else
-        {
-            leads = await _context.Leads.Where(l => l.AssignedToId == user.Id).ToListAsync();
-        }
+        bool isPrivileged = user.Roles.Any(r => r.Name == "ROLE_ADMIN" || r.Name == "ROLE_MANAGER");
+        List<Lead> leads = isPrivileged
+            ? await _context.Leads.Where(l => l.WorkspaceId == user.WorkspaceId).ToListAsync()
+            : await _context.Leads.Where(l => l.AssignedToId == user.Id).ToListAsync();
 
         var counts = new Dictionary<string, int>
         {
@@ -1605,9 +1600,9 @@ public class LeadService : ILeadService
             { "pendingPayment", 0 }
         };
 
-        var leadIds = leads.Select(l => l.Id).ToList();
         var activities = await _context.SalesActivities
-            .Where(a => leadIds.Contains(a.LeadId))
+            .Include(a => a.Lead)
+            .Where(a => a.Lead != null && (isPrivileged ? a.Lead.WorkspaceId == user.WorkspaceId : a.Lead.AssignedToId == user.Id))
             .ToListAsync();
 
         foreach (var act in activities)
@@ -1904,7 +1899,7 @@ public class LeadService : ILeadService
         {
             allMembers = await _context.Users
                 .Include(u => u.Roles)
-                .Where(u => u.WorkspaceId == workspaceId.Value && (u.Status == null || !string.Equals("SUSPENDED", u.Status)))
+                .Where(u => u.WorkspaceId == workspaceId.Value && (u.Status == null || !string.Equals("SUSPENDED", u.Status)) && u.CanReceiveLeads)
                 .ToListAsync();
         }
 

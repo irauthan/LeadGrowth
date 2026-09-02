@@ -3,6 +3,8 @@ import { useAuthStore } from '../store/authStore';
 import { useClickOutside } from '../hooks/useClickOutside';
 import api from '../services/api';
 import type { Task, User } from '../types';
+import { useSearchParams } from 'react-router-dom';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import { 
   Plus, 
   Trash2, 
@@ -360,11 +362,7 @@ export default function Tasks() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 size={36} className="animate-spin text-brand-500" />
-      </div>
-    );
+    return <HoosshBeeLoader text="Loading Tasks Board..." subtext="Syncing upcoming tasks and deadlines" />;
   }
 
   return (

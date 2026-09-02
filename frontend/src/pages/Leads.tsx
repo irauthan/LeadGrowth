@@ -20,10 +20,13 @@ import {
   Square, 
   XCircle,
   UserCheck,
-  Sparkles
+  Sparkles,
+  FileSpreadsheet
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
+import LeadImportModal from '../components/LeadImportModal';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 export default function Leads() {
   const [searchParams] = useSearchParams();
@@ -50,6 +53,7 @@ export default function Leads() {
 
   // Lead Create Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [createForm, setCreateForm] = useState({
     name: '',
@@ -354,11 +358,7 @@ export default function Leads() {
   }, [search, platformFilter, statusFilter, leads]);
 
   if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 size={36} className="animate-spin text-brand-500" />
-      </div>
-    );
+    return <HoosshBeeLoader text="Loading Leads Pipeline..." subtext="Syncing contacts, AI scores and conversion tiers" />;
   }
 
   return (
@@ -377,7 +377,16 @@ export default function Leads() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 px-4 py-2.5 text-sm font-bold shadow-sm transition-all hover:scale-[1.01]"
+            title="Upload Excel or CSV spreadsheet to intake leads into workspace"
+          >
+            <FileSpreadsheet size={16} className="text-indigo-400" />
+            <span>Import Excel / CSV</span>
+          </button>
+
           <div className="relative group">
             <button className="flex items-center gap-2 rounded-2xl border border-theme-border bg-theme-card px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-theme-bg-alt text-theme-text transition-all">
               <Download size={16} />
@@ -836,6 +845,18 @@ export default function Leads() {
           </div>
         </div>
       )}
+
+      {/* Excel Sheet Lead Reader & Intake Modal */}
+      <LeadImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportSuccess={() => {
+          fetchLeads();
+        }}
+        currentUser={user}
+        teamMembers={members}
+        campaigns={campaigns}
+      />
     </div>
   );
 }

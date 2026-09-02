@@ -19,6 +19,7 @@ import {
   CartesianGrid 
 } from 'recharts';
 import { Loader2, TrendingUp, Target, ShieldCheck, Clock, Users, IndianRupee } from 'lucide-react';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../components/TimeFilterDropdown';
 
@@ -72,12 +73,7 @@ export default function Analytics() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center space-y-3 flex-col">
-        <Loader2 size={36} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-bold text-theme-text-muted">Loading Analytics Dashboard...</span>
-      </div>
-    );
+    return <HoosshBeeLoader text="Loading Analytics Dashboard..." subtext="Crunching conversion rates, revenue trends and channel ROI" />;
   }
 
   // Color Palettes

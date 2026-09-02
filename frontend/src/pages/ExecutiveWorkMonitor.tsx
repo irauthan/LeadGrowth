@@ -21,6 +21,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 interface DailyBreakdown {
   date: string;
@@ -321,10 +322,7 @@ export default function ExecutiveWorkMonitor() {
       </div>
 
       {loading ? (
-        <div className="flex h-64 items-center justify-center space-y-3 flex-col rounded-3xl bg-theme-card border border-theme-border shadow-sm">
-          <Loader2 size={36} className="animate-spin text-theme-primary" />
-          <span className="text-xs font-bold text-theme-text-muted">Loading Executive Work Audit Logs...</span>
-        </div>
+        <HoosshBeeLoader text="Loading Executive Monitor..." subtext="Syncing agent activities, call durations and live presence" />
       ) : summary ? (
         <>
           {/* Executive Overview KPI Cards */}

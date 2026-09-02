@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import api from '../services/api';
 import { followUpService, type FollowUp } from '../services/followUpService';
 import FollowUpModal from '../components/FollowUpModal';
@@ -265,10 +267,7 @@ export default function Followups() {
 
         {/* Bottom Follow-ups List */}
         {loading ? (
-          <div className="flex h-64 items-center justify-center space-y-2 flex-col">
-            <Loader2 size={36} className="animate-spin text-blue-600" />
-            <span className="text-xs font-bold text-theme-text-muted">Loading follow-ups & schedules...</span>
-          </div>
+          <HoosshBeeLoader text="Loading Follow-ups & Schedules..." subtext="Retrieving reminders, call queues and upcoming meetings" />
         ) : filteredFollowups.length === 0 ? (
           <div className="p-12 text-center text-theme-text-muted space-y-2">
             <Calendar size={40} className="mx-auto text-theme-text-muted opacity-40" />

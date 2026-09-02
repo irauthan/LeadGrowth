@@ -123,30 +123,25 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
             .Take(100)
             .ToListAsync();
 
-        var leadIds = leads.Select(l => l.Id).ToList();
+        var allActivityLogs = await _context.SalesActivityLogs
+            .Include(a => a.LoggedBy)
+            .Where(a => a.LoggedById == targetUserId)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(500)
+            .ToListAsync();
 
-        var allActivityLogs = leadIds.Count > 0
-            ? await _context.SalesActivityLogs
-                .Include(a => a.LoggedBy)
-                .Where(a => leadIds.Contains(a.LeadId))
-                .OrderByDescending(a => a.CreatedAt)
-                .ToListAsync()
-            : new List<SalesActivityLog>();
+        var allFollowups = await _context.FollowupReminders
+            .Where(f => f.AssignedToId == targetUserId || f.WorkspaceId == actor.WorkspaceId)
+            .OrderByDescending(f => f.ScheduledAt)
+            .Take(500)
+            .ToListAsync();
 
-        var allFollowups = leadIds.Count > 0
-            ? await _context.FollowupReminders
-                .Where(f => leadIds.Contains(f.LeadId))
-                .OrderByDescending(f => f.ScheduledAt)
-                .ToListAsync()
-            : new List<FollowupReminder>();
-
-        var allHistories = leadIds.Count > 0
-            ? await _context.LeadHistories
-                .Include(h => h.PerformedBy)
-                .Where(h => leadIds.Contains(h.LeadId))
-                .OrderByDescending(h => h.Timestamp)
-                .ToListAsync()
-            : new List<LeadHistory>();
+        var allHistories = await _context.LeadHistories
+            .Include(h => h.PerformedBy)
+            .Where(h => h.PerformedById == targetUserId)
+            .OrderByDescending(h => h.Timestamp)
+            .Take(500)
+            .ToListAsync();
 
         var leadWorkList = leads.Select(l =>
         {

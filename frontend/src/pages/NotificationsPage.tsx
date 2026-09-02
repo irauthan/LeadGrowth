@@ -1,19 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  UserCheck, 
-  Megaphone, 
-  CheckSquare, 
-  AlertCircle, 
+  Bell, 
   Check, 
+  Trash2, 
+  UserCheck, 
+  Calendar, 
+  FileText, 
+  ShieldAlert, 
   Loader2,
-  Bell,
-  Clock,
-  Sparkles,
-  Trophy,
+  CheckCheck,
   Search,
-  CheckCheck
+  Filter,
+  Flame,
+  Zap,
+  Info
 } from 'lucide-react';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -211,12 +214,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !(n.isRead ?? n.read)).length;
 
   if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center space-y-3 flex-col">
-        <Loader2 size={36} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-bold text-theme-text-muted">Loading Workspace Notifications...</span>
-      </div>
-    );
+    return <HoosshBeeLoader text="Loading Workspace Alerts..." subtext="Syncing lead assignments, task deadlines and mentions" />;
   }
 
   return (

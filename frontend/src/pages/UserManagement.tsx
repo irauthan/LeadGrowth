@@ -13,17 +13,15 @@ import {
   UserCheck, 
   Building, 
   ChevronLeft, 
-  ChevronRight, 
-  BarChart3, 
-  Smartphone, 
-  Award, 
-  Users as UsersIcon, 
-  LayoutGrid, 
-  ListFilter, 
-  Shield,
-  User as UserIcon,
-  ExternalLink
+  UserX,
+  Sliders,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  Zap,
+  Coffee
 } from 'lucide-react';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { getProfileImageUrl } from '../utils/imageUrl';
@@ -415,11 +413,8 @@ export default function UserManagement() {
         </div>
       </div>
 
-      {/* Loading state */}
       {loading ? (
-        <div className="flex h-64 items-center justify-center rounded-3xl border border-theme-border bg-theme-card">
-          <Loader2 size={32} className="animate-spin text-theme-primary" />
-        </div>
+        <HoosshBeeLoader text="Loading Team Directory..." subtext="Syncing user roles, performance metrics and capacities" />
       ) : (
         <>
           {/* ========================================================================= */}

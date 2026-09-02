@@ -4,15 +4,20 @@ import api from '../services/api';
 import type { Integration, SyncLog } from '../types';
 import { formatDate } from '../utils';
 import { 
-  RefreshCw, 
+  Globe, 
   CheckCircle, 
   XCircle, 
+  RefreshCw, 
+  ExternalLink, 
+  Key, 
+  Layers, 
+  Zap, 
+  AlertCircle,
+  HelpCircle,
   Database,
-  Key,
-  Layers,
-  Globe,
   Loader2
 } from 'lucide-react';
+import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 export default function Integrations() {
   const user = useAuthStore((state) => state.user);

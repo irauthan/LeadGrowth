@@ -48,6 +48,7 @@ builder.Services.AddScoped<IExecutiveWorkMonitoringService, ExecutiveWorkMonitor
 builder.Services.AddScoped<IUserPresenceService, UserPresenceService>();
 builder.Services.AddScoped<ILeaveService, LeaveService>();
 builder.Services.AddScoped<IBulkAssignmentService, BulkAssignmentService>();
+builder.Services.AddScoped<ILeadImportService, LeadImportService>();
 
 // 2.5 Background Schedulers
 builder.Services.Configure<HostOptions>(options =>
