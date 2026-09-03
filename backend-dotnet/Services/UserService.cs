@@ -533,10 +533,12 @@ public class UserService : IUserService
         return admin.Workspace!;
     }
 
-    public async Task<User> UpdateAvailabilityStatusAsync(string availabilityStatus, string email)
+    public async Task<User> UpdateAvailabilityStatusAsync(string availabilityStatus, string? reason, string email)
     {
         var userEmail = email.Trim().ToLower();
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        var user = await _context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Email == userEmail);
         if (user == null)
         {
             throw new KeyNotFoundException("User not found");
@@ -549,10 +551,35 @@ public class UserService : IUserService
             throw new ArgumentException($"Invalid availability status: {availabilityStatus}");
         }
 
-        user.AvailabilityStatus = status;
-        user.LastActiveAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+        var previousStatus = user.AvailabilityStatus;
+        var isAdmin = user.Roles != null && user.Roles.Any(r => r.Name.Contains("ADMIN", StringComparison.OrdinalIgnoreCase));
+        var cleanReason = string.IsNullOrWhiteSpace(reason) 
+            ? (status == "AVAILABLE" ? null : (isAdmin ? "Updated by Admin" : "Status changed")) 
+            : reason.Trim();
 
+        user.AvailabilityStatus = status;
+        user.ManualStatus = status == "AVAILABLE" ? null : status;
+        user.ManualStatusReason = cleanReason;
+        user.ManualStatusSource = isAdmin ? "ADMIN" : "USER";
+        user.LastActiveAt = DateTime.UtcNow;
+
+        if (user.WorkspaceId.HasValue && user.WorkspaceId.Value > 0)
+        {
+            _context.UserStatusLogs.Add(new UserStatusLog
+            {
+                WorkspaceId = user.WorkspaceId.Value,
+                UserId = user.Id,
+                PreviousStatus = previousStatus ?? "AVAILABLE",
+                NewStatus = status,
+                StatusSource = user.ManualStatusSource,
+                Reason = cleanReason,
+                ChangedById = user.Id,
+                StartedAtUtc = DateTime.UtcNow,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+        }
+
+        await _context.SaveChangesAsync();
         return user;
     }
 }

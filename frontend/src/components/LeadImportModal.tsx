@@ -10,18 +10,13 @@ import {
   Check, 
   ArrowRight, 
   ArrowLeft, 
-  RefreshCw, 
   Users, 
   UserCheck, 
   Sparkles, 
   Database, 
   Layers, 
-  Filter, 
-  CheckSquare, 
-  Square, 
   Loader2,
-  Info,
-  ChevronDown
+  Info
 } from 'lucide-react';
 import { 
   downloadLeadTemplate, 
@@ -70,7 +65,7 @@ export default function LeadImportModal({
   const [duplicateStrategy, setDuplicateStrategy] = useState<'SKIP' | 'UPDATE' | 'ALLOW'>('SKIP');
   const [defaultSource, setDefaultSource] = useState('Excel Intake');
   const [defaultPriority, setDefaultPriority] = useState('MEDIUM');
-  const [defaultStatus, setDefaultStatus] = useState('New');
+  const [defaultStatus] = useState('New');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | undefined>(undefined);
 
   // Import Result
@@ -560,7 +555,7 @@ export default function LeadImportModal({
                             <option value="">Select Team Member...</option>
                             {teamMembers.map(m => (
                               <option key={m.id} value={m.id}>
-                                {m.fullName || m.name} ({m.designation || 'Sales Rep'})
+                                {m.fullName || (m as any).name || m.email} ({m.designation || 'Sales Rep'})
                               </option>
                             ))}
                           </select>

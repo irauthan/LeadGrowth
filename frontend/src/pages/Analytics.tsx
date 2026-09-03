@@ -18,7 +18,7 @@ import {
   Legend, 
   CartesianGrid 
 } from 'recharts';
-import { Loader2, TrendingUp, Target, ShieldCheck, Clock, Users, IndianRupee } from 'lucide-react';
+import { TrendingUp, Target, ShieldCheck, Clock, Users, IndianRupee } from 'lucide-react';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../components/TimeFilterDropdown';

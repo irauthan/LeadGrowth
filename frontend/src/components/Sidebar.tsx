@@ -189,17 +189,17 @@ export default function Sidebar() {
                   <div key={item.name} className="relative group flex-shrink-0">
                     <Link
                       to={item.path}
-                      className={`flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-medium transition-all duration-200 ${
+                      className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-medium transition-all duration-150 ${
                         isActive
-                          ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow scale-105'
-                          : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text hover:scale-105'
+                          ? 'bg-theme-primary text-white shadow-xs'
+                          : 'text-theme-text-muted hover:bg-theme-bg-alt hover:text-theme-text'
                       }`}
                     >
-                      <item.icon size={18} />
+                      <item.icon size={17} />
                     </Link>
                     {/* Tooltip */}
                     <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none ${tooltipPositionClass}`}>
-                      <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                      <span className="whitespace-nowrap rounded-xl bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-xl border border-slate-700">
                         {item.name}
                       </span>
                     </div>
@@ -211,25 +211,25 @@ export default function Sidebar() {
             {/* Admin Menu Items (Icons Only) */}
             {horizontalAdminItems.length > 0 && (
               <>
-                <div className="h-6 w-[1px] bg-theme-border/40 mx-1 flex-shrink-0" />
-                <div className="flex items-center gap-1 bg-amber-500/5 p-1 rounded-2xl border border-amber-500/10 flex-shrink-0">
+                <div className="h-5 w-[1px] bg-theme-border/40 mx-1 flex-shrink-0" />
+                <div className="flex items-center gap-1 bg-theme-bg-alt/50 p-0.5 rounded-xl border border-theme-border/40 flex-shrink-0">
                   {horizontalAdminItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
                       <div key={item.name} className="relative group flex-shrink-0">
                         <Link
                           to={item.path}
-                          className={`flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-medium transition-all duration-200 ${
+                          className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-medium transition-all duration-150 ${
                             isActive
-                              ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow scale-105'
-                              : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text hover:scale-105'
+                              ? 'bg-theme-primary text-white shadow-xs'
+                              : 'text-theme-text-muted hover:bg-theme-bg-alt hover:text-theme-text'
                           }`}
                         >
-                          <item.icon size={18} />
+                          <item.icon size={17} />
                         </Link>
                         {/* Tooltip */}
                         <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none ${tooltipPositionClass}`}>
-                          <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                          <span className="whitespace-nowrap rounded-xl bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-xl border border-slate-700">
                             {item.name} (Admin)
                           </span>
                         </div>
@@ -333,31 +333,31 @@ export default function Sidebar() {
                     <Link
                       to={item.path}
                       onClick={() => setMobileOpen(false)}
-                      className={`relative flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
+                      className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                         isCollapsed && !isMobileOpen 
                           ? 'h-10 w-10 mx-auto justify-center' 
-                          : 'px-3.5 py-2.5'
+                          : 'px-3 py-2'
                       } ${
                         isActive
-                          ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
-                          : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
+                          ? 'bg-theme-primary text-white shadow-xs font-semibold'
+                          : 'text-theme-text-muted hover:bg-theme-bg-alt hover:text-theme-text'
                       }`}
                     >
                       <item.icon
-                        size={18}
-                        className={`flex-shrink-0 transition-transform group-hover:scale-110 ${
+                        size={17}
+                        className={`flex-shrink-0 transition-transform group-hover:scale-105 ${
                           isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
                         }`}
                       />
                       {(!isCollapsed || isMobileOpen) && (
-                        <span className="truncate text-xs font-semibold">{item.name}</span>
+                        <span className="truncate text-xs font-medium">{item.name}</span>
                       )}
                     </Link>
 
                     {/* Tooltip for Collapsed Mode */}
                     {isCollapsed && !isMobileOpen && (
                       <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none ${sideTooltipClass}`}>
-                        <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                        <span className="whitespace-nowrap rounded-xl bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-xl border border-slate-700">
                           {item.name}
                         </span>
                       </div>
@@ -369,7 +369,7 @@ export default function Sidebar() {
 
             {/* Management Section */}
             {visibleManagementMenu.length > 0 && (
-              <div className="space-y-1 pt-2 border-t border-theme-border/30">
+              <div className="space-y-1 pt-2 border-t border-theme-border/40">
                 {(!isCollapsed || isMobileOpen) ? (
                   <button 
                     onClick={() => toggleSection('management')}
@@ -379,7 +379,7 @@ export default function Sidebar() {
                     <ChevronDown size={14} className={`text-theme-text-muted transition-transform duration-200 ${openSections.management ? '' : '-rotate-90'}`} />
                   </button>
                 ) : (
-                  <div className="h-4" />
+                  <div className="h-2" />
                 )}
                 
                 {((openSections.management && (!isCollapsed || isMobileOpen)) || (isCollapsed && !isMobileOpen)) && (
@@ -391,29 +391,29 @@ export default function Sidebar() {
                           <Link
                             to={item.path}
                             onClick={() => setMobileOpen(false)}
-                            className={`relative flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
+                            className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                               isCollapsed && !isMobileOpen 
                                 ? 'h-10 w-10 mx-auto justify-center' 
-                                : 'px-3.5 py-2.5 ml-2'
+                                : 'px-3 py-2'
                             } ${
                               isActive
-                                ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
-                                : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
+                                ? 'bg-theme-primary text-white shadow-xs font-semibold'
+                                : 'text-theme-text-muted hover:bg-theme-bg-alt hover:text-theme-text'
                             }`}
                           >
                             <item.icon
-                              size={18}
-                              className={`flex-shrink-0 transition-transform group-hover:scale-110 ${
+                              size={17}
+                              className={`flex-shrink-0 transition-transform group-hover:scale-105 ${
                                 isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
                               }`}
                             />
                             {(!isCollapsed || isMobileOpen) && (
-                              <span className="truncate text-xs font-semibold">{item.name}</span>
+                              <span className="truncate text-xs font-medium">{item.name}</span>
                             )}
                           </Link>
                           {isCollapsed && !isMobileOpen && (
                             <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none ${sideTooltipClass}`}>
-                              <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                              <span className="whitespace-nowrap rounded-xl bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-xl border border-slate-700">
                                 {item.name} {item.adminOnly ? '(Admin)' : ''}
                               </span>
                             </div>
@@ -428,7 +428,7 @@ export default function Sidebar() {
 
             {/* Settings Section */}
             {visibleSettingsMenu.length > 0 && (
-              <div className="space-y-1 pt-2 border-t border-theme-border/30 pb-4">
+              <div className="space-y-1 pt-2 border-t border-theme-border/40 pb-4">
                 {(!isCollapsed || isMobileOpen) ? (
                   <button 
                     onClick={() => toggleSection('settings')}
@@ -438,7 +438,7 @@ export default function Sidebar() {
                     <ChevronDown size={14} className={`text-theme-text-muted transition-transform duration-200 ${openSections.settings ? '' : '-rotate-90'}`} />
                   </button>
                 ) : (
-                  <div className="h-4" />
+                  <div className="h-2" />
                 )}
                 
                 {((openSections.settings && (!isCollapsed || isMobileOpen)) || (isCollapsed && !isMobileOpen)) && (
@@ -450,29 +450,29 @@ export default function Sidebar() {
                           <Link
                             to={item.path}
                             onClick={() => setMobileOpen(false)}
-                            className={`relative flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
+                            className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                               isCollapsed && !isMobileOpen 
                                 ? 'h-10 w-10 mx-auto justify-center' 
-                                : 'px-3.5 py-2.5 ml-2'
+                                : 'px-3 py-2'
                             } ${
                               isActive
-                                ? 'bg-gradient-to-r from-theme-primary to-indigo-500 text-white shadow-lg shadow-theme-primary/20 nav-glow'
-                                : 'text-theme-text/80 hover:bg-theme-bg-alt hover:text-theme-text'
+                                ? 'bg-theme-primary text-white shadow-xs font-semibold'
+                                : 'text-theme-text-muted hover:bg-theme-bg-alt hover:text-theme-text'
                             }`}
                           >
                             <item.icon
-                              size={18}
-                              className={`flex-shrink-0 transition-transform group-hover:scale-110 ${
+                              size={17}
+                              className={`flex-shrink-0 transition-transform group-hover:scale-105 ${
                                 isActive ? 'text-white' : 'text-theme-text-muted group-hover:text-theme-text'
                               }`}
                             />
                             {(!isCollapsed || isMobileOpen) && (
-                              <span className="truncate text-xs font-semibold">{item.name}</span>
+                              <span className="truncate text-xs font-medium">{item.name}</span>
                             )}
                           </Link>
                           {isCollapsed && !isMobileOpen && (
                             <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none ${sideTooltipClass}`}>
-                              <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
+                              <span className="whitespace-nowrap rounded-xl bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white shadow-xl border border-slate-700">
                                 {item.name} {item.adminOnly ? '(Admin)' : ''}
                               </span>
                             </div>

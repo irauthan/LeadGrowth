@@ -8,12 +8,8 @@ import {
   CheckCircle, 
   XCircle, 
   RefreshCw, 
-  ExternalLink, 
   Key, 
   Layers, 
-  Zap, 
-  AlertCircle,
-  HelpCircle,
   Database,
   Loader2
 } from 'lucide-react';

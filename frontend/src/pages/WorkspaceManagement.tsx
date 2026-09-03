@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { 
-  Building2, 
-  ShieldCheck, 
   Users, 
-  Trash2, 
-  Save, 
   Check, 
-  Copy, 
-  AlertTriangle, 
   RefreshCw, 
-  Plus, 
-  Loader2,
-  Sparkles
+  Zap, 
+  Building, 
+  Database, 
+  ShieldAlert, 
+  ArrowRight
 } from 'lucide-react';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import api from '../services/api';

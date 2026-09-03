@@ -4,73 +4,73 @@
 
 :root,
 .theme-light {
-  /* Default light theme - Light Slate */
+  /* Default light theme - Clean Slate SaaS */
   --bg-primary: #F8FAFC;
   --bg-secondary: #F1F5F9;
   --bg-card: #FFFFFF;
   --border-color: #E2E8F0;
   --text-main: #0F172A;
   --text-muted: #64748B;
-  --color-brand: #2563EB;
-  --color-brand-hover: #1D4ED8;
-  --color-brand-glow: rgba(37, 99, 235, 0.12);
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --color-brand: #4F46E5;
+  --color-brand-hover: #4338CA;
+  --color-brand-glow: rgba(79, 70, 229, 0.08);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
 }
 
 .theme-dark {
-  /* Standard dark theme - Dark Charcoal */
-  --bg-primary: #0F172A;
-  --bg-secondary: #0B0F19;
-  --bg-card: #1E293B;
-  --border-color: #334155;
-  --text-main: #F8FAFC;
-  --text-muted: #94A3B8;
-  --color-brand: #3B82F6;
-  --color-brand-hover: #60A5FA;
-  --color-brand-glow: rgba(59, 130, 246, 0.18);
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
-}
-
-.theme-midnight {
-  /* Midnight theme - Midnight Neon */
-  --bg-primary: #030712;
-  --bg-secondary: #0B0F19;
+  /* Standard dark theme - Refined Dark Obsidian */
+  --bg-primary: #0B0F17;
+  --bg-secondary: #070A10;
   --bg-card: #111827;
-  --border-color: #374151;
+  --border-color: #1F2937;
   --text-main: #F9FAFB;
   --text-muted: #9CA3AF;
   --color-brand: #6366F1;
   --color-brand-hover: #818CF8;
-  --color-brand-glow: rgba(99, 102, 241, 0.2);
-  --shadow-card: 0 4px 25px rgba(0, 0, 0, 0.45);
+  --color-brand-glow: rgba(99, 102, 241, 0.12);
+  --shadow-card: 0 4px 16px -2px rgba(0, 0, 0, 0.35);
+}
+
+.theme-midnight {
+  /* Midnight theme - Clean Deep Charcoal */
+  --bg-primary: #030712;
+  --bg-secondary: #0B0F19;
+  --bg-card: #111827;
+  --border-color: #1F2937;
+  --text-main: #F9FAFB;
+  --text-muted: #9CA3AF;
+  --color-brand: #6366F1;
+  --color-brand-hover: #818CF8;
+  --color-brand-glow: rgba(99, 102, 241, 0.12);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.45);
 }
 
 .theme-ocean {
-  /* Ocean theme - Deep Ocean */
-  --bg-primary: #04151F;
-  --bg-secondary: #09202E;
-  --bg-card: #0E2F44;
-  --border-color: #1E4963;
-  --text-main: #F0FDFA;
-  --text-muted: #67E8F9;
-  --color-brand: #06B6D4;
-  --color-brand-hover: #22D3EE;
-  --color-brand-glow: rgba(6, 182, 212, 0.2);
-  --shadow-card: 0 4px 25px rgba(0, 0, 0, 0.4);
+  /* Ocean theme - Clean Deep Navy */
+  --bg-primary: #06111C;
+  --bg-secondary: #0B1927;
+  --bg-card: #0F2236;
+  --border-color: #1C354E;
+  --text-main: #F0F9FF;
+  --text-muted: #7DD3FC;
+  --color-brand: #0284C7;
+  --color-brand-hover: #0369A1;
+  --color-brand-glow: rgba(2, 132, 199, 0.12);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
 .theme-purple {
-  /* Purple theme - Royal Velvet */
-  --bg-primary: #0D0714;
-  --bg-secondary: #170B26;
-  --bg-card: #231038;
-  --border-color: #3B1C5C;
+  /* Purple theme - Clean Deep Royal */
+  --bg-primary: #0B0714;
+  --bg-secondary: #130B22;
+  --bg-card: #1C1230;
+  --border-color: #2F1E50;
   --text-main: #FAF5FF;
-  --text-muted: #D8B4FE;
-  --color-brand: #A855F7;
-  --color-brand-hover: #C084FC;
-  --color-brand-glow: rgba(168, 85, 247, 0.2);
-  --shadow-card: 0 4px 25px rgba(139, 92, 246, 0.25);
+  --text-muted: #C084FC;
+  --color-brand: #9333EA;
+  --color-brand-hover: #7E22CE;
+  --color-brand-glow: rgba(147, 51, 234, 0.12);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
 @theme {
@@ -235,87 +235,28 @@
 /* Honey Bee Page Loader Keyframes */
 @keyframes bee-flutter {
   0%, 100% {
-    transform: translateY(0px) rotate(0deg) scale(1);
+    transform: translateY(0px) rotate(0deg);
   }
-  20% {
-    transform: translateY(-10px) rotate(-3.5deg) scale(1.03);
-  }
-  45% {
-    transform: translateY(-3px) rotate(2deg) scale(0.98);
-  }
-  70% {
-    transform: translateY(-12px) rotate(-2deg) scale(1.04);
-  }
-  85% {
-    transform: translateY(-4px) rotate(1deg) scale(1.01);
+  50% {
+    transform: translateY(-6px) rotate(-1.5deg);
   }
 }
 
 @keyframes bee-shadow-pulse {
   0%, 100% {
     transform: scale(1);
-    opacity: 0.4;
-  }
-  20% {
-    transform: scale(0.75);
-    opacity: 0.2;
-  }
-  45% {
-    transform: scale(0.95);
     opacity: 0.35;
   }
-  70% {
-    transform: scale(0.7);
-    opacity: 0.18;
-  }
-  85% {
-    transform: scale(0.92);
-    opacity: 0.32;
-  }
-}
-
-@keyframes honey-glow-pulse {
-  0%, 100% {
-    transform: scale(0.88);
-    opacity: 0.4;
-  }
   50% {
-    transform: scale(1.35);
-    opacity: 0.9;
-  }
-}
-
-@keyframes hex-rotate-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes hex-counter-rotate-slow {
-  from {
-    transform: rotate(360deg);
-  }
-  to {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes shimmer-bar {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
+    transform: scale(0.8);
+    opacity: 0.2;
   }
 }
 
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
@@ -324,31 +265,13 @@
 }
 
 .animate-bee-flutter {
-  animation: bee-flutter 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  animation: bee-flutter 2.6s ease-in-out infinite;
 }
 
 .animate-bee-shadow {
-  animation: bee-shadow-pulse 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-}
-
-.animate-honey-glow {
-  animation: honey-glow-pulse 2.4s ease-in-out infinite;
-}
-
-.animate-hex-rotate {
-  animation: hex-rotate-slow 22s linear infinite;
-}
-
-.animate-hex-counter-rotate {
-  animation: hex-counter-rotate-slow 16s linear infinite;
-}
-
-.animate-shimmer-bar {
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.95) 45%, rgba(6, 182, 212, 0.9) 55%, rgba(245, 158, 11, 0.2) 100%);
-  background-size: 200% 100%;
-  animation: shimmer-bar 1.7s linear infinite;
+  animation: bee-shadow-pulse 2.6s ease-in-out infinite;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

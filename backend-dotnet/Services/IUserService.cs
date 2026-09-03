@@ -16,5 +16,5 @@ public interface IUserService
     Task DeleteUserAsync(long userId, string adminEmail);
     Task<User> ResetUserPasswordAsync(long userId, string newPassword, string adminEmail);
     Task<Workspace> TransferWorkspaceOwnershipAsync(long newOwnerId, string adminEmail);
-    Task<User> UpdateAvailabilityStatusAsync(string availabilityStatus, string email);
+    Task<User> UpdateAvailabilityStatusAsync(string availabilityStatus, string? reason, string email);
 }

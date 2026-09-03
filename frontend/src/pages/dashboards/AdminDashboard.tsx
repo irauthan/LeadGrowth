@@ -12,7 +12,6 @@ import {
   Users, 
   Shield, 
   ExternalLink, 
-  RefreshCw, 
   Zap, 
   PhoneCall, 
   Eye, 
@@ -86,7 +85,7 @@ export default function AdminDashboard() {
         api.get('/api/users/members'),
         api.get('/api/leads', { params }),
         api.get('/api/calls/team', { params }),
-        api.get('/api/campaigns', { params })
+        api.get('/api/campaigns')
       ]);
 
       if (dashRes.status === 'fulfilled' && dashRes.value?.data) {
@@ -191,53 +190,53 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
       {/* Header Command Center Banner */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl relative">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-            <Shield size={28} />
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 rounded-2xl border border-theme-border/70 bg-theme-card shadow-xs relative">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary">
+            <Shield size={22} />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Business Command Center</h1>
-            <p className="text-xs text-theme-text-muted mt-1">High-level financial KPIs, ad spend efficiency, team output, and live marketing ROI.</p>
+            <p className="text-xs text-theme-text-muted mt-0.5">High-level financial KPIs, ad spend efficiency, team output, and live marketing ROI.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
         </div>
       </div>
 
       {/* Top Financial & Growth KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
         {/* Total Revenue */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-emerald-500/40 transition-all">
+        <div className="rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-xs transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Revenue</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-              <IndianRupee size={18} />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <IndianRupee size={15} />
             </div>
           </div>
           <h3 className="text-2xl font-black text-theme-text">{formatCurrency(data.totalRevenue)}</h3>
           <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
             <span>Net Profit</span>
-            <span className="font-bold text-emerald-500">{formatCurrency(netProfit)}</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(netProfit)}</span>
           </div>
         </div>
 
         {/* Total Ad Spend */}
         <Link
           to="/campaigns"
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-rose-500/40 hover:shadow-lg transition-all cursor-pointer group block"
+          className="rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-xs transition-all cursor-pointer group block"
           title="Open Campaigns Analytics"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-rose-500 transition-colors">Total Ad Spend</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 group-hover:scale-105 transition-transform">
-              <TrendingUp size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Total Ad Spend</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary group-hover:scale-105 transition-transform">
+              <TrendingUp size={15} />
             </div>
           </div>
           <h3 className="text-2xl font-black text-theme-text">{formatCurrency(data.totalSpend)}</h3>
@@ -250,95 +249,94 @@ export default function AdminDashboard() {
         {/* Blended ROAS */}
         <Link
           to="/campaigns"
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-cyan-500/40 hover:shadow-lg transition-all cursor-pointer group block"
+          className="rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-xs transition-all cursor-pointer group block"
           title="Open Campaigns Analytics"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-cyan-500 transition-colors">Blended ROAS</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 group-hover:scale-105 transition-transform">
-              <Zap size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Blended ROAS</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary group-hover:scale-105 transition-transform">
+              <Zap size={15} />
             </div>
           </div>
           <h3 className="text-2xl font-black text-theme-text">{data.roas}x</h3>
           <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
             <span>CTR</span>
-            <span className="font-bold text-cyan-500">{data.ctr}%</span>
+            <span className="font-bold text-theme-text">{data.ctr}%</span>
           </div>
         </Link>
 
         {/* Total Leads & Conversions */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-theme-primary/40 transition-all">
+        <div className="rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-xs transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Leads Captured</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-              <Users size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Leads</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary">
+              <Users size={15} />
             </div>
           </div>
           <h3 className="text-2xl font-black text-theme-text">{formatNumber(data.totalLeads)}</h3>
           <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
             <span>Conversions</span>
-            <span className="font-bold text-emerald-500">{formatNumber(data.totalConversions)}</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(data.totalConversions)}</span>
           </div>
         </div>
 
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION 1: TEAM AVAILABILITY & LEAD CAPACITY HUB (INTERACTIVE CARDS)      */}
+      {/* SECTION 1: TEAM AVAILABILITY & LEAD CAPACITY HUB                          */}
       {/* ========================================================================= */}
-      <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-5">
+      <div className="rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs space-y-4">
         
         {/* Header & Quick Navigation */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme-border/40 pb-4">
-          <div className="space-y-1">
-            <h3 className="text-base font-extrabold text-theme-text flex items-center gap-2">
-              <Users size={17} className="text-theme-primary" />
-              <span>Team Availability & Lead Capacity</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme-border/40 pb-3.5">
+          <div className="space-y-0.5">
+            <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+              <Users size={16} className="text-theme-primary" />
+              <span>Team Availability & Capacity</span>
             </h3>
-            <p className="text-xs text-theme-text-muted">Real-time executive presence, live availability statuses, and lead capacity distribution.</p>
+            <p className="text-xs text-theme-text-muted">Live executive presence, availability statuses, and workload distribution.</p>
           </div>
 
           <div className="flex items-center gap-2">
             <Link
               to="/admin/work-monitor"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-theme-bg-alt hover:bg-theme-card text-xs font-bold text-theme-text border border-theme-border/80 transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-card text-xs font-semibold text-theme-text border border-theme-border/70 transition-all"
             >
-              <Activity size={14} className="text-theme-primary" />
+              <Activity size={13} className="text-theme-primary" />
               <span>Work Monitor</span>
             </Link>
             <Link
               to="/admin/users"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-theme-primary/10 hover:bg-theme-primary/20 text-xs font-bold text-theme-primary border border-theme-primary/30 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-primary/10 hover:bg-theme-primary/20 text-xs font-semibold text-theme-primary border border-theme-primary/20 transition-all"
             >
               <span>Manage Roster</span>
-              <ExternalLink size={12} />
+              <ExternalLink size={11} />
             </Link>
           </div>
         </div>
 
         {/* Top Workforce Status Interactive Cards Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
           
           {/* Card 1: Available Now */}
           <button
             type="button"
             onClick={() => setSelectedAvailabilityFilter(selectedAvailabilityFilter === 'AVAILABLE' ? null : 'AVAILABLE')}
-            className={`p-4 rounded-2xl text-left transition-all cursor-pointer border shadow-2xs flex items-center justify-between group ${
+            className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border flex items-center justify-between group ${
               selectedAvailabilityFilter === 'AVAILABLE'
-                ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/40'
-                : 'bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08] border-emerald-500/20 hover:border-emerald-500/40'
+                ? 'bg-theme-card border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
+                : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
             }`}
           >
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
-                <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 block">Available Now</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Available</span>
               </div>
-              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{availableCount}</span>
-              <span className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70 font-semibold block mt-0.5">Ready for Leads</span>
+              <span className="text-xl font-black text-theme-text mt-0.5 block">{availableCount}</span>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 flex items-center justify-center transition-all">
-              <UserCheck size={18} />
+            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <UserCheck size={16} />
             </div>
           </button>
 
@@ -346,22 +344,21 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setSelectedAvailabilityFilter(selectedAvailabilityFilter === 'BUSY' ? null : 'BUSY')}
-            className={`p-4 rounded-2xl text-left transition-all cursor-pointer border shadow-2xs flex items-center justify-between group ${
+            className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border flex items-center justify-between group ${
               selectedAvailabilityFilter === 'BUSY'
-                ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/40'
-                : 'bg-amber-500/[0.04] hover:bg-amber-500/[0.08] border-amber-500/20 hover:border-amber-500/40'
+                ? 'bg-theme-card border-amber-500 shadow-xs ring-1 ring-amber-500/30'
+                : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
             }`}
           >
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
-                <span className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400 block">In Call / Busy</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted block">In Call</span>
               </div>
-              <span className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 block">{busyCount}</span>
-              <span className="text-[9px] text-amber-600/70 dark:text-amber-400/70 font-semibold block mt-0.5">Active on Leads</span>
+              <span className="text-xl font-black text-theme-text mt-0.5 block">{busyCount}</span>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 group-hover:scale-105 flex items-center justify-center transition-all">
-              <PhoneCall size={18} />
+            <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <PhoneCall size={16} />
             </div>
           </button>
 
@@ -369,22 +366,21 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setSelectedAvailabilityFilter(selectedAvailabilityFilter === 'ON_BREAK' ? null : 'ON_BREAK')}
-            className={`p-4 rounded-2xl text-left transition-all cursor-pointer border shadow-2xs flex items-center justify-between group ${
+            className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border flex items-center justify-between group ${
               selectedAvailabilityFilter === 'ON_BREAK'
-                ? 'bg-purple-500/15 border-purple-500 ring-2 ring-purple-500/40'
-                : 'bg-purple-500/[0.04] hover:bg-purple-500/[0.08] border-purple-500/20 hover:border-purple-500/40'
+                ? 'bg-theme-card border-purple-500 shadow-xs ring-1 ring-purple-500/30'
+                : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
             }`}
           >
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50" />
-                <span className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400 block">On Break</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Break</span>
               </div>
-              <span className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1 block">{breakCount}</span>
-              <span className="text-[9px] text-purple-600/70 dark:text-purple-400/70 font-semibold block mt-0.5">Short Pause</span>
+              <span className="text-xl font-black text-theme-text mt-0.5 block">{breakCount}</span>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 group-hover:scale-105 flex items-center justify-center transition-all">
-              <Coffee size={18} />
+            <div className="h-8 w-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <Coffee size={16} />
             </div>
           </button>
 
@@ -392,22 +388,21 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setSelectedAvailabilityFilter(selectedAvailabilityFilter === 'OFFLINE' ? null : 'OFFLINE')}
-            className={`p-4 rounded-2xl text-left transition-all cursor-pointer border shadow-2xs flex items-center justify-between group ${
+            className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border flex items-center justify-between group ${
               selectedAvailabilityFilter === 'OFFLINE'
-                ? 'bg-slate-500/15 border-slate-400 ring-2 ring-slate-400/40'
-                : 'bg-slate-500/[0.04] hover:bg-slate-500/[0.08] border-slate-500/20 hover:border-slate-500/40'
+                ? 'bg-theme-card border-slate-400 shadow-xs ring-1 ring-slate-400/30'
+                : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
             }`}
           >
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-400" />
-                <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block">Offline / Leave</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Offline</span>
               </div>
-              <span className="text-2xl font-black text-slate-600 dark:text-slate-400 mt-1 block">{offlineCount}</span>
-              <span className="text-[9px] text-slate-500/70 dark:text-slate-400/70 font-semibold block mt-0.5">Unavailable</span>
+              <span className="text-xl font-black text-theme-text mt-0.5 block">{offlineCount}</span>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-500 dark:text-slate-400 group-hover:scale-105 flex items-center justify-center transition-all">
-              <UserX size={18} />
+            <div className="h-8 w-8 rounded-lg bg-slate-500/10 text-slate-500 flex items-center justify-center">
+              <UserX size={16} />
             </div>
           </button>
 
@@ -415,17 +410,17 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setSelectedAvailabilityFilter(selectedAvailabilityFilter === 'CAPACITY' ? null : 'CAPACITY')}
-            className={`p-4 rounded-2xl text-left transition-all cursor-pointer border shadow-2xs col-span-2 lg:col-span-1 flex flex-col justify-between group ${
+            className={`p-3.5 rounded-xl text-left transition-all cursor-pointer border col-span-2 lg:col-span-1 flex flex-col justify-between group ${
               selectedAvailabilityFilter === 'CAPACITY'
-                ? 'bg-theme-primary/15 border-theme-primary ring-2 ring-theme-primary/40'
-                : 'bg-theme-primary/[0.04] hover:bg-theme-primary/[0.08] border-theme-primary/20 hover:border-theme-primary/40'
+                ? 'bg-theme-card border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
+                : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
             }`}
           >
             <div className="flex items-center justify-between w-full">
-              <span className="text-[10px] font-bold uppercase text-theme-primary block">Lead Capacity</span>
+              <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Capacity</span>
               <span className="text-xs font-black text-theme-primary font-mono">{overallCapacityPercent}%</span>
             </div>
-            <div className="w-full bg-theme-bg-alt rounded-full h-1.5 my-2 overflow-hidden border border-theme-border/40">
+            <div className="w-full bg-theme-bg-alt rounded-full h-1.5 my-1.5 overflow-hidden border border-theme-border/40">
               <div
                 className={`h-full rounded-full transition-all ${
                   overallCapacityPercent > 85 ? 'bg-rose-500' : overallCapacityPercent > 65 ? 'bg-amber-500' : 'bg-theme-primary'
@@ -433,8 +428,8 @@ export default function AdminDashboard() {
                 style={{ width: `${overallCapacityPercent}%` }}
               />
             </div>
-            <span className="text-[9px] text-theme-text-muted font-bold block text-right">
-              {totalAssignedLeads} of {totalCapacity} Max Assigned
+            <span className="text-[9px] text-theme-text-muted font-medium block text-right">
+              {totalAssignedLeads} of {totalCapacity} Leads
             </span>
           </button>
 
@@ -517,6 +512,14 @@ export default function AdminDashboard() {
                               <AvailIcon size={11} />
                               <span>{availBadge.label}</span>
                             </span>
+                            {(member.manualStatusReason || member.statusReason) && (member.availabilityStatus || '').toUpperCase() !== 'AVAILABLE' && (
+                              <div 
+                                className="mt-1 text-[10px] text-theme-text-muted italic max-w-[170px] truncate" 
+                                title={`Reason: ${member.manualStatusReason || member.statusReason}`}
+                              >
+                                &ldquo;{member.manualStatusReason || member.statusReason}&rdquo;
+                              </div>
+                            )}
                           </td>
 
                           <td className="py-3 px-3 font-mono font-bold text-theme-text">
@@ -581,26 +584,26 @@ export default function AdminDashboard() {
       </div>
 
       {/* Workspace Call Duration Audit & Effort Analytics Banner */}
-      <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-4 rounded-2xl border border-theme-border/70 bg-theme-card shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20">
-            <PhoneCall size={22} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary">
+            <PhoneCall size={18} />
           </div>
           <div>
-            <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
-              Workspace Call Activity & Effort Audit Logs
+            <h3 className="text-xs font-bold text-theme-text flex items-center gap-2">
+              Workspace Call Activity & Daily Effort
             </h3>
-            <p className="text-xs text-theme-text-muted">
-              Total Team Call Time Today: <span className="font-mono font-bold text-rose-500">{teamCalls?.totalTeamCallTimeFormatted || '00:00:00'}</span> ({teamCalls?.totalTeamCallsToday || 0} completed sessions)
+            <p className="text-[11px] text-theme-text-muted">
+              Team Call Time Today: <span className="font-mono font-bold text-theme-text">{teamCalls?.totalTeamCallTimeFormatted || '00:00:00'}</span> ({teamCalls?.totalTeamCallsToday || 0} completed calls)
             </p>
           </div>
         </div>
 
         <button
           onClick={() => setIsCallModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 text-xs font-bold transition-all cursor-pointer shadow-sm"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-theme-bg-alt hover:bg-theme-card text-theme-text border border-theme-border text-xs font-semibold transition-all cursor-pointer shadow-xs"
         >
-          <Eye size={14} /> View Call Logs
+          <Eye size={13} /> <span>View Call Logs</span>
         </button>
       </div>
 
@@ -633,27 +636,27 @@ export default function AdminDashboard() {
         });
 
         return (
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-5">
+          <div className="rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs space-y-4">
             
             {/* Top Header & ROI Filter Controls */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-theme-border/40 pb-4">
-              <div className="space-y-1">
-                <h3 className="text-base font-extrabold text-theme-text flex items-center gap-2">
-                  <PieIcon size={17} className="text-theme-primary" />
-                  <span>Campaign Profitability & Loss Radar</span>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-theme-border/40 pb-3.5">
+              <div className="space-y-0.5">
+                <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+                  <PieIcon size={16} className="text-theme-primary" />
+                  <span>Campaign Performance & Profitability</span>
                 </h3>
                 <p className="text-xs text-theme-text-muted">
-                  Instant financial attribution: Identify which ad campaigns are generating net profit vs budget-bleeding channels.
+                  Channel ROI attribution: Net profit vs budget-bleeding ad campaigns.
                 </p>
               </div>
 
               {/* Quick ROI Filter Badges & Direct Hub Action */}
-              <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setCampaignFilter('ALL')}
-                  className={`px-3 py-1.5 rounded-2xl text-xs font-bold transition-all border ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                     campaignFilter === 'ALL'
-                      ? 'bg-theme-text text-theme-bg border-theme-text shadow-sm'
+                      ? 'bg-theme-text text-theme-bg border-theme-text shadow-xs'
                       : 'bg-theme-bg-alt text-theme-text-muted hover:text-theme-text border-theme-border'
                   }`}
                 >
@@ -662,40 +665,34 @@ export default function AdminDashboard() {
 
                 <button
                   onClick={() => setCampaignFilter(campaignFilter === 'PROFIT' ? 'ALL' : 'PROFIT')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold transition-all border ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                     campaignFilter === 'PROFIT'
-                      ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20'
-                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30'
+                      ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20'
                   }`}
                 >
-                  <TrendingUp size={13} />
-                  <span>Profit Winners</span>
-                  <span className="font-mono font-black text-[11px] px-1.5 py-0.2 rounded-md bg-black/10 dark:bg-white/20">
-                    {profitCampaigns.length}
-                  </span>
+                  <TrendingUp size={12} />
+                  <span>Profitable ({profitCampaigns.length})</span>
                 </button>
 
                 <button
                   onClick={() => setCampaignFilter(campaignFilter === 'BLEEDING' ? 'ALL' : 'BLEEDING')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold transition-all border ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                     campaignFilter === 'BLEEDING'
-                      ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/20'
-                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border-rose-500/30'
+                      ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border-rose-500/20'
                   }`}
                 >
-                  <TrendingDown size={13} />
-                  <span>Bleeding Budget</span>
-                  <span className="font-mono font-black text-[11px] px-1.5 py-0.2 rounded-md bg-black/10 dark:bg-white/20">
-                    {bleedingCampaigns.length}
-                  </span>
+                  <TrendingDown size={12} />
+                  <span>Bleeding ({bleedingCampaigns.length})</span>
                 </button>
 
                 <Link
                   to="/campaigns"
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-2xl bg-theme-primary/10 hover:bg-theme-primary/20 text-theme-primary border border-theme-primary/30 text-xs font-bold transition-all shadow-2xs"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-theme-primary/10 hover:bg-theme-primary/20 text-theme-primary border border-theme-primary/20 text-xs font-semibold transition-all"
                 >
-                  <span>Campaign Manager</span>
-                  <ArrowRight size={13} />
+                  <span>Manager</span>
+                  <ArrowRight size={12} />
                 </Link>
               </div>
             </div>

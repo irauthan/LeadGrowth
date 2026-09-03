@@ -12,7 +12,6 @@ import {
   ChevronDown, 
   ChevronUp, 
   Clock, 
-  Loader2, 
   Eye, 
   BarChart3,
   Layers,

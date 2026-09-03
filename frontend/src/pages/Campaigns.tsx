@@ -10,7 +10,6 @@ import {
   ArrowUpDown,
   Download,
   Plus,
-  Loader2,
   LayoutGrid,
   Table as TableIcon,
   PauseCircle,

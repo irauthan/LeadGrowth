@@ -5,20 +5,24 @@ import {
   CheckCircle, 
   Mail, 
   UserPlus, 
-  Loader2, 
   Trash2, 
   Key, 
   ShieldAlert, 
   Edit2, 
   UserCheck, 
-  Building,  
-  UserX,
-  Sliders,
-  ChevronLeft,
+  Building, 
+  ChevronLeft, 
   ChevronRight,
-  Sparkles,
-  Zap,
-  Coffee
+  Users as UsersIcon,
+  ListFilter,
+  LayoutGrid,
+  Shield,
+  Award,
+  ExternalLink,
+  Smartphone,
+  User as UserIcon,
+  BarChart3,
+  Loader2
 } from 'lucide-react';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import api from '../services/api';
@@ -121,6 +125,7 @@ export default function UserManagement() {
           lastActiveAt: u.lastActiveAt ? u.lastActiveAt.split('T')[0] : 'N/A',
           profileImage: u.profileImage || '',
           availabilityStatus: u.availabilityStatus || 'OFFLINE',
+          manualStatusReason: u.manualStatusReason || u.statusReason || '',
           productivityScore: prod?.score != null ? prod.score : 50,
           performanceCategory: prod?.category || 'Average Performer'
         };
@@ -466,6 +471,11 @@ export default function UserManagement() {
                               {isItemAdmin && <ExternalLink size={10} className="text-purple-400 opacity-60 flex-shrink-0" />}
                             </div>
                             <p className="text-[10px] text-theme-text-muted font-bold uppercase tracking-wider mt-0.5 truncate">{item.designation || (isItemAdmin ? 'Workspace Owner' : 'CRM Specialist')}</p>
+                            {item.manualStatusReason && item.availabilityStatus !== 'AVAILABLE' && (
+                              <p className="text-[10px] text-amber-500/90 dark:text-amber-400/90 italic truncate mt-0.5" title={`Reason: ${item.manualStatusReason}`}>
+                                &ldquo;{item.manualStatusReason}&rdquo;
+                              </p>
+                            )}
                           </div>
                         </Link>
 
@@ -650,6 +660,11 @@ export default function UserManagement() {
                               <div>
                                 <div className="font-bold text-theme-text text-xs group-hover/user:text-theme-primary transition-colors">{item.fullName}</div>
                                 <div className="text-[10px] text-theme-text-muted">{item.designation || (isItemAdmin ? 'Workspace Owner' : 'Specialist')}</div>
+                                {item.manualStatusReason && item.availabilityStatus !== 'AVAILABLE' && (
+                                  <div className="text-[10px] text-amber-500/90 dark:text-amber-400/90 italic truncate max-w-[150px]" title={`Reason: ${item.manualStatusReason}`}>
+                                    &ldquo;{item.manualStatusReason}&rdquo;
+                                  </div>
+                                )}
                               </div>
                             </Link>
                           </td>

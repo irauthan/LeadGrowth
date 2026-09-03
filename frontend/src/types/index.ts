@@ -13,8 +13,9 @@ export interface User {
   inviteCode?: string;
   department?: string;
   status?: 'ACTIVE' | 'SUSPENDED';
-  lastActiveAt?: string;
   availabilityStatus?: 'AVAILABLE' | 'BUSY' | 'ON_BREAK' | 'OFFLINE' | 'ON_LEAVE';
+  manualStatusReason?: string;
+  statusReason?: string;
 }
 
 export interface Workspace {

@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/authStore';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import MobileBottomNav from '../components/MobileBottomNav';
-import Footer from '../components/Footer';
 import { useLayoutStore } from '../store/layoutStore';
 
 const PAGE_TITLES: Record<string, string> = {

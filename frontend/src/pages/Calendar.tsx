@@ -10,7 +10,6 @@ import {
   User as UserIcon, 
   CheckCircle, 
   Trash2, 
-  Loader2, 
   X,
   Search,
   Settings,

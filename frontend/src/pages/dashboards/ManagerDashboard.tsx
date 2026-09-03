@@ -4,7 +4,6 @@ import type { Task, Lead, User as MemberType } from '../../types';
 import { 
   Users, 
   Plus, 
-  RefreshCw, 
   CheckSquare, 
   UserCheck, 
   Clock, 

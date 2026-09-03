@@ -7,7 +7,6 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Loader2, 
-  TrendingUp, 
   ChevronRight,
   Eye,
   EyeOff

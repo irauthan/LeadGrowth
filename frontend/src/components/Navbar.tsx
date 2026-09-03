@@ -51,6 +51,11 @@ export default function Navbar() {
     setShowSearchResults(false);
   });
 
+  const [showStatusReasonModal, setShowStatusReasonModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string>('');
+  const [statusReasonInput, setStatusReasonInput] = useState<string>('');
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
   const statusOptions = [
     { value: 'AVAILABLE', label: 'Available', color: 'bg-emerald-500' },
     { value: 'BUSY', label: 'Busy', color: 'bg-amber-500' },
@@ -59,12 +64,57 @@ export default function Navbar() {
     { value: 'ON_LEAVE', label: 'On Leave', color: 'bg-purple-500' }
   ];
 
-  const changeAvailability = async (newStatus: string) => {
+  const userRoles = Array.isArray(user?.roles) ? user.roles : [];
+  const isAdmin = userRoles.some(r => typeof r === 'string' ? r.toUpperCase().includes('ADMIN') : (r as any)?.name?.toUpperCase().includes('ADMIN'));
+
+  const handleSelectStatus = (newStatus: string) => {
+    setShowProfileMenu(false);
+    if (newStatus === user?.availabilityStatus) return;
+
+    if (newStatus === 'AVAILABLE' || isAdmin) {
+      changeAvailability(newStatus);
+    } else {
+      setPendingStatus(newStatus);
+      setStatusReasonInput('');
+      setShowStatusReasonModal(true);
+    }
+  };
+
+  const changeAvailability = async (newStatus: string, reason?: string) => {
+    setStatusUpdating(true);
     try {
-      await api.put(`/api/users/availability?status=${newStatus}`);
-      updateUser({ availabilityStatus: newStatus as any });
-    } catch (err) {
+      const url = reason && reason.trim()
+        ? `/api/users/availability?status=${newStatus}&reason=${encodeURIComponent(reason.trim())}`
+        : `/api/users/availability?status=${newStatus}`;
+      await api.put(url);
+      updateUser({ 
+        availabilityStatus: newStatus as any,
+        manualStatusReason: reason?.trim() || undefined
+      });
+      window.dispatchEvent(new Event('leadgrowth-status-updated'));
+      setShowStatusReasonModal(false);
+      setPendingStatus('');
+      setStatusReasonInput('');
+    } catch (err: any) {
       console.error('Failed to change availability status', err);
+      alert(err.response?.data?.message || 'Failed to change status');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const getStatusSuggestions = (status: string) => {
+    switch (status) {
+      case 'BUSY':
+        return ['Client Demo / Call', 'Prospect Follow-up', 'Proposal Preparation', 'Internal Team Sync'];
+      case 'ON_BREAK':
+        return ['Lunch Break', 'Tea / Coffee Break', 'Quick Rest', 'Personal Call'];
+      case 'OFFLINE':
+        return ['Shift Completed', 'Network / Power Issue', 'System Restart', 'Stepping Away'];
+      case 'ON_LEAVE':
+        return ['Half Day Leave', 'Medical / Sick Leave', 'Family Emergency', 'Planned Leave'];
+      default:
+        return ['Meeting', 'Personal Break'];
     }
   };
 
@@ -797,10 +847,7 @@ export default function Navbar() {
                     {statusOptions.map(opt => (
                       <button
                         key={opt.value}
-                        onClick={() => {
-                          changeAvailability(opt.value);
-                          setShowProfileMenu(false);
-                        }}
+                        onClick={() => handleSelectStatus(opt.value)}
                         className={`flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-[10px] font-bold transition-all ${
                           user?.availabilityStatus === opt.value 
                             ? 'bg-theme-bg-alt text-theme-primary' 
@@ -847,6 +894,79 @@ export default function Navbar() {
           </div>
         </div>
       </header>
+
+      {/* User Availability Status Reason Modal */}
+      {showStatusReasonModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl border border-theme-border bg-theme-card p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
+              <div className="flex items-center gap-2">
+                <span className={`h-3 w-3 rounded-full ${statusOptions.find(o => o.value === pendingStatus)?.color || 'bg-amber-500'}`} />
+                <h3 className="text-sm font-bold text-theme-text">
+                  Update Status: {statusOptions.find(o => o.value === pendingStatus)?.label || pendingStatus}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowStatusReasonModal(false)}
+                className="text-theme-text-muted hover:text-theme-text p-1 rounded-lg hover:bg-theme-bg-alt"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-theme-text-muted">
+                Admin ke liye reason enter karein (Why are you setting status to <strong className="text-theme-text">{statusOptions.find(o => o.value === pendingStatus)?.label}</strong>?):
+              </p>
+
+              {/* Quick suggestions chips */}
+              <div className="flex flex-wrap gap-1.5">
+                {getStatusSuggestions(pendingStatus).map(sugg => (
+                  <button
+                    key={sugg}
+                    type="button"
+                    onClick={() => setStatusReasonInput(sugg)}
+                    className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all ${
+                      statusReasonInput === sugg
+                        ? 'bg-theme-primary text-white border-theme-primary'
+                        : 'bg-theme-bg-alt text-theme-text-muted hover:text-theme-text border-theme-border hover:border-theme-primary/50'
+                    }`}
+                  >
+                    {sugg}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={statusReasonInput}
+                onChange={(e) => setStatusReasonInput(e.target.value)}
+                placeholder="Reason type karein (e.g. In a demo with client, lunch break, urgent task...)"
+                rows={3}
+                maxLength={200}
+                className="w-full rounded-xl border border-theme-border bg-theme-bg-alt/50 p-2.5 text-xs text-theme-text outline-none focus:border-theme-primary focus:ring-1 focus:ring-theme-primary resize-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-theme-border/40">
+              <button
+                type="button"
+                onClick={() => setShowStatusReasonModal(false)}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!statusReasonInput.trim() || statusUpdating}
+                onClick={() => changeAvailability(pendingStatus, statusReasonInput)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-all"
+              >
+                {statusUpdating ? 'Updating...' : 'Confirm Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

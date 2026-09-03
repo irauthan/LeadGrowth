@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import api from '../services/api';
 import { followUpService, type FollowUp } from '../services/followUpService';
@@ -11,7 +10,6 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Plus, 
-  Loader2, 
   Search,
   Zap,
   Tag,

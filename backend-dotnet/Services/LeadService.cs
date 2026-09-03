@@ -630,9 +630,10 @@ public class LeadService : ILeadService
                     availableCandidates = pool;
                 }
 
-                // Pick the executive with the least active workload, tie-broken by LastAssignedAt
+                // Pick the executive with best availability, least active workload, tie-broken by LastAssignedAt
                 assignTarget = availableCandidates
-                    .OrderBy(m => workloadMap[m.Id])
+                    .OrderByDescending(m => GetAvailabilityPriority(m.AvailabilityStatus))
+                    .ThenBy(m => workloadMap[m.Id])
                     .ThenBy(m => m.LastAssignedAt ?? DateTime.MinValue)
                     .First();
 
@@ -1885,6 +1886,18 @@ public class LeadService : ILeadService
         await _context.SaveChangesAsync();
     }
 
+    private static int GetAvailabilityPriority(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return 1;
+        return status.ToUpperInvariant() switch
+        {
+            "AVAILABLE" => 3,
+            "ON_BREAK" => 2,
+            "BUSY" => 1,
+            _ => 0
+        };
+    }
+
     private async Task<List<User>> GetEligibleAssigneesAsync(long? workspaceId)
     {
         List<User> allMembers = new();
@@ -1899,7 +1912,6 @@ public class LeadService : ILeadService
 
         if (allMembers.Count == 0)
         {
-            // Global fallback to all active non-suspended users across the system
             allMembers = await _context.Users
                 .Include(u => u.Roles)
                 .Where(u => u.Status == null || !string.Equals("SUSPENDED", u.Status))
@@ -1908,7 +1920,7 @@ public class LeadService : ILeadService
 
         if (allMembers.Count == 0) return new List<User>();
 
-        // 1. Prefer non-admin users (e.g. Sales reps / members like Shubham Singh, Gagan Singh)
+        // 1. Prefer non-admin users (e.g. Sales reps / members)
         var candidates = allMembers.Where(u => 
             u.Roles == null || u.Roles.Count == 0 || !u.Roles.Any(r => r.Name.Contains("ADMIN", StringComparison.OrdinalIgnoreCase))
         ).ToList();
@@ -1919,7 +1931,21 @@ public class LeadService : ILeadService
             candidates = allMembers;
         }
 
-        return candidates.OrderBy(u => u.LastAssignedAt ?? DateTime.MinValue).ToList();
+        // 3. Exclude OFFLINE and ON_LEAVE users if online/available users exist
+        var activeStatusCandidates = candidates.Where(u => 
+            !string.Equals("OFFLINE", u.AvailabilityStatus, StringComparison.OrdinalIgnoreCase) && 
+            !string.Equals("ON_LEAVE", u.AvailabilityStatus, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+
+        if (activeStatusCandidates.Count > 0)
+        {
+            candidates = activeStatusCandidates;
+        }
+
+        return candidates
+            .OrderByDescending(u => GetAvailabilityPriority(u.AvailabilityStatus))
+            .ThenBy(u => u.LastAssignedAt ?? DateTime.MinValue)
+            .ToList();
     }
 
     private async Task<User?> FindBestLeadAssigneeAsync(long? workspaceId)
@@ -1946,7 +1972,8 @@ public class LeadService : ILeadService
         }
 
         return availableCandidates
-            .OrderBy(m => counts.TryGetValue(m.Id, out var c) ? c : 0)
+            .OrderByDescending(m => GetAvailabilityPriority(m.AvailabilityStatus))
+            .ThenBy(m => counts.TryGetValue(m.Id, out var c) ? c : 0)
             .ThenBy(m => m.LastAssignedAt ?? DateTime.MinValue)
             .FirstOrDefault();
     }

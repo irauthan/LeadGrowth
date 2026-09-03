@@ -266,7 +266,7 @@ export default function UserDashboard() {
           </Link>
           <button
             onClick={handleIdleSweep}
-            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-theme-primary to-blue-600 hover:from-theme-primary-hover hover:to-blue-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-theme-primary/20 transition-all"
+            className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-all"
           >
             <Zap size={14} /> Ready For Next Lead
           </button>
@@ -587,16 +587,16 @@ export default function UserDashboard() {
         {/* 1. My Assigned Leads -> /my-work */}
         <Link
           to={`/my-work?period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`}
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-blue-500/50 hover:shadow-lg transition-all cursor-pointer group block"
+          className="rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-md transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-blue-500 transition-colors">Assigned Leads</span>
-            <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Assigned Leads</span>
+            <div className="h-9 w-9 rounded-xl bg-theme-primary/10 text-theme-primary flex items-center justify-center transition-transform group-hover:scale-105">
               <UserCheck size={17} />
             </div>
           </div>
           <h3 className="text-2xl font-black text-theme-text">{assignedLeadsCount}</h3>
-          <span className="text-[10px] font-semibold text-blue-500 flex items-center gap-1">
+          <span className="text-[10px] font-semibold text-theme-text-muted group-hover:text-theme-primary flex items-center gap-1 transition-colors">
             Active in Pipeline <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
@@ -604,11 +604,11 @@ export default function UserDashboard() {
         {/* 2. My Pending Follow-Ups -> /followups */}
         <Link
           to="/followups"
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-amber-500/50 hover:shadow-lg transition-all cursor-pointer group block"
+          className="rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-md transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-amber-500 transition-colors">Pending Follow-ups</span>
-            <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Pending Follow-ups</span>
+            <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center transition-transform group-hover:scale-105">
               <Clock size={17} />
             </div>
           </div>
@@ -621,11 +621,11 @@ export default function UserDashboard() {
         {/* 3. My Conversions -> /my-work?stage=Converted */}
         <Link
           to={`/my-work?stage=Converted&period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`}
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-emerald-500/50 hover:shadow-lg transition-all cursor-pointer group block"
+          className="rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-md transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-emerald-500 transition-colors">My Conversions</span>
-            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">My Conversions</span>
+            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center transition-transform group-hover:scale-105">
               <Flame size={17} />
             </div>
           </div>
@@ -638,16 +638,16 @@ export default function UserDashboard() {
         {/* 4. My Revenue Contribution -> /analytics */}
         <Link
           to="/analytics"
-          className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-2 hover:border-indigo-500/50 hover:shadow-lg transition-all cursor-pointer group block"
+          className="rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-md transition-all cursor-pointer group block"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-indigo-500 transition-colors">Revenue Contribution</span>
-            <div className="h-9 w-9 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Revenue Contribution</span>
+            <div className="h-9 w-9 rounded-xl bg-theme-primary/10 text-theme-primary flex items-center justify-center transition-transform group-hover:scale-105">
               <IndianRupee size={17} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-indigo-500 dark:text-indigo-400">{formatCurrency(personalRevenue)}</h3>
-          <span className="text-[10px] font-semibold text-indigo-500 flex items-center gap-1">
+          <h3 className="text-2xl font-black text-theme-text">{formatCurrency(personalRevenue)}</h3>
+          <span className="text-[10px] font-semibold text-theme-text-muted group-hover:text-theme-primary flex items-center gap-1 transition-colors">
             Closed Deals Value <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import type { Lead, User } from '../types';
-import { formatShortDate, isLeadAssigned, isLeadFresh } from '../utils';
+import { formatShortDate, isLeadAssigned } from '../utils';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { 
   Search, 
@@ -18,9 +18,6 @@ import {
   AlertCircle, 
   CheckSquare, 
   Square, 
-  XCircle,
-  UserCheck,
-  Sparkles,
   FileSpreadsheet
 } from 'lucide-react';
 import { downloadReport } from '../services/reportService';
@@ -363,153 +360,154 @@ export default function Leads() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight text-theme-text">Lead Management Console</h1>
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">ACTIVE PIPELINE</span>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Workspace Leads</h1>
+            <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 text-[10px] font-bold border border-emerald-500/20">
+              Live Feed
+            </span>
           </div>
-          <p className="mt-1 text-sm text-theme-text-muted">
-            Intelligently ranked workspace pipeline sorted by urgency, due date, and conversion impact.
+          <p className="mt-1 text-xs text-theme-text-muted">
+            Prioritized intake pipeline for lead qualification, assignments, and follow-ups.
           </p>
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 px-4 py-2.5 text-sm font-bold shadow-sm transition-all hover:scale-[1.01]"
-            title="Upload Excel or CSV spreadsheet to intake leads into workspace"
+            className="flex items-center gap-2 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all"
+            title="Import Excel or CSV spreadsheet"
           >
-            <FileSpreadsheet size={16} className="text-indigo-400" />
-            <span>Import Excel / CSV</span>
+            <FileSpreadsheet size={15} className="text-theme-primary" />
+            <span>Import Sheet</span>
           </button>
 
           <div className="relative group">
-            <button className="flex items-center gap-2 rounded-2xl border border-theme-border bg-theme-card px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-theme-bg-alt text-theme-text transition-all">
-              <Download size={16} />
-              <span>Export Leads</span>
+            <button className="flex items-center gap-2 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all">
+              <Download size={15} />
+              <span>Export</span>
             </button>
-            <div className="absolute right-0 top-11 hidden w-36 rounded-xl border border-theme-border bg-theme-card p-1 shadow-2xl group-hover:block z-10">
-              <button onClick={() => handleExport('csv')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">CSV Sheet</button>
-              <button onClick={() => handleExport('excel')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">Excel Sheet</button>
-              <button onClick={() => handleExport('pdf')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">PDF Sheet</button>
+            <div className="absolute right-0 top-10 hidden w-36 rounded-xl border border-theme-border bg-theme-card p-1 shadow-xl group-hover:block z-20">
+              <button onClick={() => handleExport('csv')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">CSV (.csv)</button>
+              <button onClick={() => handleExport('excel')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">Excel (.xlsx)</button>
+              <button onClick={() => handleExport('pdf')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">PDF (.pdf)</button>
             </div>
           </div>
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-theme-primary/10 hover:scale-[1.01] transition-all"
+            className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2 text-xs font-semibold text-white shadow-xs transition-all"
           >
-            <Plus size={16} />
+            <Plus size={15} />
             <span>Add Lead</span>
           </button>
         </div>
       </div>
 
-      {/* Smart Priority Engine KPI Bar */}
+      {/* Priority Engine KPI Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <button
           type="button"
-          onClick={() => setStatusFilter(statusFilter === 'Overdue' ? 'All' : 'Overdue')}
-          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'Overdue'
-              ? 'bg-rose-500/20 border-rose-500 ring-2 ring-rose-500/50 shadow-md'
-              : 'bg-rose-500/5 hover:bg-rose-500/10 border-rose-500/20'
+          onClick={() => setStatusFilter(statusFilter === 'All' ? 'All' : 'All')}
+          className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+            statusFilter === 'All'
+              ? 'bg-theme-card border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
+              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
           }`}
         >
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-500 flex items-center gap-1">
-              <AlertTriangle size={12} /> Overdue Tasks
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+              <Briefcase size={13} className="text-theme-primary" /> Total Pipeline
             </span>
-            <div className="text-xl font-extrabold text-rose-500 mt-0.5">{overdueCount}</div>
+            <div className="text-xl font-black text-theme-text mt-0.5">{leads.length}</div>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${overdueCount > 0 ? 'bg-rose-500/20 text-rose-500 animate-pulse' : 'bg-emerald-500/10 text-emerald-500'}`}>
-            {overdueCount > 0 ? 'Action Req' : 'Clean'}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'HIGH' ? 'All' : 'HIGH')}
-          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'HIGH'
-              ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-500/50 shadow-md'
-              : 'bg-amber-500/5 hover:bg-amber-500/10 border-amber-500/20'
-          }`}
-        >
-          <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-500 flex items-center gap-1">
-              <Flame size={12} /> High Focus
-            </span>
-            <div className="text-xl font-extrabold text-amber-500 mt-0.5">{highPriorityCount}</div>
-          </div>
-          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 text-[10px] font-extrabold">
-            Hot Tier
+          <span className="px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-bold">
+            All
           </span>
         </button>
 
         <button
           type="button"
           onClick={() => setStatusFilter(statusFilter === 'New' ? 'All' : 'New')}
-          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+          className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
             statusFilter === 'New'
-              ? 'bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/50 shadow-md'
-              : 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/20'
+              ? 'bg-theme-card border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
+              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
           }`}
         >
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-500 flex items-center gap-1">
-              <Zap size={12} /> Fresh Leads
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+              <Zap size={13} className="text-emerald-500" /> Fresh Inbound
             </span>
-            <div className="text-xl font-extrabold text-emerald-500 mt-0.5">{newLeadsCount}</div>
+            <div className="text-xl font-black text-theme-text mt-0.5">{newLeadsCount}</div>
           </div>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 text-[10px] font-extrabold">
-            Inbound
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+            New
           </span>
         </button>
 
         <button
           type="button"
-          onClick={() => setStatusFilter('All')}
-          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'All'
-              ? 'bg-theme-primary/10 border-theme-primary ring-2 ring-theme-primary/50 shadow-md'
-              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border'
+          onClick={() => setStatusFilter(statusFilter === 'HIGH' ? 'All' : 'HIGH')}
+          className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+            statusFilter === 'HIGH'
+              ? 'bg-theme-card border-amber-500 shadow-xs ring-1 ring-amber-500/30'
+              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
           }`}
         >
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-1">
-              <Briefcase size={12} /> All Pipeline
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+              <Flame size={13} className="text-amber-500" /> High Focus
             </span>
-            <div className="text-xl font-extrabold text-theme-text mt-0.5">{leads.length}</div>
+            <div className="text-xl font-black text-theme-text mt-0.5">{highPriorityCount}</div>
           </div>
-          <span className="px-2 py-0.5 rounded-full bg-theme-primary/20 text-theme-primary text-[10px] font-extrabold">
-            Total
+          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+            Hot
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'Overdue' ? 'All' : 'Overdue')}
+          className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+            statusFilter === 'Overdue'
+              ? 'bg-theme-card border-rose-500 shadow-xs ring-1 ring-rose-500/30'
+              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
+          }`}
+        >
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+              <AlertTriangle size={13} className="text-rose-500" /> Overdue Action
+            </span>
+            <div className="text-xl font-black text-theme-text mt-0.5">{overdueCount}</div>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            overdueCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-theme-bg-alt text-theme-text-muted'
+          }`}>
+            {overdueCount > 0 ? 'Pending' : '0'}
           </span>
         </button>
       </div>
 
-      {/* Main Split Panel with Maximize/Minimize capability */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Side Pane: Leads Feed list (Hidden when user maximizes Workflow Container) */}
+      {/* Main Split Panel */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {/* Left Side Pane: Leads Feed list */}
         {!isMaximized && (
-          <div className="flex flex-col gap-4 rounded-3xl border border-theme-border bg-theme-card p-4 shadow-sm lg:col-span-1">
-            {/* List filters */}
-            <div className="space-y-3">
+          <div className="flex flex-col gap-3 rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs lg:col-span-1">
+            {/* Search & filters */}
+            <div className="space-y-2">
               <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
-                  <Search size={16} />
-                </span>
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-text-muted" />
                 <input
                   type="text"
-                  placeholder="Search leads..."
+                  placeholder="Search leads by name, email, phone..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt py-2 pl-9 pr-4 text-xs outline-none focus:border-theme-primary text-theme-text"
+                  className="w-full rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 py-2 pl-9 pr-3 text-xs outline-none focus:border-theme-primary focus:bg-theme-card text-theme-text transition-all placeholder:text-theme-text-muted"
                 />
               </div>
               
@@ -517,7 +515,7 @@ export default function Leads() {
                 <select
                   value={platformFilter}
                   onChange={(e) => setPlatformFilter(e.target.value)}
-                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary"
+                  className="w-full rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-2.5 py-1.5 text-xs font-medium outline-none text-theme-text focus:border-theme-primary cursor-pointer"
                 >
                   <option value="All">All Platforms</option>
                   <option value="Meta">Meta</option>
@@ -528,171 +526,155 @@ export default function Leads() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary font-bold"
+                  className="w-full rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-2.5 py-1.5 text-xs font-medium outline-none text-theme-text focus:border-theme-primary cursor-pointer"
                 >
-                  <option value="All">All Status</option>
+                  <option value="All">All Statuses</option>
                   <option value="New">New</option>
                   <option value="Interaction">Interaction</option>
                   <option value="Qualified">Qualified</option>
                   <option value="Converted">Converted</option>
                   <option value="Rejected">Rejected</option>
                   <option value="Overdue">Overdue</option>
-                  <option value="HIGH">High Priority</option>
+                  <option value="HIGH">High Focus</option>
                 </select>
               </div>
             </div>
 
-              {/* Management Bulk Auto-Assign Controls */}
-              {isManagementUser && filteredLeads.length > 0 && (
-                <div className="p-3 rounded-2xl bg-theme-bg-alt/70 border border-theme-border space-y-2">
-                  <div className="flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={handleToggleSelectAll}
-                      className="flex items-center gap-1.5 text-xs font-bold text-theme-text-muted hover:text-theme-text"
-                    >
-                      {selectedLeadIds.length === filteredLeads.length ? (
-                        <CheckSquare size={16} className="text-theme-primary" />
-                      ) : (
-                        <Square size={16} />
-                      )}
-                      <span>Select All ({filteredLeads.length})</span>
-                    </button>
-
-                    {selectedLeadIds.length > 0 && (
-                      <span className="text-[11px] font-extrabold text-theme-primary bg-theme-primary/10 px-2 py-0.5 rounded-full border border-theme-primary/20">
-                        {selectedLeadIds.length} Selected
-                      </span>
+            {/* Management Bulk Actions Bar */}
+            {isManagementUser && filteredLeads.length > 0 && (
+              <div className="p-2.5 rounded-xl bg-theme-bg-alt/60 border border-theme-border/50 space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAll}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-theme-text-muted hover:text-theme-text cursor-pointer"
+                  >
+                    {selectedLeadIds.length === filteredLeads.length ? (
+                      <CheckSquare size={15} className="text-theme-primary" />
+                    ) : (
+                      <Square size={15} />
                     )}
-                  </div>
+                    <span>Select All ({filteredLeads.length})</span>
+                  </button>
 
                   {selectedLeadIds.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleBulkAutoAssign}
-                        disabled={bulkAssigning}
-                        className="w-full sm:w-auto flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-theme-primary to-indigo-500 hover:opacity-90 text-white text-xs font-extrabold shadow-md disabled:opacity-50 transition-all"
-                      >
-                        {bulkAssigning ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-                        <span>Bulk Auto-Assign ({selectedLeadIds.length})</span>
-                      </button>
-
-                      <select
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          if (val) handleBulkManualAssign(val);
-                        }}
-                        disabled={bulkAssigning}
-                        className="w-full sm:w-auto rounded-xl border border-theme-border bg-theme-card px-2.5 py-1.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
-                      >
-                        <option value="">Bulk Assign To...</option>
-                        {members.map((m: any) => (
-                          <option key={m.id} value={m.id}>
-                            {m.fullName || m.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    <span className="text-[10px] font-bold text-theme-primary bg-theme-primary/10 px-2 py-0.5 rounded-md">
+                      {selectedLeadIds.length} Selected
+                    </span>
                   )}
                 </div>
-              )}
+
+                {selectedLeadIds.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleBulkAutoAssign}
+                      disabled={bulkAssigning}
+                      className="w-full sm:w-auto flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-all"
+                    >
+                      {bulkAssigning ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                      <span>Auto-Assign</span>
+                    </button>
+
+                    <select
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (val) handleBulkManualAssign(val);
+                      }}
+                      disabled={bulkAssigning}
+                      className="w-full sm:w-auto rounded-lg border border-theme-border bg-theme-card px-2 py-1.5 text-xs font-medium text-theme-text outline-none focus:border-theme-primary cursor-pointer"
+                    >
+                      <option value="">Assign to...</option>
+                      {members.map((m: any) => (
+                        <option key={m.id} value={m.id}>
+                          {m.fullName || m.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Feed List Items */}
-            <div className="max-h-[650px] space-y-2.5 overflow-y-auto pr-1">
+            <div className="max-h-[600px] space-y-2 overflow-y-auto pr-1">
               {filteredLeads.map((lead) => {
                 const isSelected = selectedLead?.id === lead.id;
                 const isLostLead = lead.status === 'Lost' || lead.status === 'Rejected';
                 const isOverdue = isLeadOverdue(lead);
                 const isChecked = selectedLeadIds.includes(lead.id);
                 const assigned = isLeadAssigned(lead);
-                const fresh = isLeadFresh(lead);
 
                 return (
                   <button
                     key={lead.id}
                     id={`lead-card-${lead.id}`}
                     onClick={() => handleLeadSelect(lead)}
-                    className={`w-full rounded-2xl border p-4 text-left transition-all ${
+                    className={`w-full rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-theme-primary bg-theme-primary/10 shadow-md ring-1 ring-theme-primary'
+                        ? 'border-theme-primary bg-theme-primary/[0.04] shadow-xs'
                         : isOverdue
-                        ? 'border-rose-500/50 bg-rose-500/5 hover:bg-rose-500/10'
-                        : isLostLead
-                        ? 'border-rose-500/40 bg-rose-500/5 hover:bg-rose-500/10'
-                        : 'border-theme-border/60 bg-theme-bg-alt/40 hover:bg-theme-bg-alt'
+                        ? 'border-rose-500/30 bg-rose-500/[0.02] hover:bg-rose-500/[0.05]'
+                        : 'border-theme-border/50 bg-theme-card hover:bg-theme-bg-alt/60'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {isManagementUser && (
                           <div
                             onClick={(e) => handleToggleSelectLead(e, lead.id)}
-                            className="text-theme-text-muted hover:text-theme-primary cursor-pointer"
+                            className="text-theme-text-muted hover:text-theme-primary cursor-pointer flex-shrink-0"
                           >
                             {isChecked ? (
-                              <CheckSquare size={16} className="text-theme-primary" />
+                              <CheckSquare size={15} className="text-theme-primary" />
                             ) : (
-                              <Square size={16} />
+                              <Square size={15} />
                             )}
                           </div>
                         )}
-                        <span className={`font-bold ${isOverdue ? 'text-rose-500 font-extrabold' : isLostLead ? 'text-rose-400' : 'text-theme-text'}`}>
+                        <span className="font-bold text-xs text-theme-text truncate">
                           {lead.name}
                         </span>
                       </div>
-                      <span className="text-[10px] text-theme-text-muted">{formatShortDate(lead.createdAt)}</span>
+                      <span className="text-[10px] text-theme-text-muted flex-shrink-0">{formatShortDate(lead.createdAt)}</span>
                     </div>
-                    <p className="mt-1 text-xs text-theme-text-muted truncate pl-6">{lead.email}</p>
 
-                    {isOverdue && (
-                      <div className="mt-2 flex items-center gap-1 text-[10px] font-extrabold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-lg border border-rose-500/20 w-max">
-                        <AlertTriangle size={11} /> Overdue Follow-up
-                      </div>
-                    )}
-                    
-                    {/* Tags row: Source, Fresh, Assigned (Admin only), Status */}
-                    <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                          lead.sourcePlatform === 'Meta' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'
-                        }`}>
-                          {lead.sourcePlatform || 'Direct'}
-                        </span>
+                    <p className="mt-1 text-[11px] text-theme-text-muted truncate">
+                      {lead.email} {lead.phone ? `• ${lead.phone}` : ''}
+                    </p>
 
-                        {fresh && (
-                          <span className="rounded-full px-2 py-0.5 text-[9px] font-extrabold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 inline-flex items-center gap-1">
-                            <Sparkles size={10} /> Fresh
-                          </span>
-                        )}
-                      </div>
+                    {/* Clean compact bottom tags row */}
+                    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-theme-border/30 pt-2 text-[10px]">
+                      <span className="text-theme-text-muted font-medium">
+                        {lead.sourcePlatform || 'Direct'}
+                      </span>
 
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5">
                         {isManagementUser && (
                           assigned ? (
-                            <span className="rounded-lg px-2 py-0.5 text-[9px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1" title={lead.assignedToName ? `Assigned to ${lead.assignedToName}` : 'Assigned'}>
-                              <UserCheck size={10} /> Assigned{lead.assignedToName && lead.assignedToName !== 'Unassigned' ? `: ${lead.assignedToName}` : ''}
+                            <span className="text-[10px] text-theme-text-muted font-medium truncate max-w-[100px]" title={lead.assignedToName}>
+                              {lead.assignedToName?.split(' ')[0] || 'Assigned'}
                             </span>
                           ) : (
-                            <div
+                            <span
                               onClick={(e) => handleSingleAutoAssign(e, lead.id)}
-                              className="flex items-center gap-1 text-[9px] font-extrabold text-theme-primary bg-theme-primary/10 hover:bg-theme-primary/20 px-2 py-0.5 rounded-lg border border-theme-primary/20 transition-all cursor-pointer"
-                              title="Auto-Assign this single lead using Smart AI Engine"
+                              className="text-[10px] font-semibold text-theme-primary hover:underline cursor-pointer"
                             >
-                              <Zap size={10} /> Auto-Assign
-                            </div>
+                              + Assign
+                            </span>
                           )
                         )}
 
-                        <span className={`rounded px-2 py-0.5 text-[9px] font-extrabold inline-flex items-center gap-1 ${
-                          isOverdue
-                            ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30'
-                            : isLostLead 
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                        <span className={`px-2 py-0.5 rounded-md font-semibold text-[9px] ${
+                          lead.status === 'Converted'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : isOverdue
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                            : isLostLead
+                            ? 'bg-slate-500/10 text-slate-500'
                             : 'bg-theme-primary/10 text-theme-primary'
                         }`}>
-                          {isLostLead && <XCircle size={10} className="text-rose-400" />}
-                          <span>{isOverdue ? 'OVERDUE' : isLostLead ? lead.status.toUpperCase() : lead.status}</span>
+                          {isOverdue ? 'Overdue' : lead.status}
                         </span>
                       </div>
                     </div>
@@ -700,13 +682,11 @@ export default function Leads() {
                 );
               })}
               {filteredLeads.length === 0 && (
-                <div className="p-8 text-center space-y-2 border border-dashed border-theme-border/60 rounded-2xl bg-theme-bg-alt/30 my-4">
-                  <AlertCircle size={28} className="text-theme-text-muted opacity-40 mx-auto" />
-                  <p className="text-xs font-bold text-theme-text">No leads found</p>
-                  <p className="text-[10px] text-theme-text-muted">
-                    {statusFilter === 'Overdue' 
-                      ? 'Great! There are no overdue follow-ups or pending actions right now.'
-                      : 'No leads match the selected filter criteria.'}
+                <div className="p-8 text-center space-y-2 border border-dashed border-theme-border/60 rounded-xl bg-theme-bg-alt/20 my-4">
+                  <AlertCircle size={24} className="text-theme-text-muted opacity-40 mx-auto" />
+                  <p className="text-xs font-semibold text-theme-text">No leads found</p>
+                  <p className="text-[11px] text-theme-text-muted">
+                    No records match the active filter criteria.
                   </p>
                 </div>
               )}
@@ -727,12 +707,12 @@ export default function Leads() {
               onLeadUpdated={fetchLeads}
             />
           ) : (
-            <div className="glass-card flex h-[650px] flex-col items-center justify-center rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm text-center space-y-3">
-              <MessageSquare size={48} className="text-theme-text-muted opacity-40 mx-auto" />
+            <div className="flex h-[600px] flex-col items-center justify-center rounded-2xl border border-theme-border/70 bg-theme-card p-6 shadow-xs text-center space-y-2">
+              <MessageSquare size={36} className="text-theme-text-muted opacity-30 mx-auto" />
               <div>
-                <h4 className="text-sm font-extrabold text-theme-text">Select a Lead from Workspace Feed</h4>
-                <p className="text-xs text-theme-text-muted mt-1 max-w-sm">
-                  Click any lead in your workspace feed to open the Enterprise Multi-Activity Workflow Container.
+                <h4 className="text-sm font-bold text-theme-text">Select a Lead from the Pipeline</h4>
+                <p className="text-xs text-theme-text-muted mt-0.5 max-w-sm">
+                  Click any contact on the left to view customer dossiers, timeline history, and call logs.
                 </p>
               </div>
             </div>

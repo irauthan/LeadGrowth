@@ -224,12 +224,12 @@ public class UserController : ControllerBase
     }
 
     [HttpPut("availability")]
-    public async Task<ActionResult<User>> UpdateAvailabilityStatus([FromQuery] string status)
+    public async Task<ActionResult<User>> UpdateAvailabilityStatus([FromQuery] string status, [FromQuery] string? reason = null)
     {
         var email = GetUserEmail();
         try
         {
-            var user = await _userService.UpdateAvailabilityStatusAsync(status, email);
+            var user = await _userService.UpdateAvailabilityStatusAsync(status, reason, email);
             return Ok(user);
         }
         catch (ArgumentException ex)

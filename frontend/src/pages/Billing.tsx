@@ -8,7 +8,6 @@ import {
   UserCheck, 
   HardDrive, 
   Sparkles, 
-  Loader2, 
   CheckCircle2
 } from 'lucide-react';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';

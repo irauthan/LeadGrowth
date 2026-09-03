@@ -3,7 +3,6 @@ import { useAuthStore } from '../store/authStore';
 import { useClickOutside } from '../hooks/useClickOutside';
 import api from '../services/api';
 import type { Task, User } from '../types';
-import { useSearchParams } from 'react-router-dom';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import { 
   Plus, 
@@ -12,7 +11,6 @@ import {
   User as UserIcon, 
   ArrowRight,
   CheckCircle,
-  Loader2,
   Sparkles,
   AlertCircle,
   Award,

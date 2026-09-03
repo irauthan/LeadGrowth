@@ -366,10 +366,7 @@ public class UserPresenceService : IUserPresenceService
             throw new UnauthorizedAccessException("Cannot manage users outside your workspace");
         }
 
-        if (string.IsNullOrWhiteSpace(request.Reason))
-        {
-            throw new ArgumentException("A reason is mandatory for administrator status changes.");
-        }
+        var cleanReason = string.IsNullOrWhiteSpace(request.Reason) ? "Updated by Administrator" : request.Reason.Trim();
 
         var now = DateTime.UtcNow;
         var requestedStatus = request.NewStatus.ToUpper();
@@ -385,7 +382,7 @@ public class UserPresenceService : IUserPresenceService
 
         targetUser.ManualStatus = (requestedStatus == "BUSY" || requestedStatus == "ON_BREAK") ? requestedStatus : null;
         targetUser.ManualStatusSource = "ADMIN";
-        targetUser.ManualStatusReason = request.Reason.Trim();
+        targetUser.ManualStatusReason = cleanReason;
         targetUser.ManualStatusExpiresAt = expiresAt;
         targetUser.AvailabilityStatus = requestedStatus;
 
@@ -396,7 +393,7 @@ public class UserPresenceService : IUserPresenceService
             PreviousStatus = previousStatus,
             NewStatus = requestedStatus,
             StatusSource = "ADMIN",
-            Reason = request.Reason.Trim(),
+            Reason = cleanReason,
             ChangedById = admin.Id,
             StartedAtUtc = now,
             ExpiresAtUtc = expiresAt,
