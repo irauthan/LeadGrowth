@@ -83,8 +83,8 @@ export default function Billing() {
 
   const plans = [
     {
-      name: 'FREE',
-      price: '₹0',
+      name: 'BASIC',
+      price: '₹599',
       period: 'Forever free',
       users: 5,
       leads: 1000,

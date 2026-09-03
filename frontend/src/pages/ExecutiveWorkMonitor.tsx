@@ -508,7 +508,9 @@ export default function ExecutiveWorkMonitor() {
                   Day-wise & Month-wise Activity Log Breakdown
                 </h3>
                 <p className="text-xs text-theme-text-muted mt-0.5">
-                  Daily breakdown of calls, meetings, emails, and follow-ups executed by {summary.userName}.
+                  {selectedUserId > 0 
+                    ? `Daily breakdown of calls, meetings, emails, and follow-ups executed by ${summary.userName}.`
+                    : 'Daily breakdown of calls, meetings, emails, and follow-ups executed across all team members.'}
                 </p>
               </div>
               <span className="text-xs font-bold text-theme-text-muted bg-theme-bg-alt px-3 py-1 rounded-full border border-theme-border">

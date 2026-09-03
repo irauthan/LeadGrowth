@@ -258,6 +258,11 @@ export default function UserDashboard() {
     );
   }
 
+  const isManagementOrAdmin = (user?.roles || []).some((r: any) => {
+    const roleName = typeof r === 'string' ? r : r?.name || '';
+    return ['ROLE_ADMIN', 'ADMIN', 'ROLE_SUPERADMIN', 'SUPERADMIN', 'ROLE_MANAGER', 'MANAGER'].includes(roleName.toUpperCase());
+  });
+
   return (
     <div className="space-y-6">
 
@@ -280,12 +285,14 @@ export default function UserDashboard() {
           >
             <Briefcase size={14} className="text-theme-primary" /> Open Pipelines
           </Link>
-          <button
-            onClick={handleIdleSweep}
-            className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-all"
-          >
-            <Zap size={14} /> Ready For Next Lead
-          </button>
+          {!isManagementOrAdmin && (
+            <button
+              onClick={handleIdleSweep}
+              className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-all"
+            >
+              <Zap size={14} /> Ready For Next Lead
+            </button>
+          )}
         </div>
       </div>
 

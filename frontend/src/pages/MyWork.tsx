@@ -22,10 +22,29 @@ import {
   Maximize2,
   Minimize2,
   Users,
-  Flame
+  Flame,
+  Download,
+  FileText,
+  ArrowLeft,
+  ArrowRight,
+  UserCheck,
+  TrendingUp,
+  Award,
+  ShieldCheck,
+  User,
+  Clock,
+  Ban,
+  Plus,
+  Calendar,
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 import api from '../services/api';
 import { isLeadFresh } from '../utils';
+import { useAuthStore } from '../store/authStore';
+import { downloadReport } from '../services/reportService';
+import { followUpService, type FollowUp } from '../services/followUpService';
+import FollowUpModal from '../components/FollowUpModal';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
@@ -48,14 +67,34 @@ const STAGES_TABLE_LIST = [
 ];
 
 export default function MyWork() {
+  const currentUser = useAuthStore((state) => state.user);
+  const isManagementOrAdmin = (currentUser?.roles || []).some((r: any) => {
+    const roleName = typeof r === 'string' ? r : r?.name || '';
+    return ['ROLE_ADMIN', 'ADMIN', 'ROLE_SUPERADMIN', 'SUPERADMIN', 'ROLE_MANAGER', 'MANAGER'].includes(roleName.toUpperCase());
+  });
+
   const [leads, setLeads] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [followups, setFollowups] = useState<FollowUp[]>([]);
+  const [selectedExecutiveId, setSelectedExecutiveId] = useState<number | null>(null);
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
+
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'table' | 'followups'>('kanban');
   const [isContactsFullWidth, setIsContactsFullWidth] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  // Follow-ups Tab & Filter State for Executive
+  const [followupStatusTab, setFollowupStatusTab] = useState<'ALL' | 'UPCOMING' | 'OVERDUE' | 'COMPLETED' | 'CANCELLED'>('ALL');
+  const [followupSearchTerm, setFollowupSearchTerm] = useState('');
+  const [followupStageFilter, setFollowupStageFilter] = useState('ALL');
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [modalLead, setModalLead] = useState<{ id: number; name: string; stage?: string; assignedUserId?: number } | null>(null);
+  const [followupSuccessMsg, setFollowupSuccessMsg] = useState('');
 
   // Business-Critical Filters & Search (E4 Filter Streamlining)
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +119,7 @@ export default function MyWork() {
   // Idle Sweep notification
   const [sweepMessage, setSweepMessage] = useState('');
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedPeriod, setSelectedPeriod] = useState<string>(searchParams.get('period') || 'all');
 
   useEffect(() => {
@@ -91,8 +130,15 @@ export default function MyWork() {
   }, [searchParams]);
 
   useEffect(() => {
+    const paramExec = searchParams.get('executiveId');
+    if (paramExec && isManagementOrAdmin) {
+      setSelectedExecutiveId(parseInt(paramExec, 10));
+    }
+  }, [searchParams, isManagementOrAdmin]);
+
+  useEffect(() => {
     fetchMyWorkLeads();
-  }, [selectedPeriod, searchParams]);
+  }, [selectedPeriod, searchParams, currentUser?.id, isManagementOrAdmin]);
 
   useEffect(() => {
     const paramLeadId = searchParams.get('leadId');
@@ -121,16 +167,55 @@ export default function MyWork() {
       if (start) params.startDate = start;
       if (end) params.endDate = end;
 
-      const [leadsRes, contactsRes] = await Promise.all([
-        api.get('/api/leads', { params }).catch(() => api.get('/api/leads/pipeline', { params })),
-        api.get('/api/leads/contacts').catch(() => ({ data: [] }))
+      const [leadsRes, contactsRes, membersRes, followupsRes] = await Promise.all([
+        api.get('/api/leads', { params }).catch(() => api.get('/api/leads/pipeline', { params }).catch(() => ({ data: [] }))),
+        api.get('/api/leads/contacts').catch(() => ({ data: [] })),
+        api.get('/api/users/members').catch(() => ({ data: [] })),
+        followUpService.getFollowups().catch(() => [])
       ]);
-      setLeads(leadsRes.data || []);
-      setContacts(contactsRes.data || []);
+
+      const fetchedLeads = Array.isArray(leadsRes?.data) ? leadsRes.data : [];
+      const fetchedContacts = Array.isArray(contactsRes?.data) ? contactsRes.data : [];
+      let fetchedMembers = Array.isArray(membersRes?.data) ? membersRes.data : [];
+      const fetchedFollowups = Array.isArray(followupsRes) ? followupsRes : ((followupsRes as any)?.data || []);
+
+      if (fetchedMembers.length === 0 && currentUser) {
+        fetchedMembers = [currentUser];
+      }
+
+      setLeads(fetchedLeads);
+      setContacts(fetchedContacts);
+      setTeamMembers(fetchedMembers);
+      setFollowups(fetchedFollowups);
     } catch (err) {
       console.error('Failed to load My Work workspace leads', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCompleteFollowup = async (id: number) => {
+    try {
+      await followUpService.complete(id);
+      setFollowupSuccessMsg('Follow-up marked as completed!');
+      fetchMyWorkLeads();
+      setTimeout(() => setFollowupSuccessMsg(''), 3000);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to complete follow-up');
+    }
+  };
+
+  const handleCancelFollowup = async (id: number) => {
+    if (!window.confirm('Are you sure you want to cancel and remove this follow-up?')) {
+      return;
+    }
+    try {
+      await followUpService.cancel(id);
+      setFollowupSuccessMsg('Follow-up removed successfully!');
+      fetchMyWorkLeads();
+      setTimeout(() => setFollowupSuccessMsg(''), 3000);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to cancel follow-up');
     }
   };
 
@@ -147,6 +232,19 @@ export default function MyWork() {
     } catch (e) {
       setSweepMessage('Sweep active. All queue items currently assigned.');
       setTimeout(() => setSweepMessage(''), 4000);
+    }
+  };
+
+  const handleExportPipelinePdf = async () => {
+    if (isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadReport('leads', 'pdf', selectedPeriod);
+    } catch (err) {
+      console.error('Failed to export pipeline PDF:', err);
+      alert('Unable to generate Pipeline PDF report. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
@@ -205,26 +303,170 @@ export default function MyWork() {
     setDraggedLeadId(null);
   };
 
+  const isUserAdminRole = (userObj: any) => {
+    const rList = userObj?.roles || [];
+    return rList.some((r: any) => {
+      const rName = typeof r === 'string' ? r : r?.name || '';
+      return ['ROLE_ADMIN', 'ADMIN', 'ROLE_SUPERADMIN', 'SUPERADMIN'].includes(rName.toUpperCase());
+    });
+  };
+
+  const safeLeads = Array.isArray(leads) ? leads : [];
+  const rawMembers = Array.isArray(teamMembers) ? teamMembers : [];
+
+  // Filter to sales executives / reps (exclude current logged-in admin / managers from sales rep cards)
+  const salesRepMembers = rawMembers.filter((m) => {
+    if (!m) return false;
+    if (m.id === currentUser?.id) return false;
+    if (isUserAdminRole(m) && safeLeads.filter(l => l && l.assignedToId === m.id).length === 0) return false;
+    return true;
+  });
+
+  // Fallback: If no non-admin sales reps exist in workspace, show all members
+  const safeMembers = salesRepMembers.length > 0 ? salesRepMembers : rawMembers.filter(m => m && m.id !== currentUser?.id);
+  const unassignedLeads = safeLeads.filter((l) => l && !l.assignedToId);
+
+  const safeFollowups = Array.isArray(followups) ? followups : [];
+
+  const doesFollowupBelongToExecutive = (f: any, execId: number | null, execName?: string) => {
+    if (!f) return false;
+    if (execId === null) return true;
+    if (execId === -1) {
+      const lead = safeLeads.find(l => l && Number(l.id) === Number(f.leadId));
+      return (!f.assignedToId || Number(f.assignedToId) === 0) && (!lead || !lead.assignedToId);
+    }
+    
+    const targetId = Number(execId);
+    const lead = safeLeads.find(l => l && Number(l.id) === Number(f.leadId));
+    const leadAssignedId = lead?.assignedToId ? Number(lead.assignedToId) : null;
+    const fAssignedId = f.assignedToId ? Number(f.assignedToId) : null;
+
+    // 1. If lead is known in workspace, its assigned executive strictly determines ownership
+    if (leadAssignedId) {
+      return leadAssignedId === targetId;
+    }
+
+    // 2. If lead is not found or unassigned on lead entity, check followup's direct assignedToId
+    if (fAssignedId) {
+      return fAssignedId === targetId;
+    }
+
+    // 3. Match by name
+    if (execName && f.assignedToName) {
+      return String(f.assignedToName).trim().toLowerCase() === String(execName).trim().toLowerCase();
+    }
+
+    return false;
+  };
+
+  const membersWithStats = safeMembers
+    .filter(Boolean)
+    .map((member) => {
+      const memberLeads = safeLeads.filter((l) => l && Number(l.assignedToId) === Number(member.id));
+      const memberFollowups = safeFollowups.filter(f => doesFollowupBelongToExecutive(f, member.id, member.fullName));
+      const activeFollowupsCount = memberFollowups.filter(f => f.status !== 'COMPLETED' && f.status !== 'CANCELLED').length;
+
+      const newCount = memberLeads.filter((l) => {
+        const s = String(l.status || 'New').toLowerCase();
+        return s === 'new' || s === 'new lead' || s === 'fresh';
+      }).length;
+      const interactionCount = memberLeads.filter((l) => {
+        const s = String(l.status || '').toLowerCase();
+        return s === 'interaction' || s === 'contacted' || s === 'first call' || s === 'follow-up';
+      }).length;
+      const proposalCount = memberLeads.filter((l) => String(l.status || '').toLowerCase().includes('proposal')).length;
+      const negotiationCount = memberLeads.filter((l) => String(l.status || '').toLowerCase().includes('negotiation')).length;
+      const convertedCount = memberLeads.filter((l) => {
+        const s = String(l.status || '').toLowerCase();
+        return s === 'converted' || s === 'won' || s === 'closed won';
+      }).length;
+      const lostCount = memberLeads.filter((l) => String(l.status || '').toLowerCase().includes('lost')).length;
+      const winRate = memberLeads.length > 0 ? Math.round((convertedCount / memberLeads.length) * 100) : 0;
+
+      return {
+        ...member,
+        totalLeads: memberLeads.length,
+        newCount,
+        interactionCount,
+        proposalCount,
+        negotiationCount,
+        convertedCount,
+        lostCount,
+        winRate,
+        totalFollowups: memberFollowups.length,
+        activeFollowupsCount
+      };
+    });
+
+  const activeExecutive = isManagementOrAdmin 
+    ? (selectedExecutiveId === -1 
+        ? { id: -1, fullName: 'Unassigned Leads Pool', email: 'Unassigned Queue', designation: 'Queue' } 
+        : (rawMembers.find(m => m && Number(m.id) === Number(selectedExecutiveId)) || { fullName: 'Sales Executive', email: '', designation: '' }))
+    : currentUser;
+
+  const activeExecutiveFollowups = safeFollowups.filter((f) => {
+    const targetId = isManagementOrAdmin && selectedExecutiveId !== null ? selectedExecutiveId : (currentUser?.id || null);
+    const targetName = isManagementOrAdmin && selectedExecutiveId !== null ? activeExecutive?.fullName : currentUser?.fullName;
+    return doesFollowupBelongToExecutive(f, targetId, targetName);
+  });
+
+  const filteredExecutiveFollowups = activeExecutiveFollowups.filter((f) => {
+    if (followupStatusTab === 'UPCOMING' && !(f.status === 'UPCOMING' || f.status === 'SCHEDULED' || f.status === 'PENDING')) return false;
+    if (followupStatusTab === 'OVERDUE' && !(f.status === 'OVERDUE' || f.status === 'MISSED' || f.isOverdue)) return false;
+    if (followupStatusTab === 'COMPLETED' && f.status !== 'COMPLETED') return false;
+    if (followupStatusTab === 'CANCELLED' && f.status !== 'CANCELLED') return false;
+
+    if (followupStageFilter !== 'ALL') {
+      const sFilter = followupStageFilter.toLowerCase();
+      const lStage = (f.leadStage || '').toLowerCase();
+      if (!lStage.includes(sFilter) && !sFilter.includes(lStage)) return false;
+    }
+
+    if (followupSearchTerm) {
+      const q = followupSearchTerm.toLowerCase();
+      const matchName = f.leadName?.toLowerCase().includes(q);
+      const matchType = f.type?.toLowerCase().includes(q);
+      const matchStage = f.leadStage?.toLowerCase().includes(q);
+      const matchNotes = f.notes?.toLowerCase().includes(q);
+      if (!matchName && !matchType && !matchStage && !matchNotes) return false;
+    }
+
+    return true;
+  });
+
+  const filteredMembers = membersWithStats.filter((m) =>
+    !memberSearchTerm ||
+    (m.fullName && String(m.fullName).toLowerCase().includes(memberSearchTerm.toLowerCase())) ||
+    (m.email && String(m.email).toLowerCase().includes(memberSearchTerm.toLowerCase()))
+  );
+
+  // Filter Leads based on selected executive
+  const targetScopeLeads = isManagementOrAdmin && selectedExecutiveId !== null
+    ? (selectedExecutiveId === -1 ? unassignedLeads : safeLeads.filter(l => l && l.assignedToId === selectedExecutiveId))
+    : safeLeads;
+
   // Filter & Search Logic
-  const filteredLeads = leads.filter((lead) => {
+  const filteredLeads = targetScopeLeads.filter((lead) => {
+    if (!lead) return false;
     const matchesSearch = 
       !searchTerm ||
-      lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.campaignName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(lead.id).includes(searchTerm);
+      (lead.name && String(lead.name).toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.company && String(lead.company).toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.phone && String(lead.phone).toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.email && String(lead.email).toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.campaignName && String(lead.campaignName).toLowerCase().includes(searchTerm.toLowerCase())) ||
+      String(lead.id || '').includes(searchTerm);
 
     const matchesPriority = selectedPriority === 'ALL' || lead.priority === selectedPriority;
     const matchesQuality = selectedQuality === 'ALL' || lead.qualityTier === selectedQuality;
 
     return matchesSearch && matchesPriority && matchesQuality;
   }).sort((a, b) => {
+    if (!a || !b) return 0;
     if (sortBy === 'newest') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-    if (sortBy === 'oldest') return new Date(a.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-    if (sortBy === 'a-z') return (a.name || '').localeCompare(b.name || '');
-    if (sortBy === 'z-a') return (b.name || '').localeCompare(a.name || '');
+    if (sortBy === 'oldest') return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    if (sortBy === 'a-z') return String(a.name || '').localeCompare(String(b.name || ''));
+    if (sortBy === 'z-a') return String(b.name || '').localeCompare(String(a.name || ''));
     if (sortBy === 'priority') {
       const pMap: any = { HIGH: 3, MEDIUM: 2, LOW: 1 };
       return (pMap[b.priority] || 2) - (pMap[a.priority] || 2);
@@ -235,7 +477,8 @@ export default function MyWork() {
 
   const getStageLeads = (stageKey: string) => {
     return filteredLeads.filter((l) => {
-      const st = (l.status || 'New').trim();
+      if (!l) return false;
+      const st = String(l.status || 'New').trim();
       const stLower = st.toLowerCase();
       const isNewLead = stLower === 'new' || stLower === 'new lead' || stLower === 'fresh';
 
@@ -262,8 +505,8 @@ export default function MyWork() {
   if (loading && leads.length === 0) {
     return (
       <HoosshBeeLoader 
-        text="Loading My Work Pipeline..." 
-        subtext="Syncing assigned leads, pipeline stages and today's urgent actions" 
+        text="Loading Pipelines Workspace..." 
+        subtext="Syncing assigned team pipelines, stage velocity, and active deals" 
       />
     );
   }
@@ -271,49 +514,227 @@ export default function MyWork() {
   return (
     <div className="space-y-6">
 
-      {/* Top Header & Workspace Summary */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
-            <Briefcase size={22} className="text-theme-primary" /> My Work Pipeline
-          </h1>
-          <p className="text-xs text-theme-text-muted mt-1">
-            Manage assigned leads, execute sales activities, complete client follow-ups, and auto-track progress from one interface.
-          </p>
-        </div>
+      {/* VIEW 1: ADMIN TEAM EXECUTIVE SELECTION OVERVIEW */}
+      {isManagementOrAdmin && selectedExecutiveId === null ? (
+        <div className="space-y-6">
+          {/* Top Header & Search in One Clean Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm">
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
+                <Users size={22} className="text-theme-primary" /> Team Pipelines
+              </h1>
+              <p className="text-xs text-theme-text-muted mt-1">
+                Select a sales team member below to view their active pipeline, lead stages, and deal progression.
+              </p>
+            </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={handleIdleSweep}
-            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-theme-primary to-blue-600 hover:from-theme-primary-hover hover:to-blue-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-theme-primary/20 transition-all"
-          >
-            Ready For Next Lead
-          </button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative min-w-[220px]">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search executive..."
+                  value={memberSearchTerm}
+                  onChange={(e) => setMemberSearchTerm(e.target.value)}
+                  className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl pl-9 pr-4 py-2 text-xs text-theme-text focus:outline-none focus:border-theme-primary font-medium"
+                />
+              </div>
 
-          <div className="flex items-center rounded-2xl bg-theme-bg-alt p-1 border border-theme-border/50">
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                viewMode === 'kanban' 
-                  ? 'bg-theme-card text-theme-primary shadow-sm' 
-                  : 'text-theme-text-muted hover:text-theme-text'
-              }`}
-            >
-              <LayoutGrid size={14} /> Kanban Board
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                viewMode === 'table' 
-                  ? 'bg-theme-card text-theme-primary shadow-sm' 
-                  : 'text-theme-text-muted hover:text-theme-text'
-              }`}
-            >
-              <TableIcon size={14} /> Table View
-            </button>
+              <button
+                onClick={handleExportPipelinePdf}
+                disabled={isExportingPdf}
+                title="Download overall stage-wise pipeline report as PDF"
+                className="flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-600/20 transition-all disabled:opacity-50"
+              >
+                <Download size={14} />
+                <span>{isExportingPdf ? 'Generating PDF...' : 'Download Pipeline PDF'}</span>
+              </button>
+            </div>
           </div>
+
+          {/* Team Members Grid (Clean, Premium, Minimalist) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMembers.map((member) => (
+              <div
+                key={member.id}
+                onClick={() => setSelectedExecutiveId(member.id)}
+                className="group relative rounded-3xl bg-theme-card border border-theme-border hover:border-theme-primary hover:shadow-lg p-6 transition-all duration-300 cursor-pointer space-y-5"
+              >
+                {/* Header: Avatar, Name, Email, Role */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-base group-hover:scale-105 transition-transform">
+                      {member?.fullName && String(member.fullName).trim().length > 0 ? String(member.fullName).trim().charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-theme-text group-hover:text-theme-primary transition-colors flex items-center gap-1.5">
+                        {member.fullName}
+                      </h3>
+                      <p className="text-[11px] text-theme-text-muted mt-0.5">{member.email}</p>
+                      <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-theme-bg-alt border border-theme-border text-theme-text-muted">
+                        {member.designation || (typeof member.roles?.[0] === 'string' ? member.roles[0].replace('ROLE_', '') : member.roles?.[0]?.name?.replace('ROLE_', '')) || 'Sales Executive'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="px-3 py-1 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text text-xs font-black">
+                    {member.totalLeads} Leads
+                  </span>
+                </div>
+
+                {/* Clean Metrics Summary */}
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-theme-border/60">
+                  <div className="bg-theme-bg-alt/50 p-2.5 rounded-2xl border border-theme-border/50 text-center">
+                    <span className="text-[10px] text-theme-text-muted font-bold block">Pipeline</span>
+                    <span className="text-xs font-black text-theme-text mt-0.5 block">{member.totalLeads} Leads</span>
+                  </div>
+                  <div className="bg-theme-bg-alt/50 p-2.5 rounded-2xl border border-theme-border/50 text-center">
+                    <span className="text-[10px] text-theme-text-muted font-bold block">Won Deals</span>
+                    <span className="text-xs font-black text-emerald-500 mt-0.5 block">{member.convertedCount} Deals</span>
+                  </div>
+                  <div className="bg-theme-bg-alt/50 p-2.5 rounded-2xl border border-theme-border/50 text-center">
+                    <span className="text-[10px] text-theme-text-muted font-bold block">Follow-ups</span>
+                    <span className="text-xs font-black text-blue-500 mt-0.5 block">{member.activeFollowupsCount} Active</span>
+                  </div>
+                </div>
+
+                {/* Footer Action */}
+                <div className="pt-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-theme-text-muted">
+                    Win Rate: <strong className="text-theme-text">{member.winRate}%</strong>
+                  </span>
+
+                  <span className="text-xs font-extrabold text-theme-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+                    View Pipeline <ArrowRight size={14} />
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {/* Unassigned Pool Card */}
+            {unassignedLeads.length > 0 && (
+              <div
+                onClick={() => setSelectedExecutiveId(-1)}
+                className="group relative rounded-3xl bg-theme-card border border-dashed border-theme-border hover:border-amber-500/80 hover:shadow-lg p-6 transition-all duration-300 cursor-pointer space-y-5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-extrabold text-base">
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-theme-text group-hover:text-amber-500 transition-colors">
+                        Unassigned Lead Pool
+                      </h3>
+                      <p className="text-[11px] text-theme-text-muted mt-0.5">Leads awaiting sales routing</p>
+                      <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                        Queue Pool
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-black">
+                    {unassignedLeads.length} Leads
+                  </span>
+                </div>
+
+                <div className="bg-theme-bg-alt/50 p-3 rounded-2xl border border-theme-border/50">
+                  <span className="text-[10px] text-theme-text-muted font-bold block">Queue Status</span>
+                  <span className="text-xs font-extrabold text-theme-text mt-0.5 block">Ready for distribution</span>
+                </div>
+
+                <div className="pt-2 flex items-center justify-between">
+                  <span className="text-xs text-theme-text-muted font-semibold">Unassigned Leads</span>
+                  <span className="text-xs font-extrabold text-amber-500 flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+                    Inspect Pool <ArrowRight size={14} />
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {filteredMembers.length === 0 && (
+            <div className="p-12 text-center border-2 border-dashed border-theme-border rounded-3xl bg-theme-card/50 space-y-2">
+              <Users size={28} className="mx-auto text-theme-text-muted" />
+              <h4 className="text-sm font-bold text-theme-text">No Executives Found</h4>
+              <p className="text-xs text-theme-text-muted">No sales team members match your search criteria.</p>
+            </div>
+          )}
         </div>
-      </div>
+      ) : (
+        /* VIEW 2: INDIVIDUAL EXECUTIVE PIPELINE KANBAN & TABLE BOARD */
+        <>
+          {/* Top Header & Workspace Summary */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
+                <Briefcase size={22} className="text-theme-primary" /> 
+                {isManagementOrAdmin 
+                  ? `${activeExecutive?.fullName || 'Executive'}'s Pipeline`
+                  : 'My Work Pipeline'}
+              </h1>
+              <p className="text-xs text-theme-text-muted mt-1">
+                {isManagementOrAdmin
+                  ? `Auditing ${activeExecutive?.fullName || 'Executive'}'s stage progression, active client deals, and follow-ups.`
+                  : 'Manage assigned leads, execute sales activities, complete client follow-ups, and auto-track progress from one interface.'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Follow-ups Quick Toggle Button */}
+              <button
+                onClick={() => setViewMode(viewMode === 'followups' ? 'kanban' : 'followups')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all border ${
+                  viewMode === 'followups'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
+                    : 'bg-theme-bg-alt text-theme-text hover:text-blue-500 border-theme-border/60 hover:border-blue-500/40'
+                }`}
+              >
+                <Clock size={14} className={viewMode === 'followups' ? 'text-white' : 'text-blue-500'} />
+                <span>Follow-ups</span>
+                {activeExecutiveFollowups.length > 0 && (
+                  <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${
+                    viewMode === 'followups' 
+                      ? 'bg-white text-blue-600' 
+                      : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                  }`}>
+                    {activeExecutiveFollowups.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Premium Styled View Switcher Dropdown (Kanban / Table only) */}
+              <div className="relative flex items-center gap-2 bg-theme-bg-alt px-3.5 py-2.5 rounded-2xl border border-theme-border hover:border-theme-primary/50 transition-all shadow-xs">
+                {viewMode === 'table' ? (
+                  <TableIcon size={14} className="text-theme-primary flex-shrink-0" />
+                ) : (
+                  <LayoutGrid size={14} className="text-theme-primary flex-shrink-0" />
+                )}
+                <select
+                  value={viewMode === 'followups' ? 'kanban' : viewMode}
+                  onChange={(e) => setViewMode(e.target.value as 'kanban' | 'table')}
+                  className="bg-transparent text-xs font-bold text-theme-text outline-none cursor-pointer pr-4 appearance-none"
+                >
+                  <option value="kanban" className="bg-theme-card text-theme-text font-bold">Kanban Board</option>
+                  <option value="table" className="bg-theme-card text-theme-text font-bold">Table View</option>
+                </select>
+                <ChevronDown size={13} className="text-theme-text-muted pointer-events-none absolute right-2.5" />
+              </div>
+
+              {/* Admin: Download Pipeline PDF (Placed AFTER dropdown) */}
+              {isManagementOrAdmin && (
+                <button
+                  onClick={handleExportPipelinePdf}
+                  disabled={isExportingPdf}
+                  title="Download stage-wise pipeline report as PDF"
+                  className="flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-600/20 transition-all disabled:opacity-50"
+                >
+                  <Download size={14} />
+                  <span>{isExportingPdf ? 'Generating PDF...' : 'Download Pipeline PDF'}</span>
+                </button>
+              )}
+            </div>
+          </div>
 
       {sweepMessage && (
         <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs font-bold text-cyan-400 flex items-center gap-2 animate-bounce">
@@ -351,42 +772,6 @@ export default function MyWork() {
             <option value="today">Time: Today</option>
             <option value="weekly">Time: This Week</option>
             <option value="monthly">Time: This Month</option>
-          </select>
-
-          <select
-            value={selectedStage}
-            onChange={(e) => setSelectedStage(e.target.value)}
-            className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-          >
-            <option value="ALL">Stage: All Stages</option>
-            <option value="New">Stage: New Leads</option>
-            <option value="Interaction">Stage: Interaction</option>
-            <option value="Proposal Sent">Stage: Proposal Sent</option>
-            <option value="Negotiation">Stage: Negotiation</option>
-            <option value="Converted">Stage: Converted</option>
-            <option value="Lost">Stage: Lost</option>
-          </select>
-
-          <select
-            value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
-            className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-          >
-            <option value="ALL">Priority: All</option>
-            <option value="HIGH">Priority: High</option>
-            <option value="MEDIUM">Priority: Medium</option>
-            <option value="LOW">Priority: Low</option>
-          </select>
-
-          <select
-            value={selectedQuality}
-            onChange={(e) => setSelectedQuality(e.target.value)}
-            className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-          >
-            <option value="ALL">Quality: All</option>
-            <option value="HOT">HOT Tier</option>
-            <option value="WARM">WARM Tier</option>
-            <option value="COLD">COLD Tier</option>
           </select>
 
           <select
@@ -952,7 +1337,7 @@ export default function MyWork() {
                     {filteredLeads.length === 0 && (
                       <tr>
                         <td colSpan={7} className="p-12 text-center text-theme-text-muted">
-                          No work items match your selected filters. Click "Ready For Next Lead" to assign unassigned leads.
+                          No work items match your selected filters.
                         </td>
                       </tr>
                     )}
@@ -961,8 +1346,214 @@ export default function MyWork() {
               </div>
             </div>
           )}
+
+          {/* VIEW MODE 3: EXECUTIVE FOLLOW-UPS MANAGEMENT VIEW */}
+          {viewMode === 'followups' && (
+            <div className="rounded-3xl border border-theme-border bg-theme-card shadow-md overflow-hidden animate-fade-in space-y-0">
+              {followupSuccessMsg && (
+                <div className="p-3 bg-emerald-500/10 border-b border-emerald-500/20 text-xs font-bold text-emerald-500 flex items-center gap-2">
+                  <CheckCircle2 size={15} /> {followupSuccessMsg}
+                </div>
+              )}
+
+              {/* Followups Toolbar */}
+              <div className="p-4 space-y-4 border-b border-theme-border/60 bg-theme-card">
+                {/* Status Tabs */}
+                <div className="flex items-center justify-between gap-2 flex-wrap border-b border-theme-border/40 pb-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[
+                      { key: 'ALL', label: 'All Follow-ups', count: activeExecutiveFollowups.length },
+                      { key: 'UPCOMING', label: 'Scheduled / Upcoming', count: activeExecutiveFollowups.filter(f => f.status === 'UPCOMING' || f.status === 'SCHEDULED' || f.status === 'PENDING').length },
+                      { key: 'OVERDUE', label: 'Overdue', count: activeExecutiveFollowups.filter(f => f.status === 'OVERDUE' || f.status === 'MISSED' || f.isOverdue).length },
+                      { key: 'COMPLETED', label: 'Completed', count: activeExecutiveFollowups.filter(f => f.status === 'COMPLETED').length },
+                      { key: 'CANCELLED', label: 'Cancelled', count: activeExecutiveFollowups.filter(f => f.status === 'CANCELLED').length },
+                    ].map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setFollowupStatusTab(tab.key as any)}
+                        className={`px-3.5 py-1.5 rounded-2xl text-xs font-extrabold transition-all flex items-center gap-1.5 ${
+                          followupStatusTab === tab.key
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'bg-theme-bg-alt text-theme-text-muted hover:text-theme-text'
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${followupStatusTab === tab.key ? 'bg-white/20 text-white' : 'bg-theme-border text-theme-text-muted'}`}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (filteredLeads.length > 0) {
+                        setModalLead({ id: filteredLeads[0].id, name: filteredLeads[0].name, stage: filteredLeads[0].status, assignedUserId: filteredLeads[0].assignedToId });
+                        setShowScheduleModal(true);
+                      } else {
+                        alert('No active leads found for this executive to schedule a follow-up.');
+                      }
+                    }}
+                    className="flex items-center gap-1.5 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all"
+                  >
+                    <Plus size={14} /> Schedule Follow-up
+                  </button>
+                </div>
+
+                {/* Search & Stage Filter for Followups */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="relative flex-1 min-w-[240px]">
+                    <Search size={14} className="absolute left-3.5 top-2.5 text-theme-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="Search follow-ups by lead name, type, or notes..."
+                      value={followupSearchTerm}
+                      onChange={(e) => setFollowupSearchTerm(e.target.value)}
+                      className="w-full rounded-2xl bg-theme-bg-alt pl-9 pr-3 py-2 text-xs font-semibold text-theme-text outline-none border border-theme-border/60 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-theme-text-muted flex items-center gap-1">
+                      <Filter size={14} /> Stage:
+                    </span>
+                    <select
+                      value={followupStageFilter}
+                      onChange={(e) => setFollowupStageFilter(e.target.value)}
+                      className="rounded-2xl border border-theme-border bg-theme-bg-alt px-3 py-2 text-xs font-bold text-theme-text outline-none focus:border-blue-500"
+                    >
+                      <option value="ALL">All Stages</option>
+                      <option value="New">New Leads</option>
+                      <option value="Interaction">Interaction</option>
+                      <option value="Proposal Sent">Proposal Sent</option>
+                      <option value="Negotiation">Negotiation</option>
+                      <option value="Converted">Converted</option>
+                      <option value="Lost">Lost</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Followups Items List */}
+              {filteredExecutiveFollowups.length === 0 ? (
+                <div className="p-12 text-center text-theme-text-muted space-y-2">
+                  <Calendar size={36} className="mx-auto text-theme-text-muted opacity-40" />
+                  <h3 className="text-sm font-extrabold text-theme-text">No Follow-ups Scheduled</h3>
+                  <p className="text-xs">No follow-ups found for this executive matching the current filters.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-theme-border/50">
+                  {filteredExecutiveFollowups.map((f) => {
+                    const isOverdue = f.isOverdue || f.status === 'OVERDUE' || f.status === 'MISSED';
+                    return (
+                      <div
+                        key={f.id}
+                        className={`p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all hover:bg-theme-bg-alt/30 ${
+                          isOverdue ? 'bg-rose-500/5' : ''
+                        }`}
+                      >
+                        {/* Details */}
+                        <div className="space-y-1.5 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3
+                              onClick={() => {
+                                setSelectedLeadId(f.leadId);
+                                setIsPanelOpen(true);
+                              }}
+                              className="text-sm font-black text-theme-text cursor-pointer hover:text-theme-primary hover:underline flex items-center gap-1.5"
+                            >
+                              {f.leadName}
+                            </h3>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-theme-bg-alt border text-theme-text border-theme-border/60">
+                              Stage: {f.leadStage || 'Interaction'}
+                            </span>
+                            {isOverdue ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1">
+                                <AlertCircle size={11} /> Overdue
+                              </span>
+                            ) : f.status === 'COMPLETED' ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+                                <CheckCircle2 size={11} /> Completed
+                              </span>
+                            ) : f.status === 'CANCELLED' ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-gray-500/10 text-gray-500 border border-gray-500/20 flex items-center gap-1">
+                                <Ban size={11} /> Cancelled
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
+                                <Clock size={11} /> Scheduled
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-4 text-xs font-semibold text-theme-text-muted flex-wrap">
+                            <div className="flex items-center gap-1 text-blue-500 font-bold">
+                              <Clock size={13} />
+                              <span>{new Date(f.scheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <span className="px-1.5 py-0.2 rounded bg-theme-bg-alt border border-theme-border text-[10px] font-extrabold uppercase text-theme-text">
+                              {f.type || 'CALL'}
+                            </span>
+                            {f.leadPhone && (
+                              <div className="flex items-center gap-1">
+                                <Phone size={12} /> {f.leadPhone}
+                              </div>
+                            )}
+                            {f.leadEmail && (
+                              <div className="flex items-center gap-1">
+                                <Mail size={12} /> {f.leadEmail}
+                              </div>
+                            )}
+                          </div>
+
+                          {f.notes && (
+                            <p className="text-xs text-theme-text italic bg-theme-bg-alt/60 p-2.5 rounded-xl border border-theme-border/40 inline-block">
+                              "{f.notes}"
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {f.status !== 'COMPLETED' && f.status !== 'CANCELLED' && (
+                            <>
+                              <button
+                                onClick={() => handleCompleteFollowup(f.id)}
+                                title="Mark completed"
+                                className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 transition-all text-xs font-bold flex items-center gap-1"
+                              >
+                                <CheckCircle2 size={14} /> Done
+                              </button>
+                              <button
+                                onClick={() => handleCancelFollowup(f.id)}
+                                title="Cancel follow-up"
+                                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 transition-all text-xs font-bold"
+                              >
+                                <Ban size={14} />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSelectedLeadId(f.leadId);
+                              setIsPanelOpen(true);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-bold shadow-sm transition-all"
+                          >
+                            <Sparkles size={13} /> Work on Lead
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
+    </>
+  )}
 
       {/* Full Screen Work Details Side Panel Drawer */}
       <WorkDetailsPanel
@@ -974,6 +1565,26 @@ export default function MyWork() {
         startDate={searchParams.get('startDate') || undefined}
         endDate={searchParams.get('endDate') || undefined}
       />
+
+      {/* Follow-up Scheduling Modal */}
+      {showScheduleModal && modalLead && (
+        <FollowUpModal
+          isOpen={showScheduleModal}
+          onClose={() => {
+            setShowScheduleModal(false);
+            setModalLead(null);
+          }}
+          leadId={modalLead.id}
+          leadName={modalLead.name}
+          leadStage={modalLead.stage}
+          assignedUserId={modalLead.assignedUserId || activeExecutive?.id || currentUser?.id}
+          onSuccess={() => {
+            fetchMyWorkLeads();
+            setFollowupSuccessMsg('Follow-up scheduled successfully!');
+            setTimeout(() => setFollowupSuccessMsg(''), 3000);
+          }}
+        />
+      )}
 
     </div>
   );

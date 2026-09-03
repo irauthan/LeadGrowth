@@ -76,7 +76,6 @@ export default function Sidebar() {
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
     { name: 'Notifications', icon: Bell, path: '/notifications-page' },
-    { name: 'Follow-ups', icon: Clock, path: '/followups' },
     { name: 'Activity Logs', icon: History, path: '/activity-logs' },
     { name: 'SaaS Billing', icon: CreditCard, path: '/billing' },
   ];
@@ -96,7 +95,9 @@ export default function Sidebar() {
   ];
 
   const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
-  const restrictedPaths = isUserOnly ? ['/billing', '/users', '/admin/users', '/activity-logs'] : (!isAdmin ? ['/billing'] : []);
+  const restrictedPaths = isUserOnly 
+    ? ['/billing', '/users', '/admin/users', '/activity-logs'] 
+    : (isAdmin || isManager ? ['/followups', ...(!isAdmin ? ['/billing'] : [])] : (!isAdmin ? ['/billing'] : []));
   
   const filterMenuItems = (menu: any[]) => {
     return menu.filter(item => {

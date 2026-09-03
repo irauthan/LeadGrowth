@@ -29,6 +29,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/audit-logs': 'Hoossh Lead Growth | Audit Logs'
 };
 
+import ErrorBoundary from '../components/ErrorBoundary';
+
 export default function MainLayout() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
@@ -87,7 +89,9 @@ export default function MainLayout() {
       <div className={`flex flex-col min-h-screen max-w-full overflow-x-hidden transition-all duration-300 ${getMainDesktopPadding()}`}>
         <Navbar />
         <main className={`flex-1 max-w-full ${isFullScreen ? 'p-0 overflow-hidden flex flex-col' : 'overflow-x-hidden px-4 sm:px-8 py-6'} ${getMainContentPadding()}`}>
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
       <MobileBottomNav />

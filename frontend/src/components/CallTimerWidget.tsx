@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PhoneCall, Square, Play, X, Timer } from 'lucide-react';
+import { PhoneCall, Square, Play, Timer, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import type { CallSession } from '../types';
 
@@ -19,8 +19,6 @@ export default function CallTimerWidget({
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-  const [showEndModal, setShowEndModal] = useState<boolean>(false);
-  const [callNotes, setCallNotes] = useState<string>('');
   const [submittingEnd, setSubmittingEnd] = useState<boolean>(false);
 
   useEffect(() => {
@@ -71,18 +69,15 @@ export default function CallTimerWidget({
     }
   };
 
-  const handleEndCallSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeCall) return;
+  const handleEndCall = async () => {
+    if (!activeCall || submittingEnd) return;
     setSubmittingEnd(true);
     try {
       await api.post('/api/calls/end', {
         callId: activeCall.id,
-        notes: callNotes
+        notes: ''
       });
       setActiveCall(null);
-      setShowEndModal(false);
-      setCallNotes('');
       if (onCallEnded) onCallEnded();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to end call session.');
@@ -145,10 +140,19 @@ export default function CallTimerWidget({
 
           <button
             type="button"
-            onClick={() => setShowEndModal(true)}
-            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-extrabold rounded-xl shadow-md transition-all cursor-pointer"
+            onClick={handleEndCall}
+            disabled={submittingEnd}
+            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-extrabold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
-            <Square size={13} fill="currentColor" /> End Call Session
+            {submittingEnd ? (
+              <>
+                <Loader2 size={13} className="animate-spin" /> Ending Call...
+              </>
+            ) : (
+              <>
+                <Square size={13} fill="currentColor" /> End Call Session
+              </>
+            )}
           </button>
         </div>
       ) : (
@@ -158,63 +162,16 @@ export default function CallTimerWidget({
           disabled={loading}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
         >
-          <Play size={14} fill="currentColor" /> Start Call Session
+          {loading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" /> Starting...
+            </>
+          ) : (
+            <>
+              <Play size={14} fill="currentColor" /> Start Call Session
+            </>
+          )}
         </button>
-      )}
-
-      {/* END CALL MODAL */}
-      {showEndModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-theme-card border border-theme-border rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-theme-border pb-3">
-              <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
-                <Square size={16} className="text-rose-500" /> Complete Call Session
-              </h3>
-              <button onClick={() => setShowEndModal(false)} className="text-theme-text-muted hover:text-theme-text">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="bg-theme-bg-alt p-3 rounded-2xl border border-theme-border/60 text-xs font-bold text-theme-text space-y-1">
-              <div className="flex justify-between">
-                <span className="text-theme-text-muted">Total Session Duration:</span>
-                <span className="text-rose-500 font-mono font-black">{formatHHMMSS(elapsedSeconds)}</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleEndCallSubmit} className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-theme-text-muted block mb-1">
-                  Call Summary Notes / Key Takeaways
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="e.g. Client requested revised pricing details, agreed to schedule follow-up meeting on Friday..."
-                  value={callNotes}
-                  onChange={(e) => setCallNotes(e.target.value)}
-                  className="w-full bg-theme-bg border border-theme-border rounded-xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary font-medium"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEndModal(false)}
-                  className="px-4 py-2 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold text-theme-text-muted hover:text-theme-text"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingEnd}
-                  className="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-extrabold shadow-md disabled:opacity-50"
-                >
-                  {submittingEnd ? 'Saving Call Session...' : 'Save & Complete Call'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
     </div>
   );

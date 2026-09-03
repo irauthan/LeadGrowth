@@ -1503,14 +1503,10 @@ public class LeadService : ILeadService
             lead.Status = "Negotiation";
             if (string.IsNullOrEmpty(lead.ProposalStatus)) lead.ProposalStatus = "NEGOTIATING";
         }
-        else if ("CLOSING".Equals(activityKey))
+        else if ("CLOSING".Equals(activityKey) || "PAYMENT_FOLLOWUP".Equals(activityKey))
         {
             lead.Status = "Converted";
             lead.ProposalStatus = "ACCEPTED";
-        }
-        else if ("PAYMENT_FOLLOWUP".Equals(activityKey))
-        {
-            lead.Status = "Payment Completed";
         }
         else if ("LEAD_LOST".Equals(activityKey, StringComparison.OrdinalIgnoreCase) || "LOST".Equals(activityKey, StringComparison.OrdinalIgnoreCase))
         {
@@ -1620,9 +1616,6 @@ public class LeadService : ILeadService
                         break;
                     case "NEGOTIATION":
                         counts["pendingNegotiation"]++;
-                        break;
-                    case "PAYMENT_FOLLOWUP":
-                        counts["pendingPayment"]++;
                         break;
                 }
             }
@@ -1839,7 +1832,6 @@ public class LeadService : ILeadService
                 new SalesActivity { LeadId = lead.Id, ActivityName = "PROPOSAL_SENT", Title = "Proposal Sent", Status = "PENDING" },
                 new SalesActivity { LeadId = lead.Id, ActivityName = "NEGOTIATION", Title = "Negotiation", Status = "PENDING" },
                 new SalesActivity { LeadId = lead.Id, ActivityName = "CLOSING", Title = "Closing", Status = "PENDING" },
-                new SalesActivity { LeadId = lead.Id, ActivityName = "PAYMENT_FOLLOWUP", Title = "Payment Follow-up", Status = "PENDING" },
                 new SalesActivity { LeadId = lead.Id, ActivityName = "LEAD_LOST", Title = "Lead Lost / Dropped", Status = "PENDING" }
             };
             _context.SalesActivities.AddRange(defaults);
@@ -2011,8 +2003,7 @@ public class LeadService : ILeadService
         if (normalized is "DEMO" or "DEMOSCHEDULED" or "DEMO_SCHEDULED") return "DEMO_SCHEDULED";
         if (normalized is "PROPOSAL" or "PROPOSALSENT" or "PROPOSAL_SENT") return "PROPOSAL_SENT";
         if (normalized is "NEGOTIATION") return "NEGOTIATION";
-        if (normalized is "CLOSING" or "CONVERTED") return "CLOSING";
-        if (normalized is "PAYMENT" or "PAYMENT_COMPLETED" or "PAYMENT_FOLLOWUP") return "PAYMENT_FOLLOWUP";
+        if (normalized is "CLOSING" or "CONVERTED" or "PAYMENT" or "PAYMENT_COMPLETED" or "PAYMENT_FOLLOWUP") return "CLOSING";
         if (normalized is "LEAD_LOST" or "LOST" or "DROP" or "DROPPED") return "LEAD_LOST";
         return normalized;
     }
@@ -2025,7 +2016,6 @@ public class LeadService : ILeadService
         ("PROPOSAL_SENT", "Proposal Sent"),
         ("NEGOTIATION", "Negotiation"),
         ("CLOSING", "Closing"),
-        ("PAYMENT_FOLLOWUP", "Payment Follow-up"),
         ("LEAD_LOST", "Lead Lost / Dropped")
     };
 
@@ -2079,7 +2069,15 @@ public class LeadService : ILeadService
             followupsByLead.TryGetValue(lead.Id, out var followup);
 
             var activityDtos = new List<SalesActivityDto>();
-            var activityMap = leadActivities.ToDictionary(a => NormalizeActivityKey(a.ActivityName), a => a, StringComparer.OrdinalIgnoreCase);
+            var activityMap = new Dictionary<string, SalesActivity>(StringComparer.OrdinalIgnoreCase);
+            foreach (var actRow in leadActivities)
+            {
+                var normKey = NormalizeActivityKey(actRow.ActivityName);
+                if (!activityMap.ContainsKey(normKey))
+                {
+                    activityMap[normKey] = actRow;
+                }
+            }
 
             foreach (var (key, title) in StandardWorkflowStages)
             {
@@ -2183,7 +2181,15 @@ public class LeadService : ILeadService
                 .OrderBy(l => l.CreatedAt)
                 .ToListAsync();
 
-            var activityMap = activities.ToDictionary(a => NormalizeActivityKey(a.ActivityName), a => a, StringComparer.OrdinalIgnoreCase);
+            var activityMap = new Dictionary<string, SalesActivity>(StringComparer.OrdinalIgnoreCase);
+            foreach (var actRow in activities)
+            {
+                var normKey = NormalizeActivityKey(actRow.ActivityName);
+                if (!activityMap.ContainsKey(normKey))
+                {
+                    activityMap[normKey] = actRow;
+                }
+            }
 
             foreach (var (key, title) in StandardWorkflowStages)
             {

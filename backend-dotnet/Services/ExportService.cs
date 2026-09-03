@@ -199,58 +199,120 @@ public class ExportService : IExportService
 
     public byte[] ExportLeadsToPdf(List<LeadDto> leads, string workspaceName)
     {
+        var newCount = leads.Count(l => (l.Status ?? "New").Equals("New", StringComparison.OrdinalIgnoreCase));
+        var interactionCount = leads.Count(l => (l.Status ?? "").Equals("Interaction", StringComparison.OrdinalIgnoreCase));
+        var proposalCount = leads.Count(l => (l.Status ?? "").Equals("Proposal Sent", StringComparison.OrdinalIgnoreCase) || (l.Status ?? "").Equals("Proposal", StringComparison.OrdinalIgnoreCase));
+        var negotiationCount = leads.Count(l => (l.Status ?? "").Equals("Negotiation", StringComparison.OrdinalIgnoreCase));
+        var wonCount = leads.Count(l => (l.Status ?? "").Equals("Converted", StringComparison.OrdinalIgnoreCase) || (l.Status ?? "").Equals("Won", StringComparison.OrdinalIgnoreCase));
+        var lostCount = leads.Count(l => (l.Status ?? "").Equals("Lost", StringComparison.OrdinalIgnoreCase));
+
         var document = Document.Create(container =>
         {
             container.Page(page =>
             {
                 page.Size(PageSizes.A4.Landscape());
-                page.Margin(20);
+                page.Margin(24);
                 page.PageColor(Colors.White);
-                page.DefaultTextStyle(x => x.FontSize(10));
+                page.DefaultTextStyle(x => x.FontSize(9).FontFamily(Fonts.Arial));
 
-                page.Header().Text($"{workspaceName} — Lead Portfolio Report")
-                    .SemiBold().FontSize(16).FontColor(Colors.Indigo.Darken2);
+                page.Header().Column(col =>
+                {
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().Column(titleCol =>
+                        {
+                            titleCol.Item().Text($"{workspaceName} — Pipeline & Leads Report")
+                                .Bold().FontSize(16).FontColor(Colors.Blue.Darken3);
+                            titleCol.Item().Text($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC • Total Portfolio: {leads.Count} Leads")
+                                .FontSize(9).FontColor(Colors.Grey.Darken1);
+                        });
+                    });
 
-                page.Content().PaddingVertical(10).Table(table =>
+                    // Stage-wise Executive Summary Cards
+                    col.Item().PaddingTop(8).PaddingBottom(8).Row(row =>
+                    {
+                        row.Spacing(6);
+                        row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(6).Column(c =>
+                        {
+                            c.Item().Text("NEW LEADS").FontSize(7).Bold().FontColor(Colors.Blue.Darken2);
+                            c.Item().Text($"{newCount}").FontSize(12).Bold().FontColor(Colors.Blue.Darken3);
+                        });
+                        row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(6).Column(c =>
+                        {
+                            c.Item().Text("INTERACTION").FontSize(7).Bold().FontColor(Colors.Purple.Darken2);
+                            c.Item().Text($"{interactionCount}").FontSize(12).Bold().FontColor(Colors.Purple.Darken3);
+                        });
+                        row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(6).Column(c =>
+                        {
+                            c.Item().Text("PROPOSALS").FontSize(7).Bold().FontColor(Colors.Cyan.Darken2);
+                            c.Item().Text($"{proposalCount}").FontSize(12).Bold().FontColor(Colors.Cyan.Darken3);
+                        });
+                        row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(6).Column(c =>
+                        {
+                            c.Item().Text("NEGOTIATION").FontSize(7).Bold().FontColor(Colors.Orange.Darken2);
+                            c.Item().Text($"{negotiationCount}").FontSize(12).Bold().FontColor(Colors.Orange.Darken3);
+                        });
+                        row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(6).Column(c =>
+                        {
+                            c.Item().Text("CONVERTED WON").FontSize(7).Bold().FontColor(Colors.Green.Darken2);
+                            c.Item().Text($"{wonCount}").FontSize(12).Bold().FontColor(Colors.Green.Darken3);
+                        });
+                        row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(6).Column(c =>
+                        {
+                            c.Item().Text("LOST / CLOSED").FontSize(7).Bold().FontColor(Colors.Red.Darken2);
+                            c.Item().Text($"{lostCount}").FontSize(12).Bold().FontColor(Colors.Red.Darken3);
+                        });
+                    });
+                });
+
+                page.Content().PaddingTop(4).Table(table =>
                 {
                     table.ColumnsDefinition(columns =>
                     {
-                        columns.ConstantColumn(30);
-                        columns.RelativeColumn(2);
-                        columns.RelativeColumn(2);
-                        columns.RelativeColumn(1.5f);
-                        columns.RelativeColumn(1.5f);
-                        columns.RelativeColumn(1.5f);
-                        columns.RelativeColumn(2);
+                        columns.ConstantColumn(36);
+                        columns.RelativeColumn(2.2f);
+                        columns.RelativeColumn(2.2f);
+                        columns.RelativeColumn(1.8f);
+                        columns.RelativeColumn(1.6f);
+                        columns.RelativeColumn(1.2f);
+                        columns.RelativeColumn(1.4f);
+                        columns.RelativeColumn(2f);
                     });
 
                     table.Header(header =>
                     {
-                        header.Cell().Text("ID").Bold();
-                        header.Cell().Text("Name").Bold();
-                        header.Cell().Text("Email").Bold();
-                        header.Cell().Text("Status").Bold();
-                        header.Cell().Text("Priority").Bold();
-                        header.Cell().Text("Score").Bold();
-                        header.Cell().Text("Assigned Rep").Bold();
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(5).Text("#ID").Bold().FontColor(Colors.White);
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(5).Text("Lead Name").Bold().FontColor(Colors.White);
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(5).Text("Email / Contact").Bold().FontColor(Colors.White);
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(5).Text("Company").Bold().FontColor(Colors.White);
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(5).Text("Stage Status").Bold().FontColor(Colors.White);
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(5).Text("Priority").Bold().FontColor(Colors.White);
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(5).Text("Quality").Bold().FontColor(Colors.White);
+                        header.Cell().Background(Colors.Blue.Darken3).Padding(5).Text("Assigned Rep").Bold().FontColor(Colors.White);
                     });
 
-                    foreach (var l in leads)
+                    for (int i = 0; i < leads.Count; i++)
                     {
-                        table.Cell().Text(l.Id.ToString());
-                        table.Cell().Text(l.Name);
-                        table.Cell().Text(l.Email);
-                        table.Cell().Text(l.Status ?? "New");
-                        table.Cell().Text(l.Priority ?? "MEDIUM");
-                        table.Cell().Text($"{l.QualityScore ?? 75} ({l.QualityTier ?? "WARM"})");
-                        table.Cell().Text(l.AssignedToName ?? "Unassigned");
+                        var l = leads[i];
+                        var bg = i % 2 == 0 ? Colors.White : Colors.Grey.Lighten4;
+
+                        table.Cell().Background(bg).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(l.Id.ToString()).FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(l.Name).Bold().FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(l.Email).FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(l.Company ?? "—").FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(l.Status ?? "New").FontSize(8).Bold();
+                        table.Cell().Background(bg).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(l.Priority ?? "MEDIUM").FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text($"{l.QualityTier ?? "WARM"} ({l.QualityScore ?? 75})").FontSize(8);
+                        table.Cell().Background(bg).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).Text(l.AssignedToName ?? "Unassigned").FontSize(8);
                     }
                 });
 
                 page.Footer().AlignCenter().Text(x =>
                 {
-                    x.Span("Page ");
+                    x.Span("Hoossh Lead Growth Enterprise CRM • Page ");
                     x.CurrentPageNumber();
+                    x.Span(" of ");
+                    x.TotalPages();
                 });
             });
         });
@@ -270,26 +332,89 @@ public class ExportService : IExportService
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
-                page.Margin(20);
+                page.Margin(24);
                 page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily(Fonts.Arial));
 
-                page.Header().Text($"Lead Dossier #{leadId}: {lead?.Name ?? "Lead Record"}")
-                    .Bold().FontSize(18).FontColor(Colors.Blue.Darken3);
+                page.Header().Column(headerCol =>
+                {
+                    headerCol.Item().Row(r =>
+                    {
+                        r.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text($"Lead Dossier: {lead?.Name ?? "Lead Record"}")
+                                .Bold().FontSize(18).FontColor(Colors.Blue.Darken3);
+                            c.Item().Text($"Lead ID #{leadId} • Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC")
+                                .FontSize(9).FontColor(Colors.Grey.Darken1);
+                        });
+                        r.AutoItem().Border(1).BorderColor(Colors.Blue.Lighten3).Background(Colors.Blue.Lighten5).Padding(6).Text(lead?.Status ?? "NEW")
+                            .Bold().FontSize(12).FontColor(Colors.Blue.Darken3);
+                    });
+                    headerCol.Item().PaddingTop(8).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+                });
 
                 page.Content().PaddingVertical(10).Column(column =>
                 {
-                    column.Item().Text($"Name: {lead?.Name}");
-                    column.Item().Text($"Email: {lead?.Email}");
-                    column.Item().Text($"Phone: {lead?.Phone ?? "N/A"}");
-                    column.Item().Text($"Company: {lead?.Company ?? "N/A"}");
-                    column.Item().Text($"Status: {lead?.Status ?? "New"}");
-                    column.Item().Text($"Priority: {lead?.Priority ?? "MEDIUM"}");
-                    column.Item().Text($"Assigned Rep: {lead?.AssignedTo?.FullName ?? "Unassigned"}");
-                    column.Item().Text($"Quality Tier: {lead?.QualityTier ?? "WARM"} ({lead?.QualityScore ?? 75} pts)");
-                    column.Item().Text($"Client Notes: {lead?.ClientNotes ?? "None"}");
+                    column.Spacing(12);
+
+                    // Section 1: Contact Information Box
+                    column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten5).Padding(10).Column(contactCol =>
+                    {
+                        contactCol.Item().Text("PRIMARY CONTACT INFORMATION").Bold().FontSize(9).FontColor(Colors.Blue.Darken2);
+                        contactCol.Item().PaddingTop(4).Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                            });
+
+                            table.Cell().PaddingVertical(2).Text($"Full Name: {lead?.Name ?? "N/A"}").Bold();
+                            table.Cell().PaddingVertical(2).Text($"Email Address: {lead?.Email ?? "N/A"}");
+                            table.Cell().PaddingVertical(2).Text($"Phone Number: {lead?.Phone ?? "N/A"}");
+                            table.Cell().PaddingVertical(2).Text($"Company: {lead?.Company ?? "N/A"}");
+                            table.Cell().PaddingVertical(2).Text($"Location: {lead?.Location ?? "N/A"}");
+                            table.Cell().PaddingVertical(2).Text($"Source Platform: {lead?.SourcePlatform ?? "Meta Ads"}");
+                        });
+                    });
+
+                    // Section 2: Pipeline & Quality Intelligence
+                    column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten5).Padding(10).Column(pipelineCol =>
+                    {
+                        pipelineCol.Item().Text("SALES PIPELINE & ASSIGNMENT INTELLIGENCE").Bold().FontSize(9).FontColor(Colors.Blue.Darken2);
+                        pipelineCol.Item().PaddingTop(4).Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                            });
+
+                            table.Cell().PaddingVertical(2).Text($"Current Stage: {lead?.Status ?? "New"}").Bold();
+                            table.Cell().PaddingVertical(2).Text($"Priority Level: {lead?.Priority ?? "MEDIUM"}");
+                            table.Cell().PaddingVertical(2).Text($"Assigned Sales Rep: {lead?.AssignedTo?.FullName ?? "Unassigned"}").Bold();
+                            table.Cell().PaddingVertical(2).Text($"Quality Tier: {lead?.QualityTier ?? "WARM"} ({lead?.QualityScore ?? 75} pts)");
+                            table.Cell().PaddingVertical(2).Text($"Conversion Probability: {((lead?.ConversionProbability ?? 0.45) * 100):F1}%");
+                            table.Cell().PaddingVertical(2).Text($"Workflow Progress: {lead?.ProgressPercentage ?? 0}%");
+                        });
+                    });
+
+                    // Section 3: Notes & Discussion Summary
+                    column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten5).Padding(10).Column(notesCol =>
+                    {
+                        notesCol.Item().Text("CLIENT NOTES & DISCUSSION LOGS").Bold().FontSize(9).FontColor(Colors.Blue.Darken2);
+                        notesCol.Item().PaddingTop(4).Text(string.IsNullOrWhiteSpace(lead?.ClientNotes) ? "No detailed notes recorded for this lead yet." : lead.ClientNotes)
+                            .FontSize(9).FontColor(Colors.Grey.Darken3);
+                    });
                 });
 
-                page.Footer().AlignRight().Text($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                page.Footer().AlignCenter().Text(x =>
+                {
+                    x.Span("Hoossh Lead Growth • Confidential CRM Record • Page ");
+                    x.CurrentPageNumber();
+                    x.Span(" of ");
+                    x.TotalPages();
+                });
             });
         });
 

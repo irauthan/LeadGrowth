@@ -180,6 +180,7 @@ export default function WorkDetailsPanel({
   const [assignSuccessMsg, setAssignSuccessMsg] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('');
   const [clientNotes, setClientNotes] = useState('');
@@ -634,11 +635,27 @@ export default function WorkDetailsPanel({
 
           {lead && (
             <button
-              onClick={() => downloadSingleLeadPdf(lead)}
-              title="Export Lead PDF"
-              className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-theme-primary transition-all"
+              onClick={async () => {
+                if (!lead?.id || isDownloadingPdf) return;
+                setIsDownloadingPdf(true);
+                try {
+                  await downloadSingleLeadPdf(lead.id);
+                } catch (err) {
+                  console.error('Failed to download lead PDF:', err);
+                  alert('Unable to generate Lead PDF. Please try again.');
+                } finally {
+                  setIsDownloadingPdf(false);
+                }
+              }}
+              disabled={isDownloadingPdf}
+              title="Export Complete Lead Dossier (PDF)"
+              className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-primary hover:border-theme-primary transition-all disabled:opacity-50"
             >
-              <Download size={16} />
+              {isDownloadingPdf ? (
+                <Loader2 size={16} className="animate-spin text-theme-primary" />
+              ) : (
+                <Download size={16} />
+              )}
             </button>
           )}
 
@@ -1789,7 +1806,7 @@ export default function WorkDetailsPanel({
                 </p>
 
                 <form onSubmit={handleCompleteStepSubmit} className="space-y-4">
-                  {(completeModalStepKey === 'PROPOSAL_SENT' || completeModalStepKey === 'NEGOTIATION' || completeModalStepKey === 'CLOSING' || completeModalStepKey === 'PAYMENT_FOLLOWUP') && (
+                  {(completeModalStepKey === 'PROPOSAL_SENT' || completeModalStepKey === 'NEGOTIATION' || completeModalStepKey === 'CLOSING') && (
                     <div>
                       <label className="text-[10px] font-bold text-theme-text-muted block mb-1">
                         {completeModalStepKey === 'PROPOSAL_SENT' ? 'Proposal Amount (₹)' : 'Negotiated / Agreed Deal Value (₹)'}

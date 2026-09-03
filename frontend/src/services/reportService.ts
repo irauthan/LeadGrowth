@@ -56,8 +56,16 @@ export const downloadReport = async (
   }
 };
 
-export const downloadSingleLeadPdf = async (leadId: number): Promise<void> => {
+export const downloadSingleLeadPdf = async (leadInput: number | any): Promise<void> => {
   try {
+    const leadId = typeof leadInput === 'object' && leadInput !== null
+      ? (leadInput.id || leadInput.leadId || leadInput._id)
+      : leadInput;
+
+    if (!leadId) {
+      throw new Error('Valid Lead ID is required for PDF export');
+    }
+
     const response = await api.get(`/api/reports/leads/${leadId}/pdf`, {
       responseType: 'blob',
     });
@@ -71,7 +79,7 @@ export const downloadSingleLeadPdf = async (leadId: number): Promise<void> => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(blobUrl);
   } catch (error) {
-    console.error(`Failed to download lead ${leadId} PDF report:`, error);
+    console.error(`Failed to download lead PDF report:`, error);
     throw error;
   }
 };

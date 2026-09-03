@@ -28,23 +28,19 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
 
         bool isPrivileged = actor.Roles.Any(r => r.Name == "ROLE_ADMIN" || r.Name == "ROLE_MANAGER");
         
-        // Regular executives (ROLE_USER) can only view their own monitoring data
-        long targetUserId;
-        if (!isPrivileged)
-        {
-            targetUserId = actor.Id;
-        }
-        else
-        {
-            targetUserId = (userId.HasValue && userId.Value > 0) ? userId.Value : actor.Id;
-        }
+        bool isTeamView = isPrivileged && (!userId.HasValue || userId.Value <= 0);
+        long targetUserId = (!isPrivileged) ? actor.Id : (userId.HasValue ? userId.Value : 0);
 
-        var targetUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == targetUserId && u.WorkspaceId == actor.WorkspaceId);
-            
-        if (targetUser == null)
+        User? targetUser = null;
+        if (!isTeamView)
         {
-            throw new KeyNotFoundException("Target executive not found in workspace");
+            targetUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == targetUserId && u.WorkspaceId == actor.WorkspaceId);
+                
+            if (targetUser == null)
+            {
+                throw new KeyNotFoundException("Target executive not found in workspace");
+            }
         }
 
         // Calculate Date Range based on timeframe
@@ -84,10 +80,21 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
         }
 
         // Base queries
-        var callsQuery = _context.CallHistories.Where(c => c.UserId == targetUserId);
-        var tasksQuery = _context.Tasks.Where(t => t.AssignedToId == targetUserId);
-        var activitiesQuery = _context.SalesActivityLogs.Where(a => a.LoggedById == targetUserId);
-        var leadHistoriesQuery = _context.LeadHistories.Where(h => h.PerformedById == targetUserId);
+        var callsQuery = isTeamView
+            ? _context.CallHistories.Where(c => c.WorkspaceId == actor.WorkspaceId)
+            : _context.CallHistories.Where(c => c.UserId == targetUserId);
+
+        var tasksQuery = isTeamView
+            ? _context.Tasks.Where(t => t.WorkspaceId == actor.WorkspaceId)
+            : _context.Tasks.Where(t => t.AssignedToId == targetUserId);
+
+        var activitiesQuery = isTeamView
+            ? _context.SalesActivityLogs.Where(a => a.Lead != null && a.Lead.WorkspaceId == actor.WorkspaceId)
+            : _context.SalesActivityLogs.Where(a => a.LoggedById == targetUserId);
+
+        var leadHistoriesQuery = isTeamView
+            ? _context.LeadHistories.Where(h => h.Lead != null && h.Lead.WorkspaceId == actor.WorkspaceId)
+            : _context.LeadHistories.Where(h => h.PerformedById == targetUserId);
 
         if (filterStart.HasValue)
         {
@@ -108,8 +115,14 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
         var tasks = await tasksQuery.ToListAsync();
 
         var callsCount = calls.Count;
-        var totalAssignedLeads = await _context.Leads.CountAsync(l => l.AssignedToId == targetUserId && l.WorkspaceId == actor.WorkspaceId);
-        var convertedLeads = await _context.Leads.CountAsync(l => l.AssignedToId == targetUserId && l.WorkspaceId == actor.WorkspaceId && (l.Status == "CONVERTED" || l.Status == "WON"));
+        var totalAssignedLeads = isTeamView
+            ? await _context.Leads.CountAsync(l => l.WorkspaceId == actor.WorkspaceId)
+            : await _context.Leads.CountAsync(l => l.AssignedToId == targetUserId && l.WorkspaceId == actor.WorkspaceId);
+
+        var convertedLeads = isTeamView
+            ? await _context.Leads.CountAsync(l => l.WorkspaceId == actor.WorkspaceId && (l.Status == "CONVERTED" || l.Status == "WON"))
+            : await _context.Leads.CountAsync(l => l.AssignedToId == targetUserId && l.WorkspaceId == actor.WorkspaceId && (l.Status == "CONVERTED" || l.Status == "WON"));
+
         var completedFollowups = tasks.Count(t => t.Status == "COMPLETED" || t.Status == "APPROVED");
         var overdueFollowups = tasks.Count(t => t.Status == "PENDING" && t.DueDate < DateOnly.FromDateTime(DateTime.UtcNow));
         
@@ -117,31 +130,59 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
         var meetingsCount = activities.Count(a => a.CommunicationType == "MEETING" || a.CommunicationType == "DEMO");
         var whatsappCount = activities.Count(a => a.CommunicationType == "WHATSAPP");
 
-        var leads = await _context.Leads
-            .Where(l => l.AssignedToId == targetUserId && l.WorkspaceId == actor.WorkspaceId)
-            .OrderByDescending(l => l.CreatedAt)
-            .Take(100)
-            .ToListAsync();
+        var leads = isTeamView
+            ? await _context.Leads
+                .Include(l => l.AssignedTo)
+                .Where(l => l.WorkspaceId == actor.WorkspaceId)
+                .OrderByDescending(l => l.CreatedAt)
+                .Take(100)
+                .ToListAsync()
+            : await _context.Leads
+                .Include(l => l.AssignedTo)
+                .Where(l => l.AssignedToId == targetUserId && l.WorkspaceId == actor.WorkspaceId)
+                .OrderByDescending(l => l.CreatedAt)
+                .Take(100)
+                .ToListAsync();
 
-        var allActivityLogs = await _context.SalesActivityLogs
-            .Include(a => a.LoggedBy)
-            .Where(a => a.LoggedById == targetUserId)
-            .OrderByDescending(a => a.CreatedAt)
-            .Take(500)
-            .ToListAsync();
+        var allActivityLogs = isTeamView
+            ? await _context.SalesActivityLogs
+                .Include(a => a.LoggedBy)
+                .Where(a => a.Lead != null && a.Lead.WorkspaceId == actor.WorkspaceId)
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(500)
+                .ToListAsync()
+            : await _context.SalesActivityLogs
+                .Include(a => a.LoggedBy)
+                .Where(a => a.LoggedById == targetUserId)
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(500)
+                .ToListAsync();
 
-        var allFollowups = await _context.FollowupReminders
-            .Where(f => f.AssignedToId == targetUserId || f.WorkspaceId == actor.WorkspaceId)
-            .OrderByDescending(f => f.ScheduledAt)
-            .Take(500)
-            .ToListAsync();
+        var allFollowups = isTeamView
+            ? await _context.FollowupReminders
+                .Where(f => f.WorkspaceId == actor.WorkspaceId)
+                .OrderByDescending(f => f.ScheduledAt)
+                .Take(500)
+                .ToListAsync()
+            : await _context.FollowupReminders
+                .Where(f => (f.AssignedToId == targetUserId || f.WorkspaceId == actor.WorkspaceId))
+                .OrderByDescending(f => f.ScheduledAt)
+                .Take(500)
+                .ToListAsync();
 
-        var allHistories = await _context.LeadHistories
-            .Include(h => h.PerformedBy)
-            .Where(h => h.PerformedById == targetUserId)
-            .OrderByDescending(h => h.Timestamp)
-            .Take(500)
-            .ToListAsync();
+        var allHistories = isTeamView
+            ? await _context.LeadHistories
+                .Include(h => h.PerformedBy)
+                .Where(h => h.Lead != null && h.Lead.WorkspaceId == actor.WorkspaceId)
+                .OrderByDescending(h => h.Timestamp)
+                .Take(500)
+                .ToListAsync()
+            : await _context.LeadHistories
+                .Include(h => h.PerformedBy)
+                .Where(h => h.PerformedById == targetUserId)
+                .OrderByDescending(h => h.Timestamp)
+                .Take(500)
+                .ToListAsync();
 
         var leadWorkList = leads.Select(l =>
         {
@@ -157,8 +198,8 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
                 LeadEmail = l.Email,
                 LeadStatus = l.Status ?? "NEW",
                 Priority = l.Priority ?? "MEDIUM",
-                AssignedToName = targetUser.FullName,
-                AssignedToId = targetUser.Id,
+                AssignedToName = l.AssignedTo?.FullName ?? (targetUser?.FullName ?? "Unassigned"),
+                AssignedToId = l.AssignedToId ?? (targetUser?.Id ?? 0),
                 ActivityCount = leadActivities.Count,
                 TotalActivitiesCount = leadActivities.Count,
                 LastWorkedAt = l.CreatedAt,
@@ -172,7 +213,7 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
                     Duration = a.Duration,
                     Remarks = a.Remarks,
                     CreatedAt = a.CreatedAt,
-                    LoggedByName = a.LoggedBy != null ? a.LoggedBy.FullName : targetUser.FullName
+                    LoggedByName = a.LoggedBy != null ? a.LoggedBy.FullName : (targetUser?.FullName ?? "Executive")
                 }).ToList(),
                 Followups = leadFollowups.Select(f => new ExecutiveFollowupDto
                 {
@@ -221,10 +262,10 @@ public class ExecutiveWorkMonitoringService : IExecutiveWorkMonitoringService
 
         return new ExecutiveWorkSummaryDto
         {
-            UserId = targetUser.Id,
-            UserName = targetUser.FullName,
-            UserEmail = targetUser.Email,
-            UserRole = targetUser.Designation ?? "Executive",
+            UserId = targetUser?.Id ?? 0,
+            UserName = targetUser?.FullName ?? "All Staff & Executive Team Members",
+            UserEmail = targetUser?.Email ?? "Team Aggregation",
+            UserRole = targetUser?.Designation ?? (isTeamView ? "All Team Members" : "Executive"),
             Timeframe = timeframe ?? "THIS_MONTH",
             TotalAssignedLeads = totalAssignedLeads,
             TotalActivitiesLogged = activities.Count,
