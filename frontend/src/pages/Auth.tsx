@@ -311,9 +311,6 @@ export default function Auth() {
           {/* Middle Analytics Cards Showcase */}
           <div className="relative z-10 my-auto space-y-6 max-w-xl">
             <div className="space-y-3">
-              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3.5 py-1 text-xs font-bold text-blue-700">
-                <Zap size={14} className="text-blue-600" /> Streamlined Lead & Team Intelligence
-              </span>
               <h1 className="text-3xl lg:text-4xl font-black tracking-tight leading-tight text-slate-900">
                 Accelerate Sales Pipeline & Team Velocity
               </h1>
