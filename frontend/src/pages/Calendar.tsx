@@ -413,21 +413,6 @@ export default function Calendar() {
   // and the mobile slide-over drawer so the two stay in sync.
   const sidebarContent = (
     <>
-      {/* Floating Create Button */}
-      <div className="relative">
-        <button
-          onClick={() => {
-            openCreateModalWithDate();
-            setIsSidebarOpen(false);
-          }}
-          className="flex items-center gap-3 rounded-full border border-theme-border bg-theme-card px-6 py-3 text-sm font-bold text-theme-text shadow-lg hover:bg-theme-bg-alt transition-all w-max"
-        >
-          <Plus size={22} className="text-blue-600" />
-          <span>Create</span>
-          <ChevronDown size={14} className="text-theme-text-muted ml-1" />
-        </button>
-      </div>
-
       {/* Mini Month Calendar Widget */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
@@ -548,15 +533,7 @@ export default function Calendar() {
             title="Toggle mini calendar and category filters"
           >
             <PanelLeft size={16} />
-            <span className="hidden sm:inline">{isSidebarOpen ? 'Hide Mini Panel' : 'Mini Panel'}</span>
-          </button>
-
-          {/* Today Button */}
-          <button
-            onClick={() => navigateDate('today')}
-            className="shrink-0 rounded-xl border border-theme-border/60 bg-theme-bg-alt px-3 py-1.5 text-xs font-bold text-theme-text hover:bg-theme-card shadow-2xs transition-all"
-          >
-            Today
+            
           </button>
 
           {/* Navigation Arrows */}

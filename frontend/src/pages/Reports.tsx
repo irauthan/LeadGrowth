@@ -249,8 +249,8 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
+      {/* Header Banner with Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-theme-primary/10 text-theme-primary">
@@ -267,28 +267,8 @@ export default function Reports() {
           </p>
         </div>
 
-        {/* System Auto Badge */}
-        <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-extrabold shadow-xs">
-          <Sparkles size={15} />
-          <span>Auto-Generated System Reports</span>
-        </div>
-      </div>
-
-      {/* Dual Filter Controls Bar (Time Filter + User Filter for Admin) */}
-      <div className="p-5 rounded-3xl border border-theme-border bg-theme-card shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <span className="text-xs font-extrabold uppercase tracking-wider text-theme-primary flex items-center gap-1.5">
-            <TrendingUp size={16} /> Dynamic Report Filter Engine
-          </span>
-          <p className="text-[10px] text-theme-text-muted font-semibold">
-            {isManagerOrAdmin && selectedUserId > 0 
-              ? `Filtered for: ${selectedMemberName} • All metrics and downloads are customized for this person`
-              : 'All metrics and downloadable database files update dynamically for the selected filter criteria'}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          
+        {/* Filter Controls Bar (Integrated in Header) */}
+        <div className="flex flex-wrap items-center gap-3">
           {/* Admin User Filter Dropdown */}
           {isManagerOrAdmin && (
             <div className="relative flex items-center">

@@ -12,10 +12,11 @@ export interface DashboardCardConfig {
 
 export const DEFAULT_DASHBOARD_CARDS: DashboardCardConfig[] = [
   { id: 'kpis_summary', label: 'Primary KPI Stat Cards', category: 'All', description: 'Pipeline, Follow-ups, Conversions & Revenue summary cards', enabled: true },
+  { id: 'performance_analytics', label: 'Performance & Conversion Charts', category: 'User', description: 'Interactive conversion funnel, weekly velocity & lead quality matrix charts', enabled: true },
   { id: 'workflow_queue', label: 'Workflow Steps Queue', category: 'User', description: 'Active lead counts across workflow stages (New, Interaction, Proposal, Negotiation, Converted)', enabled: true },
   { id: 'pending_leads', label: 'Pending Assigned Leads', category: 'User', description: 'Lead queue acceptance & pipeline addition list', enabled: true },
   { id: 'today_followups', label: 'Today\'s Follow-up Schedule', category: 'User', description: 'Reminders list for scheduled client touchpoints', enabled: true },
-  { id: 'call_metrics', label: 'Call & Outreach Analytics', category: 'All', description: 'Call logs, talk time & communication summary', enabled: true },
+  { id: 'call_metrics', label: 'Executive Call Duration & Outreach Audit', category: 'Admin', description: 'Call duration logs, talk time & executive effort telemetry', enabled: true },
   { id: 'team_workload', label: 'Team Workload & Smart Scores', category: 'Manager', description: 'Workload distribution & executive scoring metrics', enabled: true },
   { id: 'pipeline_health', label: 'Pipeline Intake & Conversion Funnel', category: 'Manager', description: 'Stage distribution & lead intake breakdown', enabled: true },
   { id: 'unassigned_queue', label: 'Unassigned Queue & Auto-Sweep', category: 'Manager', description: 'Queue monitoring & automated lead distribution', enabled: true },

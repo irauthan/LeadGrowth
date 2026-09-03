@@ -174,13 +174,8 @@ export default function Followups() {
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-theme-card p-6 rounded-3xl border border-theme-border shadow-md">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 text-[10px] font-extrabold uppercase border border-blue-500/20">
-              Enterprise Scheduling Module
-            </span>
-          </div>
-          <h1 className="text-2xl font-extrabold text-theme-text mt-1">Lead Follow-up & Scheduling</h1>
-          <p className="text-xs text-theme-text-muted mt-0.5">
+          <h1 className="text-2xl font-extrabold text-theme-text">Lead Follow-up & Scheduling</h1>
+          <p className="text-xs text-theme-text-muted mt-1">
             Stage-independent follow-ups with conflict detection, 9 AM – 7 PM working hours enforcement, and smart auto-scheduling.
           </p>
         </div>

@@ -5,6 +5,8 @@ import {
   UserCheck, 
   Calendar as CalendarIcon, 
   PhoneCall, 
+  Phone,
+  Radio,
   Video, 
   CheckCircle2, 
   TrendingUp, 
@@ -21,6 +23,7 @@ import {
 } from 'lucide-react';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
+import CallDetailsModal from '../components/CallDetailsModal';
 
 interface DailyBreakdown {
   date: string;
@@ -127,6 +130,8 @@ export default function ExecutiveWorkMonitor() {
   const [endDate, setEndDate] = useState<string>('');
 
   const [summary, setSummary] = useState<ExecutiveWorkSummary | null>(null);
+  const [callAnalytics, setCallAnalytics] = useState<any>(null);
+  const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [leadSearchTerm, setLeadSearchTerm] = useState<string>('');
   const [expandedLeadIds, setExpandedLeadIds] = useState<Record<number, boolean>>({});
@@ -167,8 +172,27 @@ export default function ExecutiveWorkMonitor() {
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
       }
-      const res = await api.get('/api/admin/executive-work', { params });
-      setSummary(res.data);
+
+      let callPeriod = 'monthly';
+      if (timeframe === 'TODAY') callPeriod = 'today';
+      else if (timeframe === 'YESTERDAY') callPeriod = 'yesterday';
+      else if (timeframe === 'THIS_WEEK') callPeriod = 'weekly';
+      else if (timeframe === 'THIS_MONTH') callPeriod = 'monthly';
+
+      const callParams: any = { period: callPeriod };
+      if (selectedUserId > 0) callParams.userId = selectedUserId;
+      if (startDate) callParams.startDate = startDate;
+      if (endDate) callParams.endDate = endDate;
+
+      const [workRes, callRes] = await Promise.all([
+        api.get('/api/admin/executive-work', { params }),
+        selectedUserId > 0 
+          ? api.get('/api/calls/analytics', { params: callParams }).catch(() => ({ data: null }))
+          : api.get('/api/calls/team', { params: callParams }).catch(() => ({ data: null }))
+      ]);
+
+      setSummary(workRes.data);
+      setCallAnalytics(callRes.data);
     } catch (err) {
       console.error('Failed to fetch executive work summary', err);
     } finally {
@@ -221,15 +245,10 @@ export default function ExecutiveWorkMonitor() {
       {/* Header Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 rounded-3xl bg-theme-card border border-theme-border shadow-md">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-extrabold uppercase tracking-wider border border-purple-500/20 flex items-center gap-1">
-              <Sparkles size={12} /> {isPrivileged ? 'Admin Executive Work Monitor' : 'My Performance & Work Monitor'}
-            </span>
-          </div>
-          <h1 className="text-2xl font-extrabold text-theme-text mt-1 font-sans">
+          <h1 className="text-2xl font-extrabold text-theme-text font-sans">
             {isPrivileged ? 'Executive Activity & Lead Work Monitor' : 'My Activity & Lead Performance'}
           </h1>
-          <p className="text-xs text-theme-text-muted mt-0.5">
+          <p className="text-xs text-theme-text-muted mt-1">
             {isPrivileged 
               ? 'Empirical day-wise and month-wise audit tracking of all activities, outreach calls, and step progress for every lead.'
               : 'Track your daily calls, meetings, follow-ups, and lead progress in real-time.'}
@@ -381,6 +400,103 @@ export default function ExecutiveWorkMonitor() {
               <p className="text-[10px] text-theme-text-muted font-semibold">{(summary.conversionRate * 100).toFixed(1)}% Conversion</p>
             </div>
 
+          </div>
+
+          {/* Executive Call Duration Tracking & Effort Productivity Banner (ADMIN / MANAGER MONITOR) */}
+          <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme-border/60 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 font-bold shadow-xs">
+                  <Phone size={18} />
+                </span>
+                <div>
+                  <h3 className="text-base font-extrabold text-theme-text">
+                    Call Duration Tracking & Executive Effort Audit
+                  </h3>
+                  <span className="text-xs text-theme-text-muted mt-0.5 block">
+                    {selectedUserId > 0 ? `Live call effort and session duration for ${summary.userName}` : 'Aggregated team-wide call duration and communication telemetry'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {callAnalytics?.activeCallSession && (
+                  <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[10px] font-black animate-pulse flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                    Active Call Running
+                  </span>
+                )}
+                <button
+                  onClick={() => setIsCallModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 text-xs font-bold transition-all shadow-xs"
+                >
+                  <Eye size={15} />
+                  <span>Inspect Call Session Logs</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <button
+                type="button"
+                onClick={() => setIsCallModalOpen(true)}
+                className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-rose-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-rose-500 transition-colors">Total Call Duration</span>
+                  <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="text-xl font-mono font-black text-rose-500">
+                  {callAnalytics?.todayCallTimeFormatted || callAnalytics?.totalCallTimeFormatted || '00:00:00'}
+                </div>
+                <span className="text-[9px] text-theme-text-muted block">Click to audit all conversations</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsCallModalOpen(true)}
+                className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-cyan-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-cyan-500 transition-colors">Total Calls Count</span>
+                  <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="text-xl font-mono font-black text-cyan-500">
+                  {callAnalytics?.todayCallsCount ?? callAnalytics?.totalCallsCount ?? summary.totalCallsMade} Calls
+                </div>
+                <span className="text-[9px] text-theme-text-muted block">Completed phone outreach</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsCallModalOpen(true)}
+                className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-emerald-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-emerald-500 transition-colors">Avg Call Length</span>
+                  <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="text-xl font-mono font-black text-emerald-500">
+                  {callAnalytics?.avgDurationFormatted || '00:00:00'}
+                </div>
+                <span className="text-[9px] text-theme-text-muted block">Average discussion duration</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsCallModalOpen(true)}
+                className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-amber-500/40 hover:bg-theme-bg-alt transition-all text-left space-y-1 group cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-theme-text-muted uppercase group-hover:text-amber-500 transition-colors">Peak Call Session</span>
+                  <Eye size={12} className="text-theme-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="text-xl font-mono font-black text-amber-500">
+                  {callAnalytics?.longestCallFormatted || '00:00:00'}
+                </div>
+                <span className="text-[9px] text-theme-text-muted block">Longest discussion recorded</span>
+              </button>
+            </div>
           </div>
 
           {/* Day-wise & Month-wise Activity Breakdown Table */}
@@ -749,10 +865,19 @@ export default function ExecutiveWorkMonitor() {
           onClose={() => setLeadDrawerId(null)}
           onLeadUpdated={() => fetchWorkSummary()}
         />
-      )}    
+      )}
 
-
+      {/* Call Details & Audit Logs Modal */}
+      <CallDetailsModal
+        isOpen={isCallModalOpen}
+        onClose={() => setIsCallModalOpen(false)}
+        initialUserId={selectedUserId > 0 ? selectedUserId : undefined}
+        userNameFilter={selectedUserId > 0 ? summary?.userName : 'Team-Wide Audit'}
+        title={selectedUserId > 0 ? `${summary?.userName}'s Call Activity Logs` : 'Team-Wide Call Activity Logs & Audit'}
+        period={timeframe.toLowerCase()}
+        startDate={startDate}
+        endDate={endDate}
+      />
     </div>
-  
   );
 }

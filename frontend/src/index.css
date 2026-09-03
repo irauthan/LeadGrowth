@@ -83,6 +83,23 @@
   --color-theme-primary: var(--color-brand);
   --color-theme-primary-hover: var(--color-brand-hover);
   --color-theme-glow: var(--color-brand-glow);
+
+  --radius-3xl: 0.75rem;
+  --radius-2xl: 0.625rem;
+  --radius-xl: 0.5rem;
+  --radius-lg: 0.375rem;
+  --radius-md: 0.25rem;
+}
+
+/* Modern Crisp Enterprise UI - Sharp & Clean Card Radii */
+.rounded-3xl {
+  border-radius: 0.75rem !important; /* 12px */
+}
+.rounded-2xl {
+  border-radius: 0.5rem !important; /* 8px */
+}
+.rounded-xl {
+  border-radius: 0.375rem !important; /* 6px */
 }
 
 @layer base {
