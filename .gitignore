@@ -35,8 +35,10 @@ backend-dotnet/obj/
 backend-dotnet/publish/
 backend-dotnet/logs/
 backend-dotnet/TestResults/
+backend-dotnet/appsettings.*.json
 backend-dotnet/appsettings.Development.json
 backend-dotnet/appsettings.Local.json
+!backend-dotnet/appsettings.json
 
 # ------------------------------------------
 # User Uploads & Media (Avatars, Attachments)

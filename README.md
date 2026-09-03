@@ -2,26 +2,28 @@
 
 > **Tagline:** "One Dashboard. Every Lead. Complete Growth."
 
-**LeadGrowth** is an enterprise-grade SaaS platform and Lead Management System (LMS) built for performance marketing teams, digital agencies, and sales operations. The platform centralizes multi-platform ad campaign analytics, intelligent lead queues, interactive pipelines, follow-up scheduling, executive work monitoring, and multi-format reporting into a unified web application.
+**LeadGrowth** is an enterprise-grade SaaS platform and Lead Management System (LMS) built for performance marketing teams, digital agencies, and sales operations. The platform centralizes multi-platform ad campaign analytics, intelligent lead queues, interactive pipelines, follow-up scheduling, executive work monitoring, and multi-format reporting into a unified, high-performance web application.
 
 ---
 
-## Table of Contents
+## 📑 Table of Contents
 
 - [Platform Overview](#platform-overview)
 - [Key Features & Modules](#key-features--modules)
 - [Tech Stack](#tech-stack)
 - [System Architecture](#system-architecture)
+- [Security & Git Secrets Protection](#security--git-secrets-protection)
 - [Project Directory Structure](#project-directory-structure)
 - [Role-Based Access Control (RBAC) & Seed Accounts](#role-based-access-control-rbac--seed-accounts)
+- [Database Schema & Architecture](#database-schema--architecture)
 - [Core API Endpoints Index](#core-api-endpoints-index)
 - [Getting Started & Local Setup](#getting-started--local-setup)
-- [Configuration & Environment Variables](#configuration--environment-variables)
+- [Configuration & Environment Files](#configuration--environment-files)
 - [License](#license)
 
 ---
 
-## Platform Overview
+## 🚀 Platform Overview
 
 LeadGrowth bridges the gap between performance marketing spend (Meta Ads, Google Ads) and sales conversion. By capturing incoming ad leads, automatically distributing them to sales representatives, tracking daily calls, tasks, and follow-ups, and delivering real-time executive visibility, LeadGrowth ensures maximum return on ad spend (ROAS).
 
@@ -35,7 +37,7 @@ LeadGrowth bridges the gap between performance marketing spend (Meta Ads, Google
 
 ---
 
-## Key Features & Modules
+## 🌟 Key Features & Modules
 
 ### 1. Campaigns & Ad Analytics Hub (`/campaigns`)
 - **Full-Screen Dedicated Campaign Dashboard:** Detailed breakdown of spend, impressions, clicks, CTR, CPC, CPA, leads, and revenue.
@@ -71,18 +73,18 @@ LeadGrowth bridges the gap between performance marketing spend (Meta Ads, Google
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 ### Frontend Application
 - **Framework & Runtime:** React 19.x, TypeScript 5.x, Vite 6.x
 - **Routing:** React Router v7
 - **State Management:** Zustand 5.x (persisted stores), TanStack React Query 5.x
-- **Styling & UI:** Tailwind CSS 4.x, Glassmorphism design system, Framer Motion 12.x
+- **Styling & UI:** Tailwind CSS 4.x, Crisp Border-First SaaS design system, Framer Motion 12.x
 - **Data Visualization:** Recharts 3.x
 - **Icons:** Lucide React
 - **HTTP Client:** Axios with JWT Bearer interceptors
 
-### Backend API (.NET 10 C# - Primary Active Service)
+### Backend API (.NET 10 / .NET 8 C#)
 - **Framework:** .NET 10.0 / ASP.NET Core Web API
 - **ORM & Data Access:** Entity Framework Core 10.0, Pomelo MySQL Provider
 - **Security:** JWT Bearer Authentication, BCrypt password hashing, Policy-based RBAC
@@ -92,11 +94,21 @@ LeadGrowth bridges the gap between performance marketing spend (Meta Ads, Google
 
 ---
 
-## System Architecture
+## 🔐 Security & Git Secrets Protection
+
+To guarantee that database credentials, passwords, and sensitive API keys are **never pushed to GitHub or public repositories**, LeadGrowth uses a multi-tier configuration architecture:
+
+1. **`appsettings.json` (Tracked in Git):** Contains only generic placeholders (`Password=YOUR_MYSQL_PASSWORD_HERE;`).
+2. **`appsettings.Development.json` (IGNORED in Git):** Stores local development database connection strings and passwords. ASP.NET Core automatically merges this on top of `appsettings.json` in Development mode.
+3. **`.gitignore` Rules:** Excludes all `appsettings.*.json` (except base `appsettings.json`), `.env`, and local credential overrides.
+
+---
+
+## 📐 System Architecture
 
 ```mermaid
 graph TD
-    Client[React 19 + TypeScript Vite SPA] -->|HTTPS REST API| DotNetAPI[ASP.NET Core .NET 10 Web API]
+    Client[React 19 + TypeScript Vite SPA] -->|HTTPS REST API| DotNetAPI[ASP.NET Core Web API]
     Client -->|SignalR / WebSocket| Hubs[SignalR Realtime Hub]
     
     DotNetAPI -->|JWT Authentication & Policy RBAC| Sec[Security Layer]
@@ -108,35 +120,37 @@ graph TD
 
 ---
 
-## Project Directory Structure
+## 📁 Project Directory Structure
 
 ```text
 LeadGrowth/
 ├── README.md                       # Master Documentation
-├── .gitignore                      # Git exclusion rules
-├── backend-dotnet/                 # .NET 10 C# Web API (Primary Backend)
+├── DATABASE_SCHEMA.md              # Complete Database Schema Documentation (37 Tables)
+├── schema.sql                      # Production & Development SQL Database Dump
+├── .gitignore                      # Git exclusion rules for secrets, builds & logs
+├── backend-dotnet/                 # .NET C# Web API (Primary Backend)
 │   ├── Controllers/                # REST Controllers (Auth, Leads, Campaigns, Tasks, Calendar, etc.)
 │   ├── Models/                     # EF Core Database Entities (Campaign, Lead, User, Workspace, etc.)
 │   ├── Data/                       # LeadGrowthDbContext & EF Configurations
-│   ├── Services/                   # Business Logic & Export Handlers
+│   ├── Services/                   # Business Logic, Auto-assignment & Export Handlers
 │   ├── Hubs/                       # SignalR Realtime Notification Hub
 │   ├── Security/                   # JWT & Auth Handlers
 │   ├── Program.cs                  # Web application entrypoint & DI setup
-│   └── appsettings.json            # Database & JWT configurations
-├── frontend/                       # React 19 + TypeScript + Vite SPA
-│   ├── package.json                # Frontend dependencies
-│   ├── vite.config.ts              # Vite server & proxy configuration
-│   └── src/
-│       ├── components/             # Reusable UI components & modals (CampaignDetailView, WorkDetailsPanel, etc.)
-│       ├── pages/                  # Views (Dashboard, Campaigns, Pipelines, Scheduler, Leads, etc.)
-│       ├── services/               # Typed API services (api.ts, campaignService.ts, followUpService.ts)
-│       └── store/                  # Zustand state stores (authStore, layoutStore)
-└── backend/                        # Java Spring Boot Backend (Reference/Legacy)
+│   ├── appsettings.json            # Base configuration template (Placeholders)
+│   └── appsettings.Development.json # Local dev credentials (Git Ignored)
+└── frontend/                       # React 19 + TypeScript + Vite SPA
+    ├── package.json                # Frontend dependencies
+    ├── vite.config.ts              # Vite server & proxy configuration
+    └── src/
+        ├── components/             # Reusable UI components & modals (CampaignDetailView, WorkDetailsPanel, etc.)
+        ├── pages/                  # Views (Dashboard, Campaigns, Pipelines, Scheduler, Leads, etc.)
+        ├── services/               # Typed API services (api.ts, campaignService.ts, followUpService.ts)
+        └── store/                  # Zustand state stores (authStore, layoutStore)
 ```
 
 ---
 
-## Role-Based Access Control (RBAC) & Seed Accounts
+## 👥 Role-Based Access Control (RBAC) & Seed Accounts
 
 LeadGrowth implements strict RBAC across 3 primary roles:
 
@@ -151,9 +165,7 @@ LeadGrowth implements strict RBAC across 3 primary roles:
 | Manage All Assigned Leads & Reassignments | ✅ | ✅ | Assigned only |
 | Personal Pipelines & Daily Follow-ups | ✅ | ✅ | ✅ |
 
-### Default Seed Accounts
-
-Upon initial launch, the backend automatically seeds the database with the following demo credentials:
+### Default Demo Credentials
 
 | Role | Email | Password | Workspace Invite Code |
 |---|---|---|---|
@@ -163,7 +175,15 @@ Upon initial launch, the backend automatically seeds the database with the follo
 
 ---
 
-## Core API Endpoints Index
+## 🗄️ Database Schema & Architecture
+
+The database is built on **MySQL 8.x / InnoDB** and contains **37 tables** covering all SaaS CRM capabilities:
+* Complete documentation is available in [DATABASE_SCHEMA.md](file:///e:/WEB/LeadGrowth/DATABASE_SCHEMA.md).
+* Complete SQL creation script and seed records are available in [schema.sql](file:///e:/WEB/LeadGrowth/schema.sql).
+
+---
+
+## 🌐 Core API Endpoints Index
 
 | Base Route | Description | Key Endpoints |
 |---|---|---|
@@ -177,72 +197,60 @@ Upon initial launch, the backend automatically seeds the database with the follo
 | `/api/calendar` | Interactive Calendar | `GET /events`, `POST /events`, `PUT /events/{id}` |
 | `/api/reports` | Custom Report Builder | `GET /download/campaigns/{format}`, `GET /download/leads/{format}` |
 | `/api/calls` | Call Duration Analytics | `GET /user`, `GET /team`, `POST /log` |
-| `/api/executive-monitoring` | Executive Work Monitoring | `GET /overview`, `GET /agents` |
+| `/api/admin/executive-work` | Executive Work Monitoring | `GET /`, `GET /user-activity` |
 
 ---
 
-## Getting Started & Local Setup
+## 🏁 Getting Started & Local Setup
 
 ### Prerequisites
-- **.NET 10 SDK** (For backend API)
+- **.NET 10 or .NET 8 SDK** (For backend API)
 - **Node.js 18+ & npm** (For frontend SPA)
-- **MySQL 8.0+** (Database service)
+- **MySQL 8.0+** (Local or cloud database service)
 
 ---
 
-### Step 1: Start MySQL Database
-Ensure MySQL is running on `localhost:3306` and create the database:
+### Step 1: Initialize MySQL Database
+Open your MySQL CLI or MySQL Workbench and run:
 ```sql
-CREATE DATABASE leadgrowth;
+CREATE DATABASE IF NOT EXISTS leadgrowth;
+```
+*(Optional: Import complete initial data using `mysql -u root -p leadgrowth < schema.sql`)*
+
+---
+
+### Step 2: Configure Local Credentials
+Ensure `backend-dotnet/appsettings.Development.json` has your local MySQL password:
+```json
+{
+  "ConnectionStrings": {
+    "LeadGrowthDb": "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=YOUR_LOCAL_PASSWORD;"
+  }
+}
 ```
 
 ---
 
-### Step 2: Start .NET 10 Backend
-Navigate to the `backend-dotnet` directory and run:
+### Step 3: Start .NET Backend
 ```bash
 cd backend-dotnet
 dotnet run
 ```
-The backend API server will start on [http://localhost:5000](http://localhost:5000) (or `8080`), automatically applying database migrations and seeding initial roles, users, and campaigns.
+The backend API server will start on `http://localhost:5000` (or `http://localhost:8080`), automatically validating database schema and seeding demo users and campaigns.
 
 ---
 
-### Step 3: Start Frontend SPA
-In a separate terminal, navigate to the `frontend` directory:
+### Step 4: Start Frontend SPA
+In a separate terminal:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-The Vite development server will start on [http://localhost:5173](http://localhost:5173).
+The Vite development server will start on `http://localhost:5173`.
 
 ---
 
-## Configuration & Environment Variables
+## 📄 License
 
-### Backend Configuration (`backend-dotnet/appsettings.json`)
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=password;"
-  },
-  "Jwt": {
-    "Key": "YOUR_STRONG_JWT_SECRET_KEY_HERE",
-    "Issuer": "LeadGrowth",
-    "Audience": "LeadGrowthApp"
-  }
-}
-```
-
-### Frontend Configuration (`frontend/.env`)
-```env
-VITE_API_BASE_URL=http://localhost:5000/api
-VITE_WS_BASE_URL=ws://localhost:5000/ws
-```
-
----
-
-## License
-
-This project is licensed for enterprise application and performance operations. All rights reserved.
+This project is proprietary and confidential for LeadGrowth SaaS platform operations. All rights reserved.

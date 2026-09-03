@@ -1,8 +1,9 @@
--- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
---
--- Host: localhost    Database: leadgrowth_db
--- ------------------------------------------------------
--- Server version	8.0.45
+-- LeadGrowth Full Enterprise Database Schema
+-- Database: leadgrowth
+-- Compatible with MySQL 8.x / InnoDB
+
+CREATE DATABASE IF NOT EXISTS `leadgrowth` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */;
+USE `leadgrowth`;
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;

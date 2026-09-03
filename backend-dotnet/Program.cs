@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Connection String & Database Context (EF Core + Pomelo MySQL 8.x)
 var connectionString = builder.Configuration.GetConnectionString("LeadGrowthDb") 
-    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=12345";
+    ?? "Server=localhost;Port=3306;Database=leadgrowth;User=root;Password=;";
 
 builder.Services.AddDbContext<LeadGrowthDbContext>(options =>
 {
