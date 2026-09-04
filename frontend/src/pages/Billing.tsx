@@ -85,7 +85,7 @@ export default function Billing() {
     {
       name: 'BASIC',
       price: '₹599',
-      period: 'Forever free',
+      period: 'Weekly',
       users: 5,
       leads: 1000,
       storage: '1 GB',
@@ -112,79 +112,80 @@ export default function Billing() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary">
-            <CreditCard size={24} />
+      {/* Unified Subscription Header & Quota Usage Container */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Top Header Row */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary shadow-xs">
+              <CreditCard size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Subscription & Billing Dashboard</h2>
+              <p className="text-xs text-theme-text-muted mt-0.5">Manage plan tiers, track workspace quota usage, and review billing details.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-extrabold uppercase tracking-wider text-theme-text">Subscription & Billing Dashboard</h2>
-            <p className="text-xs text-theme-text-muted mt-0.5">Manage plan tiers, track workspace quota usage, and review billing details.</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-theme-text-muted">Current Tier:</span>
-          <span className="text-xs font-extrabold uppercase px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-            {currentPlan} PLAN
-          </span>
-        </div>
-      </div>
-
-      {successMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-500 flex items-center gap-2">
-          <CheckCircle2 size={16} /> {successMsg}
-        </div>
-      )}
-
-      {/* Resource Quota Usage Gauges */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* User Quota */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-theme-text flex items-center gap-2">
-              <Users size={16} className="text-theme-primary" /> Active Team Seats
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-theme-text-muted">Current Tier:</span>
+            <span className="text-xs font-extrabold uppercase px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              {currentPlan} PLAN
             </span>
-            <span className="text-xs font-mono font-bold text-theme-text">{billingInfo.activeUsers} / {billingInfo.maxUsers}</span>
           </div>
-          <div className="w-full bg-theme-bg-alt rounded-full h-2.5 overflow-hidden">
-            <div className="bg-theme-primary h-2.5 rounded-full transition-all" style={{ width: `${userUsagePct}%` }} />
-          </div>
-          <span className="text-[10px] text-theme-text-muted font-semibold block">{userUsagePct}% seats consumed</span>
         </div>
 
-        {/* Lead Quota */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-theme-text flex items-center gap-2">
-              <UserCheck size={16} className="text-emerald-500" /> Lead Storage Quota
-            </span>
-            <span className="text-xs font-mono font-bold text-theme-text">{billingInfo.totalLeads} / {billingInfo.maxLeads}</span>
+        {successMsg && (
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-500 flex items-center gap-2">
+            <CheckCircle2 size={16} /> {successMsg}
           </div>
-          <div className="w-full bg-theme-bg-alt rounded-full h-2.5 overflow-hidden">
-            <div className="bg-emerald-500 h-2.5 rounded-full transition-all" style={{ width: `${leadUsagePct}%` }} />
-          </div>
-          <span className="text-[10px] text-theme-text-muted font-semibold block">{leadUsagePct}% capacity consumed</span>
-        </div>
+        )}
 
-        {/* Storage Quota */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-theme-text flex items-center gap-2">
-              <HardDrive size={16} className="text-cyan-400" /> Database & Media Storage
-            </span>
-            <span className="text-xs font-mono font-bold text-theme-text">{billingInfo.storageUsedMb} MB / {billingInfo.maxStorageMb} MB</span>
+        {/* Resource Quota Usage Gauges Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+          {/* User Quota */}
+          <div className="rounded-xl border border-theme-border/50 bg-theme-bg-alt/40 p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-theme-text flex items-center gap-2">
+                <Users size={15} className="text-theme-primary" /> Active Team Seats
+              </span>
+              <span className="text-xs font-mono font-bold text-theme-text">{billingInfo.activeUsers} / {billingInfo.maxUsers}</span>
+            </div>
+            <div className="w-full bg-theme-card rounded-full h-2 overflow-hidden border border-theme-border/30">
+              <div className="bg-theme-primary h-2 rounded-full transition-all" style={{ width: `${userUsagePct}%` }} />
+            </div>
+            <span className="text-[10px] text-theme-text-muted font-semibold block">{userUsagePct}% seats consumed</span>
           </div>
-          <div className="w-full bg-theme-bg-alt rounded-full h-2.5 overflow-hidden">
-            <div className="bg-cyan-400 h-2.5 rounded-full transition-all" style={{ width: `${storageUsagePct}%` }} />
-          </div>
-          <span className="text-[10px] text-theme-text-muted font-semibold block">{storageUsagePct}% storage consumed</span>
-        </div>
 
+          {/* Lead Quota */}
+          <div className="rounded-xl border border-theme-border/50 bg-theme-bg-alt/40 p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-theme-text flex items-center gap-2">
+                <UserCheck size={15} className="text-emerald-500" /> Lead Storage Quota
+              </span>
+              <span className="text-xs font-mono font-bold text-theme-text">{billingInfo.totalLeads} / {billingInfo.maxLeads}</span>
+            </div>
+            <div className="w-full bg-theme-card rounded-full h-2 overflow-hidden border border-theme-border/30">
+              <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${leadUsagePct}%` }} />
+            </div>
+            <span className="text-[10px] text-theme-text-muted font-semibold block">{leadUsagePct}% capacity consumed</span>
+          </div>
+
+          {/* Storage Quota */}
+          <div className="rounded-xl border border-theme-border/50 bg-theme-bg-alt/40 p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-theme-text flex items-center gap-2">
+                <HardDrive size={15} className="text-cyan-400" /> Database & Media Storage
+              </span>
+              <span className="text-xs font-mono font-bold text-theme-text">{billingInfo.storageUsedMb} MB / {billingInfo.maxStorageMb} MB</span>
+            </div>
+            <div className="w-full bg-theme-card rounded-full h-2 overflow-hidden border border-theme-border/30">
+              <div className="bg-cyan-400 h-2 rounded-full transition-all" style={{ width: `${storageUsagePct}%` }} />
+            </div>
+            <span className="text-[10px] text-theme-text-muted font-semibold block">{storageUsagePct}% storage consumed</span>
+          </div>
+        </div>
       </div>
 
       {/* SaaS Plan Comparison Grid */}

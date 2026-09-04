@@ -50,57 +50,59 @@ export default function ActivityLogs() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <p className="text-xs text-theme-text-muted">Chronological audit logs of actions taken within this workspace.</p>
-        </div>
-        <button
-          onClick={exportLogs}
-          className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover text-white px-4 py-2.5 text-xs font-bold shadow-md shadow-theme-primary/10 w-fit"
-        >
-          <Download size={14} />
-          Export Audit Trail (CSV)
-        </button>
-      </div>
-
-      {/* Filter bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center">
-        {/* Search */}
-        <div className="relative flex-1 w-full">
-          <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
-            <Search size={16} />
-          </span>
-          <input
-            type="text"
-            placeholder="Filter logs by keyword..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-2xl border border-theme-border bg-theme-card px-4 py-2.5 pl-10 text-xs font-semibold outline-none focus:border-theme-primary"
-          />
-        </div>
-
-        {/* Status Dropdown */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs font-bold text-theme-text-muted flex items-center gap-1.5 whitespace-nowrap">
-            <Filter size={14} /> Status:
-          </span>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-2xl border border-theme-border bg-theme-card px-4 py-2.5 text-xs font-bold outline-none focus:border-theme-primary w-full"
+    <div className="space-y-5">
+      {/* Unified Activity Logs Container */}
+      <div className="rounded-2xl border border-theme-border/70 bg-theme-card shadow-xs overflow-hidden">
+        {/* Top Header Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-theme-border/60">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Activity Logs & Audit Trail</h1>
+            <p className="text-xs text-theme-text-muted mt-1">Chronological audit logs of actions taken within this workspace.</p>
+          </div>
+          <button
+            onClick={exportLogs}
+            className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white px-4 py-2 text-xs font-semibold shadow-xs w-fit transition-all"
           >
-            <option value="ALL">All Levels</option>
-            <option value="SUCCESS">Success</option>
-            <option value="WARNING">Warning</option>
-            <option value="INFO">Info</option>
-          </select>
+            <Download size={14} />
+            Export Audit Trail (CSV)
+          </button>
         </div>
-      </div>
 
-      {/* Audit Logs Table */}
-      <div className="rounded-3xl border border-theme-border bg-theme-card overflow-hidden shadow-sm">
+        {/* Filter bar */}
+        <div className="p-4 border-b border-theme-border/60 bg-theme-bg-alt/20 flex flex-col sm:flex-row gap-3 items-center">
+          {/* Search */}
+          <div className="relative flex-1 w-full">
+            <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
+              <Search size={14} />
+            </span>
+            <input
+              type="text"
+              placeholder="Filter logs by keyword, user, action..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-theme-border/70 bg-theme-card px-4 py-2 pl-9 text-xs outline-none focus:border-theme-primary text-theme-text"
+            />
+          </div>
+
+          {/* Status Dropdown */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs font-semibold text-theme-text-muted flex items-center gap-1.5 whitespace-nowrap">
+              <Filter size={13} /> Level:
+            </span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="rounded-xl border border-theme-border/70 bg-theme-card px-3 py-2 text-xs font-semibold outline-none focus:border-theme-primary text-theme-text w-full sm:w-auto cursor-pointer"
+            >
+              <option value="ALL">All Levels</option>
+              <option value="SUCCESS">Success</option>
+              <option value="WARNING">Warning</option>
+              <option value="INFO">Info</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Audit Logs Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-theme-bg-alt/50 border-b border-theme-border/50 text-theme-text-muted font-bold">

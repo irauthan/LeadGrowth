@@ -103,49 +103,52 @@ export default function Analytics() {
     return (
       <div className="space-y-6">
 
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-theme-text">
-              Personal Performance & Sales Analytics
-            </h1>
-            <p className="text-xs text-theme-text-muted mt-1">
-              Individual metrics, lead conversion funnel, task fulfillment, and productivity benchmarks.
-            </p>
-          </div>
-          <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
-        </div>
-
-        {/* Personal KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Conversion Rate</span>
-            <h3 className="text-2xl font-extrabold text-theme-text">{kpis.conversionRate || 0}%</h3>
-            <span className="text-[9px] font-bold text-emerald-500 block">Personal Conversion</span>
+        {/* Unified Top Header & Personal KPI Metrics */}
+        <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">
+                Personal Performance & Sales Analytics
+              </h1>
+              <p className="text-xs text-theme-text-muted mt-1">
+                Individual metrics, lead conversion funnel, task fulfillment, and productivity benchmarks.
+              </p>
+            </div>
+            <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
           </div>
 
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Task Fulfillment</span>
-            <h3 className="text-2xl font-extrabold text-theme-text">{kpis.taskCompletionRate || 100}%</h3>
-            <span className="text-[9px] font-bold text-theme-primary block">Task Success</span>
-          </div>
+          <div className="border-t border-theme-border/60 pt-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Conversion Rate</span>
+                <h3 className="text-xl font-black text-theme-text">{kpis.conversionRate || 0}%</h3>
+                <span className="text-[9px] font-bold text-emerald-500 block">Personal Conversion</span>
+              </div>
 
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Follow-up Success</span>
-            <h3 className="text-2xl font-extrabold text-theme-text">96%</h3>
-            <span className="text-[9px] font-bold text-cyan-400 block">On-Time Reminders</span>
-          </div>
+              <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Task Fulfillment</span>
+                <h3 className="text-xl font-black text-theme-text">{kpis.taskCompletionRate || 100}%</h3>
+                <span className="text-[9px] font-bold text-theme-primary block">Task Success</span>
+              </div>
 
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Avg. Response Time</span>
-            <h3 className="text-2xl font-extrabold text-theme-text">{kpis.averageResponseTimeHours || 1.8}h</h3>
-            <span className="text-[9px] font-bold text-amber-500 block">First Outreach</span>
-          </div>
+              <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Follow-up Success</span>
+                <h3 className="text-xl font-black text-theme-text">96%</h3>
+                <span className="text-[9px] font-bold text-cyan-400 block">On-Time Reminders</span>
+              </div>
 
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Revenue Contribution</span>
-            <h3 className="text-xl font-extrabold text-emerald-400">{formatCurrency(kpis.myRevenueContribution || 0)}</h3>
-            <span className="text-[9px] font-bold text-emerald-500 block">Personal Revenue</span>
+              <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Avg. Response Time</span>
+                <h3 className="text-xl font-black text-theme-text">{kpis.averageResponseTimeHours || 1.8}h</h3>
+                <span className="text-[9px] font-bold text-amber-500 block">First Outreach</span>
+              </div>
+
+              <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1 col-span-2 sm:col-span-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Revenue Contribution</span>
+                <h3 className="text-xl font-black text-emerald-500 dark:text-emerald-400">{formatCurrency(kpis.myRevenueContribution || 0)}</h3>
+                <span className="text-[9px] font-bold text-emerald-500 block">Personal Revenue</span>
+              </div>
+            </div>
           </div>
         </div>
 

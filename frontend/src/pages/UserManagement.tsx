@@ -43,6 +43,8 @@ export interface ManagedUser {
   lastActiveAt: string;
   profileImage?: string;
   availabilityStatus?: string;
+  manualStatusReason?: string;
+  statusReason?: string;
   productivityScore?: number;
   performanceCategory?: string;
 }
@@ -272,149 +274,153 @@ export default function UserManagement() {
   const topPerformersCount = users.filter(u => (u.productivityScore || 0) >= 75).length;
 
   return (
-    <div className="space-y-6">
-      
-      {/* Top Header Command Center */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-theme-card border border-theme-border rounded-3xl p-6 shadow-xl relative overflow-hidden">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-theme-primary to-indigo-500 text-white shadow-lg nav-glow">
-            <UsersIcon size={24} />
+    <div className="space-y-5">
+      {/* Unified Team & User Management Header, Metrics & Filters Container */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Top Header Row */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary shadow-xs">
+              <UsersIcon size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Team & User Management</h2>
+              <p className="text-xs text-theme-text-muted mt-0.5">Manage user roles, access permissions, live status availability, and team performance metrics.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Team & User Management</h2>
-            <p className="text-xs text-theme-text-muted mt-1">Manage user roles, access permissions, live status availability, and team performance metrics.</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* View switcher */}
-          <div className="flex items-center rounded-2xl bg-theme-bg-alt border border-theme-border p-1">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* View switcher */}
+            <div className="flex items-center rounded-xl bg-theme-bg-alt/60 border border-theme-border p-1">
+              <button
+                onClick={() => { setViewMode('TABLE'); setCurrentPage(1); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'TABLE' ? 'bg-theme-card text-theme-primary shadow-xs' : 'text-theme-text-muted hover:text-theme-text'
+                }`}
+              >
+                <ListFilter size={13} /> Access Table
+              </button>
+              <button
+                onClick={() => { setViewMode('DIRECTORY'); setCurrentPage(1); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'DIRECTORY' ? 'bg-theme-card text-theme-primary shadow-xs' : 'text-theme-text-muted hover:text-theme-text'
+                }`}
+              >
+                <LayoutGrid size={13} /> Directory Cards
+              </button>
+            </div>
+
             <button
-              onClick={() => { setViewMode('TABLE'); setCurrentPage(1); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                viewMode === 'TABLE' ? 'bg-theme-card text-theme-primary shadow-sm' : 'text-theme-text-muted hover:text-theme-text'
-              }`}
+              onClick={() => setShowInviteModal(true)}
+              className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white px-4 py-2 text-xs font-semibold shadow-xs transition-all"
             >
-              <ListFilter size={14} /> Access Table
-            </button>
-            <button
-              onClick={() => { setViewMode('DIRECTORY'); setCurrentPage(1); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                viewMode === 'DIRECTORY' ? 'bg-theme-card text-theme-primary shadow-sm' : 'text-theme-text-muted hover:text-theme-text'
-              }`}
-            >
-              <LayoutGrid size={14} /> Directory Cards
+              <UserPlus size={15} /> Send Invite
             </button>
           </div>
-
-          <button
-            onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover text-white px-4 py-2.5 text-xs font-bold shadow-lg shadow-theme-primary/20 transition-all"
-          >
-            <UserPlus size={15} /> Send Invite
-          </button>
-        </div>
-      </div>
-
-      {/* Summary KPI Badges */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 shadow-sm flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-theme-primary font-bold">
-            <UsersIcon size={18} />
-          </div>
-          <div>
-            <span className="text-[10px] font-extrabold uppercase text-theme-text-muted">Total Members</span>
-            <h4 className="text-lg font-extrabold text-theme-text">{users.length}</h4>
-          </div>
         </div>
 
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 shadow-sm flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 font-bold">
-            <UserCheck size={18} />
-          </div>
-          <div>
-            <span className="text-[10px] font-extrabold uppercase text-theme-text-muted">Active Seats</span>
-            <h4 className="text-lg font-extrabold text-theme-text">{activeSeats}</h4>
+        {/* Summary KPI Badges */}
+        <div className="border-t border-theme-border/60 pt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-theme-primary font-bold">
+                <UsersIcon size={16} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted">Total Members</span>
+                <h4 className="text-lg font-black text-theme-text">{users.length}</h4>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 font-bold">
+                <UserCheck size={16} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted">Active Seats</span>
+                <h4 className="text-lg font-black text-theme-text">{activeSeats}</h4>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400 font-bold">
+                <Shield size={16} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted">Admins</span>
+                <h4 className="text-lg font-black text-theme-text">{adminCount}</h4>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400 font-bold">
+                <Award size={16} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted">Top Performers</span>
+                <h4 className="text-lg font-black text-theme-text">{topPerformersCount}</h4>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 shadow-sm flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 font-bold">
-            <Shield size={18} />
+        {/* Filter and Search Bar */}
+        <div className="border-t border-theme-border/60 pt-3 flex flex-col sm:flex-row gap-3 items-center">
+          <div className="relative flex-1 w-full">
+            <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
+              <Search size={14} />
+            </span>
+            <input
+              type="text"
+              placeholder="Search by name or email address..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              className="w-full rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-4 py-2 pl-9 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary"
+            />
           </div>
-          <div>
-            <span className="text-[10px] font-extrabold uppercase text-theme-text-muted">Admins</span>
-            <h4 className="text-lg font-extrabold text-theme-text">{adminCount}</h4>
-          </div>
-        </div>
 
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 shadow-sm flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 font-bold">
-            <Award size={18} />
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <select
+              value={roleFilter}
+              onChange={(e) => { setRoleFilter(e.target.value as any); setCurrentPage(1); }}
+              className="rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-3 py-1.5 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary cursor-pointer"
+            >
+              <option value="ALL">All Roles</option>
+              <option value="ADMIN">Admin</option>
+              <option value="MANAGER">Manager</option>
+              <option value="USER">User</option>
+            </select>
+            <select
+              value={deptFilter}
+              onChange={(e) => { setDeptFilter(e.target.value as any); setCurrentPage(1); }}
+              className="rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-3 py-1.5 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary cursor-pointer"
+            >
+              <option value="ALL">All Departments</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
+              <option value="Support">Support</option>
+              <option value="Management">Management</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
+              className="rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-3 py-1.5 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary cursor-pointer"
+            >
+              <option value="ALL">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="SUSPENDED">Suspended</option>
+            </select>
+            <select
+              value={sortOrder}
+              onChange={(e) => { setSortOrder(e.target.value as any); setCurrentPage(1); }}
+              className="rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-3 py-1.5 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary cursor-pointer"
+            >
+              <option value="NAME_ASC">Name (A-Z)</option>
+              <option value="NAME_DESC">Name (Z-A)</option>
+              <option value="ACTIVE_DESC">Last Active</option>
+              <option value="PROD_DESC">Top Performers</option>
+            </select>
           </div>
-          <div>
-            <span className="text-[10px] font-extrabold uppercase text-theme-text-muted">Top Performers</span>
-            <h4 className="text-lg font-extrabold text-theme-text">{topPerformersCount}</h4>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center">
-        <div className="relative flex-1 w-full">
-          <span className="absolute inset-y-0 left-3 flex items-center text-theme-text-muted">
-            <Search size={16} />
-          </span>
-          <input
-            type="text"
-            placeholder="Search by name or email address..."
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-            className="w-full rounded-2xl border border-theme-border bg-theme-card px-4 py-2.5 pl-10 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <select
-            value={roleFilter}
-            onChange={(e) => { setRoleFilter(e.target.value as any); setCurrentPage(1); }}
-            className="rounded-2xl border border-theme-border bg-theme-card px-3 py-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
-          >
-            <option value="ALL">All Roles</option>
-            <option value="ADMIN">Admin</option>
-            <option value="MANAGER">Manager</option>
-            <option value="USER">User</option>
-          </select>
-          <select
-            value={deptFilter}
-            onChange={(e) => { setDeptFilter(e.target.value as any); setCurrentPage(1); }}
-            className="rounded-2xl border border-theme-border bg-theme-card px-3 py-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
-          >
-            <option value="ALL">All Departments</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Sales">Sales</option>
-            <option value="Support">Support</option>
-            <option value="Management">Management</option>
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
-            className="rounded-2xl border border-theme-border bg-theme-card px-3 py-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
-          >
-            <option value="ALL">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
-          <select
-            value={sortOrder}
-            onChange={(e) => { setSortOrder(e.target.value as any); setCurrentPage(1); }}
-            className="rounded-2xl border border-theme-border bg-theme-card px-3 py-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
-          >
-            <option value="NAME_ASC">Name (A-Z)</option>
-            <option value="NAME_DESC">Name (Z-A)</option>
-            <option value="ACTIVE_DESC">Last Active</option>
-            <option value="PROD_DESC">Top Performers</option>
-          </select>
         </div>
       </div>
 

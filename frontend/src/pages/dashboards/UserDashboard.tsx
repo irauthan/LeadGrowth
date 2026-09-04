@@ -118,8 +118,6 @@ export default function UserDashboard() {
         setSelectedLeadIds([]);
         setIsAcceptModalOpen(false);
       }
-
-      setCallAnalytics(callRes.data);
     } catch (err) {
       console.error('Failed to load User Productivity Hub data', err);
     } finally {

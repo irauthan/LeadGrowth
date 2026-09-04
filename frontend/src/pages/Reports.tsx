@@ -249,102 +249,107 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       
-      {/* Header Banner with Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-theme-primary/10 text-theme-primary">
-              <BarChart3 size={22} />
+      {/* Unified Header, Metrics & Tab Controls Container */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Top Header Row with Filters */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-theme-primary/10 text-theme-primary">
+                <BarChart3 size={20} />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-theme-text">
+                {isManagerOrAdmin ? 'Workspace Reports & Intelligence Console' : 'My Lead Reports & Exports'}
+              </h1>
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-theme-text">
-              {isManagerOrAdmin ? 'Workspace Reports & Intelligence Console' : 'My Lead Reports & Exports'}
-            </h1>
+            <p className="text-xs text-theme-text-muted">
+              {isManagerOrAdmin 
+                ? 'Complete enterprise reporting console with person-level filters, call duration logs, and instant multi-format downloads.'
+                : 'Downloadable database reports and activity records for your assigned lead portfolio.'}
+            </p>
           </div>
-          <p className="text-xs text-theme-text-muted">
-            {isManagerOrAdmin 
-              ? 'Complete enterprise reporting console with person-level filters, call duration logs, and instant multi-format downloads.'
-              : 'Downloadable database reports and activity records for your assigned lead portfolio.'}
-          </p>
+
+          {/* Filter Controls Bar (Integrated in Header) */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Admin User Filter Dropdown */}
+            {isManagerOrAdmin && (
+              <div className="relative flex items-center">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text shadow-xs">
+                  <Users size={14} className="text-theme-primary" />
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(Number(e.target.value))}
+                    className="bg-transparent text-theme-text text-xs font-bold outline-none cursor-pointer pr-1"
+                  >
+                    <option value={0} className="bg-theme-card text-theme-text">👥 All Team Members (Workspace)</option>
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id} className="bg-theme-card text-theme-text">
+                        👤 {m.fullName || m.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Time Filter Dropdown */}
+            <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
+          </div>
         </div>
 
-        {/* Filter Controls Bar (Integrated in Header) */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Admin User Filter Dropdown */}
-          {isManagerOrAdmin && (
-            <div className="relative flex items-center">
-              <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text shadow-xs">
-                <Users size={14} className="text-theme-primary" />
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(Number(e.target.value))}
-                  className="bg-transparent text-theme-text text-xs font-bold outline-none cursor-pointer pr-2"
-                >
-                  <option value={0} className="bg-theme-card text-theme-text">👥 All Team Members (Workspace)</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id} className="bg-theme-card text-theme-text">
-                      👤 {m.fullName || m.email}
-                    </option>
-                  ))}
-                </select>
+        {/* Quick Summary Metrics Grid */}
+        <div className="border-t border-theme-border/60 pt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">
+                {isManagerOrAdmin ? (selectedUserId > 0 ? `${selectedMemberName}'s Leads` : 'Workspace Leads') : 'My Portfolio Leads'}
+              </span>
+              <div className="text-xl font-black text-theme-text">{statsSummary.totalLeads}</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Calls Logged</span>
+              <div className="text-xl font-black text-blue-500 dark:text-blue-400">{statsSummary.totalCalls}</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Follow-ups Handled</span>
+              <div className="text-xl font-black text-purple-500 dark:text-purple-400">{statsSummary.completedFollowups}</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Converted Leads</span>
+              <div className="text-xl font-black text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5">
+                {statsSummary.convertedLeads}
+                <span className="text-[10px] font-semibold text-emerald-600/80">({statsSummary.conversionRate}%)</span>
               </div>
             </div>
-          )}
-
-          {/* Time Filter Dropdown */}
-          <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
-        </div>
-      </div>
-
-      {/* Quick Summary Metrics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="p-4 rounded-2xl bg-theme-card border border-theme-border shadow-xs space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">
-            {isManagerOrAdmin ? (selectedUserId > 0 ? `${selectedMemberName}'s Leads` : 'Workspace Leads') : 'My Portfolio Leads'}
-          </span>
-          <div className="text-xl font-black text-theme-text">{statsSummary.totalLeads}</div>
-        </div>
-        <div className="p-4 rounded-2xl bg-theme-card border border-theme-border shadow-xs space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Calls Logged</span>
-          <div className="text-xl font-black text-blue-400">{statsSummary.totalCalls}</div>
-        </div>
-        <div className="p-4 rounded-2xl bg-theme-card border border-theme-border shadow-xs space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Follow-ups Handled</span>
-          <div className="text-xl font-black text-purple-400">{statsSummary.completedFollowups}</div>
-        </div>
-        <div className="p-4 rounded-2xl bg-theme-card border border-theme-border shadow-xs space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Converted Leads</span>
-          <div className="text-xl font-black text-emerald-400 flex items-center gap-1.5">
-            {statsSummary.convertedLeads}
-            <span className="text-[10px] font-semibold text-emerald-500/80">({statsSummary.conversionRate}%)</span>
           </div>
         </div>
-      </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-theme-border/40 pb-2">
-        <button
-          onClick={() => setActiveTab('exports')}
-          className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all flex items-center gap-2 ${
-            activeTab === 'exports'
-              ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20'
-              : 'bg-theme-card border border-theme-border text-theme-text-muted hover:bg-theme-bg-alt'
-          }`}
-        >
-          <Download size={14} />
-          <span>Database Export Downloads</span>
-        </button>
+        {/* Navigation Tabs */}
+        <div className="border-t border-theme-border/60 pt-3 flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab('exports')}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
+              activeTab === 'exports'
+                ? 'bg-theme-primary text-white shadow-xs'
+                : 'bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text'
+            }`}
+          >
+            <Download size={14} />
+            <span>Database Export Downloads</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('activity-table')}
-          className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all flex items-center gap-2 ${
-            activeTab === 'activity-table'
-              ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20'
-              : 'bg-theme-card border border-theme-border text-theme-text-muted hover:bg-theme-bg-alt'
-          }`}
-        >
-          <Clock size={14} />
-          <span>Auto Activity Stream Preview</span>
-        </button>
+          <button
+            onClick={() => setActiveTab('activity-table')}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
+              activeTab === 'activity-table'
+                ? 'bg-theme-primary text-white shadow-xs'
+                : 'bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text'
+            }`}
+          >
+            <Clock size={14} />
+            <span>Auto Activity Stream Preview</span>
+          </button>
+        </div>
       </div>
 
       {/* TAB 1: DATABASE EXPORT DOWNLOADS (PRIMARY VIEW) */}

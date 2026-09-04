@@ -89,7 +89,7 @@ export default function MyWork() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // Follow-ups Tab & Filter State for Executive
-  const [followupStatusTab, setFollowupStatusTab] = useState<'ALL' | 'UPCOMING' | 'OVERDUE' | 'COMPLETED' | 'CANCELLED'>('ALL');
+  const [followupStatusTab, setFollowupStatusTab] = useState<'ONGOING' | 'UPCOMING' | 'OVERDUE' | 'COMPLETED' | 'CANCELLED'>('ONGOING');
   const [followupSearchTerm, setFollowupSearchTerm] = useState('');
   const [followupStageFilter, setFollowupStageFilter] = useState('ALL');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -411,6 +411,7 @@ export default function MyWork() {
   });
 
   const filteredExecutiveFollowups = activeExecutiveFollowups.filter((f) => {
+    if (followupStatusTab === 'ONGOING' && (f.status === 'COMPLETED' || f.status === 'CANCELLED')) return false;
     if (followupStatusTab === 'UPCOMING' && !(f.status === 'UPCOMING' || f.status === 'SCHEDULED' || f.status === 'PENDING')) return false;
     if (followupStatusTab === 'OVERDUE' && !(f.status === 'OVERDUE' || f.status === 'MISSED' || f.isOverdue)) return false;
     if (followupStatusTab === 'COMPLETED' && f.status !== 'COMPLETED') return false;
@@ -1362,10 +1363,10 @@ export default function MyWork() {
                 <div className="flex items-center justify-between gap-2 flex-wrap border-b border-theme-border/40 pb-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     {[
-                      { key: 'ALL', label: 'All Follow-ups', count: activeExecutiveFollowups.length },
+                      { key: 'ONGOING', label: 'Ongoing / Active', count: activeExecutiveFollowups.filter(f => f.status !== 'COMPLETED' && f.status !== 'CANCELLED').length },
                       { key: 'UPCOMING', label: 'Scheduled / Upcoming', count: activeExecutiveFollowups.filter(f => f.status === 'UPCOMING' || f.status === 'SCHEDULED' || f.status === 'PENDING').length },
                       { key: 'OVERDUE', label: 'Overdue', count: activeExecutiveFollowups.filter(f => f.status === 'OVERDUE' || f.status === 'MISSED' || f.isOverdue).length },
-                      { key: 'COMPLETED', label: 'Completed', count: activeExecutiveFollowups.filter(f => f.status === 'COMPLETED').length },
+                      { key: 'COMPLETED', label: 'Completed History', count: activeExecutiveFollowups.filter(f => f.status === 'COMPLETED').length },
                       { key: 'CANCELLED', label: 'Cancelled', count: activeExecutiveFollowups.filter(f => f.status === 'CANCELLED').length },
                     ].map((tab) => (
                       <button

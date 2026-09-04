@@ -564,13 +564,13 @@ export default function WorkDetailsPanel({
   if (!isOpen) return null;
 
   const containerClass = inline
-    ? 'rounded-3xl overflow-hidden min-h-[680px]'
-    : `border-l ${maximized ? 'max-w-6xl w-[94vw]' : 'max-w-2xl w-full'}`;
+    ? 'rounded-2xl shadow-xs h-full flex flex-col overflow-hidden'
+    : `border-l ${maximized ? 'max-w-6xl w-[94vw]' : 'max-w-2xl w-full'} h-full flex flex-col shadow-xl`;
 
   const panelInner = (
-    <div className={`bg-theme-card border border-theme-border flex flex-col shadow-xl relative w-full h-full ${containerClass}`}>
+    <div className={`bg-theme-card border border-theme-border flex flex-col relative w-full ${containerClass}`}>
       {/* Top Header */}
-      <div className="p-5 border-b border-theme-border flex items-center justify-between bg-theme-card/80 backdrop-blur-md">
+      <div className="p-4 sm:p-5 border-b border-theme-border flex items-center justify-between bg-theme-card/80 backdrop-blur-md flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-sm">
             {lead?.name?.substring(0, 2).toUpperCase() || 'LD'}
@@ -606,12 +606,6 @@ export default function WorkDetailsPanel({
               {isLeadFresh(lead) && (
                 <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 inline-flex items-center gap-1">
                   <Sparkles size={10} /> FRESH
-                </span>
-              )}
-
-              {isManagementUser && isLeadAssigned(lead) && (
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-                  <UserCheck size={10} /> ASSIGNED
                 </span>
               )}
             </div>
@@ -671,7 +665,7 @@ export default function WorkDetailsPanel({
       </div>
 
           {/* Quick Metrics Bar */}
-          <div className="px-6 py-3 bg-theme-card/30 border-b border-theme-border flex items-center justify-between text-xs">
+          <div className="px-6 py-2.5 bg-theme-card/30 border-b border-theme-border flex items-center justify-between text-xs flex-shrink-0">
             <div className="flex items-center gap-4">
               <div>
                 <span className="text-[10px] font-bold text-theme-text-muted block">QUALITY TIER</span>
@@ -703,12 +697,12 @@ export default function WorkDetailsPanel({
 
           {/* Body Section */}
           {loading ? (
-            <div className="flex-1 flex items-center justify-center space-y-3 flex-col">
+            <div className="flex-1 flex items-center justify-center space-y-3 flex-col py-20">
               <div className="w-8 h-8 border-2 border-theme-primary border-t-transparent rounded-full animate-spin" />
               <span className="text-xs font-bold text-theme-text-muted">Loading Enterprise Multi-Activity Engine...</span>
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 min-h-0">
               {/* Call Duration Tracking Widget (Sales Reps Only) */}
               {lead && !isManagementUser && (
                 <CallTimerWidget
@@ -722,8 +716,8 @@ export default function WorkDetailsPanel({
                 />
               )}
 
-              {/* Overdue Action Banner */}
-              {lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
+              {/* Overdue Action Banner (Sales Reps Only) */}
+              {lead && !isManagementUser && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
                 <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-extrabold flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
                   <div className="flex items-start gap-2.5">
                     <AlertCircle size={18} className="shrink-0 mt-0.5 animate-bounce" />
@@ -746,40 +740,42 @@ export default function WorkDetailsPanel({
                 </div>
               )}
 
-              {/* Navigation Tabs */}
-              <div className="grid grid-cols-4 gap-1 p-1 bg-theme-card border border-theme-border rounded-2xl">
-                {[
-                  { 
-                    id: 'activities', 
-                    label: isManagementUser ? 'Lead Assignment' : 'Workflow Stages', 
-                    icon: isManagementUser ? UserCheck : CheckCircle2 
-                  },
-                  { id: 'notes', label: 'Proposal & Notes', icon: FileText },
-                  { 
-                    id: 'followup', 
-                    label: 'Schedule Follow-up', 
-                    icon: Calendar,
-                    hasAlert: Boolean(lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED')
-                  },
-                  { id: 'timeline', label: 'Interaction History', icon: History }
-                ].map((tab) => {
+              {/* Navigation Tabs (Admin: Assignment + Conversation Audit | Sales Reps: Workflow + Notes + Follow-up + History) */}
+              <div className={`grid ${isManagementUser ? 'grid-cols-2' : 'grid-cols-4'} gap-1.5 p-1.5 bg-theme-card border border-theme-border rounded-2xl flex-shrink-0`}>
+                {(isManagementUser
+                  ? [
+                      { id: 'activities', label: 'Lead Assignment & Controls', icon: UserCheck },
+                      { id: 'timeline', label: 'Lead Conversation & Activity Audit', icon: MessageSquare }
+                    ]
+                  : [
+                      { id: 'activities', label: 'Workflow Stages', icon: CheckCircle2 },
+                      { id: 'notes', label: 'Proposal & Notes', icon: FileText },
+                      { 
+                        id: 'followup', 
+                        label: 'Schedule Follow-up', 
+                        icon: Calendar,
+                        hasAlert: Boolean(lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED')
+                      },
+                      { id: 'timeline', label: 'Interaction History', icon: History }
+                    ]
+                ).map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-extrabold transition-all relative ${
+                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all relative ${
                         isActive
                           ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20'
-                          : tab.hasAlert
+                          : (tab as any).hasAlert
                           ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40'
                           : 'bg-theme-bg-alt/50 text-theme-text-muted hover:text-theme-text'
                       }`}
                     >
-                      <Icon size={14} /> 
-                      <span className="hidden sm:inline">{tab.label}</span>
-                      {tab.hasAlert && (
+                      <Icon size={15} /> 
+                      <span className="inline">{tab.label}</span>
+                      {(tab as any).hasAlert && (
                         <span className="text-[9px] font-extrabold bg-rose-500 text-white px-1.5 py-0.2 rounded-full animate-pulse">
                           OVERDUE
                         </span>
@@ -793,22 +789,17 @@ export default function WorkDetailsPanel({
               {activeTab === 'activities' && (
                 <div className="space-y-4">
                   {isManagementUser ? (
-                    <div className="space-y-5">
-                      {/* Lead Assignment Card */}
-                      <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-                        <div className="flex items-center justify-between border-b border-theme-border pb-4">
-                          <div>
-                            <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
-                              <UserCheck size={18} className="text-theme-primary" />
-                              <span>Lead Assignment & Ownership Controls</span>
-                            </h3>
-                            <p className="text-xs text-theme-text-muted mt-0.5">
-                              Assign or re-allocate this lead to an active sales executive for client follow-up.
-                            </p>
-                          </div>
-                          <span className="px-2.5 py-1 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-extrabold">
-                            MANAGEMENT CONSOLE
-                          </span>
+                    <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-6">
+                      {/* Unified Section 1: Lead Assignment Controls */}
+                      <div className="space-y-4">
+                        <div className="border-b border-theme-border pb-3">
+                          <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+                            <UserCheck size={18} className="text-theme-primary" />
+                            <span>Lead Assignment & Ownership Controls</span>
+                          </h3>
+                          <p className="text-xs text-theme-text-muted mt-0.5">
+                            Assign or re-allocate this lead to an active sales executive for client follow-up.
+                          </p>
                         </div>
 
                         {assignSuccessMsg && (
@@ -849,7 +840,7 @@ export default function WorkDetailsPanel({
                                 className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-3 text-xs outline-none focus:border-theme-primary text-theme-text font-bold"
                               >
                                 <option value="">-- Select Sales Executive --</option>
-                                <option value="-1">Auto-Assign via Smart AI Hybrid Engine</option>
+                                <option value="-1">⚡ Auto-Assign via Smart AI Hybrid Engine</option>
                                 {members
                                   .filter((m: any) => {
                                     const roles = Array.isArray(m.roles)
@@ -868,35 +859,32 @@ export default function WorkDetailsPanel({
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap justify-end gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={handleAutoAssignLead}
-                              disabled={assigningLead}
-                              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-theme-primary to-indigo-500 hover:opacity-90 px-4 py-2.5 text-xs font-bold text-white shadow-md disabled:opacity-50 transition-all cursor-pointer"
-                              title="Automatically assign to best sales rep based on workload score and live availability"
-                            >
-                              {assigningLead ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                              <span>Auto-Assign (Smart AI Engine)</span>
-                            </button>
-
+                          <div className="flex justify-end pt-1">
                             <button
                               type="submit"
                               disabled={assigningLead || !selectedAssigneeId}
-                              className="flex items-center gap-2 rounded-2xl bg-theme-card border border-theme-border hover:bg-theme-bg-alt px-5 py-2.5 text-xs font-bold text-theme-text shadow-md disabled:opacity-50 transition-all cursor-pointer"
+                              className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-theme-primary/20 disabled:opacity-50 transition-all cursor-pointer"
                             >
-                              {assigningLead ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
-                              <span>Assign Lead to Selected Executive</span>
+                              {assigningLead ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : selectedAssigneeId === '-1' ? (
+                                <Zap size={14} />
+                              ) : (
+                                <UserCheck size={14} />
+                              )}
+                              <span>
+                                {selectedAssigneeId === '-1' ? 'Auto-Assign Lead (Smart AI)' : 'Assign Lead to Executive'}
+                              </span>
                             </button>
                           </div>
                         </form>
                       </div>
 
-                      {/* Manager Lead Status & Control Card */}
-                      <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-                        <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted">
+                      {/* Unified Section 2: Supervisory Controls & Pipeline Status */}
+                      <div className="border-t border-theme-border pt-4 space-y-3">
+                        <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted">
                           Supervisory Controls & Pipeline Status
-                        </h3>
+                        </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
                             <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Pipeline Status</label>
@@ -935,6 +923,47 @@ export default function WorkDetailsPanel({
                             <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-text">
                               {lead?.sourcePlatform || 'Direct'}
                             </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Unified Section 3: Sales Pitch & Commercials Summary (Audit) */}
+                      <div className="border-t border-theme-border pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
+                            <FileText size={14} className="text-theme-primary" />
+                            <span>Sales Commercials & Discussion Summary (Audit)</span>
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('timeline')}
+                            className="text-xs font-bold text-theme-primary hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Open Conversation Timeline</span>
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/50 space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block">
+                              Proposal Pitch Value
+                            </span>
+                            <div className="text-lg font-black text-theme-text">
+                              {lead?.proposalAmount ? `₹${Number(lead.proposalAmount).toLocaleString('en-IN')}` : 'No Proposal Amount Logged'}
+                            </div>
+                            <span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-theme-primary/10 text-theme-primary uppercase">
+                              Status: {lead?.proposalStatus || 'NOT_SENT'}
+                            </span>
+                          </div>
+
+                          <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/50 space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block">
+                              Sales Executive Notes
+                            </span>
+                            <p className="text-xs text-theme-text-muted italic line-clamp-3">
+                              {lead?.clientNotes ? `"${lead.clientNotes}"` : 'No notes recorded yet by sales executive.'}
+                            </p>
                           </div>
                         </div>
                       </div>

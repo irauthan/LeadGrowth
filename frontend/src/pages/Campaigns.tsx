@@ -227,202 +227,202 @@ export default function Campaigns() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-theme-text">
+      {/* Unified Campaigns Header, Metrics & Filters Container */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Top Row: Title & Actions */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">
               Campaigns
             </h1>
-            <span className="rounded-full bg-theme-bg-alt px-2.5 py-0.5 text-xs font-semibold text-theme-text-muted border border-theme-border">
-              {campaigns.length} Total
-            </span>
+            <p className="mt-1 text-xs text-theme-text-muted">
+              Track ad spend, incoming leads, and return on ad spend.
+            </p>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-theme-text-muted">
-            Track ad spend, incoming leads, and return on ad spend.
-          </p>
+
+          {/* Action triggers */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* View Toggle */}
+            <div className="flex items-center rounded-xl border border-theme-border bg-theme-bg-alt/50 p-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === "grid"
+                    ? "bg-theme-card text-theme-text font-semibold shadow-xs"
+                    : "text-theme-text-muted hover:text-theme-text"
+                  }`}
+                title="Grid View"
+              >
+                <LayoutGrid size={14} />
+                <span className="hidden sm:inline">Cards</span>
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === "table"
+                    ? "bg-theme-card text-theme-text font-semibold shadow-xs"
+                    : "text-theme-text-muted hover:text-theme-text"
+                  }`}
+                title="Table View"
+              >
+                <TableIcon size={14} />
+                <span className="hidden sm:inline">Table</span>
+              </button>
+            </div>
+
+            {/* Export triggers */}
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu((v) => !v)}
+                className="flex items-center gap-1.5 rounded-xl border border-theme-border bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all"
+              >
+                <Download size={14} />
+                <span>Export</span>
+              </button>
+              {showExportMenu && (
+                <div className="absolute right-0 top-11 w-40 rounded-xl border border-theme-border bg-theme-card p-1 shadow-xl z-20 animate-fadeIn">
+                  <button
+                    onClick={() => handleExport("csv")}
+                    className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-theme-text hover:bg-theme-bg-alt"
+                  >
+                    CSV Spreadsheet
+                  </button>
+                  <button
+                    onClick={() => handleExport("excel")}
+                    className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-theme-text hover:bg-theme-bg-alt"
+                  >
+                    Excel Sheet (.xlsx)
+                  </button>
+                  <button
+                    onClick={() => handleExport("pdf")}
+                    className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-theme-text hover:bg-theme-bg-alt"
+                  >
+                    PDF Document (.pdf)
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {canEdit && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2 text-xs font-semibold text-white transition-all shadow-xs"
+              >
+                <Plus size={15} />
+                <span>Create Campaign</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Action triggers */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* View Toggle */}
-          <div className="flex items-center rounded-xl border border-theme-border bg-theme-card p-1">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === "grid"
-                  ? "bg-theme-bg-alt text-theme-text font-semibold shadow-xs"
-                  : "text-theme-text-muted hover:text-theme-text"
-                }`}
-              title="Grid View"
-            >
-              <LayoutGrid size={14} />
-              <span className="hidden sm:inline">Cards</span>
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === "table"
-                  ? "bg-theme-bg-alt text-theme-text font-semibold shadow-xs"
-                  : "text-theme-text-muted hover:text-theme-text"
-                }`}
-              title="Table View"
-            >
-              <TableIcon size={14} />
-              <span className="hidden sm:inline">Table</span>
-            </button>
-          </div>
-
-          {/* Export triggers */}
-          <div className="relative">
-            <button
-              onClick={() => setShowExportMenu((v) => !v)}
-              className="flex items-center gap-1.5 rounded-xl border border-theme-border bg-theme-card px-3.5 py-2 text-xs font-semibold hover:bg-theme-bg-alt text-theme-text transition-all"
-            >
-              <Download size={14} />
-              <span>Export</span>
-            </button>
-            {showExportMenu && (
-              <div className="absolute right-0 top-11 w-40 rounded-xl border border-theme-border bg-theme-card p-1 shadow-xl z-20 animate-fadeIn">
-                <button
-                  onClick={() => handleExport("csv")}
-                  className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-theme-text hover:bg-theme-bg-alt"
-                >
-                  CSV Spreadsheet
-                </button>
-                <button
-                  onClick={() => handleExport("excel")}
-                  className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-theme-text hover:bg-theme-bg-alt"
-                >
-                  Excel Sheet (.xlsx)
-                </button>
-                <button
-                  onClick={() => handleExport("pdf")}
-                  className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-theme-text hover:bg-theme-bg-alt"
-                >
-                  PDF Document (.pdf)
-                </button>
+        {/* Clean KPI Summary Bar */}
+        <div className="border-t border-theme-border/60 pt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block">
+                Active Campaigns
+              </span>
+              <div className="text-xl font-black text-theme-text">
+                {activeCount} <span className="text-xs text-theme-text-muted font-normal">/ {campaigns.length}</span>
               </div>
-            )}
-          </div>
+            </div>
 
-          {canEdit && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2 text-xs font-semibold text-white transition-all shadow-xs"
-            >
-              <Plus size={15} />
-              <span>Create Campaign</span>
-            </button>
-          )}
-        </div>
-      </div>
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block">
+                {isUserOnly ? "Campaign Spend" : "Total Spend"}
+              </span>
+              <div className="text-xl font-black text-theme-text">
+                {formatCurrency(totalSpend)}
+              </div>
+            </div>
 
-      {/* Clean KPI Summary Bar (Minimalist & Professional) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1">
-          <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            Active Campaigns
-          </span>
-          <div className="text-xl font-bold text-theme-text">
-            {activeCount} <span className="text-xs text-theme-text-muted font-normal">/ {campaigns.length}</span>
-          </div>
-        </div>
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block">
+                {isUserOnly ? "My Assigned Leads" : "Total Leads"}
+              </span>
+              <div className="text-xl font-black text-theme-primary">
+                {formatNumber(totalLeads)}
+              </div>
+            </div>
 
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1">
-          <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            {isUserOnly ? "Campaign Spend" : "Total Spend"}
-          </span>
-          <div className="text-xl font-bold text-theme-text">
-            {formatCurrency(totalSpend)}
-          </div>
-        </div>
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block">
+                {isUserOnly ? "My Conversions" : "Conversions"}
+              </span>
+              <div className="text-xl font-black text-theme-text">
+                {formatNumber(totalConversions)}
+              </div>
+            </div>
 
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1">
-          <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            {isUserOnly ? "My Assigned Leads" : "Total Leads"}
-          </span>
-          <div className="text-xl font-bold text-theme-primary">
-            {formatNumber(totalLeads)}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1">
-          <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            {isUserOnly ? "My Conversions" : "Conversions"}
-          </span>
-          <div className="text-xl font-bold text-theme-text">
-            {formatNumber(totalConversions)}
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1 col-span-2 sm:col-span-1">
+              <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block">
+                {isUserOnly ? "My Closed Revenue" : "Revenue / ROAS"}
+              </span>
+              <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(totalRevenue)}
+              </div>
+              <div className="text-[10px] text-theme-text-muted font-semibold">
+                {isUserOnly ? (
+                  <span>{totalConversions} Closed Deals</span>
+                ) : (
+                  <span>ROAS: <strong className="text-emerald-600 dark:text-emerald-400">{overallRoas.toFixed(2)}x</strong></span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1 col-span-2 sm:col-span-1">
-          <span className="text-[11px] font-medium text-theme-text-muted uppercase tracking-wider block">
-            {isUserOnly ? "My Closed Revenue" : "Revenue / ROAS"}
-          </span>
-          <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(totalRevenue)}
-          </div>
-          <div className="text-[11px] text-theme-text-muted font-medium">
-            {isUserOnly ? (
-              <span>{totalConversions} Closed Deals</span>
-            ) : (
-              <span>ROAS: <strong className="text-emerald-600 dark:text-emerald-400">{overallRoas.toFixed(2)}x</strong></span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Filters block */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-theme-border bg-theme-card p-3 sm:p-4 sm:flex-row sm:items-center">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search size={15} className="absolute inset-y-0 left-3 my-auto text-theme-text-muted" />
-          <input
-            type="text"
-            placeholder="Search campaigns..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full rounded-xl border border-theme-border bg-theme-bg-alt py-2 pl-9 pr-3 text-xs outline-none focus:border-theme-primary text-theme-text"
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-theme-text-muted">Platform:</span>
-            <select
-              value={platformFilter}
+        {/* Filters block */}
+        <div className="border-t border-theme-border/60 pt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search size={14} className="absolute inset-y-0 left-3 my-auto text-theme-text-muted" />
+            <input
+              type="text"
+              placeholder="Search campaigns by name, platform..."
+              value={search}
               onChange={(e) => {
-                setPlatformFilter(e.target.value);
+                setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              className="rounded-xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary font-medium"
-            >
-              <option value="All">All Platforms</option>
-              <option value="Meta">Meta</option>
-              <option value="Google">Google</option>
-              <option value="LinkedIn">LinkedIn</option>
-              <option value="TikTok">TikTok</option>
-            </select>
+              className="w-full rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 py-2 pl-9 pr-3 text-xs outline-none focus:border-theme-primary text-theme-text"
+            />
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-theme-text-muted">Status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="rounded-xl border border-theme-border bg-theme-bg-alt px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary font-medium"
-            >
-              <option value="All">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Paused">Paused</option>
-              <option value="Completed">Completed</option>
-            </select>
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-theme-text-muted font-medium">Platform:</span>
+              <select
+                value={platformFilter}
+                onChange={(e) => {
+                  setPlatformFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary font-medium"
+              >
+                <option value="All">All Platforms</option>
+                <option value="Meta">Meta</option>
+                <option value="Google">Google</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="TikTok">TikTok</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-theme-text-muted font-medium">Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-3 py-1.5 text-xs outline-none text-theme-text focus:border-theme-primary font-medium"
+              >
+                <option value="All">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Paused">Paused</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -455,7 +455,7 @@ export default function Campaigns() {
                             ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
                             : "bg-slate-500/10 border-slate-500/20 text-slate-500"
                         }`}>
-                        {c.status || "ACTIVE"}
+                        {c.status?.toUpperCase() || "ACTIVE"}
                       </span>
                     </div>
                     <h3 className="text-base font-bold text-theme-text group-hover:text-theme-primary transition-colors line-clamp-1">

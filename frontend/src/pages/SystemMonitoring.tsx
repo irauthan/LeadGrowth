@@ -165,127 +165,130 @@ export default function SystemMonitoring() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary">
-            <Activity size={24} />
-          </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">System Monitoring Dashboard</h2>
-            <p className="text-xs text-theme-text-muted mt-1">Real-time server metrics, database connection pool, and event error logs.</p>
-          </div>
-        </div>
-        <button
-          onClick={fetchSystemMetrics}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-text hover:bg-theme-border/20 transition-all"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Live
-        </button>
-      </div>
-
-      {/* Overview Stats Cards (Metrics Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Active Users */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Active Users</span>
-            <h3 className="text-2xl font-extrabold mt-1 text-theme-text">{liveHealth.activeUsers} / {liveHealth.totalUsers}</h3>
-            <span className="text-[9px] font-bold text-emerald-500 mt-1 block">Active Workspace Members</span>
-          </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-500/10 text-theme-primary">
-            <Users size={20} />
-          </div>
-        </div>
-
-        {/* CPU Usage */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">CPU Load</span>
-            <h3 className="text-2xl font-extrabold mt-1 text-theme-text">{liveHealth.cpuUsage}%</h3>
-            <span className="text-[9px] font-bold text-emerald-500 mt-1 block">Optimal load</span>
-          </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
-            <Cpu size={20} />
-          </div>
-        </div>
-
-        {/* RAM Usage */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">JVM Heap Memory</span>
-            <h3 className="text-2xl font-extrabold mt-1 text-theme-text">{liveHealth.usedMemoryGb} GB / {liveHealth.totalMemoryGb} GB</h3>
-            <span className="text-[9px] font-bold text-emerald-500 mt-1 block">Garbage Collector Optimal</span>
-          </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500">
-            <HardDrive size={20} />
-          </div>
-        </div>
-
-        {/* Response Time & Error Count */}
-        <div className="rounded-3xl border border-theme-border bg-theme-card p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Avg Response Time</span>
-            <h3 className="text-2xl font-extrabold mt-1 text-theme-text">{liveHealth.responseTimeMs} ms</h3>
-            <span className="text-[9px] font-bold text-emerald-500 mt-1 block">Errors: {liveHealth.errorCount} | Failed: {liveHealth.failedRequests}</span>
-          </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-500">
-            <Zap size={20} />
-          </div>
-        </div>
-      </div>
-
-      {/* Backend Subsystem Health Indicators */}
-      <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">Spring Boot Subsystem Health</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/30 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Server size={18} className="text-theme-primary" />
-              <div>
-                <span className="text-xs font-bold text-theme-text block">API Container</span>
-                <span className="text-[9px] text-theme-text-muted font-semibold">Port 8080 Tomcat</span>
-              </div>
+      {/* Unified System Monitoring Header, Metrics & Subsystem Health Container */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Top Header Row */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary shadow-xs">
+              <Activity size={22} />
             </div>
-            {getStatusBadge(liveHealth.apiStatus)}
-          </div>
-
-          <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/30 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Database size={18} className="text-emerald-500" />
-              <div>
-                <span className="text-xs font-bold text-theme-text block">MySQL HikariCP</span>
-                <span className="text-[9px] text-theme-text-muted font-semibold">Pool: {liveHealth.dbPoolActive} / {liveHealth.dbPoolMax}</span>
-              </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">System Monitoring Dashboard</h2>
+              <p className="text-xs text-theme-text-muted mt-0.5">Real-time server metrics, database connection pool, and event error logs.</p>
             </div>
-            {getStatusBadge(liveHealth.databaseStatus)}
           </div>
+          <button
+            onClick={fetchSystemMetrics}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-theme-border/80 bg-theme-bg-alt/60 text-xs font-semibold text-theme-text hover:bg-theme-border/20 transition-all shadow-xs"
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh Live
+          </button>
+        </div>
 
-          <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/30 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Wifi size={18} className="text-cyan-500" />
-              <div>
-                <span className="text-xs font-bold text-theme-text block">WebSocket Manager</span>
-                <span className="text-[9px] text-theme-text-muted font-semibold">Live Realtime Sync</span>
-              </div>
+        {/* Overview Stats Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Active Users */}
+          <div className="rounded-xl border border-theme-border/50 bg-theme-bg-alt/40 p-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Active Users</span>
+              <h3 className="text-xl font-extrabold mt-0.5 text-theme-text">{liveHealth.activeUsers} / {liveHealth.totalUsers}</h3>
+              <span className="text-[9px] font-bold text-emerald-500 mt-0.5 block">Active Workspace Members</span>
             </div>
-            {getStatusBadge(liveHealth.webSocketStatus)}
-          </div>
-
-          <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/30 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Clock size={18} className="text-indigo-500" />
-              <div>
-                <span className="text-xs font-bold text-theme-text block">Task Scheduler</span>
-                <span className="text-[9px] text-theme-text-muted font-semibold">Auto Assignments</span>
-              </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-theme-primary">
+              <Users size={18} />
             </div>
-            {getStatusBadge(liveHealth.schedulerStatus)}
           </div>
 
+          {/* CPU Usage */}
+          <div className="rounded-xl border border-theme-border/50 bg-theme-bg-alt/40 p-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">CPU Load</span>
+              <h3 className="text-xl font-extrabold mt-0.5 text-theme-text">{liveHealth.cpuUsage}%</h3>
+              <span className="text-[9px] font-bold text-emerald-500 mt-0.5 block">Optimal load</span>
+            </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+              <Cpu size={18} />
+            </div>
+          </div>
+
+          {/* RAM Usage */}
+          <div className="rounded-xl border border-theme-border/50 bg-theme-bg-alt/40 p-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">JVM Heap Memory</span>
+              <h3 className="text-xl font-extrabold mt-0.5 text-theme-text">{liveHealth.usedMemoryGb} GB / {liveHealth.totalMemoryGb} GB</h3>
+              <span className="text-[9px] font-bold text-emerald-500 mt-0.5 block">Garbage Collector Optimal</span>
+            </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+              <HardDrive size={18} />
+            </div>
+          </div>
+
+          {/* Response Time & Error Count */}
+          <div className="rounded-xl border border-theme-border/50 bg-theme-bg-alt/40 p-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Avg Response Time</span>
+              <h3 className="text-xl font-extrabold mt-0.5 text-theme-text">{liveHealth.responseTimeMs} ms</h3>
+              <span className="text-[9px] font-bold text-emerald-500 mt-0.5 block">Errors: {liveHealth.errorCount} | Failed: {liveHealth.failedRequests}</span>
+            </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-500">
+              <Zap size={18} />
+            </div>
+          </div>
+        </div>
+
+        {/* Backend Subsystem Health Indicators */}
+        <div className="pt-2 border-t border-theme-border/50 space-y-2.5">
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-theme-text-muted">Spring Boot Subsystem Health</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            
+            <div className="p-3 rounded-xl bg-theme-bg-alt/40 border border-theme-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Server size={16} className="text-theme-primary" />
+                <div>
+                  <span className="text-xs font-bold text-theme-text block">API Container</span>
+                  <span className="text-[9px] text-theme-text-muted font-semibold">Port 8080 Tomcat</span>
+                </div>
+              </div>
+              {getStatusBadge(liveHealth.apiStatus)}
+            </div>
+
+            <div className="p-3 rounded-xl bg-theme-bg-alt/40 border border-theme-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Database size={16} className="text-emerald-500" />
+                <div>
+                  <span className="text-xs font-bold text-theme-text block">MySQL HikariCP</span>
+                  <span className="text-[9px] text-theme-text-muted font-semibold">Pool: {liveHealth.dbPoolActive} / {liveHealth.dbPoolMax}</span>
+                </div>
+              </div>
+              {getStatusBadge(liveHealth.databaseStatus)}
+            </div>
+
+            <div className="p-3 rounded-xl bg-theme-bg-alt/40 border border-theme-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Wifi size={16} className="text-cyan-500" />
+                <div>
+                  <span className="text-xs font-bold text-theme-text block">WebSocket Manager</span>
+                  <span className="text-[9px] text-theme-text-muted font-semibold">Live Realtime Sync</span>
+                </div>
+              </div>
+              {getStatusBadge(liveHealth.webSocketStatus)}
+            </div>
+
+            <div className="p-3 rounded-xl bg-theme-bg-alt/40 border border-theme-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Clock size={16} className="text-indigo-500" />
+                <div>
+                  <span className="text-xs font-bold text-theme-text block">Task Scheduler</span>
+                  <span className="text-[9px] text-theme-text-muted font-semibold">Auto Assignments</span>
+                </div>
+              </div>
+              {getStatusBadge(liveHealth.schedulerStatus)}
+            </div>
+
+          </div>
         </div>
       </div>
 

@@ -215,155 +215,158 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-theme-card border border-theme-border rounded-3xl p-5 shadow-sm">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-theme-primary/10 text-theme-primary shadow-xs">
-            <Bell size={22} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-extrabold text-theme-text">Notifications Center</h1>
-              {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-xs">
-                  {unreadCount} Unread
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-theme-text-muted mt-0.5">Real-time alerts for lead assignments, scheduled follow-ups, and converted milestones.</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 self-end sm:self-center">
-          {unreadCount > 0 && (
-            <button 
-              onClick={markAllRead}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-xs font-bold text-theme-text border border-theme-border transition-all active:scale-95 shadow-xs"
-            >
-              <CheckCheck size={14} className="text-emerald-400" /> Mark All Read
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        {/* Category Tabs */}
-        <div className="flex items-center gap-1.5 bg-theme-bg-alt/70 p-1 rounded-2xl border border-theme-border/60 overflow-x-auto w-full sm:w-auto no-scrollbar">
-          {[
-            { id: 'ALL', label: `All (${notifications.length})` },
-            { id: 'UNREAD', label: `Unread (${unreadCount})` },
-            { id: 'LEADS', label: 'Leads & Conversions' },
-            { id: 'FOLLOWUPS', label: 'Follow-ups' },
-            { id: 'TASKS', label: 'Tasks' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-border/80'
-                  : 'text-theme-text-muted hover:text-theme-text'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="relative w-full sm:w-64">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-text-muted" />
-          <input
-            type="text"
-            placeholder="Search alerts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3.5 py-1.5 rounded-xl text-xs bg-theme-card border border-theme-border text-theme-text outline-none focus:border-theme-primary transition-all placeholder:text-theme-text-muted"
-          />
-        </div>
-      </div>
-
-      {/* Notifications Feed */}
-      <div className="space-y-2.5">
-        {filteredNotifications.map((item) => {
-          const isUnread = !(item.isRead ?? item.read);
-          const targetUrl = getNotificationTargetUrl(item.title, item.message || item.desc);
-
-          return (
-            <div
-              key={item.id}
-              className={`p-4 rounded-2xl border transition-all flex items-start gap-3.5 relative group ${
-                isUnread 
-                  ? 'bg-theme-card border-theme-primary/30 shadow-xs ring-1 ring-theme-primary/10' 
-                  : 'bg-theme-card/60 border-theme-border/50 opacity-80 hover:opacity-100 hover:bg-theme-card'
-              }`}
-            >
-              {/* Type Icon Container */}
-              <div className="p-2.5 rounded-2xl bg-theme-bg-alt border border-theme-border/60 shrink-0">
-                {getIcon(item.type)}
-              </div>
-              
-              {/* Content Box */}
-              <Link 
-                to={targetUrl}
-                onClick={() => markSingleRead(item.id)}
-                className="flex-1 min-w-0 block pr-8"
-              >
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <h3 className={`text-xs font-bold text-theme-text flex items-center gap-1.5 ${isUnread ? 'font-extrabold' : ''}`}>
-                      {item.title}
-                    </h3>
-                    <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase border ${getBadgeStyle(item.type)}`}>
-                      {item.type || 'SYSTEM'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-theme-text-muted">
-                    {item.time}
-                  </span>
-                </div>
-                <p className="text-xs text-theme-text-muted mt-1 leading-relaxed line-clamp-2">
-                  {item.message || item.desc}
-                </p>
-              </Link>
-
-              {/* Action Buttons */}
-              <div className="absolute right-3.5 top-3.5 flex items-center gap-1">
-                {isUnread ? (
-                  <button 
-                    onClick={() => markSingleRead(item.id)}
-                    className="p-1.5 rounded-xl hover:bg-emerald-500/10 text-theme-text-muted hover:text-emerald-400 transition-colors"
-                    title="Mark as Read"
-                  >
-                    <Check size={14} />
-                  </button>
-                ) : (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500/30 mr-1.5" title="Read" />
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {filteredNotifications.length === 0 && (
-          <div className="p-14 text-center rounded-3xl border border-theme-border/60 bg-theme-card/60 text-theme-text-muted space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-theme-primary/10 text-theme-primary flex items-center justify-center mx-auto">
-              <Sparkles size={22} />
+    <div className="max-w-4xl mx-auto space-y-5">
+      {/* Unified Notifications Center Container */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Top Header Row */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary shadow-xs">
+              <Bell size={22} />
             </div>
             <div>
-              <h4 className="text-sm font-extrabold text-theme-text">No Notifications Found</h4>
-              <p className="text-xs text-theme-text-muted mt-0.5">
-                {activeTab === 'UNREAD' 
-                  ? 'Great job! You have read all your notifications.' 
-                  : searchQuery 
-                  ? `No alerts match "${searchQuery}".` 
-                  : 'You are completely caught up with all workspace events!'}
-              </p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Notifications Center</h1>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-xs">
+                    {unreadCount} Unread
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-theme-text-muted mt-0.5">Real-time alerts for lead assignments, scheduled follow-ups, and converted milestones.</p>
             </div>
           </div>
-        )}
+
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            {unreadCount > 0 && (
+              <button 
+                onClick={markAllRead}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-theme-bg-alt hover:bg-theme-bg text-xs font-bold text-theme-text border border-theme-border transition-all active:scale-95 shadow-xs"
+              >
+                <CheckCheck size={14} className="text-emerald-400" /> Mark All Read
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs & Search Bar */}
+        <div className="pt-2 border-t border-theme-border/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Category Tabs */}
+          <div className="flex items-center gap-1.5 bg-theme-bg-alt/70 p-1 rounded-xl border border-theme-border/60 overflow-x-auto w-full sm:w-auto no-scrollbar">
+            {[
+              { id: 'ALL', label: `All (${notifications.length})` },
+              { id: 'UNREAD', label: `Unread (${unreadCount})` },
+              { id: 'LEADS', label: 'Leads & Conversions' },
+              { id: 'FOLLOWUPS', label: 'Follow-ups' },
+              { id: 'TASKS', label: 'Tasks' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-border/80'
+                    : 'text-theme-text-muted hover:text-theme-text'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-text-muted" />
+            <input
+              type="text"
+              placeholder="Search alerts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3.5 py-1.5 rounded-xl text-xs bg-theme-bg-alt/40 border border-theme-border text-theme-text outline-none focus:border-theme-primary transition-all placeholder:text-theme-text-muted"
+            />
+          </div>
+        </div>
+
+        {/* Notifications Feed */}
+        <div className="space-y-2.5 pt-1">
+          {filteredNotifications.map((item) => {
+            const isUnread = !(item.isRead ?? item.read);
+            const targetUrl = getNotificationTargetUrl(item.title, item.message || item.desc);
+
+            return (
+              <div
+                key={item.id}
+                className={`p-3.5 rounded-xl border transition-all flex items-start gap-3.5 relative group ${
+                  isUnread 
+                    ? 'bg-theme-bg-alt/60 border-theme-primary/30 shadow-xs ring-1 ring-theme-primary/10' 
+                    : 'bg-theme-bg-alt/25 border-theme-border/40 opacity-80 hover:opacity-100 hover:bg-theme-bg-alt/40'
+                }`}
+              >
+                {/* Type Icon Container */}
+                <div className="p-2 rounded-xl bg-theme-card border border-theme-border/60 shrink-0">
+                  {getIcon(item.type)}
+                </div>
+                
+                {/* Content Box */}
+                <Link 
+                  to={targetUrl}
+                  onClick={() => markSingleRead(item.id)}
+                  className="flex-1 min-w-0 block pr-8"
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <h3 className={`text-xs font-bold text-theme-text flex items-center gap-1.5 ${isUnread ? 'font-extrabold' : ''}`}>
+                        {item.title}
+                      </h3>
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase border ${getBadgeStyle(item.type)}`}>
+                        {item.type || 'SYSTEM'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-theme-text-muted">
+                      {item.time}
+                    </span>
+                  </div>
+                  <p className="text-xs text-theme-text-muted mt-1 leading-relaxed line-clamp-2">
+                    {item.message || item.desc}
+                  </p>
+                </Link>
+
+                {/* Action Buttons */}
+                <div className="absolute right-3.5 top-3.5 flex items-center gap-1">
+                  {isUnread ? (
+                    <button 
+                      onClick={() => markSingleRead(item.id)}
+                      className="p-1.5 rounded-xl hover:bg-emerald-500/10 text-theme-text-muted hover:text-emerald-400 transition-colors"
+                      title="Mark as Read"
+                    >
+                      <Check size={14} />
+                    </button>
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/30 mr-1.5" title="Read" />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {filteredNotifications.length === 0 && (
+            <div className="p-10 text-center rounded-2xl border border-theme-border/50 bg-theme-bg-alt/20 text-theme-text-muted space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-theme-primary/10 text-theme-primary flex items-center justify-center mx-auto">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h4 className="text-sm font-extrabold text-theme-text">No Notifications Found</h4>
+                <p className="text-xs text-theme-text-muted mt-0.5">
+                  {activeTab === 'UNREAD' 
+                    ? 'Great job! You have read all your notifications.' 
+                    : searchQuery 
+                    ? `No alerts match "${searchQuery}".` 
+                    : 'You are completely caught up with all workspace events!'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

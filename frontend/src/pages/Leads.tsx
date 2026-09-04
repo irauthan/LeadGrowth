@@ -316,8 +316,12 @@ export default function Leads() {
     return new Date(l.nextFollowupDate).getTime() < Date.now();
   };
 
-  // Priority Engine Counters
+  // Priority Engine Counters & Management Metrics
   const leadsArray = Array.isArray(leads) ? leads : [];
+  const unassignedCount = leadsArray.filter((l) => !isLeadAssigned(l)).length;
+  const assignedCount = leadsArray.filter((l) => isLeadAssigned(l) && l.status !== 'Converted' && l.status !== 'Lost' && l.status !== 'Rejected').length;
+  const convertedCount = leadsArray.filter((l) => l.status === 'Converted').length;
+
   const overdueCount = leadsArray.filter(isLeadOverdue).length;
   const highPriorityCount = leadsArray.filter((l) => l.priority === 'HIGH' || l.qualityTier === 'HOT').length;
   const newLeadsCount = leadsArray.filter((l) => l.status === 'New').length;
@@ -332,7 +336,13 @@ export default function Leads() {
     const matchesPlatform = platformFilter === 'All' || l.sourcePlatform === platformFilter;
     
     let matchesStatus = true;
-    if (statusFilter === 'Overdue') {
+    if (statusFilter === 'Unassigned') {
+      matchesStatus = !isLeadAssigned(l);
+    } else if (statusFilter === 'Assigned') {
+      matchesStatus = isLeadAssigned(l) && l.status !== 'Converted' && l.status !== 'Lost' && l.status !== 'Rejected';
+    } else if (statusFilter === 'Converted') {
+      matchesStatus = l.status === 'Converted';
+    } else if (statusFilter === 'Overdue') {
       matchesStatus = isLeadOverdue(l);
     } else if (statusFilter === 'HIGH') {
       matchesStatus = l.priority === 'HIGH' || l.qualityTier === 'HOT';
@@ -361,145 +371,239 @@ export default function Leads() {
 
   return (
     <div className="space-y-5">
-      {/* Header section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Workspace Leads</h1>
-            <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 text-[10px] font-bold border border-emerald-500/20">
-              Live Feed
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-theme-text-muted">
-            Prioritized intake pipeline for lead qualification, assignments, and follow-ups.
-          </p>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all"
-            title="Import Excel or CSV spreadsheet"
-          >
-            <FileSpreadsheet size={15} className="text-theme-primary" />
-            <span>Import Sheet</span>
-          </button>
-
-          <div className="relative group">
-            <button className="flex items-center gap-2 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all">
-              <Download size={15} />
-              <span>Export</span>
-            </button>
-            <div className="absolute right-0 top-10 hidden w-36 rounded-xl border border-theme-border bg-theme-card p-1 shadow-xl group-hover:block z-20">
-              <button onClick={() => handleExport('csv')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">CSV (.csv)</button>
-              <button onClick={() => handleExport('excel')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">Excel (.xlsx)</button>
-              <button onClick={() => handleExport('pdf')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">PDF (.pdf)</button>
+      {/* Unified Header & KPI Section */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Top Header Row */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">
+                {isManagementUser ? 'Admin Lead Allocation & Workspace' : 'Workspace Leads'}
+              </h1>
             </div>
+            <p className="mt-1 text-xs text-theme-text-muted">
+              {isManagementUser 
+                ? 'Lead distribution hub: assign leads to sales executives, monitor team workload, and audit client conversations.'
+                : 'Prioritized intake pipeline for lead qualification, assignments, and follow-ups.'}
+            </p>
           </div>
 
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2 text-xs font-semibold text-white shadow-xs transition-all"
-          >
-            <Plus size={15} />
-            <span>Add Lead</span>
-          </button>
+          {/* Action buttons */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all"
+              title="Import Excel or CSV spreadsheet"
+            >
+              <FileSpreadsheet size={15} className="text-theme-primary" />
+              <span>Import Sheet</span>
+            </button>
+
+            <div className="relative group">
+              <button className="flex items-center gap-2 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all">
+                <Download size={15} />
+                <span>Export</span>
+              </button>
+              <div className="absolute right-0 top-10 hidden w-36 rounded-xl border border-theme-border bg-theme-card p-1 shadow-xl group-hover:block z-20">
+                <button onClick={() => handleExport('csv')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">CSV (.csv)</button>
+                <button onClick={() => handleExport('excel')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">Excel (.xlsx)</button>
+                <button onClick={() => handleExport('pdf')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">PDF (.pdf)</button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2 text-xs font-semibold text-white shadow-xs transition-all"
+            >
+              <Plus size={15} />
+              <span>Add Lead</span>
+            </button>
+          </div>
+        </div>
+
+        {/* KPI Row (Admin Management Cards vs Sales Rep Operational Cards) */}
+        <div className="border-t border-theme-border/60 pt-3">
+          {isManagementUser ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('All')}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'All'
+                    ? 'bg-theme-bg-alt/70 border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
+                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <Briefcase size={13} className="text-theme-primary" /> Total Leads
+                  </span>
+                  <div className="text-xl font-black text-theme-text mt-0.5">{leads.length}</div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-bold">
+                  All
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter(statusFilter === 'Unassigned' ? 'All' : 'Unassigned')}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'Unassigned'
+                    ? 'bg-theme-bg-alt/70 border-amber-500 shadow-xs ring-1 ring-amber-500/30'
+                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <AlertCircle size={13} className="text-amber-500" /> Unassigned Leads
+                  </span>
+                  <div className="text-xl font-black text-theme-text mt-0.5">{unassignedCount}</div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  unassignedCount > 0 
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 animate-pulse' 
+                    : 'bg-theme-bg-alt text-theme-text-muted'
+                }`}>
+                  {unassignedCount > 0 ? 'Needs Action' : '0'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter(statusFilter === 'Assigned' ? 'All' : 'Assigned')}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'Assigned'
+                    ? 'bg-theme-bg-alt/70 border-indigo-500 shadow-xs ring-1 ring-indigo-500/30'
+                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <Zap size={13} className="text-indigo-500" /> Assigned & Active
+                  </span>
+                  <div className="text-xl font-black text-theme-text mt-0.5">{assignedCount}</div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
+                  In Progress
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter(statusFilter === 'Converted' ? 'All' : 'Converted')}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'Converted'
+                    ? 'bg-theme-bg-alt/70 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
+                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <Briefcase size={13} className="text-emerald-500" /> Converted Won
+                  </span>
+                  <div className="text-xl font-black text-theme-text mt-0.5">{convertedCount}</div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  Won
+                </span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('All')}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'All'
+                    ? 'bg-theme-bg-alt/70 border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
+                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <Briefcase size={13} className="text-theme-primary" /> Total Leads
+                  </span>
+                  <div className="text-xl font-black text-theme-text mt-0.5">{leads.length}</div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-bold">
+                  All
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter(statusFilter === 'New' ? 'All' : 'New')}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'New'
+                    ? 'bg-theme-bg-alt/70 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
+                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <Zap size={13} className="text-emerald-500" /> Fresh Inbound
+                  </span>
+                  <div className="text-xl font-black text-theme-text mt-0.5">{newLeadsCount}</div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  New
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter(statusFilter === 'HIGH' ? 'All' : 'HIGH')}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'HIGH'
+                    ? 'bg-theme-bg-alt/70 border-amber-500 shadow-xs ring-1 ring-amber-500/30'
+                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <Flame size={13} className="text-amber-500" /> High Focus
+                  </span>
+                  <div className="text-xl font-black text-theme-text mt-0.5">{highPriorityCount}</div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                  Hot
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter(statusFilter === 'Overdue' ? 'All' : 'Overdue')}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'Overdue'
+                    ? 'bg-theme-bg-alt/70 border-rose-500 shadow-xs ring-1 ring-rose-500/30'
+                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                    <AlertTriangle size={13} className="text-rose-500" /> Overdue Action
+                  </span>
+                  <div className="text-xl font-black text-theme-text mt-0.5">{overdueCount}</div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  overdueCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-theme-bg-alt text-theme-text-muted'
+                }`}>
+                  {overdueCount > 0 ? 'Pending' : '0'}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Priority Engine KPI Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'All' ? 'All' : 'All')}
-          className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'All'
-              ? 'bg-theme-card border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
-              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
-          }`}
-        >
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-              <Briefcase size={13} className="text-theme-primary" /> Total Pipeline
-            </span>
-            <div className="text-xl font-black text-theme-text mt-0.5">{leads.length}</div>
-          </div>
-          <span className="px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-bold">
-            All
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'New' ? 'All' : 'New')}
-          className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'New'
-              ? 'bg-theme-card border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
-              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
-          }`}
-        >
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-              <Zap size={13} className="text-emerald-500" /> Fresh Inbound
-            </span>
-            <div className="text-xl font-black text-theme-text mt-0.5">{newLeadsCount}</div>
-          </div>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-            New
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'HIGH' ? 'All' : 'HIGH')}
-          className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'HIGH'
-              ? 'bg-theme-card border-amber-500 shadow-xs ring-1 ring-amber-500/30'
-              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
-          }`}
-        >
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-              <Flame size={13} className="text-amber-500" /> High Focus
-            </span>
-            <div className="text-xl font-black text-theme-text mt-0.5">{highPriorityCount}</div>
-          </div>
-          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
-            Hot
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'Overdue' ? 'All' : 'Overdue')}
-          className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'Overdue'
-              ? 'bg-theme-card border-rose-500 shadow-xs ring-1 ring-rose-500/30'
-              : 'bg-theme-card hover:bg-theme-bg-alt border-theme-border/70'
-          }`}
-        >
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-              <AlertTriangle size={13} className="text-rose-500" /> Overdue Action
-            </span>
-            <div className="text-xl font-black text-theme-text mt-0.5">{overdueCount}</div>
-          </div>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-            overdueCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-theme-bg-alt text-theme-text-muted'
-          }`}>
-            {overdueCount > 0 ? 'Pending' : '0'}
-          </span>
-        </button>
-      </div>
-
-      {/* Main Split Panel */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        {/* Left Side Pane: Leads Feed list */}
+      {/* Main Split Panel - Left Sticky Sidebar & Right Naturally Scrollable Workflow */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 items-start">
+        {/* Left Side Pane: Leads Feed list (Sticky & Fit to Screen) */}
         {!isMaximized && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs lg:col-span-1">
+          <div className="flex flex-col rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs lg:col-span-1 lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] overflow-hidden">
             {/* Search & filters */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex-shrink-0 pb-1">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-text-muted" />
                 <input
@@ -528,12 +632,19 @@ export default function Leads() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-2.5 py-1.5 text-xs font-medium outline-none text-theme-text focus:border-theme-primary cursor-pointer"
                 >
-                  <option value="All">All Statuses</option>
+                  <option value="All">All Statuses / Categories</option>
+                  {isManagementUser && (
+                    <>
+                      <option value="Unassigned">Unassigned (Pending Allocation)</option>
+                      <option value="Assigned">Assigned (In Pipeline)</option>
+                    </>
+                  )}
                   <option value="New">New</option>
                   <option value="Interaction">Interaction</option>
                   <option value="Qualified">Qualified</option>
                   <option value="Converted">Converted</option>
                   <option value="Rejected">Rejected</option>
+                  <option value="Lost">Lost</option>
                   <option value="Overdue">Overdue</option>
                   <option value="HIGH">High Focus</option>
                 </select>
@@ -542,12 +653,12 @@ export default function Leads() {
 
             {/* Management Bulk Actions Bar */}
             {isManagementUser && filteredLeads.length > 0 && (
-              <div className="p-2.5 rounded-xl bg-theme-bg-alt/60 border border-theme-border/50 space-y-2">
+              <div className="p-3 my-2 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/60 space-y-2.5 shadow-xs flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <button
                     type="button"
                     onClick={handleToggleSelectAll}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-theme-text-muted hover:text-theme-text cursor-pointer"
+                    className="flex items-center gap-1.5 text-xs font-bold text-theme-text-muted hover:text-theme-text cursor-pointer"
                   >
                     {selectedLeadIds.length === filteredLeads.length ? (
                       <CheckSquare size={15} className="text-theme-primary" />
@@ -558,46 +669,55 @@ export default function Leads() {
                   </button>
 
                   {selectedLeadIds.length > 0 && (
-                    <span className="text-[10px] font-bold text-theme-primary bg-theme-primary/10 px-2 py-0.5 rounded-md">
+                    <span className="text-[10px] font-black text-theme-primary bg-theme-primary/10 border border-theme-primary/20 px-2.5 py-0.5 rounded-full">
                       {selectedLeadIds.length} Selected
                     </span>
                   )}
                 </div>
 
                 {selectedLeadIds.length > 0 && (
-                  <div className="flex flex-col sm:flex-row items-center gap-1.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleBulkAutoAssign}
-                      disabled={bulkAssigning}
-                      className="w-full sm:w-auto flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-all"
-                    >
-                      {bulkAssigning ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-                      <span>Auto-Assign</span>
-                    </button>
-
+                  <div className="pt-0.5">
                     <select
+                      defaultValue=""
                       onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (val) handleBulkManualAssign(val);
+                        const val = e.target.value;
+                        if (val === '-1') {
+                          handleBulkAutoAssign();
+                        } else if (val) {
+                          handleBulkManualAssign(parseInt(val, 10));
+                        }
+                        e.target.value = '';
                       }}
                       disabled={bulkAssigning}
-                      className="w-full sm:w-auto rounded-lg border border-theme-border bg-theme-card px-2 py-1.5 text-xs font-medium text-theme-text outline-none focus:border-theme-primary cursor-pointer"
+                      className="w-full rounded-xl border border-theme-border bg-theme-card px-3 py-2 text-xs font-bold text-theme-text outline-none focus:border-theme-primary shadow-xs cursor-pointer"
                     >
-                      <option value="">Assign to...</option>
-                      {members.map((m: any) => (
-                        <option key={m.id} value={m.id}>
-                          {m.fullName || m.name}
-                        </option>
-                      ))}
+                      <option value="" disabled>
+                        {bulkAssigning ? 'Assigning selected leads...' : `⚡ Bulk Assign (${selectedLeadIds.length}) Leads To...`}
+                      </option>
+                      <option value="-1">⚡ Auto-Assign (Smart AI Engine)</option>
+                      <optgroup label="Sales Executives">
+                        {members
+                          .filter((m: any) => {
+                            const roles = Array.isArray(m.roles)
+                              ? m.roles.map((r: any) => (typeof r === 'string' ? r : r.name || ''))
+                              : [];
+                            const roleStr = (m.role || m.designation || '').toUpperCase();
+                            return !roles.some((r: string) => r.toUpperCase().includes('ADMIN')) && !roleStr.includes('ADMIN');
+                          })
+                          .map((m: any) => (
+                            <option key={m.id} value={m.id}>
+                              👤 {m.fullName || m.name}
+                            </option>
+                          ))}
+                      </optgroup>
                     </select>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Feed List Items */}
-            <div className="max-h-[600px] space-y-2 overflow-y-auto pr-1">
+            {/* Feed List Items (scrolls internally without page scroll) */}
+            <div className="flex-1 space-y-2 overflow-y-auto pr-1 min-h-0 pt-1">
               {filteredLeads.map((lead) => {
                 const isSelected = selectedLead?.id === lead.id;
                 const isLostLead = lead.status === 'Lost' || lead.status === 'Rejected';
@@ -694,8 +814,8 @@ export default function Leads() {
           </div>
         )}
 
-        {/* Right Side Pane: Enterprise Multi-Activity Workflow Container */}
-        <div className={isMaximized ? "lg:col-span-3" : "lg:col-span-2"}>
+        {/* Right Side Pane: Enterprise Multi-Activity Workflow Container (Same Height & Bottom Alignment) */}
+        <div className={`${isMaximized ? "lg:col-span-3" : "lg:col-span-2"} lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] flex flex-col`}>
           {selectedLead ? (
             <WorkDetailsPanel
               leadId={selectedLead.id}
@@ -707,7 +827,7 @@ export default function Leads() {
               onLeadUpdated={fetchLeads}
             />
           ) : (
-            <div className="flex h-[600px] flex-col items-center justify-center rounded-2xl border border-theme-border/70 bg-theme-card p-6 shadow-xs text-center space-y-2">
+            <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-theme-border/70 bg-theme-card p-6 shadow-xs text-center space-y-2">
               <MessageSquare size={36} className="text-theme-text-muted opacity-30 mx-auto" />
               <div>
                 <h4 className="text-sm font-bold text-theme-text">Select a Lead from the Pipeline</h4>

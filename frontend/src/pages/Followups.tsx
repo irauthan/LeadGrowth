@@ -24,7 +24,7 @@ export default function Followups() {
   const [followups, setFollowups] = useState<FollowUp[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusTab, setStatusTab] = useState<'ALL' | 'UPCOMING' | 'OVERDUE' | 'COMPLETED' | 'CANCELLED'>('ALL');
+  const [statusTab, setStatusTab] = useState<'ONGOING' | 'UPCOMING' | 'OVERDUE' | 'COMPLETED' | 'CANCELLED'>('ONGOING');
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,6 +114,7 @@ export default function Followups() {
   // Filtered Follow-ups Logic
   const filteredFollowups = followups.filter((f) => {
     // 1. Status Filter
+    if (statusTab === 'ONGOING' && (f.status === 'COMPLETED' || f.status === 'CANCELLED')) return false;
     if (statusTab === 'UPCOMING' && !(f.status === 'UPCOMING' || f.status === 'PENDING' || f.status === 'SCHEDULED')) return false;
     if (statusTab === 'OVERDUE' && !(f.status === 'OVERDUE' || f.status === 'MISSED' || f.isOverdue)) return false;
     if (statusTab === 'COMPLETED' && f.status !== 'COMPLETED') return false;
@@ -138,6 +139,12 @@ export default function Followups() {
 
     return true;
   });
+
+  const ongoingCount = followups.filter((f) => f.status !== 'COMPLETED' && f.status !== 'CANCELLED').length;
+  const upcomingCount = followups.filter((f) => f.status === 'UPCOMING' || f.status === 'PENDING' || f.status === 'SCHEDULED').length;
+  const overdueCount = followups.filter((f) => f.status === 'OVERDUE' || f.status === 'MISSED' || f.isOverdue).length;
+  const completedCount = followups.filter((f) => f.status === 'COMPLETED').length;
+  const cancelledCount = followups.filter((f) => f.status === 'CANCELLED').length;
 
   const getStatusBadge = (status: string, isOverdue?: boolean) => {
     if (isOverdue || status === 'OVERDUE' || status === 'MISSED') {
@@ -168,58 +175,71 @@ export default function Followups() {
     );
   };
 
+  if (loading) {
+    return <HoosshBeeLoader text="Loading follow-up schedules..." subtext="Syncing calendar appointments and reminders" />;
+  }
+
   return (
-    <div className="space-y-6">
-      
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-theme-card p-6 rounded-3xl border border-theme-border shadow-md">
-        <div>
-          <h1 className="text-2xl font-extrabold text-theme-text">Lead Follow-up & Scheduling</h1>
-          <p className="text-xs text-theme-text-muted mt-1">
-            Stage-independent follow-ups with conflict detection, 9 AM – 7 PM working hours enforcement, and smart auto-scheduling.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={() => setShowLeadSelectModal(true)}
-            className="flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all"
-          >
-            <Plus size={16} /> New Schedule
-          </button>
-        </div>
-      </div>
-
+    <div className="space-y-5">
       {successMsg && (
         <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-xs font-bold text-emerald-500 flex items-center gap-2">
           <CheckCircle2 size={16} /> {successMsg}
         </div>
       )}
 
-      {/* Merged Card: Filters Toolbar + Follow-ups List */}
-      <div className="rounded-3xl border border-theme-border bg-theme-card shadow-md overflow-hidden">
+      {/* Unified Follow-ups Container */}
+      <div className="rounded-2xl border border-theme-border/70 bg-theme-card shadow-xs overflow-hidden">
+        {/* Top Header Banner */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 border-b border-theme-border/60">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Lead Follow-up & Scheduling</h1>
+            <p className="text-xs text-theme-text-muted mt-1">
+              Stage-independent follow-ups with conflict detection, 9 AM – 7 PM working hours enforcement, and smart auto-scheduling.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => setShowLeadSelectModal(true)}
+              className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2 text-xs font-semibold text-white shadow-xs transition-all"
+            >
+              <Plus size={15} /> New Schedule
+            </button>
+          </div>
+        </div>
         
-        {/* Top Filters & Tabs Bar */}
-        <div className="p-4 space-y-4 border-b border-theme-border/60 bg-theme-card">
+        {/* Filters & Tabs Bar */}
+        <div className="p-4 space-y-4 border-b border-theme-border/60 bg-theme-bg-alt/20">
           {/* Status Tabs */}
           <div className="flex items-center gap-2 flex-wrap border-b border-theme-border/40 pb-3">
             {[
-              { key: 'ALL', label: 'All Follow-ups' },
-              { key: 'UPCOMING', label: 'Scheduled / Upcoming' },
-              { key: 'OVERDUE', label: 'Overdue' },
-              { key: 'COMPLETED', label: 'Completed' },
-              { key: 'CANCELLED', label: 'Cancelled' },
+              { key: 'ONGOING', label: 'Ongoing / Active', count: ongoingCount },
+              { key: 'UPCOMING', label: 'Scheduled / Upcoming', count: upcomingCount },
+              { key: 'OVERDUE', label: 'Overdue', count: overdueCount },
+              { key: 'COMPLETED', label: 'Completed History', count: completedCount },
+              { key: 'CANCELLED', label: 'Cancelled', count: cancelledCount },
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setStatusTab(tab.key as any)}
-                className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all ${
+                className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all flex items-center gap-2 ${
                   statusTab === tab.key
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-theme-bg-alt text-theme-text-muted hover:text-theme-text'
                 }`}
               >
-                {tab.label}
+                <span>{tab.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  statusTab === tab.key
+                    ? 'bg-white/20 text-white'
+                    : tab.key === 'OVERDUE' && tab.count > 0
+                      ? 'bg-rose-500/20 text-rose-500'
+                      : tab.key === 'COMPLETED' && tab.count > 0
+                        ? 'bg-emerald-500/20 text-emerald-500'
+                        : 'bg-theme-border text-theme-text-muted'
+                }`}>
+                  {tab.count}
+                </span>
               </button>
             ))}
           </div>

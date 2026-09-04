@@ -192,94 +192,97 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-5">
 
-      {/* Header Command Center Banner */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 rounded-2xl border border-theme-border/70 bg-theme-card shadow-xs relative">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary">
-            <Shield size={22} />
+      {/* Unified Header & Financial KPIs Container */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Header Command Center Row */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-theme-primary/10 text-theme-primary shadow-xs">
+              <Shield size={22} />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Business Command Center</h1>
+              <p className="text-xs text-theme-text-muted mt-0.5">High-level financial KPIs, ad spend efficiency, team output, and live marketing ROI.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Business Command Center</h1>
-            <p className="text-xs text-theme-text-muted mt-0.5">High-level financial KPIs, ad spend efficiency, team output, and live marketing ROI.</p>
+
+          <div className="flex items-center gap-2.5">
+            <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
-        </div>
-      </div>
-
-      {/* Top Financial & Growth KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        
-        {/* Total Revenue */}
-        <div className="rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-xs transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Revenue</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <IndianRupee size={15} />
+        {/* Top Financial & Growth KPIs */}
+        <div className="border-t border-theme-border/60 pt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Total Revenue */}
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-2 hover:border-theme-primary/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Revenue</span>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <IndianRupee size={14} />
+                </div>
+              </div>
+              <h3 className="text-xl font-black text-theme-text">{formatCurrency(data.totalRevenue)}</h3>
+              <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
+                <span>Net Profit</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(netProfit)}</span>
+              </div>
             </div>
-          </div>
-          <h3 className="text-2xl font-black text-theme-text">{formatCurrency(data.totalRevenue)}</h3>
-          <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
-            <span>Net Profit</span>
-            <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(netProfit)}</span>
-          </div>
-        </div>
 
-        {/* Total Ad Spend */}
-        <Link
-          to="/campaigns"
-          className="rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-xs transition-all cursor-pointer group block"
-          title="Open Campaigns Analytics"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Total Ad Spend</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary group-hover:scale-105 transition-transform">
-              <TrendingUp size={15} />
-            </div>
-          </div>
-          <h3 className="text-2xl font-black text-theme-text">{formatCurrency(data.totalSpend)}</h3>
-          <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
-            <span>CPC</span>
-            <span className="font-bold text-theme-text">{formatCurrency(data.cpc)}</span>
-          </div>
-        </Link>
+            {/* Total Ad Spend */}
+            <Link
+              to="/campaigns"
+              className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-2 hover:border-theme-primary/40 transition-all cursor-pointer group block"
+              title="Open Campaigns Analytics"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Total Ad Spend</span>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary group-hover:scale-105 transition-transform">
+                  <TrendingUp size={14} />
+                </div>
+              </div>
+              <h3 className="text-xl font-black text-theme-text">{formatCurrency(data.totalSpend)}</h3>
+              <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
+                <span>CPC</span>
+                <span className="font-bold text-theme-text">{formatCurrency(data.cpc)}</span>
+              </div>
+            </Link>
 
-        {/* Blended ROAS */}
-        <Link
-          to="/campaigns"
-          className="rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-xs transition-all cursor-pointer group block"
-          title="Open Campaigns Analytics"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Blended ROAS</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary group-hover:scale-105 transition-transform">
-              <Zap size={15} />
-            </div>
-          </div>
-          <h3 className="text-2xl font-black text-theme-text">{data.roas}x</h3>
-          <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
-            <span>CTR</span>
-            <span className="font-bold text-theme-text">{data.ctr}%</span>
-          </div>
-        </Link>
+            {/* Blended ROAS */}
+            <Link
+              to="/campaigns"
+              className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-2 hover:border-theme-primary/40 transition-all cursor-pointer group block"
+              title="Open Campaigns Analytics"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Blended ROAS</span>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary group-hover:scale-105 transition-transform">
+                  <Zap size={14} />
+                </div>
+              </div>
+              <h3 className="text-xl font-black text-theme-text">{data.roas}x</h3>
+              <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
+                <span>CTR</span>
+                <span className="font-bold text-theme-text">{data.ctr}%</span>
+              </div>
+            </Link>
 
-        {/* Total Leads & Conversions */}
-        <div className="rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs space-y-2 hover:border-theme-primary/40 hover:shadow-xs transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Leads</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary">
-              <Users size={15} />
+            {/* Total Leads & Conversions */}
+            <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-2 hover:border-theme-primary/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Leads</span>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary">
+                  <Users size={14} />
+                </div>
+              </div>
+              <h3 className="text-xl font-black text-theme-text">{formatNumber(data.totalLeads)}</h3>
+              <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
+                <span>Conversions</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(data.totalConversions)}</span>
+              </div>
             </div>
-          </div>
-          <h3 className="text-2xl font-black text-theme-text">{formatNumber(data.totalLeads)}</h3>
-          <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
-            <span>Conversions</span>
-            <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(data.totalConversions)}</span>
           </div>
         </div>
-
       </div>
 
       {/* ========================================================================= */}

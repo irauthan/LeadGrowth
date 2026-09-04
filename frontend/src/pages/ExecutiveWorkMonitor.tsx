@@ -240,167 +240,167 @@ export default function ExecutiveWorkMonitor() {
   });
 
   return (
-    <div className="space-y-6">
-      
-      {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 rounded-3xl bg-theme-card border border-theme-border shadow-md">
-        <div>
-          <h1 className="text-2xl font-extrabold text-theme-text font-sans">
-            {isPrivileged ? 'Executive Activity & Lead Work Monitor' : 'My Activity & Lead Performance'}
-          </h1>
-          <p className="text-xs text-theme-text-muted mt-1">
-            {isPrivileged 
-              ? 'Empirical day-wise and month-wise audit tracking of all activities, outreach calls, and step progress for every lead.'
-              : 'Track your daily calls, meetings, follow-ups, and lead progress in real-time.'}
-          </p>
+    <div className="space-y-5">
+      {/* Unified Executive Monitor Header, Filters & KPI Overview Container */}
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+        {/* Header Row */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text font-sans">
+              {isPrivileged ? 'Executive Activity & Lead Work Monitor' : 'My Activity & Lead Performance'}
+            </h1>
+            <p className="text-xs text-theme-text-muted mt-1">
+              {isPrivileged 
+                ? 'Empirical day-wise and month-wise audit tracking of all activities, outreach calls, and step progress for every lead.'
+                : 'Track your daily calls, meetings, follow-ups, and lead progress in real-time.'}
+            </p>
+          </div>
+
+          {/* Member Selector / User Badge */}
+          <div className="flex items-center gap-3">
+            {isPrivileged ? (
+              <div className="flex items-center gap-2 bg-theme-bg-alt/70 p-1.5 rounded-xl border border-theme-border shadow-xs">
+                <UserIcon size={14} className="text-theme-primary ml-1.5" />
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setSelectedUserId(val);
+                    setSearchParams(val > 0 ? { userId: String(val) } : {});
+                  }}
+                  className="bg-transparent text-xs font-bold text-theme-text outline-none pr-2 cursor-pointer"
+                >
+                  <option value={0}>All Staff & Executive Team Members</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.fullName} ({m.roles?.[0]?.name?.replace('ROLE_', '') || m.roles?.[0]?.replace('ROLE_', '') || 'STAFF'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 bg-theme-bg-alt/70 px-3.5 py-1.5 rounded-xl border border-theme-border shadow-xs">
+                <div className="h-6 w-6 rounded-full bg-theme-primary/20 text-theme-primary flex items-center justify-center text-xs font-extrabold">
+                  {user?.fullName ? user.fullName[0].toUpperCase() : 'U'}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-theme-text leading-tight">{user?.fullName || 'Executive'}</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Member Selector / User Badge */}
-        <div className="flex items-center gap-3">
-          {isPrivileged ? (
-            <div className="flex items-center gap-2 bg-theme-bg-alt/70 p-1.5 rounded-2xl border border-theme-border">
-              <UserIcon size={14} className="text-theme-primary ml-1.5" />
-              <select
-                value={selectedUserId}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  setSelectedUserId(val);
-                  setSearchParams(val > 0 ? { userId: String(val) } : {});
-                }}
-                className="bg-transparent text-xs font-bold text-theme-text outline-none pr-2"
+        {/* Timeframe Presets & Custom Range Bar */}
+        <div className="border-t border-theme-border/60 pt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {[
+              { key: 'TODAY', label: 'Today (Day-wise)' },
+              { key: 'YESTERDAY', label: 'Yesterday' },
+              { key: 'THIS_WEEK', label: 'This Week' },
+              { key: 'THIS_MONTH', label: 'This Month (Month-wise)' },
+              { key: 'CUSTOM', label: 'Custom Range' },
+            ].map((tf) => (
+              <button
+                key={tf.key}
+                type="button"
+                onClick={() => setTimeframe(tf.key)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  timeframe === tf.key
+                    ? 'bg-theme-primary text-white shadow-xs'
+                    : 'bg-theme-bg-alt/50 text-theme-text-muted hover:text-theme-text'
+                }`}
               >
-                <option value={0}>All Staff & Executive Team Members</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.fullName} ({m.roles?.[0]?.name?.replace('ROLE_', '') || m.roles?.[0]?.replace('ROLE_', '') || 'STAFF'})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2.5 bg-theme-bg-alt/70 px-3.5 py-2 rounded-2xl border border-theme-border shadow-xs">
-              <div className="h-7 w-7 rounded-full bg-theme-primary/20 text-theme-primary flex items-center justify-center text-xs font-extrabold">
-                {user?.fullName ? user.fullName[0].toUpperCase() : 'U'}
-              </div>
-              <div>
-                <p className="text-xs font-bold text-theme-text leading-tight">{user?.fullName || 'Executive'}</p>
-                <p className="text-[10px] text-theme-text-muted font-medium">{user?.email || ''}</p>
-              </div>
+                {tf.label}
+              </button>
+            ))}
+          </div>
+
+          {timeframe === 'CUSTOM' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-theme-bg-alt border border-theme-border rounded-xl px-2.5 py-1 text-xs font-bold text-theme-text outline-none"
+              />
+              <span className="text-xs text-theme-text-muted font-bold">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-theme-bg-alt border border-theme-border rounded-xl px-2.5 py-1 text-xs font-bold text-theme-text outline-none"
+              />
             </div>
           )}
         </div>
-      </div>
 
-      {/* Filter Toolbar (Timeframe & Custom Date Selector) */}
-      <div className="p-4 rounded-3xl bg-theme-card border border-theme-border shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        
-        {/* Timeframe Presets */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {[
-            { key: 'TODAY', label: 'Today (Day-wise)' },
-            { key: 'YESTERDAY', label: 'Yesterday' },
-            { key: 'THIS_WEEK', label: 'This Week' },
-            { key: 'THIS_MONTH', label: 'This Month (Month-wise)' },
-            { key: 'CUSTOM', label: 'Custom Range' },
-          ].map((tf) => (
-            <button
-              key={tf.key}
-              type="button"
-              onClick={() => setTimeframe(tf.key)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
-                timeframe === tf.key
-                  ? 'bg-theme-primary text-white shadow-md'
-                  : 'bg-theme-bg-alt text-theme-text-muted hover:text-theme-text'
-              }`}
-            >
-              {tf.label}
-            </button>
-          ))}
-        </div>
+        {/* Executive Overview KPI Grid */}
+        {summary && (
+          <div className="border-t border-theme-border/60 pt-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+                <div className="flex items-center justify-between text-theme-text-muted">
+                  <span className="text-[10px] font-bold uppercase">Assigned Leads</span>
+                  <UserCheck size={14} className="text-blue-500" />
+                </div>
+                <div className="text-xl font-black text-theme-text">{summary.totalAssignedLeads}</div>
+                <p className="text-[9px] text-theme-text-muted font-semibold">Active in workspace</p>
+              </div>
 
-        {/* Custom Range Inputs */}
-        {timeframe === 'CUSTOM' && (
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-1.5 text-xs font-bold text-theme-text outline-none"
-            />
-            <span className="text-xs text-theme-text-muted font-bold">to</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-1.5 text-xs font-bold text-theme-text outline-none"
-            />
+              <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+                <div className="flex items-center justify-between text-theme-text-muted">
+                  <span className="text-[10px] font-bold uppercase">Total Activities</span>
+                  <BarChart3 size={14} className="text-purple-500" />
+                </div>
+                <div className="text-xl font-black text-theme-text">{summary.totalActivitiesLogged}</div>
+                <p className="text-[9px] text-theme-text-muted font-semibold">Outreach attempts</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+                <div className="flex items-center justify-between text-theme-text-muted">
+                  <span className="text-[10px] font-bold uppercase">Calls Made</span>
+                  <PhoneCall size={14} className="text-emerald-500" />
+                </div>
+                <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">{summary.totalCallsMade}</div>
+                <p className="text-[9px] text-theme-text-muted font-semibold">Phone calls logged</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+                <div className="flex items-center justify-between text-theme-text-muted">
+                  <span className="text-[10px] font-bold uppercase">Meetings & Demos</span>
+                  <Video size={14} className="text-amber-500" />
+                </div>
+                <div className="text-xl font-black text-amber-600 dark:text-amber-400">{summary.totalMeetingsHeld}</div>
+                <p className="text-[9px] text-theme-text-muted font-semibold">Scheduled / Executed</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+                <div className="flex items-center justify-between text-theme-text-muted">
+                  <span className="text-[10px] font-bold uppercase">Followups Done</span>
+                  <CheckCircle2 size={14} className="text-cyan-500" />
+                </div>
+                <div className="text-xl font-black text-cyan-600 dark:text-cyan-400">{summary.completedFollowupsCount}</div>
+                <p className="text-[9px] text-rose-500 font-semibold">{summary.overdueFollowupsCount} Overdue</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
+                <div className="flex items-center justify-between text-theme-text-muted">
+                  <span className="text-[10px] font-bold uppercase">Conversions</span>
+                  <TrendingUp size={14} className="text-indigo-500" />
+                </div>
+                <div className="text-xl font-black text-indigo-600 dark:text-indigo-400">{summary.totalConvertedLeads}</div>
+                <p className="text-[9px] text-theme-text-muted font-semibold">{(summary.conversionRate * 100).toFixed(1)}% Conversion</p>
+              </div>
+            </div>
           </div>
         )}
-
       </div>
 
       {loading ? (
         <HoosshBeeLoader text="Loading Executive Monitor..." subtext="Syncing agent activities, call durations and live presence" />
       ) : summary ? (
         <>
-          {/* Executive Overview KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            
-            <div className="p-4 rounded-3xl bg-theme-card border border-theme-border shadow-sm space-y-1">
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-extrabold uppercase">Assigned Leads</span>
-                <UserCheck size={16} className="text-blue-500" />
-              </div>
-              <div className="text-2xl font-black text-theme-text">{summary.totalAssignedLeads}</div>
-              <p className="text-[10px] text-theme-text-muted font-semibold">Active in workspace</p>
-            </div>
-
-            <div className="p-4 rounded-3xl bg-theme-card border border-theme-border shadow-sm space-y-1">
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-extrabold uppercase">Total Activities</span>
-                <BarChart3 size={16} className="text-purple-500" />
-              </div>
-              <div className="text-2xl font-black text-theme-text">{summary.totalActivitiesLogged}</div>
-              <p className="text-[10px] text-theme-text-muted font-semibold">Outreach attempts</p>
-            </div>
-
-            <div className="p-4 rounded-3xl bg-theme-card border border-theme-border shadow-sm space-y-1">
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-extrabold uppercase">Calls Made</span>
-                <PhoneCall size={16} className="text-emerald-500" />
-              </div>
-              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{summary.totalCallsMade}</div>
-              <p className="text-[10px] text-theme-text-muted font-semibold">Phone calls logged</p>
-            </div>
-
-            <div className="p-4 rounded-3xl bg-theme-card border border-theme-border shadow-sm space-y-1">
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-extrabold uppercase">Meetings & Demos</span>
-                <Video size={16} className="text-amber-500" />
-              </div>
-              <div className="text-2xl font-black text-amber-600 dark:text-amber-400">{summary.totalMeetingsHeld}</div>
-              <p className="text-[10px] text-theme-text-muted font-semibold">Scheduled / Executed</p>
-            </div>
-
-            <div className="p-4 rounded-3xl bg-theme-card border border-theme-border shadow-sm space-y-1">
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-extrabold uppercase">Followups Done</span>
-                <CheckCircle2 size={16} className="text-cyan-500" />
-              </div>
-              <div className="text-2xl font-black text-cyan-600 dark:text-cyan-400">{summary.completedFollowupsCount}</div>
-              <p className="text-[10px] text-rose-500 font-semibold">{summary.overdueFollowupsCount} Overdue</p>
-            </div>
-
-            <div className="p-4 rounded-3xl bg-theme-card border border-theme-border shadow-sm space-y-1">
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-extrabold uppercase">Conversions</span>
-                <TrendingUp size={16} className="text-indigo-500" />
-              </div>
-              <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{summary.totalConvertedLeads}</div>
-              <p className="text-[10px] text-theme-text-muted font-semibold">{(summary.conversionRate * 100).toFixed(1)}% Conversion</p>
-            </div>
-
-          </div>
 
           {/* Executive Call Duration Tracking & Effort Productivity Banner (ADMIN / MANAGER MONITOR) */}
           <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm space-y-4">
