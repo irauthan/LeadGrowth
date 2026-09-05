@@ -192,9 +192,9 @@ export default function Followups() {
         {/* Top Header Banner */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 border-b border-theme-border/60">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Lead Follow-up & Scheduling</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Follow-ups & Reminders</h1>
             <p className="text-xs text-theme-text-muted mt-1">
-              Stage-independent follow-ups with conflict detection, 9 AM – 7 PM working hours enforcement, and smart auto-scheduling.
+              Manage client calls, upcoming demos, and scheduled reminders.
             </p>
           </div>
 

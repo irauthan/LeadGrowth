@@ -201,8 +201,8 @@ export default function AdminDashboard() {
               <Shield size={22} />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Business Command Center</h1>
-              <p className="text-xs text-theme-text-muted mt-0.5">High-level financial KPIs, ad spend efficiency, team output, and live marketing ROI.</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Business Overview</h1>
+              <p className="text-xs text-theme-text-muted mt-0.5">Financial KPIs, ad spend efficiency, and team performance.</p>
             </div>
           </div>
 

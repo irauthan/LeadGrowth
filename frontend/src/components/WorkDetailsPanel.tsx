@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
+  ChevronLeft,
   Phone, 
   Mail, 
   CheckCircle2, 
@@ -570,14 +571,23 @@ export default function WorkDetailsPanel({
   const panelInner = (
     <div className={`bg-theme-card border border-theme-border flex flex-col relative w-full ${containerClass}`}>
       {/* Top Header */}
-      <div className="p-4 sm:p-5 border-b border-theme-border flex items-center justify-between bg-theme-card/80 backdrop-blur-md flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-sm">
+      <div className="p-3 sm:p-5 border-b border-theme-border flex items-center justify-between bg-theme-card/90 backdrop-blur-md flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="flex sm:hidden h-8 w-8 items-center justify-center rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text active:scale-95 transition-all flex-shrink-0"
+              title="Back"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-xs sm:text-sm flex-shrink-0">
             {lead?.name?.substring(0, 2).toUpperCase() || 'LD'}
           </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base font-extrabold text-theme-text flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h2 className="text-sm sm:text-base font-extrabold text-theme-text truncate">
                 {lead?.name || 'Lead Work Container'}
               </h2>
               <select
@@ -593,35 +603,35 @@ export default function WorkDetailsPanel({
                     console.error('Failed to update stage', err);
                   }
                 }}
-                className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-primary focus:outline-none focus:border-theme-primary cursor-pointer shadow-xs"
+                className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-lg bg-theme-bg-alt border border-theme-border text-theme-primary focus:outline-none focus:border-theme-primary cursor-pointer shadow-xs"
               >
                 <option value="New">NEW</option>
                 <option value="Interaction">INTERACTION</option>
                 <option value="Proposal Sent">PROPOSAL SENT</option>
                 <option value="Negotiation">NEGOTIATION</option>
                 <option value="Converted">CONVERTED</option>
-                <option value="Lost">LOST (DROP LEAD)</option>
+                <option value="Lost">LOST (DROP)</option>
               </select>
 
               {isLeadFresh(lead) && (
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 inline-flex items-center gap-1">
+                <span className="hidden xs:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 items-center gap-1">
                   <Sparkles size={10} /> FRESH
                 </span>
               )}
             </div>
-            <p className="text-xs text-theme-text-muted mt-0.5">
-              {lead?.company || 'No Company'} • {lead?.email} • {lead?.phone || 'No Phone'}
+            <p className="text-[11px] text-theme-text-muted mt-0.5 truncate">
+              {lead?.company && lead.company !== 'N/A' ? `${lead.company} • ` : ''}{lead?.email} {lead?.phone ? `• ${lead.phone}` : ''}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Maximize / Minimize Toggle Button */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          {/* Maximize / Minimize Toggle Button (Desktop only) */}
           <button
             type="button"
             onClick={toggleMaximize}
             title={maximized ? "Minimize Container" : "Maximize Container"}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-primary hover:border-theme-primary transition-all text-xs font-bold shadow-xs"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-primary hover:border-theme-primary transition-all text-xs font-bold shadow-xs"
           >
             {maximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             <span className="hidden sm:inline text-[11px]">{maximized ? 'Minimize' : 'Maximize'}</span>
@@ -643,149 +653,155 @@ export default function WorkDetailsPanel({
               }}
               disabled={isDownloadingPdf}
               title="Export Complete Lead Dossier (PDF)"
-              className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-primary hover:border-theme-primary transition-all disabled:opacity-50"
+              className="p-1.5 sm:p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-primary hover:border-theme-primary transition-all disabled:opacity-50"
             >
               {isDownloadingPdf ? (
-                <Loader2 size={16} className="animate-spin text-theme-primary" />
+                <Loader2 size={15} className="animate-spin text-theme-primary" />
               ) : (
-                <Download size={16} />
+                <Download size={15} />
               )}
             </button>
           )}
 
-          {!inline && (
+          {onClose && (
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-rose-500 transition-all"
+              className="p-1.5 sm:p-2 rounded-xl bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text hover:border-rose-500 transition-all active:scale-95"
+              title="Close"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           )}
         </div>
       </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="px-6 py-2.5 bg-theme-card/30 border-b border-theme-border flex items-center justify-between text-xs flex-shrink-0">
-            <div className="flex items-center gap-4">
-              <div>
-                <span className="text-[10px] font-bold text-theme-text-muted block">QUALITY TIER</span>
-                <span className="font-extrabold text-amber-400">{lead?.qualityTier || 'WARM'}</span>
+      {/* Quick Metrics Bar */}
+      <div className="px-4 sm:px-6 py-2.5 bg-theme-bg-alt/40 border-b border-theme-border flex items-center justify-between text-xs flex-shrink-0">
+        <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+          <div>
+            <span className="text-[9px] sm:text-[10px] font-bold text-theme-text-muted block">QUALITY TIER</span>
+            <span className="font-extrabold text-amber-400 text-xs sm:text-sm">{lead?.qualityTier || 'WARM'}</span>
+          </div>
+
+          <div className="h-6 w-px bg-theme-border/60" />
+
+          <div>
+            <span className="text-[9px] sm:text-[10px] font-bold text-theme-text-muted block">WORKFLOW PROGRESS</span>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="w-16 sm:w-20 h-1.5 rounded-full bg-theme-bg-alt border border-theme-border/50 overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-theme-primary to-emerald-400"
+                  style={{ width: `${lead?.progressPercentage || 0}%` }}
+                />
               </div>
-              <div className="h-6 w-px bg-theme-border" />
-              <div>
-                <span className="text-[10px] font-bold text-theme-text-muted block">WORKFLOW PROGRESS</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-20 h-1.5 rounded-full bg-theme-bg-alt overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-theme-primary to-emerald-400"
-                      style={{ width: `${lead?.progressPercentage || 0}%` }}
-                    />
-                  </div>
-                  <span className="font-extrabold text-theme-text">{lead?.progressPercentage || 0}%</span>
-                </div>
-              </div>
-              <div className="h-6 w-px bg-theme-border" />
-              <div>
-                <span className="text-[10px] font-bold text-theme-text-muted block">ASSIGNED REP</span>
-                <span className={`font-bold flex items-center gap-1 ${isLeadAssigned(lead) ? 'text-emerald-400' : 'text-theme-text-muted'}`}>
-                  {isLeadAssigned(lead) && <UserCheck size={12} className="text-emerald-400 inline" />}
-                  {lead?.assignedToName && lead.assignedToName !== 'Unassigned' ? lead.assignedToName : 'Unassigned'}
-                </span>
-              </div>
+              <span className="font-extrabold text-xs text-theme-text">{lead?.progressPercentage || 0}%</span>
             </div>
           </div>
 
-          {/* Body Section */}
-          {loading ? (
-            <div className="flex-1 flex items-center justify-center space-y-3 flex-col py-20">
-              <div className="w-8 h-8 border-2 border-theme-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs font-bold text-theme-text-muted">Loading Enterprise Multi-Activity Engine...</span>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 min-h-0">
-              {/* Call Duration Tracking Widget (Sales Reps Only) */}
-              {lead && !isManagementUser && (
-                <CallTimerWidget
-                  leadId={lead.id}
-                  leadName={lead.name}
-                  assignedToId={lead.assignedToId}
-                  onCallEnded={() => {
-                    fetchLeadDetails();
-                    triggerUpdate();
-                  }}
-                />
-              )}
+          <div className="h-6 w-px bg-theme-border/60" />
 
-              {/* Overdue Action Banner (Sales Reps Only) */}
-              {lead && !isManagementUser && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
-                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-extrabold flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-                  <div className="flex items-start gap-2.5">
-                    <AlertCircle size={18} className="shrink-0 mt-0.5 animate-bounce" />
-                    <div>
-                      <p className="font-extrabold uppercase tracking-wide flex items-center gap-1.5">
-                        <AlertCircle size={14} className="text-rose-400 animate-pulse" />
-                        <span>OVERDUE ACTION REQUIRED FOR THIS LEAD!</span>
-                      </p>
-                      <p className="text-[11px] font-semibold text-rose-400 mt-0.5">
-                        Scheduled follow-up ({new Date(lead.nextFollowupDate).toLocaleString()}) was missed.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab('followup')}
-                    className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] shadow shrink-0 self-start sm:self-auto transition-all"
-                  >
-                    Reschedule / View Slot
-                  </button>
+          <div>
+            <span className="text-[9px] sm:text-[10px] font-bold text-theme-text-muted block">ASSIGNED REP</span>
+            <span className={`font-bold text-xs flex items-center gap-1 ${isLeadAssigned(lead) ? 'text-emerald-400' : 'text-theme-text-muted'}`}>
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" />
+              {lead?.assignedToName && lead.assignedToName !== 'Unassigned' ? lead.assignedToName : 'Unassigned'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Body Section */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center space-y-3 flex-col py-20">
+          <div className="w-8 h-8 border-2 border-theme-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-theme-text-muted">Loading Activity Engine...</span>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 min-h-0">
+          {/* Call Duration Tracking Widget (Sales Reps Only) */}
+          {lead && !isManagementUser && (
+            <CallTimerWidget
+              leadId={lead.id}
+              leadName={lead.name}
+              assignedToId={lead.assignedToId}
+              onCallEnded={() => {
+                fetchLeadDetails();
+                triggerUpdate();
+              }}
+            />
+          )}
+
+          {/* Overdue Action Banner (Sales Reps Only) */}
+          {lead && !isManagementUser && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
+            <div className="p-3 sm:p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-extrabold flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shadow-xs">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={16} className="shrink-0 mt-0.5 animate-bounce" />
+                <div>
+                  <p className="font-extrabold uppercase tracking-wide flex items-center gap-1.5">
+                    <span>OVERDUE ACTION REQUIRED</span>
+                  </p>
+                  <p className="text-[11px] font-semibold text-rose-400 mt-0.5">
+                    Scheduled follow-up was missed.
+                  </p>
                 </div>
-              )}
-
-              {/* Navigation Tabs (Admin: Assignment + Conversation Audit | Sales Reps: Workflow + Notes + Follow-up + History) */}
-              <div className={`grid ${isManagementUser ? 'grid-cols-2' : 'grid-cols-4'} gap-1.5 p-1.5 bg-theme-card border border-theme-border rounded-2xl flex-shrink-0`}>
-                {(isManagementUser
-                  ? [
-                      { id: 'activities', label: 'Lead Assignment & Controls', icon: UserCheck },
-                      { id: 'timeline', label: 'Lead Conversation & Activity Audit', icon: MessageSquare }
-                    ]
-                  : [
-                      { id: 'activities', label: 'Workflow Stages', icon: CheckCircle2 },
-                      { id: 'notes', label: 'Proposal & Notes', icon: FileText },
-                      { 
-                        id: 'followup', 
-                        label: 'Schedule Follow-up', 
-                        icon: Calendar,
-                        hasAlert: Boolean(lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED')
-                      },
-                      { id: 'timeline', label: 'Interaction History', icon: History }
-                    ]
-                ).map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all relative ${
-                        isActive
-                          ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/20'
-                          : (tab as any).hasAlert
-                          ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40'
-                          : 'bg-theme-bg-alt/50 text-theme-text-muted hover:text-theme-text'
-                      }`}
-                    >
-                      <Icon size={15} /> 
-                      <span className="inline">{tab.label}</span>
-                      {(tab as any).hasAlert && (
-                        <span className="text-[9px] font-extrabold bg-rose-500 text-white px-1.5 py-0.2 rounded-full animate-pulse">
-                          OVERDUE
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
               </div>
+              <button
+                onClick={() => setActiveTab('followup')}
+                className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] shadow shrink-0 self-start sm:self-auto transition-all"
+              >
+                Reschedule Slot
+              </button>
+            </div>
+          )}
 
-              {/* TAB 1: LEAD ASSIGNMENT (ADMIN/MANAGER) OR WORKFLOW STAGES (SALES REPS) */}
+          {/* Navigation Tabs */}
+          <div className={`grid ${isManagementUser ? 'grid-cols-2' : 'grid-cols-4'} gap-1 sm:gap-1.5 p-1 bg-theme-bg-alt/60 border border-theme-border rounded-xl flex-shrink-0`}>
+            {(isManagementUser
+              ? [
+                  { id: 'activities', label: 'Lead Assignment', shortLabel: 'Assignment', icon: UserCheck },
+                  { id: 'timeline', label: 'Activity Audit', shortLabel: 'Audit', icon: MessageSquare }
+                ]
+              : [
+                  { id: 'activities', label: 'Activities & Stages', shortLabel: 'Stages', icon: CheckCircle2 },
+                  { id: 'notes', label: 'Proposal & Notes', shortLabel: 'Notes', icon: FileText },
+                  { 
+                    id: 'followup', 
+                    label: 'Schedule Follow-up', 
+                    shortLabel: 'Follow-up',
+                    icon: Calendar,
+                    hasAlert: Boolean(lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED')
+                  },
+                  { id: 'timeline', label: 'History', shortLabel: 'History', icon: History }
+                ]
+            ).map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-3 rounded-lg text-xs font-extrabold transition-all relative ${
+                    isActive
+                      ? 'bg-theme-primary text-white shadow-xs'
+                      : (tab as any).hasAlert
+                      ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40'
+                      : 'bg-theme-card/60 text-theme-text-muted hover:text-theme-text'
+                  }`}
+                >
+                  <Icon size={14} className="flex-shrink-0" /> 
+                  <span className="hidden sm:inline text-xs">{tab.label}</span>
+                  <span className="sm:hidden text-[10px] font-bold truncate">{tab.shortLabel}</span>
+                  {(tab as any).hasAlert && (
+                    <span className="text-[8px] font-extrabold bg-rose-500 text-white px-1 py-0.2 rounded-full animate-pulse">
+                      !
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* TAB 1: LEAD ASSIGNMENT (ADMIN/MANAGER) OR WORKFLOW STAGES (SALES REPS) */}
               {activeTab === 'activities' && (
                 <div className="space-y-4">
                   {isManagementUser ? (
@@ -795,10 +811,10 @@ export default function WorkDetailsPanel({
                         <div className="border-b border-theme-border pb-3">
                           <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
                             <UserCheck size={18} className="text-theme-primary" />
-                            <span>Lead Assignment & Ownership Controls</span>
+                            <span>Lead Assignment</span>
                           </h3>
                           <p className="text-xs text-theme-text-muted mt-0.5">
-                            Assign or re-allocate this lead to an active sales executive for client follow-up.
+                            Assign or re-allocate this lead to an active sales executive.
                           </p>
                         </div>
 
@@ -813,7 +829,7 @@ export default function WorkDetailsPanel({
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
-                                CURRENT ASSIGNED EXECUTIVE
+                                CURRENT OWNER
                               </label>
                               <div className="p-3 rounded-2xl border border-theme-border bg-theme-bg-alt/50 flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-theme-primary/20 text-theme-primary font-extrabold text-xs flex items-center justify-center">
@@ -832,7 +848,7 @@ export default function WorkDetailsPanel({
 
                             <div>
                               <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
-                                SELECT SALES EXECUTIVE TO ASSIGN
+                                ASSIGN TO
                               </label>
                               <select
                                 value={selectedAssigneeId}
@@ -840,7 +856,7 @@ export default function WorkDetailsPanel({
                                 className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-3 text-xs outline-none focus:border-theme-primary text-theme-text font-bold"
                               >
                                 <option value="">-- Select Sales Executive --</option>
-                                <option value="-1">⚡ Auto-Assign via Smart AI Hybrid Engine</option>
+                                <option value="-1">⚡ Auto-Assign (Smart Engine)</option>
                                 {members
                                   .filter((m: any) => {
                                     const roles = Array.isArray(m.roles)
@@ -873,21 +889,21 @@ export default function WorkDetailsPanel({
                                 <UserCheck size={14} />
                               )}
                               <span>
-                                {selectedAssigneeId === '-1' ? 'Auto-Assign Lead (Smart AI)' : 'Assign Lead to Executive'}
+                                {selectedAssigneeId === '-1' ? 'Auto-Assign Lead' : 'Assign Lead'}
                               </span>
                             </button>
                           </div>
                         </form>
                       </div>
 
-                      {/* Unified Section 2: Supervisory Controls & Pipeline Status */}
+                      {/* Unified Section 2: Pipeline Status */}
                       <div className="border-t border-theme-border pt-4 space-y-3">
                         <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted">
-                          Supervisory Controls & Pipeline Status
+                          Pipeline Status & Attributes
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Pipeline Status</label>
+                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Status</label>
                             <select
                               value={lead?.status || 'New'}
                               onChange={async (e) => {
@@ -927,19 +943,19 @@ export default function WorkDetailsPanel({
                         </div>
                       </div>
 
-                      {/* Unified Section 3: Sales Pitch & Commercials Summary (Audit) */}
+                      {/* Unified Section 3: Commercials & Discussion Summary */}
                       <div className="border-t border-theme-border pt-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
                             <FileText size={14} className="text-theme-primary" />
-                            <span>Sales Commercials & Discussion Summary (Audit)</span>
+                            <span>Commercials & Discussion Summary</span>
                           </h4>
                           <button
                             type="button"
                             onClick={() => setActiveTab('timeline')}
                             className="text-xs font-bold text-theme-primary hover:underline flex items-center gap-1 cursor-pointer"
                           >
-                            <span>Open Conversation Timeline</span>
+                            <span>View Timeline</span>
                             <ChevronRight size={14} />
                           </button>
                         </div>
@@ -947,10 +963,10 @@ export default function WorkDetailsPanel({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/50 space-y-1.5">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block">
-                              Proposal Pitch Value
+                              Proposal Amount
                             </span>
                             <div className="text-lg font-black text-theme-text">
-                              {lead?.proposalAmount ? `₹${Number(lead.proposalAmount).toLocaleString('en-IN')}` : 'No Proposal Amount Logged'}
+                              {lead?.proposalAmount ? `₹${Number(lead.proposalAmount).toLocaleString('en-IN')}` : 'No Proposal Logged'}
                             </div>
                             <span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-theme-primary/10 text-theme-primary uppercase">
                               Status: {lead?.proposalStatus || 'NOT_SENT'}
@@ -959,10 +975,10 @@ export default function WorkDetailsPanel({
 
                           <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/50 space-y-1.5">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block">
-                              Sales Executive Notes
+                              Executive Notes
                             </span>
                             <p className="text-xs text-theme-text-muted italic line-clamp-3">
-                              {lead?.clientNotes ? `"${lead.clientNotes}"` : 'No notes recorded yet by sales executive.'}
+                              {lead?.clientNotes ? `"${lead.clientNotes}"` : 'No notes recorded yet.'}
                             </p>
                           </div>
                         </div>
@@ -973,10 +989,10 @@ export default function WorkDetailsPanel({
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">
-                            Enterprise Multi-Activity Workflow Container
+                            Stage Activities & Logs
                           </h3>
-                          <p className="text-[10px] text-theme-text-muted mt-0.5">
-                            Record unlimited calls, meetings, WhatsApp & remarks. Stage completes ONLY when explicitly completed.
+                          <p className="hidden sm:block text-[10px] text-theme-text-muted mt-0.5">
+                            Record calls, meetings, WhatsApp & remarks.
                           </p>
                         </div>
                         {autoSaveStatus && (
@@ -986,7 +1002,7 @@ export default function WorkDetailsPanel({
                         )}
                       </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {lead?.activities?.map((act: SalesActivity) => {
                       const isCompleted = act.status === 'COMPLETED';
                       const isExpanded = expandedSteps[act.activityKey] ?? false;
@@ -1017,17 +1033,17 @@ export default function WorkDetailsPanel({
                           }`}
                         >
                           {/* Step Header */}
-                          <div className={`p-4 flex items-center justify-between gap-4 ${isLostStep ? 'bg-rose-500/5' : 'bg-theme-card/80'}`}>
-                            <div className="flex items-center gap-3">
+                          <div className={`p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 ${isLostStep ? 'bg-rose-500/5' : 'bg-theme-card/80'}`}>
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                               <button
                                 onClick={() => toggleStepExpanded(act.activityKey)}
-                                className="p-1 rounded-lg hover:bg-theme-bg-alt text-theme-text-muted hover:text-theme-text transition-all"
+                                className="p-1 rounded-lg hover:bg-theme-bg-alt text-theme-text-muted hover:text-theme-text transition-all flex-shrink-0"
                               >
-                                {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                                {isExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
                               </button>
 
-                              <div>
-                                <div className="flex items-center gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                   <h4 className={`text-xs font-extrabold flex items-center gap-1.5 ${
                                     isLostStep 
                                       ? 'text-rose-400' 
@@ -1035,10 +1051,10 @@ export default function WorkDetailsPanel({
                                       ? 'text-emerald-400' 
                                       : 'text-theme-text'
                                   }`}>
-                                    {isLostStep && <AlertCircle size={14} className="text-rose-400 flex-shrink-0 animate-pulse" />}
-                                    <span>{act.title}</span>
+                                    {isLostStep && <AlertCircle size={13} className="text-rose-400 flex-shrink-0 animate-pulse" />}
+                                    <span className="truncate">{act.title}</span>
                                   </h4>
-                                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
+                                  <span className={`text-[9px] font-extrabold uppercase px-1.5 sm:px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
                                     isLostStep
                                       ? isCompleted
                                         ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
@@ -1049,92 +1065,63 @@ export default function WorkDetailsPanel({
                                       ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                                       : 'bg-theme-bg-alt text-theme-text-muted border-theme-border'
                                   }`}>
-                                    {isLostStep ? (
-                                      <>
-                                        <XCircle size={10} className="text-rose-400" />
-                                        <span>{isCompleted ? 'LEAD LOST / DROPPED' : 'DROP LEAD STAGE'}</span>
-                                      </>
-                                    ) : isCompleted ? (
-                                      <>
-                                        <CheckCircle2 size={10} className="text-emerald-400" />
-                                        <span>COMPLETED</span>
-                                      </>
-                                    ) : (
-                                      act.status
-                                    )}
+                                    {isLostStep ? (isCompleted ? 'LOST' : 'DROP') : isCompleted ? 'DONE' : act.status}
                                   </span>
-                                  {!isCompleted && lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
-                                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-500 border border-rose-500/40 animate-pulse flex items-center gap-1">
-                                      <AlertCircle size={10} /> OVERDUE ACTION PENDING
-                                    </span>
-                                  )}
-                                  <span className="text-[10px] font-bold text-theme-text-muted px-2 py-0.5 rounded-md bg-theme-bg-alt/80 border border-theme-border/40">
-                                    {logs.length} {logs.length === 1 ? 'Activity' : 'Activities'}
+                                  <span className="text-[9px] font-bold text-theme-text-muted px-1.5 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border/40">
+                                    {logs.length} {logs.length === 1 ? 'Log' : 'Logs'}
                                   </span>
                                 </div>
 
                                 {isCompleted ? (
-                                  <p className={`text-[10px] font-medium mt-1 flex items-center gap-1.5 flex-wrap ${isLostStep ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
-                                    {isLostStep ? (
-                                      <>
-                                        <XCircle size={12} className="text-rose-400 flex-shrink-0" />
-                                        <span>Lead marked Lost / Dropped by</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <CheckCircle2 size={12} className="text-emerald-400 flex-shrink-0" />
-                                        <span>Completed by</span>
-                                      </>
-                                    )}
-                                    <strong className="font-bold">{act.completedByName || 'Sales Rep'}</strong> • {act.completedAt ? new Date(act.completedAt).toLocaleString() : ''}
+                                  <p className={`text-[10px] font-medium mt-1 flex items-center gap-1 flex-wrap ${isLostStep ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
+                                    <span>Completed by</span>
+                                    <strong className="font-bold">{act.completedByName || 'Sales Rep'}</strong>
                                     {act.completionRemarks && ` — "${act.completionRemarks}"`}
                                   </p>
                                 ) : (
-                                  <p className="text-[10px] text-theme-text-muted mt-0.5">
-                                    {logs.length > 0 ? `Last activity logged ${new Date(logs[logs.length - 1].createdAt).toLocaleTimeString()}` : 'No activities recorded yet.'}
+                                  <p className="text-[10px] text-theme-text-muted mt-0.5 truncate">
+                                    {logs.length > 0 ? `Last activity: ${new Date(logs[logs.length - 1].createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'No activities recorded yet.'}
                                   </p>
                                 )}
                               </div>
                             </div>
 
                             {/* Header Action Buttons */}
-                            <div className="flex items-center gap-2">
-                              {!isCompleted && (
+                            {!isCompleted && (
+                              <div className="flex items-center gap-1.5 justify-end pt-1 sm:pt-0">
                                 <button
                                   onClick={() => handleOpenAddModal(act.activityKey)}
-                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white text-[11px] font-bold shadow-xs transition-all"
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-[11px] font-bold shadow-xs transition-all active:scale-95"
                                 >
-                                  <Plus size={13} /> Add Activity
+                                  <Plus size={12} /> <span>Activity</span>
                                 </button>
-                              )}
 
-                              {!isCompleted && (
                                 <button
                                   onClick={() => handleOpenCompleteModal(act.activityKey)}
-                                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-white text-[11px] font-bold shadow-xs transition-all ${
+                                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-white text-[11px] font-bold shadow-xs transition-all active:scale-95 ${
                                     isLostStep
-                                      ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/20'
+                                      ? 'bg-rose-600 hover:bg-rose-500'
                                       : 'bg-emerald-600 hover:bg-emerald-500'
                                   }`}
                                 >
-                                  {isLostStep ? <AlertCircle size={13} /> : <CheckCircle2 size={13} />}
-                                  <span>{isLostStep ? 'Mark Lost / Drop' : 'Complete Step'}</span>
+                                  {isLostStep ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
+                                  <span>{isLostStep ? 'Drop' : 'Complete'}</span>
                                 </button>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Expandable Activity Timeline Section */}
                           {isExpanded && (
-                            <div className="p-4 border-t border-theme-border/40 bg-theme-bg/60 space-y-3">
+                            <div className="p-3 sm:p-4 border-t border-theme-border/40 bg-theme-bg/60 space-y-3">
                               {(act.activityKey === 'NEGOTIATION' || act.activityKey === 'PROPOSAL_SENT') && (
-                                <div className="p-3.5 rounded-2xl bg-theme-card border border-theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                                <div className="p-3 rounded-2xl bg-theme-card border border-theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
                                   <div className="space-y-0.5">
                                     <span className="text-[11px] font-extrabold uppercase text-theme-primary flex items-center gap-1">
-                                      <IndianRupee size={13} className="text-emerald-500" /> Negotiated Deal Revenue (₹)
+                                      <IndianRupee size={12} className="text-emerald-500" /> Negotiated Deal Revenue (₹)
                                     </span>
                                     <p className="text-[10px] text-theme-text-muted">
-                                      Enter agreed deal value during negotiation to calculate dashboard lead revenue.
+                                      Enter agreed deal value during negotiation.
                                     </p>
                                   </div>
 
@@ -1146,77 +1133,74 @@ export default function WorkDetailsPanel({
                                         placeholder="e.g. 50000"
                                         value={proposalAmount}
                                         onChange={(e) => setProposalAmount(e.target.value)}
-                                        className="w-36 bg-theme-bg-alt border border-theme-border rounded-xl pl-7 pr-3 py-1.5 text-xs font-extrabold text-theme-text focus:outline-none focus:border-theme-primary"
+                                        className="w-32 bg-theme-bg-alt border border-theme-border rounded-xl pl-6 pr-2 py-1 text-xs font-extrabold text-theme-text focus:outline-none focus:border-theme-primary"
                                       />
                                     </div>
                                     <button
                                       onClick={handleProposalSave}
                                       disabled={savingNotes}
-                                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all flex items-center gap-1"
+                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all flex items-center gap-1"
                                     >
-                                      {savingNotes ? 'Saving...' : 'Save Revenue'}
+                                      {savingNotes ? 'Saving...' : 'Save'}
                                     </button>
                                   </div>
                                 </div>
                               )}
 
-                              <div className="flex items-center justify-between text-[11px] font-bold text-theme-text-muted border-b border-theme-border/30 pb-2">
+                              <div className="flex items-center justify-between text-[11px] font-bold text-theme-text-muted border-b border-theme-border/30 pb-1.5">
                                 <span>Recorded Interaction Logs ({logs.length})</span>
                                 {logs.length > 1 && (
                                   <button
                                     onClick={() => toggleStepSort(act.activityKey)}
                                     className="flex items-center gap-1 text-[10px] text-theme-primary hover:underline font-semibold"
                                   >
-                                    <ArrowUpDown size={12} /> {isNewestFirst ? 'Newest First' : 'Oldest First'}
+                                    <ArrowUpDown size={11} /> {isNewestFirst ? 'Newest' : 'Oldest'}
                                   </button>
                                 )}
                               </div>
 
                               {/* Log Timeline Items */}
                               {sortedLogs.length > 0 ? (
-                                <div className="space-y-2.5">
+                                <div className="space-y-2">
                                   {sortedLogs.map((log: SalesActivityLog) => (
                                     <div
                                       key={log.id}
                                       onClick={() => setSelectedInteractionDetail({ ...log, stepTitle: act.title, typeName: 'Activity Attempt' })}
-                                      className="p-3 rounded-xl bg-theme-card border border-theme-border/60 hover:border-theme-primary hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer space-y-2 group relative"
+                                      className="p-2.5 sm:p-3 rounded-xl bg-theme-card border border-theme-border/60 hover:border-theme-primary hover:shadow-xs transition-all cursor-pointer space-y-1.5 group"
                                     >
-                                      <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="w-5 h-5 rounded-md bg-theme-bg-alt border border-theme-border flex items-center justify-center">
+                                      <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="w-5 h-5 rounded-md bg-theme-bg-alt border border-theme-border flex items-center justify-center flex-shrink-0">
                                             {getCommIcon(log.communicationType)}
                                           </span>
-                                          <span className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors flex items-center gap-1">
-                                            Attempt #{log.activityNumber} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                          <span className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors">
+                                            Attempt #{log.activityNumber}
                                           </span>
-                                          <span className="text-[10px] text-theme-text-muted font-medium">
-                                            ({log.communicationType?.replace('_', ' ')})
-                                          </span>
-                                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
+                                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
                                             {log.outcome?.replace('_', ' ')}
                                           </span>
                                         </div>
 
-                                        <div className="flex items-center gap-2 text-[10px] text-theme-text-muted">
+                                        <div className="flex items-center gap-1.5 text-[10px] text-theme-text-muted">
                                           {log.duration && (
-                                            <span className="flex items-center gap-1 bg-theme-bg-alt px-2 py-0.5 rounded-md border border-theme-border">
-                                              <Clock size={10} /> {log.duration}
+                                            <span className="flex items-center gap-1 bg-theme-bg-alt px-1.5 py-0.5 rounded-md border border-theme-border">
+                                              <Clock size={9} /> {log.duration}
                                             </span>
                                           )}
-                                          <span>{new Date(log.createdAt).toLocaleString()}</span>
+                                          <span>{new Date(log.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
                                       </div>
 
                                       {/* Remarks */}
-                                      <p className="text-xs text-theme-text/90 bg-theme-bg-alt/40 p-2.5 rounded-lg border border-theme-border/30 italic line-clamp-2">
+                                      <p className="text-[11px] text-theme-text/90 bg-theme-bg-alt/40 p-2 rounded-lg border border-theme-border/30 italic line-clamp-2">
                                         "{log.remarks || 'No detailed remark provided.'}"
                                       </p>
 
-                                      <div className="flex items-center justify-between text-[10px] text-theme-text-muted pt-1">
-                                        <span>Logged by: <strong className="text-theme-text font-bold">{log.loggedByName || 'Sales Executive'}</strong></span>
+                                      <div className="flex items-center justify-between text-[10px] text-theme-text-muted">
+                                        <span>By: <strong className="text-theme-text font-bold">{log.loggedByName?.split(' ')[0] || 'Executive'}</strong></span>
                                         {log.nextFollowupDate && (
                                           <span className="text-amber-400 font-bold flex items-center gap-1">
-                                            <Calendar size={11} /> Next Follow-up: {new Date(log.nextFollowupDate).toLocaleString()}
+                                            <Calendar size={10} /> Next: {new Date(log.nextFollowupDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                           </span>
                                         )}
                                       </div>
@@ -1224,8 +1208,8 @@ export default function WorkDetailsPanel({
                                   ))}
                                 </div>
                               ) : (
-                                <div className="text-center py-6 bg-theme-card/30 rounded-xl border border-dashed border-theme-border/60 space-y-2">
-                                  <AlertCircle size={24} className="mx-auto text-theme-text-muted" />
+                                <div className="text-center py-5 bg-theme-card/30 rounded-xl border border-dashed border-theme-border/60 space-y-1.5">
+                                  <AlertCircle size={20} className="mx-auto text-theme-text-muted opacity-50" />
                                   <p className="text-xs text-theme-text-muted">
                                     No activities recorded for this step yet.
                                   </p>

@@ -506,3 +506,4 @@ C:\Users\LENOVO\Desktop\LeadGrowth\backend-dotnet\bin\test-build\runtimes\win-x8
 C:\Users\LENOVO\Desktop\LeadGrowth\backend-dotnet\bin\test-build\runtimes\win-x86\native\libstdc++-6.dll
 C:\Users\LENOVO\Desktop\LeadGrowth\backend-dotnet\bin\test-build\runtimes\win-x86\native\libwinpthread-1.dll
 C:\Users\LENOVO\Desktop\LeadGrowth\backend-dotnet\bin\test-build\runtimes\win-x86\native\qpdf.dll
+E:\WEB\LeadGrowth\backend-dotnet\bin\Debug\net10.0\package-lock.json

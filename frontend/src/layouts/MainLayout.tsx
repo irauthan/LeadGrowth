@@ -70,17 +70,17 @@ export default function MainLayout() {
 
   const getMainContentPadding = () => {
     if (isFullScreen) {
-      if (sidebarPosition === 'top') return 'pt-24 pb-0';
-      if (sidebarPosition === 'bottom') return 'pt-16 pb-16';
-      return 'pt-16 pb-0';
+      if (sidebarPosition === 'top') return 'pt-28 pb-0';
+      if (sidebarPosition === 'bottom') return 'pt-20 pb-16';
+      return 'pt-20 pb-0';
     }
     if (sidebarPosition === 'top') {
       return 'pt-28 pb-24 lg:pb-8';
     }
     if (sidebarPosition === 'bottom') {
-      return 'pt-16 pb-24 lg:pb-20';
+      return 'pt-20 pb-24 lg:pb-20';
     }
-    return 'pt-16 pb-24 lg:pb-8';
+    return 'pt-20 sm:pt-22 lg:pt-24 pb-20 lg:pb-8';
   };
 
   return (
@@ -88,7 +88,7 @@ export default function MainLayout() {
       <Sidebar />
       <div className={`flex flex-col min-h-screen max-w-full overflow-x-hidden transition-all duration-300 ${getMainDesktopPadding()}`}>
         <Navbar />
-        <main className={`flex-1 max-w-full ${isFullScreen ? 'p-0 overflow-hidden flex flex-col' : 'overflow-x-hidden px-4 sm:px-8 py-6'} ${getMainContentPadding()}`}>
+        <main className={`flex-1 max-w-full ${isFullScreen ? 'p-0 overflow-hidden flex flex-col' : 'overflow-x-hidden px-2.5 sm:px-6 md:px-8'} ${getMainContentPadding()}`}>
           <ErrorBoundary>
             <Outlet />
           </ErrorBoundary>

@@ -34,6 +34,7 @@ export default function Leads() {
 
   // Selected Lead state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
 
   // WorkDetailsPanel Modal state
   const [isMaximized, setIsMaximized] = useState(false);
@@ -80,6 +81,7 @@ export default function Leads() {
         const match = data.find((l) => l.id === targetId);
         if (match) {
           setSelectedLead(match);
+          setShowMobileDetails(true);
           return;
         }
       }
@@ -111,6 +113,7 @@ export default function Leads() {
         const match = leads.find((l) => l.id === targetId);
         if (match) {
           setSelectedLead(match);
+          setShowMobileDetails(true);
           // If the match was filtered out, reset filters so it's clearly visible
           if (statusFilter !== 'All' && match.status !== statusFilter) {
             setStatusFilter('All');
@@ -196,6 +199,7 @@ export default function Leads() {
 
   const handleLeadSelect = (lead: Lead) => {
     setSelectedLead(lead);
+    setShowMobileDetails(true);
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -372,37 +376,35 @@ export default function Leads() {
   return (
     <div className="space-y-5">
       {/* Unified Header & KPI Section */}
-      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-5 shadow-xs space-y-4">
+      <div className="bg-theme-card border border-theme-border/70 rounded-2xl p-3.5 sm:p-5 shadow-xs space-y-3 sm:space-y-4">
         {/* Top Header Row */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">
-                {isManagementUser ? 'Admin Lead Allocation & Workspace' : 'Workspace Leads'}
-              </h1>
-            </div>
-            <p className="mt-1 text-xs text-theme-text-muted">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-theme-text truncate">
+              {isManagementUser ? 'Admin Lead Allocation' : 'Workspace Leads'}
+            </h1>
+            <p className="hidden sm:block mt-0.5 text-xs text-theme-text-muted">
               {isManagementUser 
-                ? 'Lead distribution hub: assign leads to sales executives, monitor team workload, and audit client conversations.'
+                ? 'Lead distribution hub: assign leads to sales executives and monitor workload.'
                 : 'Prioritized intake pipeline for lead qualification, assignments, and follow-ups.'}
             </p>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Action buttons (Clean responsive layout) */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
             <button
               onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all"
+              className="flex items-center gap-1.5 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs font-semibold text-theme-text transition-all"
               title="Import Excel or CSV spreadsheet"
             >
-              <FileSpreadsheet size={15} className="text-theme-primary" />
-              <span>Import Sheet</span>
+              <FileSpreadsheet size={14} className="text-theme-primary" />
+              <span className="hidden xs:inline">Import</span>
             </button>
 
             <div className="relative group">
-              <button className="flex items-center gap-2 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-3.5 py-2 text-xs font-semibold text-theme-text transition-all">
-                <Download size={15} />
-                <span>Export</span>
+              <button className="flex items-center gap-1.5 rounded-xl border border-theme-border hover:border-theme-primary/40 bg-theme-bg-alt hover:bg-theme-card px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs font-semibold text-theme-text transition-all">
+                <Download size={14} />
+                <span className="hidden xs:inline">Export</span>
               </button>
               <div className="absolute right-0 top-10 hidden w-36 rounded-xl border border-theme-border bg-theme-card p-1 shadow-xl group-hover:block z-20">
                 <button onClick={() => handleExport('csv')} className="w-full rounded-lg px-3 py-1.5 text-left text-xs font-semibold text-theme-text hover:bg-theme-bg-alt">CSV (.csv)</button>
@@ -413,7 +415,7 @@ export default function Leads() {
 
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2 text-xs font-semibold text-white shadow-xs transition-all"
+              className="flex items-center gap-1.5 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-white shadow-xs transition-all"
             >
               <Plus size={15} />
               <span>Add Lead</span>
@@ -421,187 +423,245 @@ export default function Leads() {
           </div>
         </div>
 
-        {/* KPI Row (Admin Management Cards vs Sales Rep Operational Cards) */}
-        <div className="border-t border-theme-border/60 pt-3">
-          {isManagementUser ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <button
-                type="button"
-                onClick={() => setStatusFilter('All')}
-                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  statusFilter === 'All'
-                    ? 'bg-theme-bg-alt/70 border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
-                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-                    <Briefcase size={13} className="text-theme-primary" /> Total Leads
-                  </span>
-                  <div className="text-xl font-black text-theme-text mt-0.5">{leads.length}</div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-bold">
-                  All
-                </span>
-              </button>
+        {/* KPI Section */}
+        <div className="border-t border-theme-border/60 pt-2.5 sm:pt-3">
+          {/* Mobile Micro-Stats Strip (Compact, single-row touch-friendly filter strip) */}
+          <div className="grid grid-cols-4 gap-1 p-1 bg-theme-bg-alt/50 border border-theme-border/50 rounded-xl sm:hidden text-center">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('All')}
+              className={`py-1.5 px-1 rounded-lg transition-all flex flex-col items-center ${
+                statusFilter === 'All'
+                  ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-primary/30 font-black'
+                  : 'text-theme-text-muted hover:text-theme-text'
+              }`}
+            >
+              <span className="text-xs font-black leading-tight text-theme-text">{leads.length}</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight">Total</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setStatusFilter(statusFilter === 'Unassigned' ? 'All' : 'Unassigned')}
-                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  statusFilter === 'Unassigned'
-                    ? 'bg-theme-bg-alt/70 border-amber-500 shadow-xs ring-1 ring-amber-500/30'
-                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-                    <AlertCircle size={13} className="text-amber-500" /> Unassigned Leads
-                  </span>
-                  <div className="text-xl font-black text-theme-text mt-0.5">{unassignedCount}</div>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  unassignedCount > 0 
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 animate-pulse' 
-                    : 'bg-theme-bg-alt text-theme-text-muted'
-                }`}>
-                  {unassignedCount > 0 ? 'Needs Action' : '0'}
-                </span>
-              </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter(isManagementUser ? (statusFilter === 'Unassigned' ? 'All' : 'Unassigned') : (statusFilter === 'New' ? 'All' : 'New'))}
+              className={`py-1.5 px-1 rounded-lg transition-all flex flex-col items-center ${
+                (isManagementUser ? statusFilter === 'Unassigned' : statusFilter === 'New')
+                  ? 'bg-theme-card text-emerald-500 shadow-xs border border-emerald-500/30 font-black'
+                  : 'text-theme-text-muted hover:text-theme-text'
+              }`}
+            >
+              <span className="text-xs font-black leading-tight text-emerald-500">{isManagementUser ? unassignedCount : newLeadsCount}</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight">{isManagementUser ? 'Unassigned' : 'Fresh'}</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setStatusFilter(statusFilter === 'Assigned' ? 'All' : 'Assigned')}
-                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  statusFilter === 'Assigned'
-                    ? 'bg-theme-bg-alt/70 border-indigo-500 shadow-xs ring-1 ring-indigo-500/30'
-                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-                    <Zap size={13} className="text-indigo-500" /> Assigned & Active
-                  </span>
-                  <div className="text-xl font-black text-theme-text mt-0.5">{assignedCount}</div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
-                  In Progress
-                </span>
-              </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter(isManagementUser ? (statusFilter === 'Assigned' ? 'All' : 'Assigned') : (statusFilter === 'HIGH' ? 'All' : 'HIGH'))}
+              className={`py-1.5 px-1 rounded-lg transition-all flex flex-col items-center ${
+                (isManagementUser ? statusFilter === 'Assigned' : statusFilter === 'HIGH')
+                  ? 'bg-theme-card text-amber-500 shadow-xs border border-amber-500/30 font-black'
+                  : 'text-theme-text-muted hover:text-theme-text'
+              }`}
+            >
+              <span className="text-xs font-black leading-tight text-amber-500">{isManagementUser ? assignedCount : highPriorityCount}</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight">{isManagementUser ? 'Assigned' : 'Hot'}</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setStatusFilter(statusFilter === 'Converted' ? 'All' : 'Converted')}
-                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  statusFilter === 'Converted'
-                    ? 'bg-theme-bg-alt/70 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
-                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-                    <Briefcase size={13} className="text-emerald-500" /> Converted Won
-                  </span>
-                  <div className="text-xl font-black text-theme-text mt-0.5">{convertedCount}</div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                  Won
-                </span>
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <button
-                type="button"
-                onClick={() => setStatusFilter('All')}
-                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  statusFilter === 'All'
-                    ? 'bg-theme-bg-alt/70 border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
-                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-                    <Briefcase size={13} className="text-theme-primary" /> Total Leads
-                  </span>
-                  <div className="text-xl font-black text-theme-text mt-0.5">{leads.length}</div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-bold">
-                  All
-                </span>
-              </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter(isManagementUser ? (statusFilter === 'Converted' ? 'All' : 'Converted') : (statusFilter === 'Overdue' ? 'All' : 'Overdue'))}
+              className={`py-1.5 px-1 rounded-lg transition-all flex flex-col items-center ${
+                (isManagementUser ? statusFilter === 'Converted' : statusFilter === 'Overdue')
+                  ? 'bg-theme-card text-rose-500 shadow-xs border border-rose-500/30 font-black'
+                  : 'text-theme-text-muted hover:text-theme-text'
+              }`}
+            >
+              <span className="text-xs font-black leading-tight text-rose-500">{isManagementUser ? convertedCount : overdueCount}</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight">{isManagementUser ? 'Won' : 'Overdue'}</span>
+            </button>
+          </div>
 
-              <button
-                type="button"
-                onClick={() => setStatusFilter(statusFilter === 'New' ? 'All' : 'New')}
-                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  statusFilter === 'New'
-                    ? 'bg-theme-bg-alt/70 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
-                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-                    <Zap size={13} className="text-emerald-500" /> Fresh Inbound
+          {/* Desktop KPI Cards (Shown on tablet / desktop sm+) */}
+          <div className="hidden sm:block">
+            {isManagementUser ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('All')}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                    statusFilter === 'All'
+                      ? 'bg-theme-bg-alt/70 border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
+                      : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                  }`}
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                      <Briefcase size={13} className="text-theme-primary" /> Total Leads
+                    </span>
+                    <div className="text-xl font-black text-theme-text mt-0.5">{leads.length}</div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-bold">
+                    All
                   </span>
-                  <div className="text-xl font-black text-theme-text mt-0.5">{newLeadsCount}</div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                  New
-                </span>
-              </button>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setStatusFilter(statusFilter === 'HIGH' ? 'All' : 'HIGH')}
-                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  statusFilter === 'HIGH'
-                    ? 'bg-theme-bg-alt/70 border-amber-500 shadow-xs ring-1 ring-amber-500/30'
-                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-                    <Flame size={13} className="text-amber-500" /> High Focus
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'Unassigned' ? 'All' : 'Unassigned')}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                    statusFilter === 'Unassigned'
+                      ? 'bg-theme-bg-alt/70 border-amber-500 shadow-xs ring-1 ring-amber-500/30'
+                      : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                  }`}
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                      <AlertCircle size={13} className="text-amber-500" /> Unassigned Leads
+                    </span>
+                    <div className="text-xl font-black text-theme-text mt-0.5">{unassignedCount}</div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    unassignedCount > 0 
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 animate-pulse' 
+                      : 'bg-theme-bg-alt text-theme-text-muted'
+                  }`}>
+                    {unassignedCount > 0 ? 'Needs Action' : '0'}
                   </span>
-                  <div className="text-xl font-black text-theme-text mt-0.5">{highPriorityCount}</div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
-                  Hot
-                </span>
-              </button>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setStatusFilter(statusFilter === 'Overdue' ? 'All' : 'Overdue')}
-                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  statusFilter === 'Overdue'
-                    ? 'bg-theme-bg-alt/70 border-rose-500 shadow-xs ring-1 ring-rose-500/30'
-                    : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
-                    <AlertTriangle size={13} className="text-rose-500" /> Overdue Action
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'Assigned' ? 'All' : 'Assigned')}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                    statusFilter === 'Assigned'
+                      ? 'bg-theme-bg-alt/70 border-indigo-500 shadow-xs ring-1 ring-indigo-500/30'
+                      : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                  }`}
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                      <Zap size={13} className="text-indigo-500" /> Assigned & Active
+                    </span>
+                    <div className="text-xl font-black text-theme-text mt-0.5">{assignedCount}</div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
+                    In Progress
                   </span>
-                  <div className="text-xl font-black text-theme-text mt-0.5">{overdueCount}</div>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  overdueCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-theme-bg-alt text-theme-text-muted'
-                }`}>
-                  {overdueCount > 0 ? 'Pending' : '0'}
-                </span>
-              </button>
-            </div>
-          )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'Converted' ? 'All' : 'Converted')}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                    statusFilter === 'Converted'
+                      ? 'bg-theme-bg-alt/70 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
+                      : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                  }`}
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                      <Briefcase size={13} className="text-emerald-500" /> Converted Won
+                    </span>
+                    <div className="text-xl font-black text-theme-text mt-0.5">{convertedCount}</div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                    Won
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('All')}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                    statusFilter === 'All'
+                      ? 'bg-theme-bg-alt/70 border-theme-primary shadow-xs ring-1 ring-theme-primary/30'
+                      : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                  }`}
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                      <Briefcase size={13} className="text-theme-primary" /> Total Leads
+                    </span>
+                    <div className="text-xl font-black text-theme-text mt-0.5">{leads.length}</div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary text-[10px] font-bold">
+                    All
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'New' ? 'All' : 'New')}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                    statusFilter === 'New'
+                      ? 'bg-theme-bg-alt/70 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
+                      : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                  }`}
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                      <Zap size={13} className="text-emerald-500" /> Fresh Inbound
+                    </span>
+                    <div className="text-xl font-black text-theme-text mt-0.5">{newLeadsCount}</div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                    New
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'HIGH' ? 'All' : 'HIGH')}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                    statusFilter === 'HIGH'
+                      ? 'bg-theme-bg-alt/70 border-amber-500 shadow-xs ring-1 ring-amber-500/30'
+                      : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                  }`}
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                      <Flame size={13} className="text-amber-500" /> High Focus
+                    </span>
+                    <div className="text-xl font-black text-theme-text mt-0.5">{highPriorityCount}</div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                    Hot
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'Overdue' ? 'All' : 'Overdue')}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                    statusFilter === 'Overdue'
+                      ? 'bg-theme-bg-alt/70 border-rose-500 shadow-xs ring-1 ring-rose-500/30'
+                      : 'bg-theme-bg-alt/30 hover:bg-theme-bg-alt/60 border-theme-border/60'
+                  }`}
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                      <AlertTriangle size={13} className="text-rose-500" /> Overdue Action
+                    </span>
+                    <div className="text-xl font-black text-theme-text mt-0.5">{overdueCount}</div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    overdueCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-theme-bg-alt text-theme-text-muted'
+                  }`}>
+                    {overdueCount > 0 ? 'Pending' : '0'}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Split Panel - Left Sticky Sidebar & Right Naturally Scrollable Workflow */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 items-start">
-        {/* Left Side Pane: Leads Feed list (Sticky & Fit to Screen) */}
+        {/* Left Side Pane: Leads Feed list */}
         {!isMaximized && (
-          <div className="flex flex-col rounded-2xl border border-theme-border/70 bg-theme-card p-4 shadow-xs lg:col-span-1 lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] overflow-hidden">
+          <div className="flex flex-col rounded-2xl border border-theme-border/70 bg-theme-card p-3 sm:p-4 shadow-xs lg:col-span-1 lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] overflow-hidden">
             {/* Search & filters */}
             <div className="space-y-2 flex-shrink-0 pb-1">
               <div className="relative">
@@ -630,13 +690,13 @@ export default function Leads() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-2.5 py-1.5 text-xs font-medium outline-none text-theme-text focus:border-theme-primary cursor-pointer"
+                  className="w-full rounded-xl border border-theme-border/70 bg-theme-bg-alt/50 px-2.5 py-1.5 text-xs font-medium outline-none text-theme-text focus:border-theme-primary cursor-pointer truncate"
                 >
-                  <option value="All">All Statuses / Categories</option>
+                  <option value="All">All Statuses</option>
                   {isManagementUser && (
                     <>
-                      <option value="Unassigned">Unassigned (Pending Allocation)</option>
-                      <option value="Assigned">Assigned (In Pipeline)</option>
+                      <option value="Unassigned">Unassigned (Queue)</option>
+                      <option value="Assigned">Assigned (Active)</option>
                     </>
                   )}
                   <option value="New">New</option>
@@ -653,7 +713,7 @@ export default function Leads() {
 
             {/* Management Bulk Actions Bar */}
             {isManagementUser && filteredLeads.length > 0 && (
-              <div className="p-3 my-2 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/60 space-y-2.5 shadow-xs flex-shrink-0">
+              <div className="p-2.5 sm:p-3 my-2 rounded-2xl bg-theme-bg-alt/60 border border-theme-border/60 space-y-2 shadow-xs flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <button
                     type="button"
@@ -669,7 +729,7 @@ export default function Leads() {
                   </button>
 
                   {selectedLeadIds.length > 0 && (
-                    <span className="text-[10px] font-black text-theme-primary bg-theme-primary/10 border border-theme-primary/20 px-2.5 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-theme-primary bg-theme-primary/10 border border-theme-primary/20 px-2 py-0.5 rounded-full">
                       {selectedLeadIds.length} Selected
                     </span>
                   )}
@@ -694,7 +754,7 @@ export default function Leads() {
                       <option value="" disabled>
                         {bulkAssigning ? 'Assigning selected leads...' : `⚡ Bulk Assign (${selectedLeadIds.length}) Leads To...`}
                       </option>
-                      <option value="-1">⚡ Auto-Assign (Smart AI Engine)</option>
+                      <option value="-1">⚡ Auto-Assign (Smart Engine)</option>
                       <optgroup label="Sales Executives">
                         {members
                           .filter((m: any) => {
@@ -730,7 +790,7 @@ export default function Leads() {
                     key={lead.id}
                     id={`lead-card-${lead.id}`}
                     onClick={() => handleLeadSelect(lead)}
-                    className={`w-full rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
+                    className={`w-full rounded-xl border p-3 text-left transition-all cursor-pointer ${
                       isSelected
                         ? 'border-theme-primary bg-theme-primary/[0.04] shadow-xs'
                         : isOverdue
@@ -764,7 +824,7 @@ export default function Leads() {
                     </p>
 
                     {/* Clean compact bottom tags row */}
-                    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-theme-border/30 pt-2 text-[10px]">
+                    <div className="mt-2 flex items-center justify-between gap-2 border-t border-theme-border/30 pt-1.5 text-[10px]">
                       <span className="text-theme-text-muted font-medium">
                         {lead.sourcePlatform || 'Direct'}
                       </span>
@@ -814,8 +874,8 @@ export default function Leads() {
           </div>
         )}
 
-        {/* Right Side Pane: Enterprise Multi-Activity Workflow Container (Same Height & Bottom Alignment) */}
-        <div className={`${isMaximized ? "lg:col-span-3" : "lg:col-span-2"} lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] flex flex-col`}>
+        {/* Desktop Side Pane: Enterprise Multi-Activity Workflow Container (Hidden on mobile, visible on desktop) */}
+        <div className={`hidden lg:flex ${isMaximized ? "lg:col-span-3" : "lg:col-span-2"} lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] flex-col`}>
           {selectedLead ? (
             <WorkDetailsPanel
               leadId={selectedLead.id}
@@ -839,6 +899,19 @@ export default function Leads() {
           )}
         </div>
       </div>
+
+      {/* Mobile Lead Details Overlay / Fullscreen Drawer (Clean, focused view on Android / mobile) */}
+      {showMobileDetails && selectedLead && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-theme-bg lg:hidden animate-fade-in p-0 overflow-hidden">
+          <WorkDetailsPanel
+            leadId={selectedLead.id}
+            isOpen={true}
+            inline={true}
+            onClose={() => setShowMobileDetails(false)}
+            onLeadUpdated={fetchLeads}
+          />
+        </div>
+      )}
 
       {/* Add Lead Modal */}
       {showCreateModal && (

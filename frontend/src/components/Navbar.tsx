@@ -475,25 +475,25 @@ export default function Navbar() {
       {/* Main Top Header Navbar (Always fixed edge-to-edge at top) */}
       <header className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b border-theme-border/80 bg-theme-card/85 px-3 sm:px-6 backdrop-blur-md transition-all duration-300">
         {/* Left Section: Mobile Sidebar Toggle, Brand Icon & Page Title */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={(e) => { e.stopPropagation(); toggleMobileOpen(); }}
-            className="flex h-9 w-9 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/60 text-theme-text shadow-sm hover:bg-theme-bg-alt active:scale-95 transition-all lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/60 text-theme-text shadow-xs hover:bg-theme-bg-alt active:scale-95 transition-all lg:hidden flex-shrink-0"
             title="Open Menu"
           >
             <Menu size={18} />
           </button>
 
-          {/* Compact App Brand Icon */}
-          <Link to="/dashboard" className="flex items-center transition-transform hover:scale-105" title="Hoossh Lead Growth">
-            <HoosshLogo size={28} variant="full" animated />
+          {/* App Brand Logo */}
+          <Link to="/dashboard" className="flex items-center transition-transform hover:scale-105 flex-shrink-0" title="Hoossh Lead Growth">
+            <HoosshLogo size={26} variant="full" animated />
           </Link>
 
           {/* Subtle Vertical Divider */}
-          <div className="h-5 w-[1px] bg-theme-border/60 mx-0.5 sm:mx-1" />
+          <div className="h-5 w-[1px] bg-theme-border/60 mx-0.5 sm:mx-1 flex-shrink-0" />
 
           {/* Page Title */}
-          <div className="flex items-center">
+          <div className="flex items-center min-w-0">
             <h1 className="text-sm sm:text-base md:text-lg font-extrabold text-theme-text tracking-tight truncate">
               {getPageTitle()}
             </h1>
@@ -501,14 +501,14 @@ export default function Navbar() {
         </div>
 
         {/* Right Section: Global Actions */}
-        <div ref={navbarActionsRef} className="flex items-center gap-2 sm:gap-3">
+        <div ref={navbarActionsRef} className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Mobile Search Button */}
           <button
             onClick={() => setShowMobileSearch(true)}
-            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/60 text-theme-text shadow-sm hover:bg-theme-bg-alt md:hidden active:scale-95 transition-all"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/60 text-theme-text shadow-xs hover:bg-theme-bg-alt md:hidden active:scale-95 transition-all"
             title="Search"
           >
-            <Search size={18} />
+            <Search size={17} />
           </button>
 
           {/* Desktop Search Bar */}
@@ -612,15 +612,15 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Quick Actions Dropdown Button */}
-          <div className="relative">
+          {/* Quick Actions Dropdown Button (Hidden on small mobile screens to prevent clutter) */}
+          <div className="relative hidden sm:block">
             <button
               onClick={() => {
                 const state = !showQuickActions;
                 closeAllMenus();
                 setShowQuickActions(state);
               }}
-              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-theme-primary text-white shadow-md hover:bg-theme-primary-hover active:scale-95 transition-all"
+              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-theme-primary text-white shadow-xs hover:bg-theme-primary-hover active:scale-95 transition-all"
               title="Quick Action"
             >
               <Plus size={18} />
@@ -667,15 +667,15 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Theme Switcher Button */}
-          <div className="relative">
+          {/* Theme Switcher Button (Hidden on small mobile screens to prevent clutter) */}
+          <div className="relative hidden sm:block">
             <button
               onClick={() => {
                 const state = !showThemeMenu;
                 closeAllMenus();
                 setShowThemeMenu(state);
               }}
-              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/60 text-theme-text shadow-sm hover:bg-theme-bg-alt active:scale-95 transition-all"
+              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl border border-theme-border bg-theme-card/60 text-theme-text shadow-xs hover:bg-theme-bg-alt active:scale-95 transition-all"
               title="Theme Palette"
             >
               <Palette size={18} />
@@ -858,6 +858,22 @@ export default function Navbar() {
                         <span>{opt.label}</span>
                       </button>
                     ))}
+                  </div>
+
+                  <div className="py-1 border-b border-theme-border/20 sm:hidden">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        setShowThemeMenu(true);
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-theme-text/80 hover:bg-theme-bg-alt"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Palette size={14} className="text-theme-primary" />
+                        <span>Theme: <span className="capitalize text-theme-text">{theme}</span></span>
+                      </span>
+                      <span className="text-[10px] text-theme-primary font-bold">Change</span>
+                    </button>
                   </div>
 
                   <div className="py-1">

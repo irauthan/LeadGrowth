@@ -69,27 +69,24 @@ export default function Sidebar() {
 
   const generalMenu = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { name: 'Workspace', icon: UserCheck, path: '/leads' },
+    { name: 'Leads', icon: UserCheck, path: '/leads' },
     { name: 'Pipelines', icon: Briefcase, path: '/my-work' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
     { name: 'Scheduler', icon: Calendar, path: '/scheduler' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
     { name: 'Notifications', icon: Bell, path: '/notifications-page' },
-    { name: 'Activity Logs', icon: History, path: '/activity-logs' },
-    { name: 'SaaS Billing', icon: CreditCard, path: '/billing' },
   ];
 
   const managementMenu = [
-    { name: 'Executive Work Monitor', icon: Activity, path: '/admin/work-monitor', adminOnly: false },
-    { name: 'Team Management', icon: Users, path: '/admin/users', adminOnly: false },
-    { name: 'Workspace Management', icon: Building2, path: '/admin/workspace', adminOnly: true },
-    { name: 'API Management', icon: Key, path: '/admin/api', adminOnly: true },
+    { name: 'Work Monitor', icon: Activity, path: '/admin/work-monitor', adminOnly: false },
+    { name: 'Team', icon: Users, path: '/admin/users', adminOnly: false },
+    { name: 'Workspace', icon: Building2, path: '/admin/workspace', adminOnly: true },
+    { name: 'API Keys', icon: Key, path: '/admin/api', adminOnly: true },
   ];
 
   const settingsMenu = [
-    { name: 'General Settings', icon: Settings, path: '/settings', adminOnly: false },
-    { name: 'System Monitoring', icon: Activity, path: '/admin/system', adminOnly: true },
+    { name: 'Settings', icon: Settings, path: '/settings', adminOnly: false },
     { name: 'Security Center', icon: ShieldCheck, path: '/admin/security', adminOnly: true },
     { name: 'Audit Logs', icon: ShieldAlert, path: '/admin/audit-logs', adminOnly: true },
   ];
