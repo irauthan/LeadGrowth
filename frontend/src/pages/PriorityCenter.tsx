@@ -216,7 +216,7 @@ export default function PriorityCenter() {
         {/* Top Header Row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-theme-text flex items-center gap-2">
               <Zap className="w-5 h-5 text-theme-primary" />
               <span>Priority Center</span>
             </h1>
@@ -252,7 +252,7 @@ export default function PriorityCenter() {
                 }`}
               >
                 <div className="text-[11px] font-semibold text-theme-text-muted">Today's Work</div>
-                <div className="text-xl font-black text-theme-text mt-0.5">{stats.todaysWorkCount}</div>
+                <div className="text-xl font-bold tracking-tight text-theme-text mt-0.5">{stats.todaysWorkCount}</div>
                 <div className="text-[9px] text-theme-primary font-bold mt-0.5">High Focus Leads</div>
               </button>
 
@@ -269,7 +269,7 @@ export default function PriorityCenter() {
                 <div className="text-[11px] font-bold text-rose-500 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3 text-rose-500" /> Overdue
                 </div>
-                <div className="text-xl font-black text-rose-500 mt-0.5">{stats.overdueCount}</div>
+                <div className="text-xl font-bold tracking-tight text-rose-500 mt-0.5">{stats.overdueCount}</div>
                 <div className="text-[9px] text-rose-500/80 font-medium mt-0.5">Immediate Action</div>
               </button>
 
@@ -286,7 +286,7 @@ export default function PriorityCenter() {
                 <div className="text-[11px] font-bold text-amber-500 flex items-center gap-1">
                   <Flame className="w-3 h-3 text-amber-500" /> High Priority
                 </div>
-                <div className="text-xl font-black text-amber-500 mt-0.5">{stats.highPriorityCount}</div>
+                <div className="text-xl font-bold tracking-tight text-amber-500 mt-0.5">{stats.highPriorityCount}</div>
                 <div className="text-[9px] text-amber-500/80 font-medium mt-0.5">Top Tier Impact</div>
               </button>
 
@@ -301,7 +301,7 @@ export default function PriorityCenter() {
                 }`}
               >
                 <div className="text-[11px] font-bold text-purple-400">Negotiations</div>
-                <div className="text-xl font-black text-purple-400 mt-0.5">{stats.negotiationsCount}</div>
+                <div className="text-xl font-bold tracking-tight text-purple-400 mt-0.5">{stats.negotiationsCount}</div>
                 <div className="text-[9px] text-purple-400/80 font-medium mt-0.5">Closing Deals</div>
               </button>
 
@@ -316,7 +316,7 @@ export default function PriorityCenter() {
                 }`}
               >
                 <div className="text-[11px] font-bold text-blue-500">Follow-ups</div>
-                <div className="text-xl font-black text-blue-500 mt-0.5">{stats.todaysFollowupsCount}</div>
+                <div className="text-xl font-bold tracking-tight text-blue-500 mt-0.5">{stats.todaysFollowupsCount}</div>
                 <div className="text-[9px] text-blue-500/80 font-medium mt-0.5">Scheduled Today</div>
               </button>
 
@@ -331,7 +331,7 @@ export default function PriorityCenter() {
                 }`}
               >
                 <div className="text-[11px] font-bold text-emerald-500">New Leads</div>
-                <div className="text-xl font-black text-emerald-500 mt-0.5">{stats.newLeadsCount}</div>
+                <div className="text-xl font-bold tracking-tight text-emerald-500 mt-0.5">{stats.newLeadsCount}</div>
                 <div className="text-[9px] text-emerald-500/80 font-medium mt-0.5">Fresh Inbound</div>
               </button>
 
@@ -348,7 +348,7 @@ export default function PriorityCenter() {
                 <div className="text-[11px] font-bold text-theme-text-muted flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Completed
                 </div>
-                <div className="text-xl font-black text-emerald-500 mt-0.5">{stats.completedTodayCount}</div>
+                <div className="text-xl font-bold tracking-tight text-emerald-500 mt-0.5">{stats.completedTodayCount}</div>
                 <div className="text-[9px] text-theme-text-muted font-medium mt-0.5">Converted / Done</div>
               </button>
             </div>
@@ -419,7 +419,7 @@ export default function PriorityCenter() {
         </div>
       ) : filteredApiItems && filteredApiItems.length > 0 ? (
         <div className="space-y-3">
-          <div className="text-xs font-extrabold text-theme-text-muted uppercase tracking-wider mb-2">
+          <div className="text-xs font-semibold text-theme-text-muted uppercase tracking-wider mb-2">
             Showing {filteredApiItems.length} records for filter: {getCardTitle(activeCardFilter)}
           </div>
           {filteredApiItems.map((item, idx) => (
@@ -429,7 +429,7 @@ export default function PriorityCenter() {
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-extrabold text-theme-text">
+                  <h3 className="text-sm font-semibold text-theme-text">
                     {item.title || item.name || item.leadName || `Record #${item.id}`}
                   </h3>
                   <p className="text-xs text-theme-text-muted">
@@ -458,7 +458,7 @@ export default function PriorityCenter() {
       ) : filteredPriorities.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-theme-card border border-theme-border rounded-3xl text-theme-text-muted gap-2">
           <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-          <h3 className="text-base font-extrabold text-theme-text">No Priority Items Pending</h3>
+          <h3 className="text-base font-semibold text-theme-text">No Priority Items Pending</h3>
           <p className="text-xs text-theme-text-muted">All high-urgency lead activities for this filter are up to date.</p>
         </div>
       ) : (
@@ -477,10 +477,10 @@ export default function PriorityCenter() {
                       <span className={`px-2.5 py-0.5 rounded-full text-xs border ${badge.color}`}>
                         {badge.label}
                       </span>
-                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-theme-bg-alt text-theme-text border border-theme-border">
+                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-theme-bg-alt text-theme-text border border-theme-border">
                         {item.currentStage}
                       </span>
-                      <span className="px-2 py-0.5 rounded-lg text-xs font-extrabold bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
                         <Flame size={12} className="text-amber-500 fill-amber-500/20" />
                         <span>{item.qualityTier || 'WARM'} ({item.qualityScore || 75} PTS)</span>
                       </span>
@@ -490,7 +490,7 @@ export default function PriorityCenter() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenLead(item.leadId)}
-                          className="text-base font-extrabold text-theme-text hover:text-theme-primary transition-colors text-left"
+                          className="text-base font-semibold text-theme-text hover:text-theme-primary transition-colors text-left"
                         >
                           {item.name}
                         </button>
@@ -534,7 +534,7 @@ export default function PriorityCenter() {
                   <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap border-t lg:border-t-0 pt-3 lg:pt-0 border-theme-border/60">
                     <button
                       onClick={() => handleOpenLead(item.leadId)}
-                      className="px-4 py-2 bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-extrabold rounded-2xl flex items-center gap-1.5 transition-all shadow-sm"
+                      className="px-4 py-2 bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-semibold rounded-2xl flex items-center gap-1.5 transition-all shadow-sm"
                     >
                       Open Lead <ChevronRight className="w-3.5 h-3.5" />
                     </button>

@@ -140,6 +140,10 @@ export default function ExecutiveWorkMonitor() {
   // Active sub-tab inside expanded lead card (logs, followups, timeline)
   const [activeLeadSubTab, setActiveLeadSubTab] = useState<Record<number, 'logs' | 'followups' | 'timeline'>>({});
 
+  // Day-wise Activity Breakdown presentation controls
+  const [breakdownViewMode, setBreakdownViewMode] = useState<'ACTIVE' | 'ALL'>('ACTIVE');
+  const [isBreakdownCollapsed, setIsBreakdownCollapsed] = useState<boolean>(false);
+
   useEffect(() => {
     if (isPrivileged) {
       fetchMembers();
@@ -500,61 +504,239 @@ export default function ExecutiveWorkMonitor() {
           </div>
 
           {/* Day-wise & Month-wise Activity Breakdown Table */}
-          <div className="p-6 rounded-3xl bg-theme-card border border-theme-border shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-extrabold text-theme-text flex items-center gap-2">
-                  <CalendarIcon size={18} className="text-theme-primary" />
-                  Day-wise & Month-wise Activity Log Breakdown
-                </h3>
-                <p className="text-xs text-theme-text-muted mt-0.5">
-                  {selectedUserId > 0 
-                    ? `Daily breakdown of calls, meetings, emails, and follow-ups executed by ${summary.userName}.`
-                    : 'Daily breakdown of calls, meetings, emails, and follow-ups executed across all team members.'}
-                </p>
-              </div>
-              <span className="text-xs font-bold text-theme-text-muted bg-theme-bg-alt px-3 py-1 rounded-full border border-theme-border">
-                {summary.dailyBreakdown.length} Days Recorded
-              </span>
-            </div>
+          {(() => {
+            const allDays = summary.dailyBreakdown || [];
+            const activeDays = allDays.filter((row) => row.totalActivitiesCount > 0);
+            const displayedBreakdown = breakdownViewMode === 'ACTIVE'
+              ? (activeDays.length > 0 ? activeDays : allDays)
+              : allDays;
+            const totalActivitiesRecorded = allDays.reduce((acc, curr) => acc + (curr.totalActivitiesCount || 0), 0);
+            const totalCallsRecorded = allDays.reduce((acc, curr) => acc + (curr.callsCount || 0), 0);
+            const peakDay = allDays.length > 0 
+              ? allDays.reduce((prev, current) => (prev.totalActivitiesCount > current.totalActivitiesCount) ? prev : current, allDays[0])
+              : null;
 
-            {summary.dailyBreakdown.length === 0 ? (
-              <div className="p-8 text-center text-xs font-bold text-theme-text-muted">
-                No daily activity breakdown recorded for this timeframe.
+            return (
+              <div className="p-5 sm:p-6 rounded-3xl bg-theme-card border border-theme-border shadow-xs space-y-4 transition-all">
+                {/* Header with Title and Executive Controls */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-xl bg-theme-primary/10 text-theme-primary">
+                        <CalendarIcon size={17} />
+                      </div>
+                      <h3 className="text-base font-semibold text-theme-text">
+                        Day-wise & Month-wise Activity Log Breakdown
+                      </h3>
+                    </div>
+                    <p className="text-xs text-theme-text-muted">
+                      {selectedUserId > 0 
+                        ? `Audit breakdown of calls, meetings, emails, and follow-ups executed by ${summary.userName}.`
+                        : 'Audit breakdown of calls, meetings, emails, and follow-ups executed across all team members.'}
+                    </p>
+                  </div>
+
+                  {/* Action Controls: Active vs All Days Pill + Collapse Button */}
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    {/* Active vs All View Mode Toggle */}
+                    <div className="flex items-center p-1 rounded-xl bg-theme-bg-alt border border-theme-border/70 text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBreakdownViewMode('ACTIVE');
+                          if (isBreakdownCollapsed) setIsBreakdownCollapsed(false);
+                        }}
+                        className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                          breakdownViewMode === 'ACTIVE'
+                            ? 'bg-theme-card text-theme-primary font-bold shadow-xs border border-theme-border/60'
+                            : 'text-theme-text-muted hover:text-theme-text'
+                        }`}
+                      >
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span>Active Days ({activeDays.length})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBreakdownViewMode('ALL');
+                          if (isBreakdownCollapsed) setIsBreakdownCollapsed(false);
+                        }}
+                        className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                          breakdownViewMode === 'ALL'
+                            ? 'bg-theme-card text-theme-primary font-bold shadow-xs border border-theme-border/60'
+                            : 'text-theme-text-muted hover:text-theme-text'
+                        }`}
+                      >
+                        <span>All Calendar Days ({allDays.length})</span>
+                      </button>
+                    </div>
+
+                    {/* Collapsible toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setIsBreakdownCollapsed(!isBreakdownCollapsed)}
+                      className="p-1.5 rounded-xl border border-theme-border/70 bg-theme-bg-alt hover:bg-theme-card text-theme-text-muted hover:text-theme-text transition-all cursor-pointer"
+                      title={isBreakdownCollapsed ? "Expand Activity Table" : "Collapse Activity Table"}
+                    >
+                      {isBreakdownCollapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick KPI Summary Strip */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                  <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-2.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted block">Workday Presence</span>
+                    <span className="text-sm font-bold tracking-tight text-theme-text mt-0.5 block">
+                      {activeDays.length} <span className="text-xs font-normal text-theme-text-muted">/ {allDays.length} Days Active</span>
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-2.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted block">Total Logged Actions</span>
+                    <span className="text-sm font-bold tracking-tight text-theme-text mt-0.5 block">
+                      {totalActivitiesRecorded} <span className="text-xs font-normal text-theme-text-muted">Activities</span>
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-2.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted block">Outreach Phone Calls</span>
+                    <span className="text-sm font-bold tracking-tight text-cyan-600 dark:text-cyan-400 mt-0.5 block">
+                      {totalCallsRecorded} <span className="text-xs font-normal text-theme-text-muted">Calls</span>
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-2.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted block">Peak Activity Day</span>
+                    <span className="text-sm font-bold tracking-tight text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
+                      {peakDay && peakDay.totalActivitiesCount > 0 ? `${peakDay.dayOfWeek} (${peakDay.totalActivitiesCount})` : 'None'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Table or Empty State (Only rendered when not collapsed) */}
+                {!isBreakdownCollapsed && (
+                  <>
+                    {allDays.length === 0 ? (
+                      <div className="p-8 text-center text-xs font-bold text-theme-text-muted">
+                        No daily activity breakdown recorded for this timeframe.
+                      </div>
+                    ) : displayedBreakdown.length === 0 ? (
+                      <div className="p-6 text-center text-xs font-medium text-theme-text-muted bg-theme-bg-alt/30 rounded-2xl border border-theme-border/60 space-y-2">
+                        <p>No activity recorded on any days in the last {allDays.length} days.</p>
+                        <button
+                          type="button"
+                          onClick={() => setBreakdownViewMode('ALL')}
+                          className="px-3 py-1.5 rounded-xl bg-theme-primary text-white text-xs font-bold shadow-xs hover:bg-theme-primary-hover cursor-pointer"
+                        >
+                          View All {allDays.length} Calendar Days
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto max-h-[340px] overflow-y-auto border border-theme-border/60 rounded-2xl">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-theme-bg-alt sticky top-0 z-10 border-b border-theme-border/60 text-theme-text-muted font-bold text-[11px] uppercase tracking-wider backdrop-blur-sm">
+                            <tr>
+                              <th className="p-3">Date</th>
+                              <th className="p-3">Day</th>
+                              <th className="p-3 text-center">Calls</th>
+                              <th className="p-3 text-center">Meetings / Demos</th>
+                              <th className="p-3 text-center">Emails</th>
+                              <th className="p-3 text-center">WhatsApp</th>
+                              <th className="p-3 text-center">Followups</th>
+                              <th className="p-3 text-right">Total Activities</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-theme-border/40 font-semibold">
+                            {displayedBreakdown.map((row) => {
+                              const isActive = row.totalActivitiesCount > 0;
+                              return (
+                                <tr 
+                                  key={row.date} 
+                                  className={`transition-colors hover:bg-theme-bg-alt/50 ${
+                                    isActive ? 'bg-theme-primary/[0.02]' : 'opacity-70'
+                                  }`}
+                                >
+                                  <td className="p-3 font-mono font-bold text-theme-text">
+                                    <div className="flex items-center gap-2">
+                                      {isActive && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0" />}
+                                      <span>{row.date}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-3 text-theme-text-muted">{row.dayOfWeek}</td>
+                                  
+                                  <td className="p-3 text-center font-bold">
+                                    {row.callsCount > 0 ? (
+                                      <span className="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
+                                        {row.callsCount}
+                                      </span>
+                                    ) : (
+                                      <span className="text-theme-text-muted/30 font-normal">-</span>
+                                    )}
+                                  </td>
+
+                                  <td className="p-3 text-center font-bold">
+                                    {row.meetingsCount > 0 ? (
+                                      <span className="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono">
+                                        {row.meetingsCount}
+                                      </span>
+                                    ) : (
+                                      <span className="text-theme-text-muted/30 font-normal">-</span>
+                                    )}
+                                  </td>
+
+                                  <td className="p-3 text-center font-bold">
+                                    {row.emailsCount > 0 ? (
+                                      <span className="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">
+                                        {row.emailsCount}
+                                      </span>
+                                    ) : (
+                                      <span className="text-theme-text-muted/30 font-normal">-</span>
+                                    )}
+                                  </td>
+
+                                  <td className="p-3 text-center font-bold">
+                                    {row.whatsappCount > 0 ? (
+                                      <span className="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-mono">
+                                        {row.whatsappCount}
+                                      </span>
+                                    ) : (
+                                      <span className="text-theme-text-muted/30 font-normal">-</span>
+                                    )}
+                                  </td>
+
+                                  <td className="p-3 text-center font-bold">
+                                    {row.followupsCompletedCount > 0 ? (
+                                      <span className="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-mono">
+                                        {row.followupsCompletedCount}
+                                      </span>
+                                    ) : (
+                                      <span className="text-theme-text-muted/30 font-normal">-</span>
+                                    )}
+                                  </td>
+
+                                  <td className="p-3 text-right font-bold tracking-tight text-theme-text">
+                                    {row.totalActivitiesCount > 0 ? (
+                                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-theme-primary/10 text-theme-primary font-mono font-bold">
+                                        {row.totalActivitiesCount}
+                                      </span>
+                                    ) : (
+                                      <span className="text-theme-text-muted/30 font-normal">-</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            ) : (
-              <div className="overflow-x-auto border border-theme-border/60 rounded-2xl">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-theme-bg-alt border-b border-theme-border/60 text-theme-text-muted font-bold">
-                    <tr>
-                      <th className="p-3">Date</th>
-                      <th className="p-3">Day</th>
-                      <th className="p-3 text-center">Calls</th>
-                      <th className="p-3 text-center">Meetings / Demos</th>
-                      <th className="p-3 text-center">Emails</th>
-                      <th className="p-3 text-center">WhatsApp</th>
-                      <th className="p-3 text-center">Followups Completed</th>
-                      <th className="p-3 text-right">Total Activities</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-theme-border/40 font-semibold">
-                    {summary.dailyBreakdown.map((row) => (
-                      <tr key={row.date} className="hover:bg-theme-bg-alt/50 transition-colors">
-                        <td className="p-3 font-mono font-bold text-theme-text">{row.date}</td>
-                        <td className="p-3 text-theme-text-muted">{row.dayOfWeek}</td>
-                        <td className="p-3 text-center text-emerald-600 dark:text-emerald-400 font-bold">{row.callsCount}</td>
-                        <td className="p-3 text-center text-amber-600 dark:text-amber-400 font-bold">{row.meetingsCount}</td>
-                        <td className="p-3 text-center text-blue-600 dark:text-blue-400 font-bold">{row.emailsCount}</td>
-                        <td className="p-3 text-center text-purple-600 dark:text-purple-400 font-bold">{row.whatsappCount}</td>
-                        <td className="p-3 text-center text-cyan-600 dark:text-cyan-400 font-bold">{row.followupsCompletedCount}</td>
-                        <td className="p-3 text-right font-black text-theme-text">{row.totalActivitiesCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+            );
+          })()}
 
           {/* Lead-by-Lead Detailed Work Directory */}
           <div className="p-6 rounded-3xl bg-theme-card border border-theme-border shadow-sm space-y-4">

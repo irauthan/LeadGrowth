@@ -21,10 +21,8 @@ import {
   X,
   Layers,
   TrendingUp,
-  Target,
   Activity,
   Award,
-  ArrowUpRight,
   BarChart2,
   PieChart as PieChartIcon
 } from 'lucide-react';
@@ -248,6 +246,7 @@ export default function UserDashboard() {
   const conversionsCount = kpis?.myConversions ?? getStageCount('Converted');
   const personalRevenue = kpis?.myRevenueContribution ?? 0;
 
+
   const isManagementOrAdmin = (user?.roles || []).some((r: any) => {
     const roleName = typeof r === 'string' ? r : r?.name || '';
     return ['ROLE_ADMIN', 'ADMIN', 'ROLE_SUPERADMIN', 'SUPERADMIN', 'ROLE_MANAGER', 'MANAGER'].includes(roleName.toUpperCase());
@@ -259,7 +258,7 @@ export default function UserDashboard() {
       {/* Top Welcome Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-theme-text">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-theme-text">
             Welcome back, {user?.fullName}!
           </h1>
           <p className="text-xs text-theme-text-muted mt-1">
@@ -307,10 +306,10 @@ export default function UserDashboard() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-extrabold text-theme-text">
+                    <h3 className="text-base font-semibold text-theme-text">
                       Newly Assigned Leads ({pendingLeads.length} Lead{pendingLeads.length > 1 ? 's' : ''})
                     </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 text-amber-500 border border-amber-500/30">
                       Action Required
                     </span>
                   </div>
@@ -357,7 +356,7 @@ export default function UserDashboard() {
                 <button
                   type="button"
                   onClick={() => handleBulkAcceptPipeline(pendingLeads.map((l) => l.id))}
-                  className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-extrabold transition-all flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-semibold transition-all flex items-center gap-1.5"
                 >
                   <CheckCheck size={14} />
                   <span>Add All to Pipelines ({pendingLeads.length})</span>
@@ -386,9 +385,9 @@ export default function UserDashboard() {
                             <div className={`flex-shrink-0 transition-colors ${isSelected ? 'text-amber-500' : 'text-theme-text-muted'}`}>
                               {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
                             </div>
-                            <h4 className="text-xs font-extrabold text-theme-text">{lead.name}</h4>
+                            <h4 className="text-xs font-semibold text-theme-text">{lead.name}</h4>
                           </div>
-                          <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex-shrink-0">
+                          <span className="text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex-shrink-0">
                             {lead.qualityTier || 'WARM'} ({lead.qualityScore || 75} pts)
                           </span>
                         </div>
@@ -437,7 +436,7 @@ export default function UserDashboard() {
                   type="button"
                   disabled={selectedLeadIds.length === 0}
                   onClick={() => handleBulkAcceptPipeline()}
-                  className={`px-5 py-2.5 rounded-2xl text-xs font-extrabold shadow-lg transition-all flex items-center gap-2 ${
+                  className={`px-5 py-2.5 rounded-2xl text-xs font-semibold shadow-lg transition-all flex items-center gap-2 ${
                     selectedLeadIds.length > 0
                       ? 'bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white shadow-theme-primary/25 cursor-pointer scale-100'
                       : 'bg-theme-bg-alt text-theme-text-muted border border-theme-border/60 cursor-not-allowed opacity-60'
@@ -459,7 +458,7 @@ export default function UserDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="flex h-3 w-3 rounded-full bg-amber-500 animate-ping" />
-              <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-1.5">
+              <h3 className="text-sm font-semibold text-theme-text flex items-center gap-1.5">
                 <Bell size={16} className="text-amber-500" />
                 <span>Newly Received Leads ({pendingLeads.length} Lead{pendingLeads.length > 1 ? 's' : ''} Assigned)</span>
               </h3>
@@ -469,7 +468,7 @@ export default function UserDashboard() {
               <button
                 type="button"
                 onClick={() => setIsAcceptModalOpen(true)}
-                className="px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 text-[10px] font-extrabold uppercase transition-all flex items-center gap-1"
+                className="px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 text-[10px] font-bold uppercase transition-all flex items-center gap-1"
               >
                 <Layers size={12} /> Open Popup View
               </button>
@@ -520,7 +519,7 @@ export default function UserDashboard() {
                 type="button"
                 disabled={selectedLeadIds.length === 0}
                 onClick={() => handleBulkAcceptPipeline()}
-                className={`px-4 py-1.5 rounded-xl text-xs font-extrabold shadow-md transition-all flex items-center gap-1.5 ${
+                className={`px-4 py-1.5 rounded-xl text-xs font-semibold shadow-md transition-all flex items-center gap-1.5 ${
                   selectedLeadIds.length > 0
                     ? 'bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white shadow-theme-primary/20 cursor-pointer'
                     : 'bg-theme-bg-alt text-theme-text-muted border border-theme-border/60 cursor-not-allowed opacity-60'
@@ -552,9 +551,9 @@ export default function UserDashboard() {
                         <div className={`flex-shrink-0 transition-colors ${isSelected ? 'text-amber-500' : 'text-theme-text-muted'}`}>
                           {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                         </div>
-                        <h4 className="text-xs font-extrabold text-theme-text">{lead.name}</h4>
+                        <h4 className="text-xs font-semibold text-theme-text">{lead.name}</h4>
                       </div>
-                      <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex-shrink-0">
+                      <span className="text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex-shrink-0">
                         {lead.qualityTier || 'WARM'} ({lead.qualityScore || 75} pts)
                       </span>
                     </div>
@@ -608,7 +607,7 @@ export default function UserDashboard() {
               <UserCheck size={17} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-theme-text">{assignedLeadsCount}</h3>
+          <h3 className="text-2xl font-bold tracking-tight text-theme-text">{assignedLeadsCount}</h3>
           <span className="text-[10px] font-semibold text-theme-text-muted group-hover:text-theme-primary flex items-center gap-1 transition-colors">
             Active in Pipeline <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
@@ -625,7 +624,7 @@ export default function UserDashboard() {
               <Clock size={17} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-theme-text">{pendingFollowupsCount}</h3>
+          <h3 className="text-2xl font-bold tracking-tight text-theme-text">{pendingFollowupsCount}</h3>
           <span className="text-[10px] font-semibold text-amber-500 flex items-center gap-1">
             Scheduled Reminders <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
@@ -642,7 +641,7 @@ export default function UserDashboard() {
               <Flame size={17} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-theme-text">{conversionsCount}</h3>
+          <h3 className="text-2xl font-bold tracking-tight text-theme-text">{conversionsCount}</h3>
           <span className="text-[10px] font-semibold text-emerald-500 flex items-center gap-1">
             {kpis?.conversionRate || 0}% Conversion Rate <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
@@ -659,7 +658,7 @@ export default function UserDashboard() {
               <IndianRupee size={17} />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-theme-text">{formatCurrency(personalRevenue)}</h3>
+          <h3 className="text-2xl font-bold tracking-tight text-theme-text">{formatCurrency(personalRevenue)}</h3>
           <span className="text-[10px] font-semibold text-theme-text-muted group-hover:text-theme-primary flex items-center gap-1 transition-colors">
             Closed Deals Value <ChevronRight size={10} className="transition-transform group-hover:translate-x-0.5" />
           </span>
@@ -678,7 +677,7 @@ export default function UserDashboard() {
                 <BarChart2 size={18} />
               </span>
               <div>
-                <h3 className="text-sm font-extrabold text-theme-text">
+                <h3 className="text-sm font-semibold text-theme-text">
                   Executive Performance & Conversion Analytics
                 </h3>
                 <span className="text-[10px] text-theme-text-muted mt-0.5 block">
@@ -692,9 +691,9 @@ export default function UserDashboard() {
               <button
                 type="button"
                 onClick={() => setChartTab('funnel')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                   chartTab === 'funnel'
-                    ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-border/60 font-extrabold'
+                    ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-border/60 font-semibold'
                     : 'text-theme-text-muted hover:text-theme-text'
                 }`}
               >
@@ -705,9 +704,9 @@ export default function UserDashboard() {
               <button
                 type="button"
                 onClick={() => setChartTab('trend')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                   chartTab === 'trend'
-                    ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-border/60 font-extrabold'
+                    ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-border/60 font-semibold'
                     : 'text-theme-text-muted hover:text-theme-text'
                 }`}
               >
@@ -718,9 +717,9 @@ export default function UserDashboard() {
               <button
                 type="button"
                 onClick={() => setChartTab('quality')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                   chartTab === 'quality'
-                    ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-border/60 font-extrabold'
+                    ? 'bg-theme-card text-theme-primary shadow-xs border border-theme-border/60 font-semibold'
                     : 'text-theme-text-muted hover:text-theme-text'
                 }`}
               >
@@ -730,68 +729,15 @@ export default function UserDashboard() {
             </div>
           </div>
 
-          {/* Quick Clickable Performance Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div 
-              onClick={() => navigate(`/my-work?period=${timeFilter.period}`)}
-              className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-theme-primary/50 hover:bg-theme-bg-alt transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-bold uppercase group-hover:text-theme-primary transition-colors">Active Pipeline</span>
-                <ArrowUpRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-theme-primary" />
-              </div>
-              <div className="text-xl font-black text-theme-text mt-1">{myLeads.length} Leads</div>
-              <span className="text-[9px] text-theme-text-muted block">Click to view pipeline</span>
-            </div>
-
-            <div 
-              onClick={() => navigate(`/my-work?stage=Converted&period=${timeFilter.period}`)}
-              className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-emerald-500/50 hover:bg-theme-bg-alt transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-bold uppercase group-hover:text-emerald-500 transition-colors">Win Rate</span>
-                <ArrowUpRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500" />
-              </div>
-              <div className="text-xl font-black text-emerald-500 mt-1">
-                {kpis?.conversionRate || (myLeads.length > 0 ? ((conversionsCount / myLeads.length) * 100).toFixed(1) : '0')}%
-              </div>
-              <span className="text-[9px] text-emerald-500/80 block">Click to view converted leads</span>
-            </div>
-
-            <div 
-              onClick={() => navigate(`/followups`)}
-              className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-amber-500/50 hover:bg-theme-bg-alt transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-bold uppercase group-hover:text-amber-500 transition-colors">Followup Cadence</span>
-                <ArrowUpRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />
-              </div>
-              <div className="text-xl font-black text-amber-500 mt-1">{followups.length} Pending</div>
-              <span className="text-[9px] text-amber-500/80 block">Click to open schedule</span>
-            </div>
-
-            <div 
-              onClick={() => navigate(`/analytics`)}
-              className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-purple-500/50 hover:bg-theme-bg-alt transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between text-theme-text-muted">
-                <span className="text-[10px] font-bold uppercase group-hover:text-purple-500 transition-colors">Pipeline Value</span>
-                <ArrowUpRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-purple-500" />
-              </div>
-              <div className="text-xl font-black text-purple-500 mt-1">{formatCurrency(personalRevenue || 0)}</div>
-              <span className="text-[9px] text-purple-500/80 block">Click for revenue analytics</span>
-            </div>
-          </div>
-
           {/* Chart Rendering Container */}
-          <div className="h-72 w-full pt-2">
+          <div className="h-72 w-full pt-1">
             {chartTab === 'funnel' && (
               <div className="h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-xs font-extrabold text-theme-text">
+                  <span className="text-xs font-semibold text-theme-text">
                     Pipeline Stages Conversion Funnel
                   </span>
-                  <span className="text-[10px] text-theme-text-muted font-bold">
+                  <span className="text-[10px] text-theme-text-muted font-medium">
                     💡 Click any stage column to open leads in Kanban Pipeline
                   </span>
                 </div>
@@ -833,12 +779,12 @@ export default function UserDashboard() {
                             const data = payload[0].payload;
                             return (
                               <div className="p-3 rounded-2xl bg-theme-card/95 border border-theme-border shadow-xl backdrop-blur-md space-y-1 text-xs">
-                                <div className="font-extrabold text-theme-text flex items-center gap-1.5">
+                                <div className="font-semibold text-theme-text flex items-center gap-1.5">
                                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
                                   <span>{data.label}</span>
                                 </div>
-                                <div className="text-sm font-black text-theme-primary">{data.count} Leads</div>
-                                <div className="text-[10px] text-emerald-500 font-bold">👉 Click to view leads in this stage</div>
+                                <div className="text-sm font-bold text-theme-primary">{data.count} Leads</div>
+                                <div className="text-[10px] text-emerald-500 font-medium">👉 Click to view leads in this stage</div>
                               </div>
                             );
                           }
@@ -865,10 +811,10 @@ export default function UserDashboard() {
             {chartTab === 'trend' && (
               <div className="h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-xs font-extrabold text-theme-text">
+                  <span className="text-xs font-semibold text-theme-text">
                     Weekly Activity & Conversion Momentum
                   </span>
-                  <span className="text-[10px] text-theme-text-muted font-bold">
+                  <span className="text-[10px] text-theme-text-muted font-medium">
                     Daily engagement and deals velocity
                   </span>
                 </div>
@@ -903,7 +849,7 @@ export default function UserDashboard() {
                           if (active && payload && payload.length) {
                             return (
                               <div className="p-3 rounded-2xl bg-theme-card/95 border border-theme-border shadow-xl backdrop-blur-md space-y-1.5 text-xs">
-                                <span className="font-extrabold text-theme-text block">{label} Performance</span>
+                                <span className="font-semibold text-theme-text block">{label} Performance</span>
                                 <div className="space-y-1 text-[11px]">
                                   <div className="flex items-center justify-between gap-3 text-indigo-500 font-bold">
                                     <span>Active Leads:</span>
@@ -980,9 +926,9 @@ export default function UserDashboard() {
                   >
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                      <span className="font-extrabold text-rose-500">HOT Priority Leads</span>
+                      <span className="font-semibold text-rose-500">HOT Priority Leads</span>
                     </div>
-                    <span className="font-mono font-black text-rose-500">
+                    <span className="font-mono font-bold text-rose-500">
                       {myLeads.filter((l: any) => (l.qualityTier || '').toUpperCase() === 'HOT').length} Leads
                     </span>
                   </div>
@@ -993,9 +939,9 @@ export default function UserDashboard() {
                   >
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                      <span className="font-extrabold text-amber-500">WARM Interested Leads</span>
+                      <span className="font-semibold text-amber-500">WARM Interested Leads</span>
                     </div>
-                    <span className="font-mono font-black text-amber-500">
+                    <span className="font-mono font-bold text-amber-500">
                       {myLeads.filter((l: any) => (l.qualityTier || '').toUpperCase() === 'WARM' || !l.qualityTier).length} Leads
                     </span>
                   </div>
@@ -1006,9 +952,9 @@ export default function UserDashboard() {
                   >
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                      <span className="font-extrabold text-blue-500">COLD Nurturing Leads</span>
+                      <span className="font-semibold text-blue-500">COLD Nurturing Leads</span>
                     </div>
-                    <span className="font-mono font-black text-blue-500">
+                    <span className="font-mono font-bold text-blue-500">
                       {myLeads.filter((l: any) => (l.qualityTier || '').toUpperCase() === 'COLD').length} Leads
                     </span>
                   </div>
@@ -1023,10 +969,10 @@ export default function UserDashboard() {
       {isCardEnabled('workflow_queue') && (
         <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-theme-text flex items-center gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-theme-text flex items-center gap-2">
               <Briefcase size={16} className="text-theme-primary" /> Workflow Stage Breakdown
             </h3>
-            <span className="text-[10px] font-bold text-theme-text-muted">
+            <span className="text-[10px] font-medium text-theme-text-muted">
               Active Pipeline Leads by Stage
             </span>
           </div>
@@ -1051,7 +997,7 @@ export default function UserDashboard() {
                   </span>
                 </div>
                 <div className="mt-1.5">
-                  <span className="text-xl font-black text-theme-text">
+                  <span className="text-xl font-bold tracking-tight text-theme-text">
                     {item.count}
                   </span>
                 </div>
@@ -1102,7 +1048,7 @@ export default function UserDashboard() {
                       </td>
                       <td className="p-3 text-theme-text-muted font-medium truncate max-w-[120px]">{lead.company || lead.sourcePlatform || 'Corporate'}</td>
                       <td className="p-3">
-                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${
                           lead.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-500' :
                           lead.status === 'Negotiation' ? 'bg-amber-500/10 text-amber-400' :
                           'bg-theme-primary/10 text-theme-primary'
@@ -1111,7 +1057,7 @@ export default function UserDashboard() {
                         </span>
                       </td>
                       <td className="p-3">
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           lead.priority === 'HIGH' ? 'bg-rose-500/10 text-rose-400' : 'bg-blue-500/10 text-blue-400'
                         }`}>
                           {lead.priority || 'MEDIUM'}
@@ -1165,7 +1111,7 @@ export default function UserDashboard() {
                         {f.leadName || 'Client Touchpoint'}
                         <ChevronRight size={12} className="text-theme-primary transition-transform group-hover:translate-x-0.5" />
                       </span>
-                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 uppercase">{f.type || 'CALL'}</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 uppercase">{f.type || 'CALL'}</span>
                     </div>
                     <p className="text-[10px] text-theme-text-muted truncate">{f.notes || 'Requirement collection & proposal follow-up'}</p>
                   </Link>

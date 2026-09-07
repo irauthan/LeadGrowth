@@ -284,7 +284,7 @@ export default function UserManagement() {
               <UsersIcon size={22} />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">Team & User Management</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-theme-text">Team & User Management</h2>
               <p className="text-xs text-theme-text-muted mt-0.5">Manage user roles, access permissions, live status availability, and team performance metrics.</p>
             </div>
           </div>
@@ -294,7 +294,7 @@ export default function UserManagement() {
             <div className="flex items-center rounded-xl bg-theme-bg-alt/60 border border-theme-border p-1">
               <button
                 onClick={() => { setViewMode('TABLE'); setCurrentPage(1); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   viewMode === 'TABLE' ? 'bg-theme-card text-theme-primary shadow-xs' : 'text-theme-text-muted hover:text-theme-text'
                 }`}
               >
@@ -302,7 +302,7 @@ export default function UserManagement() {
               </button>
               <button
                 onClick={() => { setViewMode('DIRECTORY'); setCurrentPage(1); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   viewMode === 'DIRECTORY' ? 'bg-theme-card text-theme-primary shadow-xs' : 'text-theme-text-muted hover:text-theme-text'
                 }`}
               >
@@ -328,7 +328,7 @@ export default function UserManagement() {
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase text-theme-text-muted">Total Members</span>
-                <h4 className="text-lg font-black text-theme-text">{users.length}</h4>
+                <h4 className="text-lg font-bold tracking-tight text-theme-text">{users.length}</h4>
               </div>
             </div>
 
@@ -338,7 +338,7 @@ export default function UserManagement() {
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase text-theme-text-muted">Active Seats</span>
-                <h4 className="text-lg font-black text-theme-text">{activeSeats}</h4>
+                <h4 className="text-lg font-bold tracking-tight text-theme-text">{activeSeats}</h4>
               </div>
             </div>
 
@@ -348,7 +348,7 @@ export default function UserManagement() {
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase text-theme-text-muted">Admins</span>
-                <h4 className="text-lg font-black text-theme-text">{adminCount}</h4>
+                <h4 className="text-lg font-bold tracking-tight text-theme-text">{adminCount}</h4>
               </div>
             </div>
 
@@ -358,7 +358,7 @@ export default function UserManagement() {
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase text-theme-text-muted">Top Performers</span>
-                <h4 className="text-lg font-black text-theme-text">{topPerformersCount}</h4>
+                <h4 className="text-lg font-bold tracking-tight text-theme-text">{topPerformersCount}</h4>
               </div>
             </div>
           </div>
@@ -503,15 +503,15 @@ export default function UserManagement() {
                           title="Click to manage Admin Profile & Credentials"
                         >
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 font-extrabold">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 font-semibold">
                               <Shield size={16} />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[9px] text-purple-400 font-extrabold uppercase tracking-wider">Workspace Administrator</span>
-                              <span className="text-xs font-black text-theme-text group-hover/adminbadge:text-purple-400 transition-colors">Full System & Management</span>
+                              <span className="text-[9px] text-purple-400 font-semibold uppercase tracking-wider">Workspace Administrator</span>
+                              <span className="text-xs font-semibold text-theme-text group-hover/adminbadge:text-purple-400 transition-colors">Full System & Management</span>
                             </div>
                           </div>
-                          <span className="rounded-xl px-2.5 py-1 text-[8px] font-extrabold uppercase tracking-wide bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                          <span className="rounded-xl px-2.5 py-1 text-[8px] font-semibold uppercase tracking-wide bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
                             Profile <ChevronRight size={10} />
                           </span>
                         </Link>
@@ -522,11 +522,11 @@ export default function UserManagement() {
                             <div className="flex items-center gap-2">
                               <Award size={16} className="text-theme-primary" />
                               <div className="flex flex-col">
-                                <span className="text-[9px] text-theme-text-muted font-bold uppercase tracking-wider">Performance Index</span>
-                                <span className="text-xs font-black text-theme-text">{Math.round(item.productivityScore || 0)}% Score</span>
+                                <span className="text-[9px] text-theme-text-muted font-semibold uppercase tracking-wider">Performance Index</span>
+                                <span className="text-xs font-semibold text-theme-text">{Math.round(item.productivityScore || 0)}% Score</span>
                               </div>
                             </div>
-                            <span className={`rounded-xl px-2.5 py-1 text-[8px] font-extrabold uppercase tracking-wide ${
+                            <span className={`rounded-xl px-2.5 py-1 text-[8px] font-semibold uppercase tracking-wide ${
                               item.performanceCategory === 'Top Performer' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                               item.performanceCategory === 'Average Performer' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
                               'bg-rose-500/10 text-rose-400 border border-rose-500/20'

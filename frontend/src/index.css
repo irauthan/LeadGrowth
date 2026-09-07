@@ -2,6 +2,42 @@
 
 @import "tailwindcss";
 
+@layer base {
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Enterprise SaaS Typography Normalization:
+     Prevent bloated/chunky cartoonish text (font-black 900 / font-extrabold 800)
+     and replace with crisp, modern business B2B weights (700 bold, 600 semibold) */
+  .font-black {
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+  }
+
+  .font-extrabold {
+    font-weight: 600 !important;
+    letter-spacing: -0.015em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Direct fallback to guarantee override */
+.font-black {
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+}
+.font-extrabold {
+  font-weight: 600 !important;
+  letter-spacing: -0.015em;
+}
+
 :root,
 .theme-light {
   /* Default light theme - Clean Slate SaaS */
@@ -110,10 +146,28 @@
   }
   body {
     @apply font-sans antialiased bg-theme-bg text-theme-text transition-colors duration-300;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
   }
   /* Enforce touch target accessibility standards */
   button, a, input, select, textarea {
     touch-action: manipulation;
+  }
+
+  /* Refined Enterprise SaaS Typography Normalization */
+  /* Calms aggressive bolding to professional SaaS weights (Linear / Stripe style) */
+  .font-black {
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+  }
+  .font-extrabold {
+    font-weight: 600 !important;
+    letter-spacing: -0.015em;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
   }
 }
 

@@ -201,7 +201,7 @@ export default function AdminDashboard() {
               <Shield size={22} />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Business Overview</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-theme-text">Business Overview</h1>
               <p className="text-xs text-theme-text-muted mt-0.5">Financial KPIs, ad spend efficiency, and team performance.</p>
             </div>
           </div>
@@ -217,15 +217,15 @@ export default function AdminDashboard() {
             {/* Total Revenue */}
             <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-2 hover:border-theme-primary/40 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Revenue</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted">Total Revenue</span>
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   <IndianRupee size={14} />
                 </div>
               </div>
-              <h3 className="text-xl font-black text-theme-text">{formatCurrency(data.totalRevenue)}</h3>
+              <h3 className="text-xl font-bold tracking-tight text-theme-text">{formatCurrency(data.totalRevenue)}</h3>
               <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
                 <span>Net Profit</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(netProfit)}</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(netProfit)}</span>
               </div>
             </div>
 
@@ -236,15 +236,15 @@ export default function AdminDashboard() {
               title="Open Campaigns Analytics"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Total Ad Spend</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Total Ad Spend</span>
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary group-hover:scale-105 transition-transform">
                   <TrendingUp size={14} />
                 </div>
               </div>
-              <h3 className="text-xl font-black text-theme-text">{formatCurrency(data.totalSpend)}</h3>
+              <h3 className="text-xl font-bold tracking-tight text-theme-text">{formatCurrency(data.totalSpend)}</h3>
               <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
                 <span>CPC</span>
-                <span className="font-bold text-theme-text">{formatCurrency(data.cpc)}</span>
+                <span className="font-semibold text-theme-text">{formatCurrency(data.cpc)}</span>
               </div>
             </Link>
 
@@ -255,30 +255,30 @@ export default function AdminDashboard() {
               title="Open Campaigns Analytics"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Blended ROAS</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted group-hover:text-theme-primary transition-colors">Blended ROAS</span>
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary group-hover:scale-105 transition-transform">
                   <Zap size={14} />
                 </div>
               </div>
-              <h3 className="text-xl font-black text-theme-text">{data.roas}x</h3>
+              <h3 className="text-xl font-bold tracking-tight text-theme-text">{data.roas}x</h3>
               <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
                 <span>CTR</span>
-                <span className="font-bold text-theme-text">{data.ctr}%</span>
+                <span className="font-semibold text-theme-text">{data.ctr}%</span>
               </div>
             </Link>
 
             {/* Total Leads & Conversions */}
             <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-2 hover:border-theme-primary/40 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Total Leads</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted">Total Leads</span>
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-theme-primary/10 text-theme-primary">
                   <Users size={14} />
                 </div>
               </div>
-              <h3 className="text-xl font-black text-theme-text">{formatNumber(data.totalLeads)}</h3>
+              <h3 className="text-xl font-bold tracking-tight text-theme-text">{formatNumber(data.totalLeads)}</h3>
               <div className="flex items-center justify-between text-[10px] font-semibold text-theme-text-muted pt-1 border-t border-theme-border/30">
                 <span>Conversions</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(data.totalConversions)}</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(data.totalConversions)}</span>
               </div>
             </div>
           </div>
@@ -293,7 +293,7 @@ export default function AdminDashboard() {
         {/* Header & Quick Navigation */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme-border/40 pb-3.5">
           <div className="space-y-0.5">
-            <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-theme-text flex items-center gap-2">
               <Users size={16} className="text-theme-primary" />
               <span>Team Availability & Capacity</span>
             </h3>
@@ -336,7 +336,7 @@ export default function AdminDashboard() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Available</span>
               </div>
-              <span className="text-xl font-black text-theme-text mt-0.5 block">{availableCount}</span>
+              <span className="text-xl font-bold tracking-tight text-theme-text mt-0.5 block">{availableCount}</span>
             </div>
             <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <UserCheck size={16} />
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Busy</span>
               </div>
-              <span className="text-xl font-black text-theme-text mt-0.5 block">{busyCount}</span>
+              <span className="text-xl font-bold tracking-tight text-theme-text mt-0.5 block">{busyCount}</span>
             </div>
             <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <PhoneCall size={16} />
@@ -380,7 +380,7 @@ export default function AdminDashboard() {
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                 <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Break</span>
               </div>
-              <span className="text-xl font-black text-theme-text mt-0.5 block">{breakCount}</span>
+              <span className="text-xl font-bold tracking-tight text-theme-text mt-0.5 block">{breakCount}</span>
             </div>
             <div className="h-8 w-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
               <Coffee size={16} />
@@ -402,7 +402,7 @@ export default function AdminDashboard() {
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                 <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Offline</span>
               </div>
-              <span className="text-xl font-black text-theme-text mt-0.5 block">{offlineCount}</span>
+              <span className="text-xl font-bold tracking-tight text-theme-text mt-0.5 block">{offlineCount}</span>
             </div>
             <div className="h-8 w-8 rounded-lg bg-slate-500/10 text-slate-500 flex items-center justify-center">
               <UserX size={16} />
@@ -421,7 +421,7 @@ export default function AdminDashboard() {
           >
             <div className="flex items-center justify-between w-full">
               <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Capacity</span>
-              <span className="text-xs font-black text-theme-primary font-mono">{overallCapacityPercent}%</span>
+              <span className="text-xs font-bold text-theme-primary font-mono">{overallCapacityPercent}%</span>
             </div>
             <div className="w-full bg-theme-bg-alt rounded-full h-1.5 my-1.5 overflow-hidden border border-theme-border/40">
               <div
@@ -443,7 +443,7 @@ export default function AdminDashboard() {
           <div className="mt-4 p-5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 space-y-4 animate-in fade-in duration-200">
             <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-extrabold text-theme-text uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-theme-text uppercase tracking-wider flex items-center gap-1.5">
                   <Users size={14} className="text-theme-primary" />
                   {selectedAvailabilityFilter === 'CAPACITY'
                     ? 'Team Workload & Capacity Distribution'
@@ -496,7 +496,7 @@ export default function AdminDashboard() {
                         <tr key={member.id} className="hover:bg-theme-bg-alt/50 transition-colors">
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2.5">
-                              <div className="h-8 w-8 rounded-xl bg-theme-primary/10 text-theme-primary border border-theme-primary/20 flex items-center justify-center font-extrabold text-xs shrink-0">
+                              <div className="h-8 w-8 rounded-xl bg-theme-primary/10 text-theme-primary border border-theme-primary/20 flex items-center justify-center font-semibold text-xs shrink-0">
                                 {member.fullName ? member.fullName.charAt(0).toUpperCase() : 'U'}
                               </div>
                               <div className="min-w-0">
@@ -644,7 +644,7 @@ export default function AdminDashboard() {
             {/* Top Header & ROI Filter Controls */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-theme-border/40 pb-3.5">
               <div className="space-y-0.5">
-                <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-theme-text flex items-center gap-2">
                   <PieIcon size={16} className="text-theme-primary" />
                   <span>Campaign Performance & Profitability</span>
                 </h3>
@@ -730,18 +730,18 @@ export default function AdminDashboard() {
                       <div className="space-y-2.5">
                         {/* Platform & Profit/Loss Status Pill */}
                         <div className="flex items-center justify-between gap-1.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-theme-card border border-theme-border text-theme-text-muted">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase bg-theme-card border border-theme-border text-theme-text-muted">
                             <Globe size={10} className="text-theme-primary" />
                             {c.platform || 'Meta Ads'}
                           </span>
 
                           {isProfitable ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                               <TrendingUp size={11} />
                               +{roas.toFixed(1)}x ROAS
                             </span>
                           ) : isBleeding ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30">
                               <TrendingDown size={11} />
                               Bleeding Spend
                             </span>
@@ -754,7 +754,7 @@ export default function AdminDashboard() {
 
                         {/* Campaign Name */}
                         <div>
-                          <h4 className="text-sm font-black text-theme-text group-hover:text-theme-primary transition-colors truncate">
+                          <h4 className="text-sm font-semibold text-theme-text group-hover:text-theme-primary transition-colors truncate">
                             {c.name}
                           </h4>
                           <div className="flex items-center gap-2 mt-0.5 text-[10px] text-theme-text-muted">
@@ -782,7 +782,7 @@ export default function AdminDashboard() {
                           <span className="text-[10px] font-bold uppercase tracking-wider">
                             {isProfitable ? 'Net Profit' : isBleeding ? 'Net Loss' : 'Net Margin'}
                           </span>
-                          <span className="text-sm font-mono font-black">
+                          <span className="text-sm font-mono font-bold">
                             {isProfitable ? `+${formatCurrency(profit)}` : formatCurrency(profit)}
                           </span>
                         </div>

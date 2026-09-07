@@ -10,7 +10,6 @@ import {
   PhoneCall,
   CheckCircle2,
   Clock,
-  Sparkles,
   Zap,
   BarChart3,
   Users
@@ -53,6 +52,8 @@ export default function Reports() {
   // User Filter State (Admin / Manager)
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number>(0); // 0 = All Team Members
+  const selectedMemberName = members.find(m => m.id === selectedUserId)?.fullName || 'Team Member';
+
 
   // Auto-Generated Daily Activity State
   const [dailyData, setDailyData] = useState<DailyBreakdownItem[]>([]);
@@ -255,7 +256,7 @@ export default function Reports() {
               <div className="p-2 rounded-xl bg-theme-primary/10 text-theme-primary">
                 <BarChart3 size={20} />
               </div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-theme-text">
+              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-theme-text">
                 {isManagerOrAdmin ? 'Workspace Reports & Intelligence Console' : 'My Lead Reports & Exports'}
               </h1>
             </div>
@@ -271,12 +272,12 @@ export default function Reports() {
             {/* Admin User Filter Dropdown */}
             {isManagerOrAdmin && (
               <div className="relative flex items-center">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-xs font-bold text-theme-text shadow-xs">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-theme-bg-alt border border-theme-border text-xs font-semibold text-theme-text shadow-xs">
                   <Users size={14} className="text-theme-primary" />
                   <select
                     value={selectedUserId}
                     onChange={(e) => setSelectedUserId(Number(e.target.value))}
-                    className="bg-transparent text-theme-text text-xs font-bold outline-none cursor-pointer pr-1"
+                    className="bg-transparent text-theme-text text-xs font-semibold outline-none cursor-pointer pr-1"
                   >
                     <option value={0} className="bg-theme-card text-theme-text">👥 All Team Members (Workspace)</option>
                     {members.map((m) => (
@@ -299,7 +300,7 @@ export default function Reports() {
         <div className="border-t border-theme-border/60 pt-3 flex items-center gap-2">
           <button
             onClick={() => setActiveTab('exports')}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'exports'
                 ? 'bg-theme-primary text-white shadow-xs'
                 : 'bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text'
@@ -311,7 +312,7 @@ export default function Reports() {
 
           <button
             onClick={() => setActiveTab('activity-table')}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'activity-table'
                 ? 'bg-theme-primary text-white shadow-xs'
                 : 'bg-theme-bg-alt border border-theme-border text-theme-text-muted hover:text-theme-text'
@@ -333,10 +334,10 @@ export default function Reports() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 mb-5">
                 <ShieldCheck size={24} />
               </div>
-              <h3 className="text-lg font-black text-theme-text">
+              <h3 className="text-lg font-semibold text-theme-text">
                 {isManagerOrAdmin 
                   ? (selectedUserId > 0 ? `${selectedMemberName}'s Leads Database` : 'Workspace Leads Tracking Database') 
-                  : 'My Assigned Leads Portfolio'}
+                  : 'My Assigned Leads'}
               </h3>
               <p className="mt-2 text-xs text-theme-text-muted leading-relaxed">
                 {isManagerOrAdmin
@@ -378,7 +379,7 @@ export default function Reports() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-400 mb-5">
                 <Calendar size={24} />
               </div>
-              <h3 className="text-lg font-black text-theme-text">
+              <h3 className="text-lg font-semibold text-theme-text">
                 {isManagerOrAdmin 
                   ? (selectedUserId > 0 ? `${selectedMemberName}'s Daily Work Summary` : 'Workspace Daily Executive Summary') 
                   : 'Auto Daily Activity Report'}
@@ -408,7 +409,7 @@ export default function Reports() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary mb-5">
                   <TrendingUp size={24} />
                 </div>
-                <h3 className="text-lg font-black text-theme-text">Campaign Performance Database</h3>
+                <h3 className="text-lg font-semibold text-theme-text">Campaign Performance Database</h3>
                 <p className="mt-2 text-xs text-theme-text-muted leading-relaxed">
                   Downloads multi-platform marketing campaign intelligence containing click-through rates, advertising spend, intake lead volume, and conversion ROI.
                 </p>
@@ -449,7 +450,7 @@ export default function Reports() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 mb-5">
                   <PhoneCall size={24} />
                 </div>
-                <h3 className="text-lg font-black text-theme-text">
+                <h3 className="text-lg font-semibold text-theme-text">
                   Call Duration Tracking & User Productivity Database
                 </h3>
                 <p className="mt-2 text-xs text-theme-text-muted leading-relaxed">
@@ -462,7 +463,7 @@ export default function Reports() {
                 <button
                   onClick={handleDownloadCallReports}
                   disabled={loadingKey === 'call-audit'}
-                  className="flex items-center gap-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white border border-rose-500 px-4 py-2.5 text-xs font-extrabold shadow-md transition-all cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white border border-rose-500 px-4 py-2.5 text-xs font-semibold shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
                   {loadingKey === 'call-audit' ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                   <span>Export Call Duration Audit (CSV)</span>
@@ -510,7 +511,7 @@ export default function Reports() {
           ) : (   
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-theme-bg-alt border-b border-theme-border text-theme-text-muted font-extrabold uppercase text-[10px] tracking-wider">
+                <thead className="bg-theme-bg-alt border-b border-theme-border text-theme-text-muted font-semibold uppercase text-[10px] tracking-wider">
                   <tr>
                     <th className="p-3.5">Date & Day</th>
                     <th className="p-3.5">Total Activities</th>
@@ -531,7 +532,7 @@ export default function Reports() {
                           </span>
                         </div>
                       </td>
-                      <td className="p-3.5 font-black text-theme-text">
+                      <td className="p-3.5 font-bold text-theme-text">
                         <span className="px-2.5 py-1 rounded-lg bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
                           {d.totalActivitiesCount || 0} Actions
                         </span>
@@ -543,7 +544,7 @@ export default function Reports() {
                         <span className="text-emerald-400 font-bold">{d.followupsCompletedCount || 0}</span> Completed
                       </td>
                       <td className="p-3.5">
-                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1 w-fit">
+                        <span className="text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1 w-fit">
                           <CheckCircle2 size={12} /> Auto-Logged
                         </span>
                       </td>
