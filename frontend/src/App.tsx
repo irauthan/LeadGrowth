@@ -59,7 +59,7 @@ export default function App() {
           <Route path="/billing" element={<Billing />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/integrations" element={<Integrations />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={<Navigate to="/settings?tab=profile" replace />} />
 
           {/* Admin specific controls */}
           <Route path="/admin/work-monitor" element={<ExecutiveWorkMonitor />} />

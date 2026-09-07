@@ -112,17 +112,13 @@ export default function CallTimerWidget({
           </div>
         </div>
 
-        {activeCall ? (
+        {activeCall && (
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-rose-500/10 text-rose-400 border border-rose-500/30 animate-pulse">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
               Call In Progress
             </span>
           </div>
-        ) : (
-          <span className="text-[10px] font-bold text-theme-text-muted bg-theme-bg/60 border border-theme-border px-2.5 py-1 rounded-xl">
-            Idle Call State
-          </span>
         )}
       </div>
 

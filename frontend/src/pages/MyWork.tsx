@@ -47,6 +47,7 @@ import { followUpService, type FollowUp } from '../services/followUpService';
 import FollowUpModal from '../components/FollowUpModal';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
+import { getProfileImageUrl } from '../utils/imageUrl';
 
 const KANBAN_STAGES = [
   { key: 'New', title: 'New', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10', headerColor: 'from-blue-500/20 to-blue-500/5 text-blue-400', icon: Sparkles },
@@ -564,8 +565,25 @@ export default function MyWork() {
                 {/* Header: Avatar, Name, Email, Role */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-base group-hover:scale-105 transition-transform">
-                      {member?.fullName && String(member.fullName).trim().length > 0 ? String(member.fullName).trim().charAt(0).toUpperCase() : 'U'}
+                    <div className="w-12 h-12 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-base group-hover:scale-105 transition-transform overflow-hidden flex-shrink-0 relative">
+                      {member?.profileImage ? (
+                        <img
+                          src={getProfileImageUrl(member.profileImage)}
+                          alt={member.fullName || 'Member'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className="items-center justify-center w-full h-full font-black text-base"
+                        style={{ display: member?.profileImage ? 'none' : 'flex' }}
+                      >
+                        {member?.fullName && String(member.fullName).trim().length > 0 ? String(member.fullName).trim().charAt(0).toUpperCase() : 'U'}
+                      </span>
                     </div>
                     <div>
                       <h3 className="text-sm font-extrabold text-theme-text group-hover:text-theme-primary transition-colors flex items-center gap-1.5">
@@ -667,18 +685,53 @@ export default function MyWork() {
         <>
           {/* Top Header & Workspace Summary */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-xl">
-            <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
-                <Briefcase size={22} className="text-theme-primary" /> 
-                {isManagementOrAdmin 
-                  ? `${activeExecutive?.fullName || 'Executive'}'s Pipeline`
-                  : 'My Work Pipeline'}
-              </h1>
-              <p className="text-xs text-theme-text-muted mt-1">
-                {isManagementOrAdmin
-                  ? `Auditing ${activeExecutive?.fullName || 'Executive'}'s stage progression, active client deals, and follow-ups.`
-                  : 'Manage assigned leads, execute sales activities, complete client follow-ups, and auto-track progress from one interface.'}
-              </p>
+            <div className="space-y-2">
+              {isManagementOrAdmin && (
+                <button
+                  onClick={() => setSelectedExecutiveId(null)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-primary/10 border border-theme-border hover:border-theme-primary/40 text-xs font-bold text-theme-text hover:text-theme-primary transition-all group cursor-pointer"
+                >
+                  <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" /> 
+                  Back to Team Pipelines
+                </button>
+              )}
+              <div className="flex items-center gap-3">
+                {isManagementOrAdmin && selectedExecutiveId !== -1 && (
+                  <div className="w-11 h-11 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-sm overflow-hidden flex-shrink-0 relative">
+                    {activeExecutive?.profileImage ? (
+                      <img
+                        src={getProfileImageUrl(activeExecutive.profileImage)}
+                        alt={activeExecutive.fullName || 'Executive'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <span
+                      className="items-center justify-center w-full h-full font-black"
+                      style={{ display: activeExecutive?.profileImage ? 'none' : 'flex' }}
+                    >
+                      {activeExecutive?.fullName && String(activeExecutive.fullName).trim().length > 0 ? String(activeExecutive.fullName).trim().charAt(0).toUpperCase() : 'U'}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
+                    <Briefcase size={22} className="text-theme-primary" /> 
+                    {isManagementOrAdmin 
+                      ? `${activeExecutive?.fullName || 'Executive'}'s Pipeline`
+                      : 'My Work Pipeline'}
+                  </h1>
+                  <p className="text-xs text-theme-text-muted mt-1">
+                    {isManagementOrAdmin
+                      ? `Auditing ${activeExecutive?.fullName || 'Executive'}'s stage progression, active client deals, and follow-ups.`
+                      : 'Manage assigned leads, execute sales activities, complete client follow-ups, and auto-track progress from one interface.'}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">

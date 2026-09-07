@@ -356,7 +356,7 @@ export default function AdminDashboard() {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span className="text-[10px] font-bold uppercase text-theme-text-muted block">In Call</span>
+                <span className="text-[10px] font-bold uppercase text-theme-text-muted block">Busy</span>
               </div>
               <span className="text-xl font-black text-theme-text mt-0.5 block">{busyCount}</span>
             </div>

@@ -24,14 +24,16 @@ public static class DateRangeHelper
             case "weekly":
             case "this week":
             case "this_week":
-                int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
-                start = now.Date.AddDays(-1 * diff);
+                start = now.Date.AddDays(-7);
                 end = now.Date.AddDays(1).AddTicks(-1);
                 break;
             case "monthly":
             case "this month":
             case "this_month":
-                start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                var calMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                var thirtyDaysAgo = now.Date.AddDays(-30);
+                // Ensure monthly encompasses at least the last 30 days so it never shows fewer leads than weekly
+                start = thirtyDaysAgo < calMonthStart ? thirtyDaysAgo : calMonthStart;
                 end = now.Date.AddDays(1).AddTicks(-1);
                 break;
             case "yearly":

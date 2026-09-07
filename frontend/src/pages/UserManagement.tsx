@@ -449,7 +449,7 @@ export default function UserManagement() {
                       {/* Header info */}
                       <div className="flex items-center justify-between gap-3">
                         <Link
-                          to={isItemAdmin ? '/profile' : `/admin/work-monitor?userId=${item.id}`}
+                          to={isItemAdmin ? '/settings?tab=profile' : `/admin/work-monitor?userId=${item.id}`}
                           className="flex items-center gap-3 group/user flex-1 min-w-0"
                           title={isItemAdmin ? 'Click to view Admin Profile' : 'Click to view Work Monitor'}
                         >
@@ -498,7 +498,7 @@ export default function UserManagement() {
                       {isItemAdmin ? (
                         /* ADMIN IDENTITY BADGE - No work monitor required */
                         <Link
-                          to="/profile"
+                          to="/settings?tab=profile"
                           className="bg-gradient-to-r from-purple-500/10 via-indigo-500/5 to-transparent border border-purple-500/25 hover:border-purple-500/50 rounded-2xl p-3 flex items-center justify-between shadow-inner transition-all group/adminbadge cursor-pointer"
                           title="Click to manage Admin Profile & Credentials"
                         >
@@ -577,7 +577,7 @@ export default function UserManagement() {
                         {isItemAdmin ? (
                           /* Admin Profile link */
                           <Link
-                            to="/profile"
+                            to="/settings?tab=profile"
                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 transition-all font-extrabold text-[10px] shadow-xs"
                             title="Open Profile & Personal Details"
                           >
@@ -640,7 +640,7 @@ export default function UserManagement() {
                         <tr key={item.id} className="hover:bg-theme-bg-alt/50 transition-colors">
                           <td className="p-4 whitespace-nowrap">
                             <Link
-                              to={isItemAdmin ? '/profile' : `/admin/work-monitor?userId=${item.id}`}
+                              to={isItemAdmin ? '/settings?tab=profile' : `/admin/work-monitor?userId=${item.id}`}
                               className="flex items-center gap-3 group/user"
                               title={isItemAdmin ? 'View Profile' : 'View Work Monitor'}
                             >
@@ -716,7 +716,7 @@ export default function UserManagement() {
                             {/* Profile (for Admin) or Work Monitor (for Staff) */}
                             {isItemAdmin ? (
                               <Link
-                                to="/profile"
+                                to="/settings?tab=profile"
                                 className="inline-flex items-center p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 transition-all"
                                 title="View Profile"
                               >

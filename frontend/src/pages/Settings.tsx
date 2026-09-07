@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import type { AppTheme } from '../store/themeStore';
@@ -111,7 +111,77 @@ export default function Settings() {
     toggleNavItem, 
     resetNavItems
   } = useLayoutStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'security' | 'notifications' | 'workspace'>('profile');
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab') as 'profile' | 'appearance' | 'security' | 'notifications' | null;
+  const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'security' | 'notifications'>(
+    tabParam && ['profile', 'appearance', 'security', 'notifications'].includes(tabParam) ? tabParam : 'profile'
+  );
+
+  useEffect(() => {
+    if (tabParam && ['profile', 'appearance', 'security', 'notifications'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tab: 'profile' | 'appearance' | 'security' | 'notifications') => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
+
+  const [profileForm, setProfileForm] = useState({
+    fullName: user?.fullName || '',
+    phone: user?.phone || '',
+    designation: user?.designation || '',
+    bio: user?.bio || '',
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
+  const [profileErrorMsg, setProfileErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        fullName: user.fullName || '',
+        phone: user.phone || '',
+        designation: user.designation || '',
+        bio: user.bio || '',
+      });
+    }
+  }, [user]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileSuccessMsg('');
+    setProfileErrorMsg('');
+    try {
+      await axios.put(
+        `${API_BASE_URL}/api/users/profile`,
+        {
+          fullName: profileForm.fullName,
+          phone: profileForm.phone,
+          designation: profileForm.designation,
+          bio: profileForm.bio,
+          profileImage: user?.profileImage || '',
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      updateUser({
+        fullName: profileForm.fullName,
+        phone: profileForm.phone,
+        designation: profileForm.designation,
+        bio: profileForm.bio,
+      });
+      setProfileSuccessMsg('Profile details updated successfully!');
+      setTimeout(() => setProfileSuccessMsg(''), 4000);
+    } catch (err: any) {
+      console.error(err);
+      setProfileErrorMsg(err.response?.data?.message || 'Failed to update profile.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const allNavItemsList = [
     { id: '/dashboard', label: 'Dashboard', category: 'General' },
@@ -198,7 +268,7 @@ export default function Settings() {
         {/* Navigation Sidebar Tabs */}
         <div className="w-full md:w-64 flex-shrink-0 flex flex-col gap-1">
           <button
-            onClick={() => setActiveTab('profile')}
+            onClick={() => handleTabChange('profile')}
             className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
               activeTab === 'profile'
                 ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/10'
@@ -210,7 +280,7 @@ export default function Settings() {
           </button>
 
           <button
-            onClick={() => setActiveTab('appearance')}
+            onClick={() => handleTabChange('appearance')}
             className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
               activeTab === 'appearance'
                 ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/10'
@@ -222,7 +292,7 @@ export default function Settings() {
           </button>
 
           <button
-            onClick={() => setActiveTab('security')}
+            onClick={() => handleTabChange('security')}
             className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
               activeTab === 'security'
                 ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/10'
@@ -234,7 +304,7 @@ export default function Settings() {
           </button>
 
           <button
-            onClick={() => setActiveTab('notifications')}
+            onClick={() => handleTabChange('notifications')}
             className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
               activeTab === 'notifications'
                 ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/10'
@@ -244,21 +314,6 @@ export default function Settings() {
             <Bell size={16} />
             {isManager || isAdmin ? 'Team & Notification Rules' : 'Personal Notifications'}
           </button>
-
-          {/* Admin Only Workspace Controls Tab */}
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab('workspace')}
-              className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-                activeTab === 'workspace'
-                  ? 'bg-theme-primary text-white shadow-md shadow-theme-primary/10'
-                  : 'text-theme-text-muted hover:bg-theme-bg-alt hover:text-theme-text'
-              }`}
-            >
-              <Building size={16} />
-              Workspace Controls (Admin Only)
-            </button>
-          )}
         </div>
 
         {/* Content Container */}
@@ -266,23 +321,28 @@ export default function Settings() {
           {/* PROFILE SETTINGS TAB */}
           {activeTab === 'profile' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-theme-border/40 pb-4">
-                <div>
-                  <h3 className="text-base font-bold text-theme-text">Profile Info & Photo</h3>
-                  <p className="text-xs text-theme-text-muted">Manage your personal details and account photo.</p>
-                </div>
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-theme-primary/10 text-theme-primary hover:bg-theme-primary/20 text-xs font-bold transition-all w-max"
-                >
-                  <span>Edit Full Profile</span>
-                  <ExternalLink size={14} />
-                </Link>
+              <div className="border-b border-theme-border/40 pb-4">
+                <h3 className="text-base font-bold text-theme-text">Profile Info & Photo</h3>
+                <p className="text-xs text-theme-text-muted mt-0.5">Manage your personal credentials, contact info, and profile avatar.</p>
               </div>
+
+              {profileSuccessMsg && (
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <Check size={16} />
+                  <span>{profileSuccessMsg}</span>
+                </div>
+              )}
+
+              {profileErrorMsg && (
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <AlertTriangle size={16} />
+                  <span>{profileErrorMsg}</span>
+                </div>
+              )}
 
               {/* Avatar File Upload Box */}
               <div className="flex items-center gap-4 p-4 rounded-3xl bg-theme-bg-alt/60 border border-theme-border/60">
-                <div className="relative group">
+                <div className="relative group flex-shrink-0">
                   {user?.profileImage ? (
                     <img
                       src={getProfileImageUrl(user.profileImage)}
@@ -302,11 +362,11 @@ export default function Settings() {
                   </label>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <label className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-theme-primary text-white text-xs font-bold hover:bg-theme-primary-hover cursor-pointer shadow-xs transition-all">
                       <Upload size={14} />
-                      <span>{user?.profileImage ? 'Change Photo' : 'Upload Photo File'}</span>
+                      <span>{user?.profileImage ? 'Change Photo' : 'Upload Photo'}</span>
                       <input
                         id="settings-avatar-file"
                         type="file"
@@ -322,7 +382,7 @@ export default function Settings() {
                           try {
                             await axios.put(
                               `${API_BASE_URL}/api/users/profile`,
-                              { fullName: user?.fullName, phone: user?.phone, designation: user?.designation, bio: user?.bio, profileImage: '' },
+                              { fullName: profileForm.fullName, phone: profileForm.phone, designation: profileForm.designation, bio: profileForm.bio, profileImage: '' },
                               { headers: { Authorization: `Bearer ${token}` } }
                             );
                             updateUser({ profileImage: '' });
@@ -336,48 +396,104 @@ export default function Settings() {
                       </button>
                     )}
                   </div>
-                  <p className="text-[10px] text-theme-text-muted font-semibold">Upload any JPG, PNG, WEBP or SVG image file (Max 5MB)</p>
+                  <p className="text-[10px] text-theme-text-muted font-semibold">Upload JPG, PNG, or WEBP image (Max 5MB)</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Editable Profile Form */}
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-theme-text-muted mb-1.5">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={profileForm.fullName}
+                      onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
+                      placeholder="e.g. Shubham Singh"
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary focus:bg-theme-card transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-theme-text-muted mb-1.5">
+                      Email Address <span className="text-[10px] text-theme-text-muted font-normal">(Account ID)</span>
+                    </label>
+                    <input
+                      type="email"
+                      disabled
+                      value={user?.email || ''}
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/30 px-4 py-2.5 text-xs font-medium outline-none opacity-70 text-theme-text cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-theme-text-muted mb-1.5">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      placeholder="e.g. +91 9876543210"
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary focus:bg-theme-card transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-theme-text-muted mb-1.5">Designation / Role Title</label>
+                    <input
+                      type="text"
+                      value={profileForm.designation}
+                      onChange={(e) => setProfileForm({ ...profileForm, designation: e.target.value })}
+                      placeholder="e.g. Senior Sales Specialist"
+                      className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-semibold text-theme-text outline-none focus:border-theme-primary focus:bg-theme-card transition-all"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-theme-text-muted mb-2">Full Name</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={user?.fullName || ''}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none opacity-70"
+                  <label className="block text-xs font-semibold text-theme-text-muted mb-1.5">Bio / About Me</label>
+                  <textarea
+                    rows={3}
+                    value={profileForm.bio}
+                    onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                    placeholder="Brief description about your role or client handling focus..."
+                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium text-theme-text outline-none focus:border-theme-primary focus:bg-theme-card transition-all resize-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-theme-text-muted mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    disabled
-                    value={user?.email || ''}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none opacity-70"
-                  />
+
+                {/* Workspace & Role Read-only Pills */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="p-3 rounded-2xl bg-theme-bg-alt/30 border border-theme-border/40">
+                    <span className="text-[10px] font-bold text-theme-text-muted uppercase block">System Permission Role</span>
+                    <span className="text-xs font-bold text-theme-primary capitalize mt-0.5 block">
+                      {user?.roles?.[0]?.replace('ROLE_', '').toLowerCase() || 'member'}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-theme-bg-alt/30 border border-theme-border/40">
+                    <span className="text-[10px] font-bold text-theme-text-muted uppercase block">Active Workspace</span>
+                    <span className="text-xs font-bold text-theme-text mt-0.5 block">
+                      {user?.workspaceName || 'Default Workspace'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-theme-text-muted mb-2">System Role</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={user?.roles[0]?.replace('ROLE_', '') || 'MEMBER'}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none opacity-70"
-                  />
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingProfile}
+                    className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-theme-primary/20 disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    {savingProfile ? (
+                      <span>Saving...</span>
+                    ) : (
+                      <>
+                        <Check size={15} />
+                        <span>Save Profile Changes</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-theme-text-muted mb-2">Workspace Slug</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={user?.workspaceSlug || ''}
-                    className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt/50 px-4 py-2.5 text-xs font-medium outline-none opacity-70"
-                  />
-                </div>
-              </div>
+              </form>
             </motion.div>
           )}
 
@@ -627,31 +743,6 @@ export default function Settings() {
                     className="h-4 w-4 rounded border-theme-border text-theme-primary focus:ring-theme-primary"
                   />
                 </label>
-              </div>
-            </motion.div>
-          )}
-
-          {/* WORKSPACE INFO TAB */}
-          {activeTab === 'workspace' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div>
-                <h3 className="text-base font-bold">Workspace Configuration</h3>
-                <p className="text-xs text-theme-text-muted">Details for your current marketing workspace.</p>
-              </div>
-
-              <div className="rounded-2xl border border-theme-border bg-theme-bg-alt/20 p-4 space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-theme-border/20">
-                  <span className="text-xs font-semibold text-theme-text-muted">Workspace Name</span>
-                  <span className="text-xs font-bold text-theme-text">{user?.workspaceName || 'Default'}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-theme-border/20">
-                  <span className="text-xs font-semibold text-theme-text-muted">Workspace Invite Code</span>
-                  <span className="text-xs font-mono font-bold text-theme-primary">{user?.inviteCode || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-theme-border/20">
-                  <span className="text-xs font-semibold text-theme-text-muted">Workspace Slug</span>
-                  <span className="text-xs font-bold text-theme-text">/{user?.workspaceSlug || ''}</span>
-                </div>
               </div>
             </motion.div>
           )}

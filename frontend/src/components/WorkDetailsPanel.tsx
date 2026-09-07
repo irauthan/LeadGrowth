@@ -164,8 +164,20 @@ export default function WorkDetailsPanel({
   const toggleMaximize = onToggleMaximize || (() => setInternalMaximized(!internalMaximized));
 
   const currentUser = useAuthStore((state) => state.user);
-  const isAdmin = currentUser?.roles?.includes('ROLE_ADMIN');
-  const isManager = currentUser?.roles?.includes('ROLE_MANAGER');
+  const userRoles: any[] = Array.isArray(currentUser?.roles)
+    ? currentUser.roles
+    : currentUser?.roles
+    ? [currentUser.roles]
+    : [];
+  const directRole = (currentUser as any)?.role || '';
+  const isAdmin = userRoles.some((r: any) => {
+    const roleName = typeof r === 'string' ? r : r?.name || '';
+    return roleName.toUpperCase().includes('ADMIN');
+  }) || directRole.toUpperCase().includes('ADMIN');
+  const isManager = userRoles.some((r: any) => {
+    const roleName = typeof r === 'string' ? r : r?.name || '';
+    return roleName.toUpperCase().includes('MANAGER');
+  }) || directRole.toUpperCase().includes('MANAGER');
   const isManagementUser = isAdmin || isManager;
 
   const [lead, setLead] = useState<any>(null);
@@ -590,28 +602,30 @@ export default function WorkDetailsPanel({
               <h2 className="text-sm sm:text-base font-extrabold text-theme-text truncate">
                 {lead?.name || 'Lead Work Container'}
               </h2>
-              <select
-                value={lead?.status || 'New'}
-                onChange={async (e) => {
-                  const newStatus = e.target.value;
-                  if (!lead?.id) return;
-                  try {
-                    await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
-                    fetchLeadDetails();
-                    triggerUpdate();
-                  } catch (err) {
-                    console.error('Failed to update stage', err);
-                  }
-                }}
-                className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-lg bg-theme-bg-alt border border-theme-border text-theme-primary focus:outline-none focus:border-theme-primary cursor-pointer shadow-xs"
-              >
-                <option value="New">NEW</option>
-                <option value="Interaction">INTERACTION</option>
-                <option value="Proposal Sent">PROPOSAL SENT</option>
-                <option value="Negotiation">NEGOTIATION</option>
-                <option value="Converted">CONVERTED</option>
-                <option value="Lost">LOST (DROP)</option>
-              </select>
+              {!isManagementUser && (
+                <select
+                  value={lead?.status || 'New'}
+                  onChange={async (e) => {
+                    const newStatus = e.target.value;
+                    if (!lead?.id) return;
+                    try {
+                      await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
+                      fetchLeadDetails();
+                      triggerUpdate();
+                    } catch (err) {
+                      console.error('Failed to update stage', err);
+                    }
+                  }}
+                  className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-lg bg-theme-bg-alt border border-theme-border text-theme-primary focus:outline-none focus:border-theme-primary cursor-pointer shadow-xs"
+                >
+                  <option value="New">NEW</option>
+                  <option value="Interaction">INTERACTION</option>
+                  <option value="Proposal Sent">PROPOSAL SENT</option>
+                  <option value="Negotiation">NEGOTIATION</option>
+                  <option value="Converted">CONVERTED</option>
+                  <option value="Lost">LOST (DROP)</option>
+                </select>
+              )}
 
               {isLeadFresh(lead) && (
                 <span className="hidden xs:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 items-center gap-1">
@@ -831,15 +845,15 @@ export default function WorkDetailsPanel({
                               <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
                                 CURRENT OWNER
                               </label>
-                              <div className="p-3 rounded-2xl border border-theme-border bg-theme-bg-alt/50 flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-theme-primary/20 text-theme-primary font-extrabold text-xs flex items-center justify-center">
+                              <div className="h-14 px-3.5 rounded-2xl border border-theme-border bg-theme-bg-alt/50 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-theme-primary/20 text-theme-primary font-extrabold text-xs flex items-center justify-center flex-shrink-0">
                                   {lead?.assignedToName ? lead.assignedToName.charAt(0).toUpperCase() : 'U'}
                                 </div>
-                                <div>
-                                  <span className="font-bold text-xs text-theme-text block">
+                                <div className="min-w-0">
+                                  <span className="font-bold text-xs text-theme-text block truncate">
                                     {lead?.assignedToName || 'Unassigned Lead'}
                                   </span>
-                                  <span className="text-[10px] text-theme-text-muted">
+                                  <span className="text-[10px] text-theme-text-muted block truncate">
                                     {lead?.assignedToName ? 'Active Owner' : 'Needs Assignment'}
                                   </span>
                                 </div>
@@ -853,7 +867,7 @@ export default function WorkDetailsPanel({
                               <select
                                 value={selectedAssigneeId}
                                 onChange={(e) => setSelectedAssigneeId(e.target.value)}
-                                className="w-full rounded-2xl border border-theme-border bg-theme-bg-alt p-3 text-xs outline-none focus:border-theme-primary text-theme-text font-bold"
+                                className="w-full h-14 px-3.5 rounded-2xl border border-theme-border bg-theme-bg-alt text-xs outline-none focus:border-theme-primary text-theme-text font-bold cursor-pointer"
                               >
                                 <option value="">-- Select Sales Executive --</option>
                                 <option value="-1">⚡ Auto-Assign (Smart Engine)</option>
@@ -903,28 +917,34 @@ export default function WorkDetailsPanel({
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Status</label>
-                            <select
-                              value={lead?.status || 'New'}
-                              onChange={async (e) => {
-                                const newStatus = e.target.value;
-                                try {
-                                  await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
-                                  fetchLeadDetails();
-                                  triggerUpdate();
-                                } catch (err) {
-                                  console.error(err);
-                                }
-                              }}
-                              className="w-full rounded-xl border border-theme-border bg-theme-bg-alt p-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary"
-                            >
-                              <option value="New">New</option>
-                              <option value="Interaction">Interaction</option>
-                              <option value="Qualified">Qualified</option>
-                              <option value="Converted">Converted</option>
-                              <option value="Rejected">Rejected</option>
-                              <option value="Lost">Lost</option>
-                            </select>
+                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Pipeline Stage</label>
+                            {isManagementUser ? (
+                              <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-primary uppercase">
+                                {lead?.status || 'New'}
+                              </div>
+                            ) : (
+                              <select
+                                value={lead?.status || 'New'}
+                                onChange={async (e) => {
+                                  const newStatus = e.target.value;
+                                  try {
+                                    await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
+                                    fetchLeadDetails();
+                                    triggerUpdate();
+                                  } catch (err) {
+                                    console.error(err);
+                                  }
+                                }}
+                                className="w-full rounded-xl border border-theme-border bg-theme-bg-alt p-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary cursor-pointer"
+                              >
+                                <option value="New">New</option>
+                                <option value="Interaction">Interaction</option>
+                                <option value="Qualified">Qualified</option>
+                                <option value="Converted">Converted</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="Lost">Lost</option>
+                              </select>
+                            )}
                           </div>
 
                           <div>

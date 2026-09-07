@@ -878,7 +878,7 @@ export default function Navbar() {
 
                   <div className="py-1">
                     <Link
-                      to="/profile"
+                      to="/settings?tab=profile"
                       onClick={() => setShowProfileMenu(false)}
                       className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-theme-text/80 hover:bg-theme-bg-alt"
                     >

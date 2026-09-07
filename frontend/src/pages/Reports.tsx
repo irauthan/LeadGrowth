@@ -242,9 +242,6 @@ export default function Reports() {
     }
   };
 
-  const selectedMemberName = selectedUserId > 0 
-    ? (members.find(m => m.id === selectedUserId)?.fullName || 'Selected User') 
-    : 'All Team Members';
 
   return (
     <div className="space-y-6">
@@ -297,32 +294,6 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Quick Summary Metrics Grid */}
-        <div className="border-t border-theme-border/60 pt-3">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">
-                {isManagerOrAdmin ? (selectedUserId > 0 ? `${selectedMemberName}'s Leads` : 'Workspace Leads') : 'My Portfolio Leads'}
-              </span>
-              <div className="text-xl font-black text-theme-text">{statsSummary.totalLeads}</div>
-            </div>
-            <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Calls Logged</span>
-              <div className="text-xl font-black text-blue-500 dark:text-blue-400">{statsSummary.totalCalls}</div>
-            </div>
-            <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Follow-ups Handled</span>
-              <div className="text-xl font-black text-purple-500 dark:text-purple-400">{statsSummary.completedFollowups}</div>
-            </div>
-            <div className="p-3.5 rounded-xl bg-theme-bg-alt/30 border border-theme-border/60 space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Converted Leads</span>
-              <div className="text-xl font-black text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5">
-                {statsSummary.convertedLeads}
-                <span className="text-[10px] font-semibold text-emerald-600/80">({statsSummary.conversionRate}%)</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Navigation Tabs */}
         <div className="border-t border-theme-border/60 pt-3 flex items-center gap-2">

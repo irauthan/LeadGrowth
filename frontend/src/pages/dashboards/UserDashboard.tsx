@@ -7,7 +7,6 @@ import {
   Phone, 
   Mail, 
   Sparkles, 
-  RefreshCw, 
   Flame,
   Clock,
   IndianRupee,
@@ -118,6 +117,8 @@ export default function UserDashboard() {
         setSelectedLeadIds([]);
         setIsAcceptModalOpen(false);
       }
+      // Smooth viewing duration for loader
+      await new Promise(r => setTimeout(r, 600));
     } catch (err) {
       console.error('Failed to load User Productivity Hub data', err);
     } finally {
@@ -202,10 +203,10 @@ export default function UserDashboard() {
 
   if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center space-y-3 flex-col">
-        <RefreshCw size={36} className="animate-spin text-theme-primary" />
-        <span className="text-xs font-bold text-theme-text-muted">Loading Personal Sales Executive Hub...</span>
-      </div>
+      <HoosshBeeLoader 
+        text="Loading Sales Workspace..." 
+        subtext="Syncing your active pipelines, scheduled follow-ups and performance targets" 
+      />
     );
   }
 
@@ -246,15 +247,6 @@ export default function UserDashboard() {
   const pendingFollowupsCount = kpis?.myPendingFollowups ?? followups.length;
   const conversionsCount = kpis?.myConversions ?? getStageCount('Converted');
   const personalRevenue = kpis?.myRevenueContribution ?? 0;
-
-  if (loading && !kpis && myLeads.length === 0) {
-    return (
-      <HoosshBeeLoader 
-        text="Loading Sales Workspace..." 
-        subtext="Syncing your active pipelines, scheduled follow-ups and performance targets" 
-      />
-    );
-  }
 
   const isManagementOrAdmin = (user?.roles || []).some((r: any) => {
     const roleName = typeof r === 'string' ? r : r?.name || '';
