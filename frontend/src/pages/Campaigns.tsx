@@ -15,7 +15,8 @@ import {
   PauseCircle,
   PlayCircle,
   Layers,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 import { downloadReport } from "../services/reportService";
 import CampaignDetailView from "../components/CampaignDetailView";
@@ -55,7 +56,6 @@ export default function Campaigns() {
     clicks: 0,
     impressions: 0,
     conversions: 0,
-    revenue: 0,
   });
 
   // Export menu state
@@ -127,7 +127,6 @@ export default function Campaigns() {
         clicks: 0,
         impressions: 0,
         conversions: 0,
-        revenue: 0,
       });
       fetchCampaigns();
     } catch (err) {
@@ -818,42 +817,15 @@ export default function Campaigns() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                    Conversions
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={createForm.conversions}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        conversions: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full rounded-xl border border-theme-border bg-theme-bg-alt py-2 px-3.5 text-xs outline-none focus:border-theme-primary text-theme-text"
-                  />
+              {/* Dynamic Revenue & Conversions Notice */}
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-theme-text space-y-1">
+                <div className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <Sparkles size={14} />
+                  <span>Real-time Lead & Revenue Attribution</span>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                    Generated Revenue ($)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={createForm.revenue}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        revenue: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full rounded-xl border border-theme-border bg-theme-bg-alt py-2 px-3.5 text-xs outline-none focus:border-theme-primary text-theme-text font-bold text-emerald-600 dark:text-emerald-400"
-                  />
-                </div>
+                <p className="text-[11px] text-theme-text-muted leading-relaxed">
+                  Campaign <strong>Revenue</strong> and <strong>Conversions</strong> will automatically increment in real-time as incoming leads attributed to this campaign are converted with approved proposal amounts.
+                </p>
               </div>
 
               <div className="flex justify-end gap-2.5 pt-3 border-t border-theme-border/60">

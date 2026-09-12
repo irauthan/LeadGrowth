@@ -5,23 +5,18 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
-  Users,
   Target,
   TrendingUp,
   ShieldCheck,
-  Zap,
   PhoneCall,
-  DollarSign,
   UserCheck,
   Menu,
   X,
-  Activity,
   Mail,
   Send,
   Layers,
   Calendar,
   Clock,
-  ChevronRight,
   Shield
 } from 'lucide-react';
 

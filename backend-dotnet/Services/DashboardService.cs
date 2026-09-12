@@ -50,12 +50,12 @@ public class DashboardService : IDashboardService
             : allLeadsData;
 
         var totalLeads = filteredLeadsData.Count;
-        var converted = filteredLeadsData.Count(l => 
-            string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) || 
-            string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase));
+        var convertedLeads = filteredLeadsData.Where(l => IsConvertedStatus(l.Status)).ToList();
+        var converted = convertedLeads.Count;
         var conversionRate = totalLeads > 0 ? (double)converted / totalLeads * 100 : 0.0;
 
-        var leadProposalTotal = filteredLeadsData
+        // Total converted revenue strictly from converted leads with proposal amounts
+        var convertedRevenue = convertedLeads
             .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
             .Sum(l => (decimal)(l.ProposalAmount ?? 0));
 
@@ -69,15 +69,15 @@ public class DashboardService : IDashboardService
             ? allCampaigns.Where(c => c.CreatedAt >= rangeStart && c.CreatedAt <= rangeEnd).ToList()
             : allCampaigns;
 
-        var revenue = campaigns.Sum(c => c.Revenue) + leadProposalTotal;
+        var revenue = convertedRevenue;
         var spend = campaigns.Sum(c => c.Spend);
         var budget = campaigns.Sum(c => c.Budget);
         var clicks = campaigns.Sum(c => c.Clicks);
         var impressions = campaigns.Sum(c => c.Impressions);
-        var conversions = campaigns.Sum(c => c.Conversions) + converted;
+        var conversions = converted;
         var activeCampaigns = allCampaigns.Count(c => string.Equals("ACTIVE", c.Status, StringComparison.OrdinalIgnoreCase));
 
-        var roas = spend > 0 ? Math.Round((double)(revenue / spend), 2) : (revenue > 0 ? (double)revenue : 0.0);
+        var roas = spend > 0 ? Math.Round((double)(revenue / spend), 2) : 0.0;
         var cpc = clicks > 0 ? Math.Round((double)(spend / clicks), 2) : 0.0;
         var ctr = impressions > 0 ? Math.Round((double)clicks / impressions * 100, 2) : 0.0;
 
@@ -101,9 +101,9 @@ public class DashboardService : IDashboardService
             var targetDay = now.AddDays(-i).Date;
             var targetDayEnd = targetDay.AddDays(1).AddTicks(-1);
             var dayLeads = allLeadsData.Where(l => l.CreatedAt >= targetDay && l.CreatedAt <= targetDayEnd).ToList();
-            var dayRevenue = dayLeads.Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0).Sum(l => (double)(l.ProposalAmount ?? 0));
+            var dayConvertedLeads = dayLeads.Where(l => IsConvertedStatus(l.Status)).ToList();
+            var dayRevenue = dayConvertedLeads.Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0).Sum(l => (double)(l.ProposalAmount ?? 0));
             var dayCampaigns = allCampaigns.Where(c => c.CreatedAt >= targetDay && c.CreatedAt <= targetDayEnd).ToList();
-            dayRevenue += dayCampaigns.Sum(c => (double)c.Revenue);
             var daySpend = dayCampaigns.Sum(c => (double)c.Spend);
 
             trends.Add(new Dictionary<string, object>
@@ -391,5 +391,17 @@ public class DashboardService : IDashboardService
         }
 
         return results;
+    }
+
+    private static bool IsConvertedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return false;
+        var s = status.Trim();
+        return s.Equals("Converted", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Closed Won", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Closed_Won", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Won", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Payment Completed", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Payment_Completed", StringComparison.OrdinalIgnoreCase);
     }
 }

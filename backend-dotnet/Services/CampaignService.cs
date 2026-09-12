@@ -32,9 +32,40 @@ public class CampaignService : ICampaignService
             query = query.Where(c => c.CreatedAt >= rangeStart && c.CreatedAt <= rangeEnd);
         }
 
-        return await query
+        var campaigns = await query
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
+
+        // Dynamically compute leads count, conversions, and revenue from actual workspace leads
+        var leads = await _context.Leads
+            .Where(l => l.WorkspaceId == user.WorkspaceId)
+            .Select(l => new {
+                l.Id,
+                l.CampaignId,
+                l.CampaignName,
+                l.Status,
+                l.ProposalAmount
+            })
+            .ToListAsync();
+
+        foreach (var c in campaigns)
+        {
+            var campLeads = leads.Where(l => 
+                l.CampaignId == c.Id || 
+                (!string.IsNullOrEmpty(l.CampaignName) && l.CampaignName.Equals(c.Name, StringComparison.OrdinalIgnoreCase))
+            ).ToList();
+
+            var convertedLeads = campLeads.Where(l => IsConvertedStatus(l.Status)).ToList();
+            var convertedRevenue = (decimal)convertedLeads
+                .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
+                .Sum(l => l.ProposalAmount!.Value);
+
+            c.LeadsCount = Math.Max(c.LeadsCount, campLeads.Count);
+            c.Conversions = Math.Max(c.Conversions, convertedLeads.Count);
+            c.Revenue = convertedRevenue;
+        }
+
+        return campaigns;
     }
 
     public async Task<List<Dictionary<string, object>>> GetUserCampaignsAsync(string email)
@@ -86,18 +117,11 @@ public class CampaignService : ICampaignService
                 (l.CampaignName != null && l.CampaignName.Equals(c.Name, StringComparison.OrdinalIgnoreCase))
             ).ToList();
 
-            var myConverted = myLeads.Where(l => 
-                l.Status != null && (
-                    l.Status.Equals("CONVERTED", StringComparison.OrdinalIgnoreCase) ||
-                    l.Status.Equals("Closed Won", StringComparison.OrdinalIgnoreCase) ||
-                    l.Status.Equals("Closed_Won", StringComparison.OrdinalIgnoreCase) ||
-                    l.Status.Equals("Won", StringComparison.OrdinalIgnoreCase) ||
-                    l.Status.Equals("Payment Completed", StringComparison.OrdinalIgnoreCase) ||
-                    l.Status.Equals("Payment_Completed", StringComparison.OrdinalIgnoreCase)
-                )
-            ).ToList();
+            var myConverted = myLeads.Where(l => IsConvertedStatus(l.Status)).ToList();
 
-            var myRevenue = (decimal)myConverted.Sum(l => l.ProposalAmount ?? 0.0);
+            var myRevenue = (decimal)myConverted
+                .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
+                .Sum(l => l.ProposalAmount!.Value);
             var myConversions = myConverted.Count;
             var myLeadsCount = myLeads.Count;
 
@@ -173,30 +197,39 @@ public class CampaignService : ICampaignService
             leadsQuery = leadsQuery.Where(l => l.AssignedToId == user.Id);
         }
 
-        var leads = await leadsQuery
+        var rawLeads = await leadsQuery
             .OrderByDescending(l => l.CreatedAt)
-            .Take(50)
-            .Select(l => new
-            {
-                id = l.Id,
-                name = l.Name,
-                email = l.Email,
-                phone = l.Phone,
-                status = l.Status,
-                dealValue = l.ProposalAmount,
-                sourcePlatform = l.SourcePlatform,
-                assignedToName = l.AssignedTo != null ? l.AssignedTo.FullName : null,
-                createdAt = l.CreatedAt.ToString("o")
-            })
+            .Take(100)
             .ToListAsync();
+
+        var convertedLeads = rawLeads.Where(l => IsConvertedStatus(l.Status)).ToList();
+        var dynamicRevenue = (decimal)convertedLeads
+            .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
+            .Sum(l => l.ProposalAmount!.Value);
+        var dynamicConversions = Math.Max(campaign.Conversions, convertedLeads.Count);
+        var dynamicLeadsCount = Math.Max(campaign.LeadsCount, rawLeads.Count);
+
+        var leads = rawLeads.Select(l => new
+        {
+            id = l.Id,
+            name = l.Name,
+            email = l.Email,
+            phone = l.Phone,
+            status = l.Status,
+            dealValue = l.ProposalAmount,
+            isConverted = IsConvertedStatus(l.Status),
+            sourcePlatform = l.SourcePlatform,
+            assignedToName = l.AssignedTo != null ? l.AssignedTo.FullName : null,
+            createdAt = l.CreatedAt.ToString("o")
+        }).ToList();
 
         var ctr = campaign.Impressions > 0 ? ((decimal)campaign.Clicks / campaign.Impressions) * 100m : 0m;
         var cpc = campaign.Clicks > 0 ? (campaign.Spend / campaign.Clicks) : 0m;
-        var cpa = campaign.Conversions > 0 ? (campaign.Spend / campaign.Conversions) : 0m;
-        var roas = campaign.Spend > 0 ? (campaign.Revenue / campaign.Spend) : 0m;
-        var conversionRate = campaign.Clicks > 0 ? ((decimal)campaign.Conversions / campaign.Clicks) * 100m : 0m;
-        var leadConversionRate = campaign.LeadsCount > 0 ? ((decimal)campaign.Conversions / campaign.LeadsCount) * 100m : 0m;
-        var profit = campaign.Revenue - campaign.Spend;
+        var cpa = dynamicConversions > 0 ? (campaign.Spend / dynamicConversions) : 0m;
+        var roas = campaign.Spend > 0 ? (dynamicRevenue / campaign.Spend) : 0m;
+        var conversionRate = campaign.Clicks > 0 ? ((decimal)dynamicConversions / campaign.Clicks) * 100m : 0m;
+        var leadConversionRate = dynamicLeadsCount > 0 ? ((decimal)dynamicConversions / dynamicLeadsCount) * 100m : 0m;
+        var profit = dynamicRevenue - campaign.Spend;
         var budgetUsedPercent = campaign.Budget > 0 ? (campaign.Spend / campaign.Budget) * 100m : 0m;
 
         return new
@@ -211,9 +244,9 @@ public class CampaignService : ICampaignService
                 spend = campaign.Spend,
                 clicks = campaign.Clicks,
                 impressions = campaign.Impressions,
-                leadsCount = Math.Max(campaign.LeadsCount, leads.Count),
-                conversions = campaign.Conversions,
-                revenue = campaign.Revenue,
+                leadsCount = dynamicLeadsCount,
+                conversions = dynamicConversions,
+                revenue = dynamicRevenue,
                 createdAt = campaign.CreatedAt.ToString("o")
             },
             metrics = new
@@ -229,6 +262,18 @@ public class CampaignService : ICampaignService
             },
             leads = leads
         };
+    }
+
+    private static bool IsConvertedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return false;
+        var s = status.Trim();
+        return s.Equals("Converted", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Closed Won", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Closed_Won", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Won", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Payment Completed", StringComparison.OrdinalIgnoreCase) ||
+               s.Equals("Payment_Completed", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<Campaign> UpdateCampaignAsync(long id, Campaign updated, string email)

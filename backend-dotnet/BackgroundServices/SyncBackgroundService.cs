@@ -37,6 +37,17 @@ public class SyncBackgroundService : BackgroundService
                 using var scope = _scopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<LeadGrowthDbContext>();
                 var syncService = scope.ServiceProvider.GetRequiredService<ISyncService>();
+                var metaAdsService = scope.ServiceProvider.GetRequiredService<IMetaAdsService>();
+
+                // 1. Proactive Token Refresh Check: If token expires within 5 days, exchange for a fresh 60-day token
+                try
+                {
+                    await metaAdsService.CheckAndRefreshTokensBeforeExpiryAsync(daysThreshold: 5);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Token refresh check encountered an error in SyncBackgroundService");
+                }
 
                 _logger.LogInformation("Starting hourly automated data sync for Meta & Google Ads...");
                 var workspaces = await dbContext.Workspaces.ToListAsync(stoppingToken);

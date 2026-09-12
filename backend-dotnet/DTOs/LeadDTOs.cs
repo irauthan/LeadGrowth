@@ -31,6 +31,14 @@ public class LeadDto
     public string? ClientNotes { get; set; }
     public double? ProposalAmount { get; set; }
     public string? ProposalStatus { get; set; }
+    public string? ExternalLeadId { get; set; }
+    public string? FormId { get; set; }
+    public string? AdId { get; set; }
+    public string? AdName { get; set; }
+    public string? AdsetId { get; set; }
+    public string? AdsetName { get; set; }
+    public bool IsOrganic { get; set; } = false;
+    public string? RawFormData { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public DateTime? NextFollowupDate { get; set; }

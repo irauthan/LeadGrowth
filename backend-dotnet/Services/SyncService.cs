@@ -7,10 +7,17 @@ namespace LeadGrowth.Services;
 public class SyncService : ISyncService
 {
     private readonly LeadGrowthDbContext _context;
+    private readonly IMetaAdsService _metaAdsService;
+    private readonly ILogger<SyncService> _logger;
 
-    public SyncService(LeadGrowthDbContext context)
+    public SyncService(
+        LeadGrowthDbContext context,
+        IMetaAdsService metaAdsService,
+        ILogger<SyncService> logger)
     {
         _context = context;
+        _metaAdsService = metaAdsService;
+        _logger = logger;
     }
 
     public async Task SyncWorkspaceAsync(long workspaceId, string platform)
@@ -18,17 +25,41 @@ public class SyncService : ISyncService
         var integration = await _context.Integrations
             .FirstOrDefaultAsync(i => i.WorkspaceId == workspaceId && i.Platform.ToLower() == platform.ToLower());
 
+        string syncStatus = "SUCCESS";
+        string syncDetails = string.Empty;
+
+        if (platform.Equals("Meta", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var metaResult = await _metaAdsService.SyncWorkspaceMetaAsync(workspaceId);
+                syncStatus = metaResult.Success ? "SUCCESS" : "PARTIAL_SUCCESS";
+                syncDetails = metaResult.Message;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing Meta Marketing API for workspace {WorkspaceId}", workspaceId);
+                syncStatus = "FAILED";
+                syncDetails = $"Meta sync error: {ex.Message}";
+            }
+        }
+        else
+        {
+            syncDetails = $"Synced mock records for {platform}";
+        }
+
         if (integration != null)
         {
             integration.LastSyncedAt = DateTime.UtcNow;
+            integration.Status = syncStatus == "FAILED" ? "Error" : "Connected";
         }
 
         var log = new SyncLog
         {
             WorkspaceId = workspaceId,
             Platform = platform.ToUpper(),
-            Status = "SUCCESS",
-            Details = $"Synced {Random.Shared.Next(5, 25)} records for {platform}",
+            Status = syncStatus,
+            Details = syncDetails,
             CreatedAt = DateTime.UtcNow
         };
 

@@ -1,6 +1,92 @@
-@backend_dotnet_HostAddress = http://localhost:5168
+@host = http://localhost:5000
+@jwtToken = YOUR_LEADGROWTH_JWT_TOKEN_HERE
 
-GET {{backend_dotnet_HostAddress}}/weatherforecast/
-Accept: application/json
+### 0. Health / Meta Integration Status Check
+GET {{host}}/api/meta/status
+Authorization: Bearer {{jwtToken}}
 
-###
+### =========================================================================
+### PART A: CAMPAIGNS, ADSETS & INSIGHTS (Uses User Access Token)
+### =========================================================================
+
+### 1. List Campaigns from Meta Ad Account
+GET {{host}}/api/meta/campaigns
+Authorization: Bearer {{jwtToken}}
+
+### 2. Create Campaign on Meta
+POST {{host}}/api/meta/campaigns
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "name": "Hoossh Leads Launch Campaign",
+  "objective": "OUTCOME_LEADS",
+  "status": "PAUSED",
+  "specialAdCategories": ["NONE"],
+  "isAdsetBudgetSharingEnabled": false,
+  "dailyBudget": 500.00
+}
+
+### 3. Create Ad Set under Campaign
+POST {{host}}/api/meta/adsets
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "name": "Hoossh Real Estate - US 25-55",
+  "campaignId": "YOUR_META_CAMPAIGN_ID_HERE",
+  "dailyBudget": 1000,
+  "billingEvent": "IMPRESSIONS",
+  "optimizationGoal": "LEAD_GENERATION",
+  "targetCountries": ["US"],
+  "ageMin": 25,
+  "ageMax": 55,
+  "status": "PAUSED"
+}
+
+### 4. Get Campaign Insights (Summary)
+GET {{host}}/api/meta/campaigns/YOUR_META_CAMPAIGN_ID_HERE/insights
+Authorization: Bearer {{jwtToken}}
+
+### 5. Get Campaign Insights with Daily Breakdown (Chart / Trends)
+GET {{host}}/api/meta/campaigns/YOUR_META_CAMPAIGN_ID_HERE/insights?dailyTrend=true&datePreset=last_30d
+Authorization: Bearer {{jwtToken}}
+
+
+### =========================================================================
+### PART B: LEAD ADS & FORMS (Uses Page Access Token)
+### =========================================================================
+
+### 6. List Lead Forms for Page
+GET {{host}}/api/meta/forms
+Authorization: Bearer {{jwtToken}}
+
+### 7. Create a Lead Generation Form on Meta
+POST {{host}}/api/meta/forms
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "name": "Hoossh Instant Lead Capture Form",
+  "followUpActionUrl": "https://hoossh.com",
+  "questions": ["FULL_NAME", "EMAIL", "PHONE"],
+  "privacyPolicyUrl": "https://hoossh.com/privacy",
+  "privacyPolicyLinkText": "Privacy Policy"
+}
+
+### 8. Get Leads Captured by a Specific Lead Form
+GET {{host}}/api/meta/forms/YOUR_FORM_ID_HERE/leads
+Authorization: Bearer {{jwtToken}}
+
+### 9. Get Page Access Token from Business Manager owned pages
+GET {{host}}/api/meta/page-token?businessManagerId=YOUR_BM_ID&pageId=1391100724075709
+Authorization: Bearer {{jwtToken}}
+
+
+### =========================================================================
+### FULL SYNC & PERSISTENCE
+### =========================================================================
+
+### 10. Trigger Manual Full Meta Sync for Current Workspace
+POST {{host}}/api/meta/sync
+Authorization: Bearer {{jwtToken}}

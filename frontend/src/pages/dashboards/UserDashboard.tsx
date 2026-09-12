@@ -13,7 +13,6 @@ import {
   Zap,
   ChevronRight,
   Briefcase,
-  Eye,
   Bell,
   CheckSquare,
   Square,
@@ -22,7 +21,6 @@ import {
   Layers,
   TrendingUp,
   Activity,
-  Award,
   BarChart2,
   PieChart as PieChartIcon
 } from 'lucide-react';
@@ -752,7 +750,7 @@ export default function UserDashboard() {
                         { stage: 'Converted', label: 'Closed Won', count: getStageCount('Converted'), color: '#10b981', targetUrl: '/my-work?stage=Converted' }
                       ]}
                       margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
-                      onClick={(state) => {
+                      onClick={(state: any) => {
                         if (state && state.activePayload && state.activePayload[0]) {
                           const item = state.activePayload[0].payload;
                           if (item?.targetUrl) navigate(item.targetUrl);

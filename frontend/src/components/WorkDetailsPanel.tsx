@@ -29,7 +29,6 @@ import {
   UserCheck,
   Loader2,
   Zap,
-  XCircle,
   Lightbulb,
   Timer,
   AlertTriangle,
@@ -284,24 +283,6 @@ export default function WorkDetailsPanel({
     } catch (err: any) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to assign lead.');
-    } finally {
-      setAssigningLead(false);
-    }
-  };
-
-  const handleAutoAssignLead = async () => {
-    if (!leadId) return;
-    setAssigningLead(true);
-    try {
-      await api.post(`/api/leads/${leadId}/auto-assign`);
-      setAssignSuccessMsg('Lead successfully auto-assigned via Smart AI Hybrid Engine!');
-      setTimeout(() => setAssignSuccessMsg(''), 4000);
-      window.dispatchEvent(new Event('leadgrowth-notification-updated'));
-      fetchLeadDetails();
-      triggerUpdate();
-    } catch (err: any) {
-      console.error(err);
-      alert(err.response?.data?.message || 'Failed to auto-assign lead.');
     } finally {
       setAssigningLead(false);
     }

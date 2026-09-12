@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using LeadGrowth.BackgroundServices;
 using LeadGrowth.Data;
 using LeadGrowth.Hubs;
+using LeadGrowth.Models;
 using LeadGrowth.Security;
 using LeadGrowth.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,6 +22,13 @@ builder.Services.AddDbContext<LeadGrowthDbContext>(options =>
 });
 
 // 2. Security, Realtime & Application Services DI Registration
+builder.Services.Configure<MetaAdsOptions>(builder.Configuration.GetSection(MetaAdsOptions.SectionName));
+builder.Services.AddHttpClient("MetaGraphApi", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "LeadGrowth-MetaIntegration/1.0");
+});
+
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IWebSocketManagerService, WebSocketManagerService>();
@@ -37,6 +45,7 @@ builder.Services.AddScoped<ICalendarService, CalendarService>();
 builder.Services.AddScoped<IFollowupService, FollowupService>();
 builder.Services.AddScoped<ICallService, CallService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
+builder.Services.AddScoped<IMetaAdsService, MetaAdsService>();
 builder.Services.AddScoped<ISyncService, SyncService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IExportService, ExportService>();
@@ -296,6 +305,16 @@ try
             failure_summary TEXT NULL,
             created_at_utc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_bulk_workspace (workspace_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    EnsureTable("meta_tokens", @"
+        CREATE TABLE meta_tokens (
+            Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            token_type VARCHAR(50) NOT NULL UNIQUE,
+            access_token TEXT NOT NULL,
+            expires_at DATETIME NULL,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_meta_tokens_type (token_type)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
     // Ensure columns on bulk_assignment_jobs if table already existed previously

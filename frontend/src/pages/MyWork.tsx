@@ -24,14 +24,8 @@ import {
   Users,
   Flame,
   Download,
-  FileText,
   ArrowLeft,
   ArrowRight,
-  UserCheck,
-  TrendingUp,
-  Award,
-  ShieldCheck,
-  User,
   Clock,
   Ban,
   Plus,
@@ -117,10 +111,7 @@ export default function MyWork() {
   const [draggedLeadId, setDraggedLeadId] = useState<number | null>(null);
   const [dragOverStageKey, setDragOverStageKey] = useState<string | null>(null);
 
-  // Idle Sweep notification
-  const [sweepMessage, setSweepMessage] = useState('');
-
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [selectedPeriod, setSelectedPeriod] = useState<string>(searchParams.get('period') || 'all');
 
   useEffect(() => {
@@ -217,22 +208,6 @@ export default function MyWork() {
       setTimeout(() => setFollowupSuccessMsg(''), 3000);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to cancel follow-up');
-    }
-  };
-
-  const handleIdleSweep = async () => {
-    try {
-      const res = await api.post('/api/leads/queue/idle-sweep');
-      if (res.data) {
-        setSweepMessage(`New lead auto-assigned: ${res.data.name}!`);
-        fetchMyWorkLeads();
-      } else {
-        setSweepMessage('Queue empty. You are fully caught up!');
-      }
-      setTimeout(() => setSweepMessage(''), 4000);
-    } catch (e) {
-      setSweepMessage('Sweep active. All queue items currently assigned.');
-      setTimeout(() => setSweepMessage(''), 4000);
     }
   };
 
@@ -790,12 +765,6 @@ export default function MyWork() {
             </div>
           </div>
 
-      {sweepMessage && (
-        <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs font-bold text-cyan-400 flex items-center gap-2 animate-bounce">
-          <Sparkles size={16} /> {sweepMessage}
-        </div>
-      )}
-
       {/* Search and Filters Bar */}
       <div className="flex items-center justify-between gap-4 flex-wrap bg-theme-card/60 p-4 rounded-3xl border border-theme-border">
         {/* Search Bar */}
@@ -826,6 +795,28 @@ export default function MyWork() {
             <option value="today">Time: Today</option>
             <option value="weekly">Time: This Week</option>
             <option value="monthly">Time: This Month</option>
+          </select>
+
+          <select
+            value={selectedPriority}
+            onChange={(e) => setSelectedPriority(e.target.value)}
+            className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+          >
+            <option value="ALL">Priority: All</option>
+            <option value="HIGH">Priority: High</option>
+            <option value="MEDIUM">Priority: Medium</option>
+            <option value="LOW">Priority: Low</option>
+          </select>
+
+          <select
+            value={selectedQuality}
+            onChange={(e) => setSelectedQuality(e.target.value)}
+            className="bg-theme-bg-alt border border-theme-border/60 rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+          >
+            <option value="ALL">Quality: All</option>
+            <option value="HOT">Quality: Hot</option>
+            <option value="WARM">Quality: Warm</option>
+            <option value="COLD">Quality: Cold</option>
           </select>
 
           <select

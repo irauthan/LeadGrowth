@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { PhoneCall, Square, Play, Timer, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import type { CallSession } from '../types';

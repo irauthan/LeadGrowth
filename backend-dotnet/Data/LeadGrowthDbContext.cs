@@ -46,6 +46,7 @@ public class LeadGrowthDbContext : DbContext
     public DbSet<LeaveRequest> LeaveRequests { get; set; } = null!;
     public DbSet<BulkAssignmentJob> BulkAssignmentJobs { get; set; } = null!;
     public DbSet<UserStatusLog> UserStatusLogs { get; set; } = null!;
+    public DbSet<MetaToken> MetaTokens { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -122,12 +123,27 @@ public class LeadGrowthDbContext : DbContext
         modelBuilder.Entity<Lead>()
             .HasIndex(l => l.Email);
 
+        modelBuilder.Entity<Lead>()
+            .HasIndex(l => new { l.WorkspaceId, l.ExternalLeadId })
+            .HasDatabaseName("idx_ext_lead");
+
         // 10. Campaign indexes
         modelBuilder.Entity<Campaign>()
             .HasIndex(c => new { c.WorkspaceId, c.Status });
 
         modelBuilder.Entity<Campaign>()
             .HasIndex(c => new { c.WorkspaceId, c.CreatedAt });
+
+        modelBuilder.Entity<Campaign>()
+            .HasIndex(c => new { c.WorkspaceId, c.ExternalCampaignId })
+            .HasDatabaseName("idx_ext_campaign");
+
+        // 10.5 AdMetrics indexes
+        modelBuilder.Entity<AdMetrics>()
+            .HasIndex(m => new { m.WorkspaceId, m.CampaignId, m.Date });
+
+        modelBuilder.Entity<AdMetrics>()
+            .HasIndex(m => new { m.WorkspaceId, m.Date });
 
         // 11. Sales Activity indexes
         modelBuilder.Entity<SalesActivity>()
@@ -183,5 +199,10 @@ public class LeadGrowthDbContext : DbContext
         // 17. User indexes
         modelBuilder.Entity<User>()
             .HasIndex(u => new { u.WorkspaceId, u.Status });
+
+        // 18. MetaToken indexes
+        modelBuilder.Entity<MetaToken>()
+            .HasIndex(t => t.TokenType)
+            .IsUnique();
     }
 }

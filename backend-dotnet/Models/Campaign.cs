@@ -49,6 +49,18 @@ public class Campaign
     [Column(TypeName = "decimal(12,2)")]
     public decimal Revenue { get; set; } = 0;
 
+    [Column("external_campaign_id")]
+    [MaxLength(64)]
+    public string? ExternalCampaignId { get; set; }
+
+    [Column("ad_account_id")]
+    [MaxLength(64)]
+    public string? AdAccountId { get; set; }
+
+    [Column("objective")]
+    [MaxLength(50)]
+    public string? Objective { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

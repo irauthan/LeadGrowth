@@ -58,13 +58,6 @@ export default function Reports() {
   // Auto-Generated Daily Activity State
   const [dailyData, setDailyData] = useState<DailyBreakdownItem[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [statsSummary, setStatsSummary] = useState({
-    totalLeads: 0,
-    totalCalls: 0,
-    completedFollowups: 0,
-    convertedLeads: 0,
-    conversionRate: 0
-  });
 
   useEffect(() => {
     if (isManagerOrAdmin) {
@@ -121,13 +114,6 @@ export default function Reports() {
       const summary = res.data;
       if (summary) {
         setDailyData(summary.dailyBreakdown || []);
-        setStatsSummary({
-          totalLeads: summary.totalAssignedLeads || 0,
-          totalCalls: summary.totalCallsMade || 0,
-          completedFollowups: summary.completedFollowupsCount || 0,
-          convertedLeads: summary.totalConvertedLeads || 0,
-          conversionRate: summary.conversionRate ? Math.round(summary.conversionRate * 100) : 0
-        });
       }
     } catch (err) {
       console.error('Failed to load auto daily activity', err);

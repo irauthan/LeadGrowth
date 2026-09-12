@@ -10,7 +10,6 @@ import {
   Download, 
   MessageSquare, 
   Plus, 
-  Loader2, 
   AlertTriangle, 
   Flame, 
   Zap, 
@@ -322,10 +321,6 @@ export default function Leads() {
 
   // Priority Engine Counters & Management Metrics
   const leadsArray = Array.isArray(leads) ? leads : [];
-  const unassignedCount = leadsArray.filter((l) => !isLeadAssigned(l)).length;
-  const assignedCount = leadsArray.filter((l) => isLeadAssigned(l) && l.status !== 'Converted' && l.status !== 'Lost' && l.status !== 'Rejected').length;
-  const convertedCount = leadsArray.filter((l) => l.status === 'Converted').length;
-
   const overdueCount = leadsArray.filter(isLeadOverdue).length;
   const highPriorityCount = leadsArray.filter((l) => l.priority === 'HIGH' || l.qualityTier === 'HOT').length;
   const newLeadsCount = leadsArray.filter((l) => l.status === 'New').length;

@@ -55,7 +55,6 @@ export default function CampaignDetailView({
     clicks: 0,
     impressions: 0,
     conversions: 0,
-    revenue: 0,
   });
 
   useEffect(() => {
@@ -79,7 +78,6 @@ export default function CampaignDetailView({
           clicks: data.campaign.clicks || 0,
           impressions: data.campaign.impressions || 0,
           conversions: data.campaign.conversions || 0,
-          revenue: data.campaign.revenue || 0,
         });
       }
     } catch (err) {
@@ -711,18 +709,13 @@ export default function CampaignDetailView({
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                  Generated Revenue ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editForm.revenue}
-                  onChange={(e) => setEditForm({ ...editForm, revenue: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary font-bold text-emerald-600 dark:text-emerald-400"
-                />
+              <div className="sm:col-span-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs space-y-1">
+                <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  ✨ Automatic Revenue Calculation
+                </div>
+                <p className="text-[11px] text-theme-text-muted leading-relaxed">
+                  Campaign <strong>Revenue</strong> and <strong>Conversions</strong> are automatically synced in real-time from converted leads that have approved proposal amounts.
+                </p>
               </div>
             </div>
 

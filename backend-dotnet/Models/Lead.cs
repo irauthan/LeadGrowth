@@ -111,6 +111,36 @@ public class Lead
     [MaxLength(30)]
     public string? ProposalStatus { get; set; }
 
+    [Column("external_lead_id")]
+    [MaxLength(64)]
+    public string? ExternalLeadId { get; set; }
+
+    [Column("form_id")]
+    [MaxLength(64)]
+    public string? FormId { get; set; }
+
+    [Column("ad_id")]
+    [MaxLength(64)]
+    public string? AdId { get; set; }
+
+    [Column("ad_name")]
+    [MaxLength(100)]
+    public string? AdName { get; set; }
+
+    [Column("adset_id")]
+    [MaxLength(64)]
+    public string? AdsetId { get; set; }
+
+    [Column("adset_name")]
+    [MaxLength(100)]
+    public string? AdsetName { get; set; }
+
+    [Column("is_organic")]
+    public bool IsOrganic { get; set; } = false;
+
+    [Column("raw_form_data", TypeName = "TEXT")]
+    public string? RawFormData { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -3,7 +3,7 @@
 # ==========================================
 
 # ------------------------------------------
-# Root & IDE Configurations
+# Root, IDE & Editor Configurations
 # ------------------------------------------
 .idea/
 .vscode/
@@ -26,6 +26,37 @@ antigravity-ide/
 scratch/
 
 # ------------------------------------------
+# Environment & Secrets Configuration (CRITICAL)
+# ------------------------------------------
+.env
+.env.*
+!.env.example
+*.env
+*.env.*
+!*.env.example
+
+# Frontend env files
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Backend env files
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Keys, Certificates & Tokens
+*.pem
+*.key
+*.pfx
+*.p12
+*.cer
+*.crt
+*.pkcs12
+secrets.json
+appsettings.secrets.json
+
+# ------------------------------------------
 # .NET 10 / C# Backend (backend-dotnet)
 # ------------------------------------------
 **/bin/
@@ -35,10 +66,10 @@ backend-dotnet/obj/
 backend-dotnet/publish/
 backend-dotnet/logs/
 backend-dotnet/TestResults/
-backend-dotnet/appsettings.*.json
-backend-dotnet/appsettings.Development.json
-backend-dotnet/appsettings.Local.json
-!backend-dotnet/appsettings.json
+
+# Protect all appsettings with real secrets
+backend-dotnet/appsettings*.json
+!backend-dotnet/appsettings.example.json
 
 # ------------------------------------------
 # User Uploads & Media (Avatars, Attachments)
@@ -47,6 +78,8 @@ backend-dotnet/wwwroot/uploads/*
 !backend-dotnet/wwwroot/uploads/.gitkeep
 backend-dotnet/wwwroot/uploads/avatars/*
 !backend-dotnet/wwwroot/uploads/avatars/.gitkeep
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep
 
 # ------------------------------------------
 # Backend (Java Spring Boot & Maven - Legacy)
@@ -66,6 +99,7 @@ backend/logs/
 # Frontend (React 19 + TypeScript + Vite)
 # ------------------------------------------
 frontend/node_modules/
+node_modules/
 frontend/dist/
 frontend/build/
 frontend/.cache/
@@ -77,21 +111,11 @@ frontend/pnpm-debug.log*
 frontend/coverage/
 
 # ------------------------------------------
-# Environment & Secrets Configuration
-# ------------------------------------------
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-frontend/.env
-frontend/.env.local
-backend/.env
-backend/.env.local
-
-# ------------------------------------------
-# General Logs & Dumps
+# General Logs & Database Dumps
 # ------------------------------------------
 *.log
 *.sql.bak
 *.dump
+*.db
+*.sqlite
+*.sqlite3

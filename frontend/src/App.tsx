@@ -10,7 +10,6 @@ import Analytics from './pages/Analytics';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Integrations from './pages/Integrations';
-import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import ActivityLogs from './pages/ActivityLogs';
 import NotificationsPage from './pages/NotificationsPage';

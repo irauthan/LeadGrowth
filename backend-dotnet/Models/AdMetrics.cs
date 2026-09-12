@@ -36,6 +36,24 @@ public class AdMetrics
 
     public int Conversions { get; set; } = 0;
 
+    [Column("reach")]
+    public int Reach { get; set; } = 0;
+
+    [Column("frequency", TypeName = "decimal(6,2)")]
+    public decimal Frequency { get; set; } = 1.00m;
+
+    [Column("cpm", TypeName = "decimal(10,2)")]
+    public decimal Cpm { get; set; } = 0.00m;
+
+    [Column("cpc", TypeName = "decimal(10,2)")]
+    public decimal Cpc { get; set; } = 0.00m;
+
+    [Column("ctr", TypeName = "decimal(6,2)")]
+    public decimal Ctr { get; set; } = 0.00m;
+
+    [Column("leads_count")]
+    public int LeadsCount { get; set; } = 0;
+
     [Required]
     public DateOnly Date { get; set; }
 }

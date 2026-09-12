@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import type { AppTheme } from '../store/themeStore';
@@ -9,7 +9,6 @@ import {
   Palette, 
   Lock, 
   Bell, 
-  Building,
   Check,
   AlertTriangle,
   RotateCcw,
@@ -19,8 +18,7 @@ import {
   ArrowDown,
   Camera,
   Upload,
-  Trash2,
-  ExternalLink
+  Trash2
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../services/api';
