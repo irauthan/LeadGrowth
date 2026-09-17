@@ -485,19 +485,13 @@ export default function Navbar() {
           </button>
 
           {/* App Brand Logo */}
-          <Link to="/dashboard" className="flex items-center transition-transform hover:scale-105 flex-shrink-0" title="Hoossh Lead Growth">
-            <HoosshLogo size={26} variant="full" animated />
+          <Link 
+            to="/dashboard" 
+            className="flex items-center py-1 px-2 rounded-2xl hover:bg-theme-bg-alt/60 active:scale-95 transition-all flex-shrink-0 group" 
+            title="Hoossh Lead Growth"
+          >
+            <HoosshLogo size={38} variant="full" animated />
           </Link>
-
-          {/* Subtle Vertical Divider */}
-          <div className="h-5 w-[1px] bg-theme-border/60 mx-0.5 sm:mx-1 flex-shrink-0" />
-
-          {/* Page Title */}
-          <div className="flex items-center min-w-0">
-            <h1 className="text-sm sm:text-base md:text-lg font-extrabold text-theme-text tracking-tight truncate">
-              {getPageTitle()}
-            </h1>
-          </div>
         </div>
 
         {/* Right Section: Global Actions */}

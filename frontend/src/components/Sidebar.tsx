@@ -29,10 +29,15 @@ import { useAuthStore } from '../store/authStore';
 import { useLayoutStore } from '../store/layoutStore';
 
 export default function Sidebar() {
-  const { isCollapsed, toggleCollapsed, isMobileOpen, setMobileOpen, sidebarPosition, enabledNavItems } = useLayoutStore();
+  const { isCollapsed, toggleCollapsed, setCollapsed, isMobileOpen, setMobileOpen, sidebarPosition, enabledNavItems } = useLayoutStore();
   const location = useLocation();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+
+  const handleNavClick = () => {
+    setMobileOpen(false);
+    setCollapsed(true);
+  };
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN');
   const isManager = user?.roles.includes('ROLE_MANAGER');
@@ -149,9 +154,10 @@ export default function Sidebar() {
             <div className="relative group flex-shrink-0">
               <Link 
                 to="/dashboard" 
+                onClick={handleNavClick}
                 className="flex items-center justify-center p-1.5 rounded-2xl bg-theme-bg-alt/80 shadow-md nav-glow transition-transform hover:scale-105"
               >
-                <HoosshLogo size={26} variant="full" animated />
+                <HoosshLogo size={34} variant="full" animated />
               </Link>
               <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none ${tooltipPositionClass}`}>
                 <span className="whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl border border-slate-700">
@@ -184,6 +190,7 @@ export default function Sidebar() {
                   <div key={item.name} className="relative group flex-shrink-0">
                     <Link
                       to={item.path}
+                      onClick={handleNavClick}
                       className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-medium transition-all duration-150 ${
                         isActive
                           ? 'bg-theme-primary text-white shadow-xs'
@@ -214,6 +221,7 @@ export default function Sidebar() {
                       <div key={item.name} className="relative group flex-shrink-0">
                         <Link
                           to={item.path}
+                          onClick={handleNavClick}
                           className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-medium transition-all duration-150 ${
                             isActive
                               ? 'bg-theme-primary text-white shadow-xs'
@@ -264,8 +272,8 @@ export default function Sidebar() {
           {/* Mobile Only Header (Logo + Close X) */}
           {isMobileOpen && (
             <div className="flex h-16 items-center justify-between px-4 border-b border-theme-border/40">
-              <Link to="/dashboard" className="flex items-center gap-2.5 overflow-hidden" onClick={() => setMobileOpen(false)}>
-                <HoosshLogo size={30} variant="full" animated />
+              <Link to="/dashboard" className="flex items-center gap-2.5 overflow-hidden" onClick={handleNavClick}>
+                <HoosshLogo size={36} variant="full" animated />
               </Link>
               <button
                 onClick={() => setMobileOpen(false)}
@@ -327,7 +335,7 @@ export default function Sidebar() {
                   <div key={item.name} className="relative group">
                     <Link
                       to={item.path}
-                      onClick={() => setMobileOpen(false)}
+                      onClick={handleNavClick}
                       className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                         isCollapsed && !isMobileOpen 
                           ? 'h-10 w-10 mx-auto justify-center' 
@@ -385,7 +393,7 @@ export default function Sidebar() {
                         <div key={item.name} className="relative group">
                           <Link
                             to={item.path}
-                            onClick={() => setMobileOpen(false)}
+                            onClick={handleNavClick}
                             className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                               isCollapsed && !isMobileOpen 
                                 ? 'h-10 w-10 mx-auto justify-center' 
@@ -444,7 +452,7 @@ export default function Sidebar() {
                         <div key={item.name} className="relative group">
                           <Link
                             to={item.path}
-                            onClick={() => setMobileOpen(false)}
+                            onClick={handleNavClick}
                             className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                               isCollapsed && !isMobileOpen 
                                 ? 'h-10 w-10 mx-auto justify-center' 

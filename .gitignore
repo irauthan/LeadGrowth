@@ -8,16 +8,19 @@
 .idea/
 .vscode/
 *.suo
+*.user
+*.userprefs
+*.userosscache
+*.sln.docstates
 *.ntvs*
 *.njsproj
-*.sln.docstates
-*.user
-*.userosscache
 *.swp
 *~
 .DS_Store
 Thumbs.db
 .vs/
+_ReSharper*/
+*.DotSettings.user
 
 # Antigravity & Agent Temp Artifacts
 .agents/
@@ -34,16 +37,23 @@ scratch/
 *.env
 *.env.*
 !*.env.example
+*.env.local
+*.env.*.local
 
 # Frontend env files
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+frontend/.env.local
+frontend/.env.*.local
 
 # Backend env files
 backend/.env
 backend/.env.*
 !backend/.env.example
+backend-dotnet/.env
+backend-dotnet/.env.*
+!backend-dotnet/.env.example
 
 # Keys, Certificates & Tokens
 *.pem
@@ -55,9 +65,10 @@ backend/.env.*
 *.pkcs12
 secrets.json
 appsettings.secrets.json
+**/UserSecrets/
 
 # ------------------------------------------
-# .NET 10 / C# Backend (backend-dotnet)
+# .NET 10 / C# Backend & API (backend-dotnet)
 # ------------------------------------------
 **/bin/
 **/obj/
@@ -66,10 +77,23 @@ backend-dotnet/obj/
 backend-dotnet/publish/
 backend-dotnet/logs/
 backend-dotnet/TestResults/
+*.efbundle*
 
-# Protect all appsettings with real secrets
+# Protect all backend appsettings & local developer configurations
+appsettings*.json
+!appsettings.example.json
 backend-dotnet/appsettings*.json
 !backend-dotnet/appsettings.example.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Local.json
+backend-dotnet/appsettings.Local.json
+
+# Local API testing & HTTP client secrets
+http-client.env.json
+http-client.private.env.json
+*.private.http
+*.local.http
 
 # ------------------------------------------
 # User Uploads & Media (Avatars, Attachments)
@@ -114,8 +138,14 @@ frontend/coverage/
 # General Logs & Database Dumps
 # ------------------------------------------
 *.log
+logs/
 *.sql.bak
 *.dump
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
+*.mdf
+*.ldf
+*.ndf

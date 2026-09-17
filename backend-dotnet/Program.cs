@@ -252,6 +252,58 @@ try
     EnsureColumn("users", "manual_status_expires_at", "DATETIME NULL");
     EnsureColumn("users", "max_capacity", "INT NULL DEFAULT 30");
 
+    // 1.1 Add missing columns to leads table safely
+    EnsureColumn("leads", "quality_score", "INT NULL");
+    EnsureColumn("leads", "quality_tier", "VARCHAR(20) NULL");
+    EnsureColumn("leads", "conversion_probability", "DOUBLE NULL");
+    EnsureColumn("leads", "queue_status", "VARCHAR(30) NULL");
+    EnsureColumn("leads", "company", "VARCHAR(100) NULL");
+    EnsureColumn("leads", "location", "VARCHAR(100) NULL");
+    EnsureColumn("leads", "priority", "VARCHAR(20) NULL DEFAULT 'MEDIUM'");
+    EnsureColumn("leads", "assigned_by_id", "BIGINT NULL");
+    EnsureColumn("leads", "assigned_date", "DATETIME NULL");
+    EnsureColumn("leads", "progress_percentage", "INT NULL DEFAULT 0");
+    EnsureColumn("leads", "last_followup_date", "DATETIME NULL");
+    EnsureColumn("leads", "due_date", "DATETIME NULL");
+    EnsureColumn("leads", "client_notes", "TEXT NULL");
+    EnsureColumn("leads", "proposal_amount", "DOUBLE NULL");
+    EnsureColumn("leads", "proposal_status", "VARCHAR(30) NULL");
+    EnsureColumn("leads", "external_lead_id", "VARCHAR(64) NULL");
+    EnsureColumn("leads", "form_id", "VARCHAR(64) NULL");
+    EnsureColumn("leads", "ad_id", "VARCHAR(64) NULL");
+    EnsureColumn("leads", "ad_name", "VARCHAR(100) NULL");
+    EnsureColumn("leads", "adset_id", "VARCHAR(64) NULL");
+    EnsureColumn("leads", "adset_name", "VARCHAR(100) NULL");
+    EnsureColumn("leads", "is_organic", "TINYINT(1) NOT NULL DEFAULT 0");
+    EnsureColumn("leads", "raw_form_data", "TEXT NULL");
+
+    // 1.2 Add missing columns to campaigns table safely
+    EnsureColumn("campaigns", "external_campaign_id", "VARCHAR(64) NULL");
+    EnsureColumn("campaigns", "ad_account_id", "VARCHAR(64) NULL");
+    EnsureColumn("campaigns", "objective", "VARCHAR(50) NULL");
+    EnsureColumn("campaigns", "leads_count", "INT NOT NULL DEFAULT 0");
+
+    // 1.3 Add missing columns to followup_reminders table safely
+    EnsureColumn("followup_reminders", "outcome", "VARCHAR(50) NULL");
+    EnsureColumn("followup_reminders", "remarks", "TEXT NULL");
+
+    // 1.4 Add missing columns to tasks table safely
+    EnsureColumn("tasks", "assigned_at", "DATETIME NULL");
+    EnsureColumn("tasks", "assigned_by_id", "BIGINT NULL");
+    EnsureColumn("tasks", "due_time", "VARCHAR(20) NULL");
+    EnsureColumn("tasks", "reminder_minutes", "INT NULL");
+    EnsureColumn("tasks", "reschedule_count", "INT NOT NULL DEFAULT 0");
+    EnsureColumn("tasks", "reschedule_notes", "TEXT NULL");
+
+    // 1.5 Add missing columns to calendar_events table safely
+    EnsureColumn("calendar_events", "reminder_sent", "TINYINT(1) NOT NULL DEFAULT 0");
+    EnsureColumn("calendar_events", "reminder_minutes", "INT NOT NULL DEFAULT 15");
+    EnsureColumn("calendar_events", "event_type", "VARCHAR(50) NULL DEFAULT 'MEETING'");
+
+    // 1.6 Add missing columns to sales_activities table safely
+    EnsureColumn("sales_activities", "completion_remarks", "TEXT NULL");
+    EnsureColumn("sales_activities", "remarks", "TEXT NULL");
+
     // 2. Create new tables only if they don't already exist in the database
     EnsureTable("leave_requests", @"
         CREATE TABLE leave_requests (

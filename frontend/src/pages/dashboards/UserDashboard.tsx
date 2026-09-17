@@ -4,8 +4,6 @@ import api from '../../services/api';
 import { formatCurrency } from '../../utils';
 import { 
   UserCheck, 
-  Phone, 
-  Mail, 
   Sparkles, 
   Flame,
   Clock,
@@ -33,6 +31,7 @@ import {
   YAxis,
   Tooltip,
   Cell,
+  LabelList,
   AreaChart,
   Area,
   PieChart,
@@ -43,6 +42,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
 import HoosshBeeLoader from '../../components/HoosshBeeLoader';
+import { toast } from '../../store/toastStore';
 
 export default function UserDashboard() {
   const user = useAuthStore((state) => state.user);
@@ -146,12 +146,13 @@ export default function UserDashboard() {
         api.patch(`/api/leads/${leadId}/assign?userId=${user.id}`)
       );
       setIdleMessage(`Lead "${leadName}" added to your Pipelines!`);
+      toast.success(`Lead "${leadName}" added to your Pipelines!`, 'Pipeline Updated');
       setTimeout(() => setIdleMessage(''), 4000);
       window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchUserData();
     } catch (e: any) {
       fetchUserData();
-      alert(e.response?.data?.message || 'Failed to add lead to pipeline');
+      toast.error(e.response?.data?.message || 'Failed to add lead to pipeline');
     }
   };
 
@@ -168,12 +169,13 @@ export default function UserDashboard() {
     try {
       await api.post('/api/leads/bulk-add-to-pipeline', targetIds);
       setIdleMessage(`${targetIds.length} lead${targetIds.length > 1 ? 's' : ''} added to your Pipelines!`);
+      toast.success(`${targetIds.length} lead${targetIds.length > 1 ? 's' : ''} added to your Pipelines!`, 'Pipelines Updated');
       setTimeout(() => setIdleMessage(''), 4000);
       window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchUserData();
     } catch (e: any) {
       fetchUserData();
-      alert(e.response?.data?.message || 'Failed to add leads to pipeline');
+      toast.error(e.response?.data?.message || 'Failed to add leads to pipeline');
     }
   };
 
@@ -185,14 +187,17 @@ export default function UserDashboard() {
         const isAlreadyPresent = myLeads.some((l: any) => l.id === res.data.id);
         if (!isAlreadyPresent) {
           setIdleMessage(`New lead auto-assigned: ${res.data.name}! Click 'Add To Pipelines' to accept.`);
+          toast.success(`New lead auto-assigned: ${res.data.name}!`, 'Lead Received');
           fetchUserData();
         }
       } else {
         setIdleMessage('Queue empty. You are fully caught up!');
+        toast.info('Queue empty. You are fully caught up!', 'All Caught Up');
       }
       setTimeout(() => setIdleMessage(''), 4000);
     } catch (e) {
       setIdleMessage('Sweep active. All queue items currently assigned.');
+      toast.info('Sweep active. All queue items currently assigned.');
       setTimeout(() => setIdleMessage(''), 4000);
     }
   };
@@ -259,9 +264,6 @@ export default function UserDashboard() {
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-theme-text">
             Welcome back, {user?.fullName}!
           </h1>
-          <p className="text-xs text-theme-text-muted mt-1">
-            Manage your pipeline, advance workflow steps, complete client follow-ups, and drive conversions.
-          </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -678,9 +680,6 @@ export default function UserDashboard() {
                 <h3 className="text-sm font-semibold text-theme-text">
                   Executive Performance & Conversion Analytics
                 </h3>
-                <span className="text-[10px] text-theme-text-muted mt-0.5 block">
-                  Visual performance insights • Click on any stage, bar or metric to drill down into your pipeline
-                </span>
               </div>
             </div>
 
@@ -728,18 +727,18 @@ export default function UserDashboard() {
           </div>
 
           {/* Chart Rendering Container */}
-          <div className="h-72 w-full pt-1">
+          <div className="h-80 sm:h-96 w-full pt-1">
             {chartTab === 'funnel' && (
               <div className="h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2 px-1">
                   <span className="text-xs font-semibold text-theme-text">
                     Pipeline Stages Conversion Funnel
                   </span>
-                  <span className="text-[10px] text-theme-text-muted font-medium">
-                    💡 Click any stage column to open leads in Kanban Pipeline
+                  <span className="text-[10px] text-theme-text-muted">
+                    Click any bar or stage pill to view leads in My Work
                   </span>
                 </div>
-                <div className="flex-1 w-full min-h-[200px]">
+                <div className="flex-1 w-full min-h-[220px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart 
                       data={[
@@ -749,7 +748,7 @@ export default function UserDashboard() {
                         { stage: 'Negotiation', label: 'Negotiation', count: getStageCount('Negotiation'), color: '#f59e0b', targetUrl: '/my-work?stage=Negotiation' },
                         { stage: 'Converted', label: 'Closed Won', count: getStageCount('Converted'), color: '#10b981', targetUrl: '/my-work?stage=Converted' }
                       ]}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
+                      margin={{ top: 20, right: 10, left: -20, bottom: 20 }}
                       onClick={(state: any) => {
                         if (state && state.activePayload && state.activePayload[0]) {
                           const item = state.activePayload[0].payload;
@@ -790,6 +789,7 @@ export default function UserDashboard() {
                         }}
                       />
                       <Bar dataKey="count" radius={[10, 10, 0, 0]} className="cursor-pointer">
+                        <LabelList dataKey="count" position="top" fill="var(--color-theme-text, #475569)" fontSize={12} fontWeight={700} />
                         {[
                           { color: '#3b82f6' },
                           { color: '#a855f7' },
@@ -802,6 +802,34 @@ export default function UserDashboard() {
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
+                </div>
+
+                {/* Quick Stage Filter Pills */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-theme-border/40">
+                  {[
+                    { label: 'New Leads', count: getStageCount('New'), dot: 'bg-blue-500', targetStage: 'New' },
+                    { label: 'Interaction', count: getStageCount('Interaction'), dot: 'bg-purple-500', targetStage: 'Interaction' },
+                    { label: 'Proposal Sent', count: getStageCount('Proposal Sent'), dot: 'bg-cyan-500', targetStage: 'Proposal Sent' },
+                    { label: 'Negotiation', count: getStageCount('Negotiation'), dot: 'bg-amber-500', targetStage: 'Negotiation' },
+                    { label: 'Converted', count: getStageCount('Converted'), dot: 'bg-emerald-500', targetStage: 'Converted' }
+                  ].map((item, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => navigate(`/my-work?stage=${encodeURIComponent(item.targetStage)}&period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`)}
+                      className="p-2.5 rounded-xl bg-theme-bg-alt/50 border border-theme-border/50 hover:border-theme-primary/40 hover:bg-theme-bg-alt transition-all flex items-center justify-between text-left group"
+                    >
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className={`w-2 h-2 rounded-full ${item.dot} flex-shrink-0`} />
+                        <span className="text-[11px] font-semibold text-theme-text-muted group-hover:text-theme-text truncate">
+                          {item.label}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-theme-text font-mono pl-1">
+                        {item.count}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -963,168 +991,7 @@ export default function UserDashboard() {
         </div>
       )}
 
-      {/* Workflow Stage-wise Active Breakdown Grid */}
-      {isCardEnabled('workflow_queue') && (
-        <div className="p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-theme-text flex items-center gap-2">
-              <Briefcase size={16} className="text-theme-primary" /> Workflow Stage Breakdown
-            </h3>
-            <span className="text-[10px] font-medium text-theme-text-muted">
-              Active Pipeline Leads by Stage
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[
-              { label: 'New Leads', count: getStageCount('New'), dot: 'bg-blue-500', targetStage: 'New' },
-              { label: 'Interaction', count: getStageCount('Interaction'), dot: 'bg-purple-500', targetStage: 'Interaction' },
-              { label: 'Proposal Sent', count: getStageCount('Proposal Sent'), dot: 'bg-cyan-500', targetStage: 'Proposal Sent' },
-              { label: 'Negotiation', count: getStageCount('Negotiation'), dot: 'bg-amber-500', targetStage: 'Negotiation' },
-              { label: 'Converted', count: getStageCount('Converted'), dot: 'bg-emerald-500', targetStage: 'Converted' }
-            ].map((item, i) => (
-              <Link
-                key={i}
-                to={`/my-work?stage=${encodeURIComponent(item.targetStage)}&period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`}
-                className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/60 hover:border-theme-primary/40 hover:bg-theme-bg-alt transition-all group block"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${item.dot}`} />
-                  <span className="text-[10px] font-bold text-theme-text-muted block truncate group-hover:text-theme-text">
-                    {item.label}
-                  </span>
-                </div>
-                <div className="mt-1.5">
-                  <span className="text-xl font-bold tracking-tight text-theme-text">
-                    {item.count}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Main Grid Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-
-        {/* Left Column: My Pipeline Active Leads */}
-        <div className="lg:col-span-2 flex flex-col space-y-6">
-
-          <div className="h-full flex flex-col justify-between rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                <UserCheck size={16} className="text-theme-primary" /> Active Pipeline Contacts
-              </h3>
-              <Link to={`/my-work?period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`} className="text-xs font-bold text-theme-primary hover:underline flex items-center gap-1">
-                View My Workspace <ChevronRight size={14} />
-              </Link>
-            </div>
-
-            <div className="flex-1 overflow-x-auto max-h-[420px] min-h-[380px] overflow-y-auto rounded-2xl border border-theme-border/40">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-theme-bg-alt border-b border-theme-border text-theme-text-muted font-bold sticky top-0 z-10 backdrop-blur-md">
-                  <tr>
-                    <th className="p-3">Client Name</th>
-                    <th className="p-3">Company</th>
-                    <th className="p-3">Pipeline Stage</th>
-                    <th className="p-3">Priority</th>
-                    <th className="p-3 text-right">Quick Contact</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-theme-border/30">
-                  {myLeads.slice(0, 8).map((lead) => (
-                    <tr key={lead.id} className="hover:bg-theme-bg-alt/40 transition-colors">
-                      <td className="p-3 font-bold text-theme-text">
-                        <Link 
-                          to={`/my-work?leadId=${lead.id}&period=${timeFilter.period}${timeFilter.startDate ? `&startDate=${timeFilter.startDate}` : ''}${timeFilter.endDate ? `&endDate=${timeFilter.endDate}` : ''}`}
-                          className="hover:text-theme-primary hover:underline transition-colors flex items-center gap-1.5 group/link"
-                        >
-                          <span>{lead.name}</span>
-                          <ChevronRight size={12} className="text-theme-primary opacity-0 group-hover/link:opacity-100 transition-opacity" />
-                        </Link>
-                      </td>
-                      <td className="p-3 text-theme-text-muted font-medium truncate max-w-[120px]">{lead.company || lead.sourcePlatform || 'Corporate'}</td>
-                      <td className="p-3">
-                        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${
-                          lead.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-500' :
-                          lead.status === 'Negotiation' ? 'bg-amber-500/10 text-amber-400' :
-                          'bg-theme-primary/10 text-theme-primary'
-                        }`}>
-                          {lead.status || 'New'}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          lead.priority === 'HIGH' ? 'bg-rose-500/10 text-rose-400' : 'bg-blue-500/10 text-blue-400'
-                        }`}>
-                          {lead.priority || 'MEDIUM'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <a href={`tel:${lead.phone || ''}`} className="p-1.5 rounded-lg bg-theme-bg-alt text-theme-text hover:text-theme-primary">
-                            <Phone size={13} />
-                          </a>
-                          <a href={`mailto:${lead.email}`} className="p-1.5 rounded-lg bg-theme-bg-alt text-theme-text hover:text-theme-primary">
-                            <Mail size={13} />
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {myLeads.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="p-8 text-center text-theme-text-muted">
-                        No assigned pipeline leads. Click "Ready For Next Lead" to pull unassigned contacts.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Right Column: Scheduled Reminders & Productivity Summary */}
-        <div className="flex flex-col space-y-6">
-
-          {/* Upcoming Reminders */}
-          {isCardEnabled('today_followups') && (
-            <div className="h-full flex flex-col justify-between rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                <Clock size={16} className="text-cyan-400" /> Follow-up Schedule
-              </h3>
-
-              <div className="flex-1 space-y-3 max-h-[420px] min-h-[380px] overflow-y-auto pr-1">
-                {followups.slice(0, 8).map((f: any, idx: number) => (
-                  <Link 
-                    key={idx}
-                    to={`/my-work?leadId=${f.leadId || ''}`}
-                    className="block p-3.5 rounded-2xl border border-theme-border/40 bg-theme-bg-alt/30 hover:bg-theme-bg-alt hover:border-theme-primary/40 transition-all group space-y-1"
-                  >
-                    <div className="flex items-center justify-between text-xs font-bold text-theme-text">
-                      <span className="group-hover:text-theme-primary transition-colors flex items-center gap-1">
-                        {f.leadName || 'Client Touchpoint'}
-                        <ChevronRight size={12} className="text-theme-primary transition-transform group-hover:translate-x-0.5" />
-                      </span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 uppercase">{f.type || 'CALL'}</span>
-                    </div>
-                    <p className="text-[10px] text-theme-text-muted truncate">{f.notes || 'Requirement collection & proposal follow-up'}</p>
-                  </Link>
-                ))}
-                {followups.length === 0 && (
-                  <p className="text-center text-xs text-theme-text-muted py-6">No pending follow-up reminders scheduled.</p>
-                )}
-              </div>
-            </div>
-          )}
-
-        </div>
-
-      </div>
-
     </div>
   );
 }
+

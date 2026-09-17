@@ -5,6 +5,7 @@ import { followUpService, type FollowUp } from '../services/followUpService';
 import FollowUpModal from '../components/FollowUpModal';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 import type { Lead } from '../types';
+import { toast } from '../store/toastStore';
 import { 
   Clock, 
   CheckCircle2, 
@@ -73,11 +74,12 @@ export default function Followups() {
     try {
       await followUpService.complete(id);
       setSuccessMsg('Follow-up marked as completed!');
+      toast.success('Follow-up marked as completed!', 'Follow-up Done');
       fetchFollowups();
       fetchLeads();
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to complete follow-up');
+      toast.error(err.response?.data?.message || 'Failed to complete follow-up');
     }
   };
 
@@ -89,12 +91,13 @@ export default function Followups() {
       setFollowups((prev) => prev.filter((f) => f.id !== id));
       await followUpService.cancel(id);
       setSuccessMsg('Follow-up removed & time slot freed successfully!');
+      toast.info('Follow-up cancelled and time slot released.', 'Cancelled');
       fetchFollowups();
       fetchLeads();
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       fetchFollowups();
-      alert(err.response?.data?.message || 'Failed to cancel follow-up');
+      toast.error(err.response?.data?.message || 'Failed to cancel follow-up');
     }
   };
 
@@ -193,9 +196,6 @@ export default function Followups() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 border-b border-theme-border/60">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Follow-ups & Reminders</h1>
-            <p className="text-xs text-theme-text-muted mt-1">
-              Manage client calls, upcoming demos, and scheduled reminders.
-            </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">

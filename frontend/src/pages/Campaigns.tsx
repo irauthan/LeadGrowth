@@ -234,9 +234,6 @@ export default function Campaigns() {
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">
               Campaigns
             </h1>
-            <p className="mt-1 text-xs text-theme-text-muted">
-              Track ad spend, incoming leads, and return on ad spend.
-            </p>
           </div>
 
           {/* Action triggers */}

@@ -42,6 +42,7 @@ import FollowUpModal from '../components/FollowUpModal';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 import { getProfileImageUrl } from '../utils/imageUrl';
+import { toast } from '../store/toastStore';
 
 const KANBAN_STAGES = [
   { key: 'New', title: 'New', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10', headerColor: 'from-blue-500/20 to-blue-500/5 text-blue-400', icon: Sparkles },
@@ -190,10 +191,11 @@ export default function MyWork() {
     try {
       await followUpService.complete(id);
       setFollowupSuccessMsg('Follow-up marked as completed!');
+      toast.success('Follow-up marked as completed!', 'Follow-up Done');
       fetchMyWorkLeads();
       setTimeout(() => setFollowupSuccessMsg(''), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to complete follow-up');
+      toast.error(err.response?.data?.message || 'Failed to complete follow-up');
     }
   };
 
@@ -204,10 +206,11 @@ export default function MyWork() {
     try {
       await followUpService.cancel(id);
       setFollowupSuccessMsg('Follow-up removed successfully!');
+      toast.info('Follow-up reminder removed.', 'Cancelled');
       fetchMyWorkLeads();
       setTimeout(() => setFollowupSuccessMsg(''), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to cancel follow-up');
+      toast.error(err.response?.data?.message || 'Failed to cancel follow-up');
     }
   };
 
@@ -216,9 +219,10 @@ export default function MyWork() {
     setIsExportingPdf(true);
     try {
       await downloadReport('leads', 'pdf', selectedPeriod);
+      toast.success('Pipeline PDF exported successfully!', 'Export Completed');
     } catch (err) {
       console.error('Failed to export pipeline PDF:', err);
-      alert('Unable to generate Pipeline PDF report. Please try again.');
+      toast.error('Unable to generate Pipeline PDF report. Please try again.');
     } finally {
       setIsExportingPdf(false);
     }
@@ -227,9 +231,10 @@ export default function MyWork() {
   const handleStageChange = async (leadId: number, newStage: string) => {
     try {
       await api.patch(`/api/leads/${leadId}/status?status=${encodeURIComponent(newStage)}`);
+      toast.success(`Lead moved to ${newStage}!`, 'Stage Updated');
       fetchMyWorkLeads();
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to update stage');
+      toast.error(e.response?.data?.message || 'Failed to update stage');
     }
   };
 
@@ -500,9 +505,6 @@ export default function MyWork() {
               <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
                 <Users size={22} className="text-theme-primary" /> Team Pipelines
               </h1>
-              <p className="text-xs text-theme-text-muted mt-1">
-                Select a sales team member below to view their active pipeline, lead stages, and deal progression.
-              </p>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
@@ -700,11 +702,6 @@ export default function MyWork() {
                       ? `${activeExecutive?.fullName || 'Executive'}'s Pipeline`
                       : 'My Work Pipeline'}
                   </h1>
-                  <p className="text-xs text-theme-text-muted mt-1">
-                    {isManagementOrAdmin
-                      ? `Auditing ${activeExecutive?.fullName || 'Executive'}'s stage progression, active client deals, and follow-ups.`
-                      : 'Manage assigned leads, execute sales activities, complete client follow-ups, and auto-track progress from one interface.'}
-                  </p>
                 </div>
               </div>
             </div>

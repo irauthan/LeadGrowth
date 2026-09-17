@@ -23,6 +23,7 @@ import { downloadReport } from '../services/reportService';
 import WorkDetailsPanel from '../components/WorkDetailsPanel';
 import LeadImportModal from '../components/LeadImportModal';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
+import { toast } from '../store/toastStore';
 
 export default function Leads() {
   const [searchParams] = useSearchParams();
@@ -249,14 +250,14 @@ export default function Leads() {
     setBulkAssigning(true);
     try {
       await api.post(`/api/leads/bulk-assign?leadIds=${selectedLeadIds.join(',')}&userId=-1`);
-      alert(`Successfully auto-assigned ${selectedLeadIds.length} lead(s) via Smart Hybrid Engine!`);
+      toast.success(`Successfully auto-assigned ${selectedLeadIds.length} lead(s) via Smart Hybrid Engine!`, 'Bulk Assigned');
       setSelectedLeadIds([]);
       window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchLeads();
     } catch (err: any) {
       console.error('Bulk auto-assign error:', err);
       const msg = err.response?.data?.message || err.response?.data?.title || err.message || 'Failed to bulk auto-assign leads.';
-      alert(msg);
+      toast.error(msg);
     } finally {
       setBulkAssigning(false);
     }
@@ -267,14 +268,14 @@ export default function Leads() {
     setBulkAssigning(true);
     try {
       await api.post(`/api/leads/bulk-assign?leadIds=${selectedLeadIds.join(',')}&userId=${targetUserId}`);
-      alert(`Successfully assigned ${selectedLeadIds.length} lead(s) to selected team member!`);
+      toast.success(`Successfully assigned ${selectedLeadIds.length} lead(s) to selected team member!`, 'Leads Assigned');
       setSelectedLeadIds([]);
       window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchLeads();
     } catch (err: any) {
       console.error('Bulk manual assign error:', err);
       const msg = err.response?.data?.message || err.response?.data?.title || err.message || 'Failed to bulk assign leads.';
-      alert(msg);
+      toast.error(msg);
     } finally {
       setBulkAssigning(false);
     }
@@ -284,21 +285,22 @@ export default function Leads() {
     e.stopPropagation();
     try {
       await api.post(`/api/leads/${leadId}/auto-assign`);
-      alert('Lead successfully auto-assigned via Smart Hybrid Engine!');
+      toast.success('Lead successfully auto-assigned via Smart Hybrid Engine!', 'Lead Assigned');
       window.dispatchEvent(new Event('leadgrowth-notification-updated'));
       fetchLeads();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Failed to auto-assign lead.');
+      toast.error(err.response?.data?.message || 'Failed to auto-assign lead.');
     }
   };
 
   const handleExport = async (format: 'csv' | 'excel' | 'pdf') => {
     try {
       await downloadReport('leads', format);
+      toast.success(`Leads exported successfully as ${format.toUpperCase()}!`, 'Export Completed');
     } catch (err) {
       console.error(err);
-      alert(`Failed to export leads as ${format.toUpperCase()}.`);
+      toast.error(`Failed to export leads as ${format.toUpperCase()}.`);
     }
   };
 
@@ -364,6 +366,37 @@ export default function Leads() {
     }
   }, [search, platformFilter, statusFilter, leads]);
 
+  // Selected lead index and navigation helpers for shifting leads
+  const selectedLeadIndex = selectedLead 
+    ? filteredLeads.findIndex((l) => l.id === selectedLead.id) 
+    : -1;
+  const hasNextLead = selectedLeadIndex >= 0 && selectedLeadIndex < filteredLeads.length - 1;
+  const hasPrevLead = selectedLeadIndex > 0;
+  const nextLead = hasNextLead ? filteredLeads[selectedLeadIndex + 1] : null;
+  const prevLead = hasPrevLead ? filteredLeads[selectedLeadIndex - 1] : null;
+
+  const handleShiftNextLead = () => {
+    if (!hasNextLead || !nextLead) return;
+    handleLeadSelect(nextLead);
+    setTimeout(() => {
+      const el = document.getElementById(`lead-card-${nextLead.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 80);
+  };
+
+  const handleShiftPrevLead = () => {
+    if (!hasPrevLead || !prevLead) return;
+    handleLeadSelect(prevLead);
+    setTimeout(() => {
+      const el = document.getElementById(`lead-card-${prevLead.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 80);
+  };
+
   if (loading) {
     return <HoosshBeeLoader text="Loading Leads Pipeline..." subtext="Syncing contacts, AI scores and conversion tiers" />;
   }
@@ -378,11 +411,6 @@ export default function Leads() {
             <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-theme-text truncate">
               {isManagementUser ? 'Admin Lead Allocation' : 'Workspace Leads'}
             </h1>
-            <p className="hidden sm:block mt-0.5 text-xs text-theme-text-muted">
-              {isManagementUser 
-                ? 'Lead distribution hub: assign leads to sales executives and monitor workload.'
-                : 'Prioritized intake pipeline for lead qualification, assignments, and follow-ups.'}
-            </p>
           </div>
 
           {/* Action buttons (Clean responsive layout) */}
@@ -794,6 +822,13 @@ export default function Leads() {
               onToggleMaximize={() => setIsMaximized(!isMaximized)}
               onClose={() => setSelectedLead(null)}
               onLeadUpdated={fetchLeads}
+              onNextLead={handleShiftNextLead}
+              onPrevLead={handleShiftPrevLead}
+              hasNextLead={hasNextLead}
+              hasPrevLead={hasPrevLead}
+              nextLeadName={nextLead?.name}
+              prevLeadName={prevLead?.name}
+              leadPositionInfo={{ current: selectedLeadIndex + 1, total: filteredLeads.length }}
             />
           ) : (
             <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-theme-border/70 bg-theme-card p-6 shadow-xs text-center space-y-2">
@@ -818,6 +853,13 @@ export default function Leads() {
             inline={true}
             onClose={() => setShowMobileDetails(false)}
             onLeadUpdated={fetchLeads}
+            onNextLead={handleShiftNextLead}
+            onPrevLead={handleShiftPrevLead}
+            hasNextLead={hasNextLead}
+            hasPrevLead={hasPrevLead}
+            nextLeadName={nextLead?.name}
+            prevLeadName={prevLead?.name}
+            leadPositionInfo={{ current: selectedLeadIndex + 1, total: filteredLeads.length }}
           />
         </div>
       )}

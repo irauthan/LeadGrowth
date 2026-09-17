@@ -46,6 +46,7 @@ import type { SalesActivity, SalesActivityLog } from '../types';
 import CallTimerWidget from './CallTimerWidget';
 import CallHistoryLog from './CallHistoryLog';
 import SchedulePreviewSidePanel from './SchedulePreviewSidePanel';
+import { toast } from '../store/toastStore';
 
 const formatLocalDateOnly = (val?: string | Date): string => {
   if (!val) {
@@ -92,6 +93,13 @@ interface WorkDetailsPanelProps {
   period?: string;
   startDate?: string;
   endDate?: string;
+  onNextLead?: () => void;
+  onPrevLead?: () => void;
+  hasNextLead?: boolean;
+  hasPrevLead?: boolean;
+  nextLeadName?: string;
+  prevLeadName?: string;
+  leadPositionInfo?: { current: number; total: number };
 }
 
 export default function WorkDetailsPanel({ 
@@ -105,7 +113,14 @@ export default function WorkDetailsPanel({
   onToggleMaximize,
   period,
   startDate,
-  endDate
+  endDate,
+  onNextLead,
+  onPrevLead,
+  hasNextLead = false,
+  hasPrevLead = false,
+  nextLeadName,
+  prevLeadName,
+  leadPositionInfo
 }: WorkDetailsPanelProps) {
   const triggerUpdate = () => {
     onLeadUpdated?.();
@@ -233,6 +248,85 @@ export default function WorkDetailsPanel({
   const [checkingConflict, setCheckingConflict] = useState(false);
   const [completingFollowup, setCompletingFollowup] = useState(false);
 
+  // Safe Lead Shift Navigation State
+  const [isNavigatingLead, setIsNavigatingLead] = useState(false);
+  const [showSafeNavWarning, setShowSafeNavWarning] = useState(false);
+  const [pendingNavDirection, setPendingNavDirection] = useState<'next' | 'prev' | null>(null);
+  const [activeCallWarning, setActiveCallWarning] = useState(false);
+
+  const handleSafeLeadNavigation = async (direction: 'next' | 'prev') => {
+    if (isNavigatingLead) return;
+    if (direction === 'next' && !hasNextLead) return;
+    if (direction === 'prev' && !hasPrevLead) return;
+
+    // Check unsaved modal forms inside panel
+    const hasUnsavedModal = (addModalStepKey !== null && activityRemarks.trim().length > 0) ||
+                            (completeModalStepKey !== null && completionRemarks.trim().length > 0);
+
+    // Check active call session on the current lead
+    let hasActiveCall = false;
+    try {
+      const res = await api.get('/api/calls/active');
+      if (res.data && res.data.status === 'ACTIVE' && res.data.leadId === leadId) {
+        hasActiveCall = true;
+      }
+    } catch (e) {
+      // Ignore call fetch error
+    }
+
+    if (hasUnsavedModal || hasActiveCall) {
+      setActiveCallWarning(hasActiveCall);
+      setPendingNavDirection(direction);
+      setShowSafeNavWarning(true);
+      return;
+    }
+
+    executeLeadShift(direction);
+  };
+
+  const executeLeadShift = (direction: 'next' | 'prev') => {
+    setIsNavigatingLead(true);
+    setShowSafeNavWarning(false);
+    setPendingNavDirection(null);
+
+    // Reset inner temporary modal states safely
+    setAddModalStepKey(null);
+    setCompleteModalStepKey(null);
+
+    if (direction === 'next' && onNextLead) {
+      onNextLead();
+    } else if (direction === 'prev' && onPrevLead) {
+      onPrevLead();
+    }
+
+    setTimeout(() => {
+      setIsNavigatingLead(false);
+    }, 400);
+  };
+
+  // Keyboard navigation: Alt + ArrowRight (or Alt + N) for Next, Alt + ArrowLeft (or Alt + P) for Prev
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName)) return;
+
+      if (e.altKey && (e.key === 'ArrowRight' || e.key.toLowerCase() === 'n')) {
+        e.preventDefault();
+        if (hasNextLead && onNextLead) {
+          handleSafeLeadNavigation('next');
+        }
+      } else if (e.altKey && (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'p')) {
+        e.preventDefault();
+        if (hasPrevLead && onPrevLead) {
+          handleSafeLeadNavigation('prev');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasNextLead, hasPrevLead, onNextLead, onPrevLead, isNavigatingLead, addModalStepKey, activityRemarks, completeModalStepKey, completionRemarks, leadId]);
+
   useEffect(() => {
     if (leadId && isOpen) {
       fetchLeadDetails();
@@ -270,11 +364,13 @@ export default function WorkDetailsPanel({
       if (selectedAssigneeId === '-1') {
         await api.post(`/api/leads/${leadId}/auto-assign`);
         setAssignSuccessMsg('Lead successfully auto-assigned via Smart AI Hybrid Engine!');
+        toast.success('Lead auto-assigned via Smart AI Engine!', 'Lead Assigned');
       } else {
         await api.patch(`/api/leads/${leadId}/assign`, null, {
           params: { userId: parseInt(selectedAssigneeId, 10) }
         });
         setAssignSuccessMsg('Lead successfully assigned!');
+        toast.success('Lead successfully assigned!', 'Lead Assigned');
       }
       setTimeout(() => setAssignSuccessMsg(''), 4000);
       window.dispatchEvent(new Event('leadgrowth-notification-updated'));
@@ -282,7 +378,7 @@ export default function WorkDetailsPanel({
       triggerUpdate();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Failed to assign lead.');
+      toast.error(err.response?.data?.message || 'Failed to assign lead.');
     } finally {
       setAssigningLead(false);
     }
@@ -367,8 +463,9 @@ export default function WorkDetailsPanel({
       setAddModalStepKey(null);
       fetchLeadDetails();
       triggerUpdate();
+      toast.success('Interaction activity recorded successfully!', 'Activity Saved');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to record activity log');
+      toast.error(err.response?.data?.message || 'Failed to record activity log');
     } finally {
       setSubmittingActivity(false);
     }
@@ -394,8 +491,9 @@ export default function WorkDetailsPanel({
       setCompleteModalStepKey(null);
       fetchLeadDetails();
       triggerUpdate();
+      toast.success('Workflow stage completed successfully!', 'Stage Completed');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to complete workflow step');
+      toast.error(err.response?.data?.message || 'Failed to complete workflow step');
     } finally {
       setSubmittingCompletion(false);
     }
@@ -424,10 +522,11 @@ export default function WorkDetailsPanel({
         proposalStatus: 'SENT'
       });
       setAutoSaveStatus('Proposal Details Saved');
+      toast.success('Proposal details saved successfully!', 'Proposal Updated');
       fetchLeadDetails();
       triggerUpdate();
     } catch (e) {
-      alert('Failed to save proposal');
+      toast.error('Failed to save proposal');
     } finally {
       setSavingNotes(false);
     }
@@ -463,7 +562,7 @@ export default function WorkDetailsPanel({
     e.preventDefault();
     if (!leadId || !followupDate) return;
     if (followupConflict?.hasConflict) {
-      alert('This slot is already booked for another lead. Please choose a free slot.');
+      toast.warning('This slot is already booked for another lead. Please choose a free slot.', 'Schedule Conflict');
       return;
     }
 
@@ -476,13 +575,13 @@ export default function WorkDetailsPanel({
         notes: followupNotes,
         autoScheduleIfConflict: false
       });
-      alert('Follow-up scheduled successfully!');
+      toast.success('Follow-up scheduled successfully!', 'Follow-up Booked');
       setFollowupDate('');
       setFollowupNotes('');
       fetchLeadDetails();
       triggerUpdate();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to schedule follow-up');
+      toast.error(err.response?.data?.message || 'Failed to schedule follow-up');
     } finally {
       setSchedulingFollowup(false);
     }
@@ -494,10 +593,11 @@ export default function WorkDetailsPanel({
     try {
       await followUpService.complete(leadActiveFollowup.id, 'Follow-up successfully completed.');
       setLeadActiveFollowup(null);
+      toast.success('Follow-up marked as completed!', 'Follow-up Done');
       fetchLeadDetails();
       triggerUpdate();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to complete follow-up');
+      toast.error(err.response?.data?.message || 'Failed to complete follow-up');
     } finally {
       setCompletingFollowup(false);
     }
@@ -509,10 +609,11 @@ export default function WorkDetailsPanel({
     try {
       await followUpService.cancel(leadActiveFollowup.id);
       setLeadActiveFollowup(null);
+      toast.info('Follow-up reminder cancelled.', 'Cancelled');
       fetchLeadDetails();
       triggerUpdate();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to cancel follow-up');
+      toast.error(err.response?.data?.message || 'Failed to cancel follow-up');
     }
   };
 
@@ -614,13 +715,61 @@ export default function WorkDetailsPanel({
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-theme-text-muted mt-0.5 truncate">
-              {lead?.company && lead.company !== 'N/A' ? `${lead.company} • ` : ''}{lead?.email} {lead?.phone ? `• ${lead.phone}` : ''}
-            </p>
+            <div className="flex items-center gap-2.5 sm:gap-3 mt-1 flex-wrap text-xs sm:text-[13px]">
+              {lead?.email && (
+                <a 
+                  href={`mailto:${lead.email}`}
+                  className="flex items-center gap-1.5 font-semibold text-theme-text hover:text-theme-primary transition-colors group"
+                  title="Send Email"
+                >
+                  <Mail size={13} className="text-theme-text-muted group-hover:text-theme-primary flex-shrink-0" />
+                  <span className="truncate max-w-[200px] sm:max-w-[280px]">{lead.email}</span>
+                </a>
+              )}
+
+              {lead?.email && lead?.phone && (
+                <span className="text-theme-border flex-shrink-0">•</span>
+              )}
+
+              {lead?.phone && (
+                <a 
+                  href={`tel:${lead.phone}`}
+                  className="flex items-center gap-1.5 font-semibold text-theme-text hover:text-emerald-500 transition-colors group"
+                  title="Call Lead"
+                >
+                  <Phone size={13} className="text-theme-text-muted group-hover:text-emerald-500 flex-shrink-0" />
+                  <span>{lead.phone}</span>
+                </a>
+              )}
+
+              {lead?.company && lead.company !== 'N/A' && (
+                <>
+                  <span className="text-theme-border flex-shrink-0">•</span>
+                  <span className="flex items-center gap-1 text-theme-text-muted text-xs font-medium">
+                    <Building2 size={13} className="flex-shrink-0" />
+                    <span>{lead.company}</span>
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          {/* Quick Call Action (Header Placement) */}
+          {lead && !isManagementUser && (
+            <CallTimerWidget
+              leadId={lead.id}
+              leadName={lead.name}
+              assignedToId={lead.assignedToId}
+              compact={true}
+              onCallEnded={() => {
+                fetchLeadDetails();
+                triggerUpdate();
+              }}
+            />
+          )}
+
           {/* Maximize / Minimize Toggle Button (Desktop only) */}
           <button
             type="button"
@@ -641,7 +790,7 @@ export default function WorkDetailsPanel({
                   await downloadSingleLeadPdf(lead.id);
                 } catch (err) {
                   console.error('Failed to download lead PDF:', err);
-                  alert('Unable to generate Lead PDF. Please try again.');
+                  toast.error('Unable to generate Lead PDF. Please try again.');
                 } finally {
                   setIsDownloadingPdf(false);
                 }
@@ -671,14 +820,14 @@ export default function WorkDetailsPanel({
       </div>
 
       {/* Quick Metrics Bar */}
-      <div className="px-4 sm:px-6 py-2.5 bg-theme-bg-alt/40 border-b border-theme-border flex items-center justify-between text-xs flex-shrink-0">
-        <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
-          <div>
+      <div className="px-4 sm:px-6 py-2 bg-theme-bg-alt/40 border-b border-theme-border flex items-center justify-between text-xs flex-shrink-0 gap-3">
+        <div className="flex items-center gap-4 sm:gap-6 flex-wrap min-w-0">
+          {/* <div>
             <span className="text-[9px] sm:text-[10px] font-bold text-theme-text-muted block">QUALITY TIER</span>
             <span className="font-extrabold text-amber-400 text-xs sm:text-sm">{lead?.qualityTier || 'WARM'}</span>
-          </div>
+          </div> */}
 
-          <div className="h-6 w-px bg-theme-border/60" />
+          <div className="h-6 w-px bg-theme-border/60 hidden sm:block" />
 
           <div>
             <span className="text-[9px] sm:text-[10px] font-bold text-theme-text-muted block">WORKFLOW PROGRESS</span>
@@ -693,16 +842,68 @@ export default function WorkDetailsPanel({
             </div>
           </div>
 
-          <div className="h-6 w-px bg-theme-border/60" />
+          <div className="h-6 w-px bg-theme-border/60 hidden sm:block" />
 
-          <div>
+          {/* <div>
             <span className="text-[9px] sm:text-[10px] font-bold text-theme-text-muted block">ASSIGNED REP</span>
             <span className={`font-bold text-xs flex items-center gap-1 ${isLeadAssigned(lead) ? 'text-emerald-400' : 'text-theme-text-muted'}`}>
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" />
               {lead?.assignedToName && lead.assignedToName !== 'Unassigned' ? lead.assignedToName : 'Unassigned'}
             </span>
-          </div>
+          </div> */}
         </div>
+
+        {/* Lead Shift Navigation (Red Box Location in Lead Header) */}
+        {(onNextLead || onPrevLead) && (
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
+            {leadPositionInfo && (
+              <span 
+                className="hidden xl:inline-flex items-center text-[10px] font-bold text-theme-text-muted bg-theme-bg/60 border border-theme-border/60 px-2 py-1 rounded-lg"
+                title={`Viewing Lead ${leadPositionInfo.current} of ${leadPositionInfo.total}`}
+              >
+                {/* {leadPositionInfo.current} / {leadPositionInfo.total} */}
+              </span>
+            )}
+
+            {onPrevLead && (
+              <button
+                type="button"
+                onClick={() => handleSafeLeadNavigation('prev')}
+                disabled={!hasPrevLead || isNavigatingLead}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-theme-border/80 bg-theme-bg-alt/70 hover:bg-theme-card text-theme-text-muted hover:text-theme-text disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-1 font-bold text-xs cursor-pointer"
+                title={hasPrevLead ? (prevLeadName ? `Previous Lead: ${prevLeadName} (Alt+←)` : 'Previous Lead (Alt+←)') : 'No previous lead'}
+              >
+                <ChevronLeft size={14} />
+                <span className="hidden lg:inline text-[11px]">Prev</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => handleSafeLeadNavigation('next')}
+              disabled={!hasNextLead || isNavigatingLead}
+              className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+                hasNextLead && !isNavigatingLead
+                  ? 'bg-theme-primary hover:bg-theme-primary-hover text-white shadow-theme-primary/20 ring-1 ring-white/10 cursor-pointer'
+                  : 'bg-theme-bg-alt/80 border border-theme-border text-theme-text-muted opacity-40 cursor-not-allowed'
+              }`}
+              title={hasNextLead ? (nextLeadName ? `Shift to Next: ${nextLeadName} (Alt+→)` : 'Next Lead (Alt+→)') : 'No more leads in list'}
+            >
+              {isNavigatingLead ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span className="text-[11px]">Loading...</span>
+                </>
+              ) : (
+                <>
+                  <span className="tracking-wide">Next</span>
+                  
+                  <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Body Section */}
@@ -713,19 +914,6 @@ export default function WorkDetailsPanel({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 min-h-0">
-          {/* Call Duration Tracking Widget (Sales Reps Only) */}
-          {lead && !isManagementUser && (
-            <CallTimerWidget
-              leadId={lead.id}
-              leadName={lead.name}
-              assignedToId={lead.assignedToId}
-              onCallEnded={() => {
-                fetchLeadDetails();
-                triggerUpdate();
-              }}
-            />
-          )}
-
           {/* Overdue Action Banner (Sales Reps Only) */}
           {lead && !isManagementUser && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED' && (
             <div className="p-3 sm:p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-extrabold flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shadow-xs">
@@ -992,9 +1180,6 @@ export default function WorkDetailsPanel({
                           <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">
                             Stage Activities & Logs
                           </h3>
-                          <p className="hidden sm:block text-[10px] text-theme-text-muted mt-0.5">
-                            Record calls, meetings, WhatsApp & remarks.
-                          </p>
                         </div>
                         {autoSaveStatus && (
                           <span className="text-[10px] font-bold text-emerald-400 animate-pulse">
@@ -1673,124 +1858,179 @@ export default function WorkDetailsPanel({
             </div>
           )}
 
-          {/* MODAL 1: ADD ACTIVITY LOG MODAL */}
+          {/* MODAL 1: ADD ACTIVITY LOG MODAL (Enlarged & Fully Managed) */}
           {addModalStepKey && (
-            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-theme-card border border-theme-border rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5"
+                initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                className="bg-theme-card border border-theme-border rounded-3xl p-7 sm:p-8 w-full max-w-2xl sm:max-w-3xl shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto custom-scrollbar"
               >
-                <div className="flex items-center justify-between border-b border-theme-border pb-3">
-                  <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
-                    <Plus size={16} className="text-theme-primary" /> Log Interaction Attempt
-                  </h3>
-                  <button onClick={() => setAddModalStepKey(null)} className="text-theme-text-muted hover:text-theme-text">
-                    <X size={18} />
+                {/* Modal Header */}
+                <div className="flex items-start justify-between border-b border-theme-border/60 pb-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-theme-primary/20 to-indigo-600/10 text-theme-primary border border-theme-primary/30 flex items-center justify-center flex-shrink-0 shadow-xs">
+                      <Activity size={22} />
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-extrabold text-theme-text flex items-center gap-2">
+                        Log Interaction Attempt
+                      </h3>
+                      <p className="text-xs text-theme-text-muted mt-0.5">
+                        Stage: <span className="font-bold text-theme-primary uppercase">{addModalStepKey.replace(/_/g, ' ')}</span>
+                        {lead?.name && (
+                          <span> • Client: <strong className="text-theme-text font-bold">{lead.name}</strong></span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setAddModalStepKey(null)} 
+                    className="p-2 rounded-xl text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-colors"
+                    title="Close"
+                  >
+                    <X size={20} />
                   </button>
                 </div>
 
-                <form onSubmit={handleAddActivitySubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleAddActivitySubmit} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Communication Type</label>
+                      <label className="text-xs font-bold text-theme-text block mb-1.5">Communication Channel</label>
                       <select
                         value={communicationType}
                         onChange={(e) => setCommunicationType(e.target.value)}
-                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all"
                       >
-                        <option value="PHONE_CALL">Phone Call</option>
-                        <option value="WHATSAPP">WhatsApp</option>
-                        <option value="EMAIL">Email</option>
-                        <option value="GOOGLE_MEET">Google Meet</option>
-                        <option value="ZOOM">Zoom</option>
-                        <option value="OFFICE_VISIT">Office Visit</option>
-                        <option value="VIDEO_CALL">Video Call</option>
-                        <option value="OTHER">Other</option>
+                        <option value="PHONE_CALL">📞 Phone Call</option>
+                        <option value="WHATSAPP">💬 WhatsApp</option>
+                        <option value="EMAIL">✉️ Email</option>
+                        <option value="GOOGLE_MEET">🎥 Google Meet</option>
+                        <option value="ZOOM">📹 Zoom</option>
+                        <option value="OFFICE_VISIT">🏢 Office Visit</option>
+                        <option value="VIDEO_CALL">📱 Video Call</option>
+                        <option value="OTHER">📋 Other Channel</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Call / Interaction Outcome</label>
+                      <label className="text-xs font-bold text-theme-text block mb-1.5">Interaction Outcome</label>
                       <select
                         value={outcome}
                         onChange={(e) => setOutcome(e.target.value)}
-                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all"
                       >
                         <option value="BUSY">Client Busy</option>
-                        <option value="NOT_ANSWERED">No Answer</option>
-                        <option value="REJECTED_CALL">Rejected Call</option>
+                        <option value="NOT_ANSWERED">No Answer / Ringing</option>
+                        <option value="REJECTED_CALL">Declined / Cut Call</option>
                         <option value="WRONG_NUMBER">Wrong Number</option>
                         <option value="CONNECTED">Connected & Discussed</option>
-                        <option value="INTERESTED">Interested</option>
+                        <option value="INTERESTED">Interested & Positive</option>
                         <option value="NOT_INTERESTED">Not Interested</option>
-                        <option value="CALL_BACK_LATER">Call Back Later</option>
+                        <option value="CALL_BACK_LATER">Requested Call Back</option>
                         <option value="MEETING_SCHEDULED">Meeting Scheduled</option>
                         <option value="DEMO_SCHEDULED">Demo Scheduled</option>
                         <option value="PROPOSAL_REQUESTED">Proposal Requested</option>
                         <option value="NEGOTIATION_STARTED">Negotiation Started</option>
-                        <option value="CONVERTED">Converted</option>
-                        <option value="LOST">Lost</option>
+                        <option value="CONVERTED">Closed / Converted</option>
+                        <option value="LOST">Deal Lost</option>
                       </select>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Duration</label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-theme-text">Interaction Duration</label>
+                        <span className="text-[10px] text-theme-text-muted">Quick presets:</span>
+                      </div>
                       <input
                         type="text"
-                        placeholder="e.g. 10 mins"
+                        placeholder="e.g. 5 mins, 15 mins"
                         value={activityDuration}
                         onChange={(e) => setActivityDuration(e.target.value)}
-                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all"
                       />
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {['2 mins', '5 mins', '10 mins', '15 mins', '30 mins'].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setActivityDuration(preset)}
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-all ${
+                              activityDuration === preset
+                                ? 'bg-theme-primary/15 border-theme-primary/50 text-theme-primary font-bold'
+                                : 'bg-theme-bg border-theme-border/60 text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt'
+                            }`}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Attempt Status</label>
+                      <label className="text-xs font-bold text-theme-text block mb-1.5">Attempt Status</label>
                       <select
                         value={activityStatus}
                         onChange={(e) => setActivityStatus(e.target.value)}
-                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all"
                       >
-                        <option value="ATTEMPTED">Attempted</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="WAITING">Waiting</option>
-                        <option value="SCHEDULED">Scheduled</option>
-                        <option value="SUCCESSFUL">Successful</option>
+                        <option value="ATTEMPTED">Attempted (Unreached)</option>
+                        <option value="IN_PROGRESS">In Progress (Active Discussions)</option>
+                        <option value="WAITING">Waiting (Client to reply)</option>
+                        <option value="SCHEDULED">Scheduled (Next Step Fixed)</option>
+                        <option value="SUCCESSFUL">Successful (Discussion Done)</option>
                       </select>
+                      <p className="text-[10px] text-theme-text-muted mt-2">
+                        Mark as Attempted if client didn't respond, or Successful if dialogue occurred.
+                      </p>
                     </div>
                   </div>
 
+                  {/* Discussion Notes / Remarks */}
                   <div>
-                    <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Detailed Remarks / Discussion Notes</label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-theme-text">Detailed Discussion Summary & Notes</label>
+                      <span className="text-[10px] font-semibold text-rose-500">Required</span>
+                    </div>
                     <textarea
                       required
-                      rows={3}
-                      placeholder="e.g. Client outside office, asked to call back at 6 PM..."
+                      rows={5}
+                      placeholder="e.g. Client outside office, confirmed budget and requested pricing proposal over email. Agreed to connect tomorrow afternoon at 3 PM..."
                       value={activityRemarks}
                       onChange={(e) => setActivityRemarks(e.target.value)}
-                      className="w-full bg-theme-bg border border-theme-border rounded-xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
+                      className="w-full bg-theme-bg border border-theme-border rounded-2xl p-4 text-xs text-theme-text leading-relaxed focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all placeholder:text-theme-text-muted/60"
                     />
                   </div>
 
-
-
-                  <div className="flex items-center justify-end gap-3 pt-2">
+                  {/* Modal Footer Buttons */}
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-theme-border/60">
                     <button
                       type="button"
                       onClick={() => setAddModalStepKey(null)}
-                      className="px-4 py-2 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold text-theme-text-muted hover:text-theme-text"
+                      className="px-5 py-2.5 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-all"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={submittingActivity}
-                      className="px-5 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-xs font-bold shadow-md"
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-theme-primary/25 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                     >
-                      Save Activity Log
+                      {submittingActivity ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Saving Activity...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={15} />
+                          <span>Save Activity Log</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>
@@ -2005,6 +2245,53 @@ export default function WorkDetailsPanel({
                 triggerUpdate();
               }}
             />
+          )}
+
+          {/* Safe Navigation Confirmation Modal */}
+          {showSafeNavWarning && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-xs animate-fade-in">
+              <div className="w-full max-w-md rounded-2xl bg-theme-card border border-amber-500/40 p-6 shadow-2xl space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex-shrink-0">
+                    <AlertTriangle size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-theme-text">
+                      {activeCallWarning ? 'Active Call Session in Progress' : 'Unsaved Changes Detected'}
+                    </h3>
+                    <p className="text-xs text-theme-text-muted mt-1.5 leading-relaxed">
+                      {activeCallWarning 
+                        ? `You currently have an active call session timer running for ${lead?.name || 'this lead'}. Shifting to ${pendingNavDirection === 'next' ? (nextLeadName || 'the next lead') : (prevLeadName || 'the previous lead')} will not automatically stop your call.`
+                        : `You have an open activity form with unsaved notes for ${lead?.name || 'this lead'}. Shifting now will discard unsaved form inputs.`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-theme-border/50">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSafeNavWarning(false);
+                      setPendingNavDirection(null);
+                    }}
+                    className="px-4 py-2 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-semibold text-theme-text-muted hover:text-theme-text transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingNavDirection) {
+                        executeLeadShift(pendingNavDirection);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer"
+                  >
+                    Continue Anyway
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       );

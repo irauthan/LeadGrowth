@@ -163,7 +163,6 @@ export default function ManagerDashboard() {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-theme-text">Operations Control Center</h1>
-            <p className="text-xs text-theme-text-muted mt-1">Manage team workload, assign incoming lead queue, and review task submissions.</p>
           </div>
         </div>
 

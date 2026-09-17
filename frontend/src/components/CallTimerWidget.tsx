@@ -2,18 +2,21 @@ import { useState, useEffect } from 'react';
 import { PhoneCall, Square, Play, Timer, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import type { CallSession } from '../types';
+import { toast } from '../store/toastStore';
 
 interface CallTimerWidgetProps {
   leadId: number;
   leadName: string;
   assignedToId?: number;
   currentUserId?: number;
+  compact?: boolean;
   onCallEnded?: () => void;
 }
 
 export default function CallTimerWidget({
   leadId,
   leadName,
+  compact = true,
   onCallEnded
 }: CallTimerWidgetProps) {
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
@@ -62,8 +65,9 @@ export default function CallTimerWidget({
     try {
       const res = await api.post('/api/calls/start', { leadId });
       setActiveCall(res.data);
+      toast.info(`Calling ${leadName}... Timer started.`, 'Call Connected');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to start call. Ensure you have no other active calls running.');
+      toast.error(err.response?.data?.message || 'Failed to start call. Ensure you have no other active calls running.');
     } finally {
       setLoading(false);
     }
@@ -77,10 +81,12 @@ export default function CallTimerWidget({
         callId: activeCall.id,
         notes: ''
       });
+      const finalDuration = formatHHMMSS(elapsedSeconds);
       setActiveCall(null);
+      toast.success(`Call ended (${finalDuration}). Call duration recorded!`, 'Call Finished');
       if (onCallEnded) onCallEnded();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to end call session.');
+      toast.error(err.response?.data?.message || 'Failed to end call session.');
     } finally {
       setSubmittingEnd(false);
     }
@@ -94,6 +100,62 @@ export default function CallTimerWidget({
   };
 
   const isCurrentLeadCall = activeCall && activeCall.leadId === leadId;
+
+  // Compact Mode (Ideal for Lead Header Row - minimal theory, clean button & icon)
+  if (compact) {
+    if (activeCall) {
+      return (
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono font-bold shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+            <Timer size={13} className="animate-pulse" />
+            <span>{formatHHMMSS(elapsedSeconds)}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleEndCall}
+            disabled={submittingEnd}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            title="End Call Session"
+          >
+            {submittingEnd ? (
+              <>
+                <Loader2 size={12} className="animate-spin" />
+                <span className="hidden xs:inline text-[11px]">Ending...</span>
+              </>
+            ) : (
+              <>
+                <Square size={11} fill="currentColor" />
+                <span className="text-[11px]">End Call</span>
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={handleStartCall}
+        disabled={loading}
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+        title={`Start call with ${leadName}`}
+      >
+        {loading ? (
+          <>
+            <Loader2 size={13} className="animate-spin" />
+            <span>Starting...</span>
+          </>
+        ) : (
+          <>
+            <PhoneCall size={13} />
+            <span>Start Call</span>
+          </>
+        )}
+      </button>
+    );
+  }
 
   return (
     <div className="bg-theme-bg-alt/60 border border-theme-border rounded-2xl p-4 shadow-sm space-y-3">

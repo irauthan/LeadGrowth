@@ -26,10 +26,12 @@ import MyWork from './pages/MyWork';
 import Calendar from './pages/Calendar';
 import ExecutiveWorkMonitor from './pages/ExecutiveWorkMonitor';
 import PriorityCenter from './pages/PriorityCenter';
+import ToastContainer from './components/ToastContainer';
 
 export default function App() {
   return (
     <Router>
+      <ToastContainer />
       <Routes>
         {/* Guest access routes */}
         <Route path="/" element={<Welcome />} />

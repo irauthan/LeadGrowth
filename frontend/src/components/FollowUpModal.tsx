@@ -8,6 +8,7 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
+import { toast } from '../store/toastStore';
 
 import SchedulePreviewSidePanel from './SchedulePreviewSidePanel';
 
@@ -130,6 +131,7 @@ export default function FollowUpModal({
     try {
       if (isReschedule && activeFollowup) {
         await followUpService.reschedule(activeFollowup.id, scheduledAt, false);
+        toast.success('Follow-up rescheduled successfully!', 'Follow-up Updated');
       } else {
         await followUpService.createFollowup({
           leadId,
@@ -138,12 +140,13 @@ export default function FollowUpModal({
           notes,
           autoScheduleIfConflict: false
         });
+        toast.success(`Follow-up scheduled for ${leadName}!`, 'Follow-up Booked');
       }
       onSuccess();
       onClose();
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message || 'Failed to save follow-up.';
-      alert(errMsg);
+      toast.error(errMsg);
     } finally {
       setSubmitting(false);
     }
@@ -154,13 +157,15 @@ export default function FollowUpModal({
     try {
       if (isReschedule && activeFollowup) {
         await followUpService.reschedule(activeFollowup.id, scheduledAt, true);
+        toast.success('Follow-up auto-rescheduled successfully!', 'Auto-Scheduled');
       } else {
         await followUpService.autoSchedule(leadId, type, notes);
+        toast.success(`Follow-up auto-scheduled for ${leadName}!`, 'Auto-Scheduled');
       }
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Auto schedule failed.');
+      toast.error(err.response?.data?.message || 'Auto schedule failed.');
     } finally {
       setSubmitting(false);
     }

@@ -202,7 +202,6 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-theme-text">Business Overview</h1>
-              <p className="text-xs text-theme-text-muted mt-0.5">Financial KPIs, ad spend efficiency, and team performance.</p>
             </div>
           </div>
 

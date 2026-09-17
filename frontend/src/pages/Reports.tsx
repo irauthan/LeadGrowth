@@ -246,11 +246,6 @@ export default function Reports() {
                 {isManagerOrAdmin ? 'Workspace Reports & Intelligence Console' : 'My Lead Reports & Exports'}
               </h1>
             </div>
-            <p className="text-xs text-theme-text-muted">
-              {isManagerOrAdmin 
-                ? 'Complete enterprise reporting console with person-level filters, call duration logs, and instant multi-format downloads.'
-                : 'Downloadable database reports and activity records for your assigned lead portfolio.'}
-            </p>
           </div>
 
           {/* Filter Controls Bar (Integrated in Header) */}

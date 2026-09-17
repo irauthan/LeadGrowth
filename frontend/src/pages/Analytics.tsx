@@ -110,9 +110,6 @@ export default function Analytics() {
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-theme-text">
                 Personal Performance & Sales Analytics
               </h1>
-              <p className="text-xs text-theme-text-muted mt-1">
-                Individual metrics, lead conversion funnel, task fulfillment, and productivity benchmarks.
-              </p>
             </div>
             <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
           </div>
