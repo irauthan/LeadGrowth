@@ -10,7 +10,7 @@ interface CallTimerWidgetProps {
   assignedToId?: number;
   currentUserId?: number;
   compact?: boolean;
-  onCallEnded?: () => void;
+  onCallEnded?: (durationStr: string, totalSec: number) => void;
 }
 
 export default function CallTimerWidget({
@@ -82,14 +82,25 @@ export default function CallTimerWidget({
         notes: ''
       });
       const finalDuration = formatHHMMSS(elapsedSeconds);
+      const readable = getReadableDuration(elapsedSeconds);
       setActiveCall(null);
-      toast.success(`Call ended (${finalDuration}). Call duration recorded!`, 'Call Finished');
-      if (onCallEnded) onCallEnded();
+      toast.success(`Call ended (${readable}). Call duration recorded!`, 'Call Finished');
+      if (onCallEnded) onCallEnded(readable, elapsedSeconds);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to end call session.');
     } finally {
       setSubmittingEnd(false);
     }
+  };
+
+  const getReadableDuration = (totalSec: number) => {
+    if (totalSec <= 0) return '0s';
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
   };
 
   const formatHHMMSS = (totalSec: number) => {

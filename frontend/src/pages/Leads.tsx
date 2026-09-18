@@ -597,7 +597,7 @@ export default function Leads() {
       {/* Main Split Panel - Left Sticky Sidebar & Right Naturally Scrollable Workflow */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 items-start">
         {/* Left Side Pane: Leads Feed list */}
-        {!isMaximized && (
+        {(!isMaximized || !selectedLead) && (
           <div className="flex flex-col rounded-2xl border border-theme-border/70 bg-theme-card p-3 sm:p-4 shadow-xs lg:col-span-1 lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] overflow-hidden">
             {/* Search & filters */}
             <div className="space-y-2 flex-shrink-0 pb-1">
@@ -812,7 +812,7 @@ export default function Leads() {
         )}
 
         {/* Desktop Side Pane: Enterprise Multi-Activity Workflow Container (Hidden on mobile, visible on desktop) */}
-        <div className={`hidden lg:flex ${isMaximized ? "lg:col-span-3" : "lg:col-span-2"} lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] flex-col`}>
+        <div className={`hidden lg:flex ${isMaximized && selectedLead ? "lg:col-span-3" : "lg:col-span-2"} lg:sticky lg:top-24 lg:h-[calc(100vh-120px)] lg:max-h-[calc(100vh-120px)] flex-col`}>
           {selectedLead ? (
             <WorkDetailsPanel
               leadId={selectedLead.id}
@@ -820,7 +820,10 @@ export default function Leads() {
               inline={true}
               isMaximized={isMaximized}
               onToggleMaximize={() => setIsMaximized(!isMaximized)}
-              onClose={() => setSelectedLead(null)}
+              onClose={() => {
+                setSelectedLead(null);
+                setIsMaximized(false);
+              }}
               onLeadUpdated={fetchLeads}
               onNextLead={handleShiftNextLead}
               onPrevLead={handleShiftPrevLead}
@@ -834,9 +837,9 @@ export default function Leads() {
             <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-theme-border/70 bg-theme-card p-6 shadow-xs text-center space-y-2">
               <MessageSquare size={36} className="text-theme-text-muted opacity-30 mx-auto" />
               <div>
-                <h4 className="text-sm font-bold text-theme-text">Select a Lead from the Pipeline</h4>
+                <h4 className="text-sm font-bold text-theme-text">Please Select a Lead to Start Working</h4>
                 <p className="text-xs text-theme-text-muted mt-0.5 max-w-sm">
-                  Click any contact on the left to view customer dossiers, timeline history, and call logs.
+                  Click any lead from the list on the left to view customer details, timeline history, and log activities.
                 </p>
               </div>
             </div>
@@ -851,7 +854,11 @@ export default function Leads() {
             leadId={selectedLead.id}
             isOpen={true}
             inline={true}
-            onClose={() => setShowMobileDetails(false)}
+            onClose={() => {
+              setShowMobileDetails(false);
+              setSelectedLead(null);
+              setIsMaximized(false);
+            }}
             onLeadUpdated={fetchLeads}
             onNextLead={handleShiftNextLead}
             onPrevLead={handleShiftPrevLead}

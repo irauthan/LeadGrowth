@@ -31,7 +31,8 @@ import {
   CornerDownRight,
   Video,
   Activity,
-  Save
+  Save,
+  ChevronDown
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
@@ -183,7 +184,7 @@ export default function WorkDetailsPanel({
   const [communicationType, setCommunicationType] = useState('PHONE_CALL');
   const [outcome, setOutcome] = useState('BUSY');
   const [activityRemarks, setActivityRemarks] = useState('');
-  const [activityDuration, setActivityDuration] = useState('5 mins');
+  const [activityDuration, setActivityDuration] = useState('--');
   const [activityStatus, setActivityStatus] = useState('ATTEMPTED');
   const [nextFollowupDate, setNextFollowupDate] = useState('');
   const [submittingActivity, setSubmittingActivity] = useState(false);
@@ -423,7 +424,7 @@ export default function WorkDetailsPanel({
           communicationType,
           outcome,
           remarks: activityRemarks,
-          duration: activityDuration,
+          duration: activityDuration && activityDuration !== '--' ? activityDuration : '1 min',
           status: activityStatus,
           nextFollowupDate: nextFollowupDate ? (nextFollowupDate.length === 16 ? `${nextFollowupDate}:00` : nextFollowupDate) : null
         };
@@ -644,7 +645,11 @@ export default function WorkDetailsPanel({
               leadName={lead.name}
               assignedToId={lead.assignedToId}
               compact={true}
-              onCallEnded={() => {
+              onCallEnded={(durationStr) => {
+                if (durationStr) {
+                  setActivityDuration(durationStr);
+                  setCommunicationType('PHONE_CALL');
+                }
                 fetchLeadDetails();
                 triggerUpdate();
               }}
@@ -737,15 +742,6 @@ export default function WorkDetailsPanel({
         {/* Lead Shift Navigation (Red Box Location in Lead Header) */}
         {(onNextLead || onPrevLead) && (
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
-            {leadPositionInfo && (
-              <span 
-                className="hidden xl:inline-flex items-center text-[10px] font-bold text-theme-text-muted bg-theme-bg/60 border border-theme-border/60 px-2 py-1 rounded-lg"
-                title={`Viewing Lead ${leadPositionInfo.current} of ${leadPositionInfo.total}`}
-              >
-                {/* {leadPositionInfo.current} / {leadPositionInfo.total} */}
-              </span>
-            )}
-
             {onPrevLead && (
               <button
                 type="button"
@@ -1100,13 +1096,6 @@ export default function WorkDetailsPanel({
                     <span className="text-[11px] font-extrabold uppercase tracking-wider text-theme-text-muted">
                       Pipeline Workflow Stages
                     </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-                      Step {(() => {
-                        const stages = ['FIRST_CALL', 'REQUIREMENT_COLLECTION', 'DEMO_SCHEDULED', 'PROPOSAL_SENT', 'NEGOTIATION', 'CLOSING'];
-                        const idx = stages.indexOf(activeStudioStepKey);
-                        return idx >= 0 ? idx + 1 : 1;
-                      })()} of 6
-                    </span>
                   </div>
 
                   {autoSaveStatus && (
@@ -1147,17 +1136,7 @@ export default function WorkDetailsPanel({
                             : 'bg-theme-bg-alt/40 border-theme-border hover:border-theme-primary/40'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                            isCompleted
-                              ? 'bg-emerald-500 text-white'
-                              : isActiveInStudio
-                              ? 'bg-theme-primary text-white'
-                              : 'bg-theme-bg-alt border border-theme-border text-theme-text-muted'
-                          }`}>
-                            {isCompleted ? <Check size={11} /> : stage.number}
-                          </div>
-
+                        <div className="flex items-center justify-end gap-1 mb-1">
                           <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-md border ${
                             isCompleted
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
@@ -1201,114 +1180,148 @@ export default function WorkDetailsPanel({
                           <h3 className="text-sm font-extrabold text-theme-text">
                             {activeStudioStepKey.replace(/_/g, ' ')}
                           </h3>
-                          <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-                            Active Step
-                          </span>
                         </div>
                         <p className="text-[11px] text-theme-text-muted mt-0.5">
                           Record interaction outcome, discussion notes, commercials & follow-up.
                         </p>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <span className="px-2.5 py-1 rounded-xl bg-theme-bg-alt border border-theme-border font-bold text-theme-text-muted text-[11px]">
-                        Attempt #{(() => {
-                          const currentAct = lead?.activities?.find((a: any) => a.activityKey === activeStudioStepKey);
-                          return (currentAct?.logs?.length || 0) + 1;
-                        })()}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Section 1: Call Outcome Selector (Clean, NO Emojis) */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center justify-between">
-                      <span>Call Outcome *</span>
-                      <span className="text-[10px] font-semibold text-theme-primary">Selected: {outcome.replace(/_/g, ' ')}</span>
-                    </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-2">
-                      {[
-                        { value: 'CONNECTED', label: 'Connected', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' },
-                        { value: 'INTERESTED', label: 'Interested', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' },
-                        { value: 'BUSY', label: 'Client Busy', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
-                        { value: 'NO_ANSWER', label: 'No Answer', color: 'border-rose-500/40 text-rose-400 bg-rose-500/10' },
-                        { value: 'CALLBACK_REQUESTED', label: 'Callback Req', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
-                        { value: 'MEETING_SCHEDULED', label: 'Meeting Set', color: 'border-indigo-500/40 text-indigo-400 bg-indigo-500/10' },
-                        { value: 'PROPOSAL_REQUESTED', label: 'Proposal Req', color: 'border-purple-500/40 text-purple-400 bg-purple-500/10' },
-                        { value: 'NOT_INTERESTED', label: 'Not Interested', color: 'border-zinc-500/40 text-zinc-400 bg-zinc-500/10' },
-                        { value: 'LOST', label: 'Deal Lost', color: 'border-rose-600/40 text-rose-400 bg-rose-600/10' }
-                      ].map((item) => (
-                        <button
-                          key={item.value}
-                          type="button"
-                          onClick={() => setOutcome(item.value)}
-                          className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
-                            outcome === item.value
-                              ? `${item.color} ring-1 ring-current shadow-xs`
-                              : 'bg-theme-bg-alt/50 border-theme-border text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt'
-                          }`}
+                  {/* Section 1 & 2: Sleek Outcome Pills & Unified Metadata Bar */}
+                  <div className="space-y-2.5 p-3 rounded-2xl bg-theme-bg-alt/30 border border-theme-border/60">
+                    {/* Header + Outcome Pills */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-[11px] font-extrabold uppercase tracking-wider text-theme-text-muted">
+                          Call Outcome
+                        </label>
+                        <span className="text-[10px] font-bold text-theme-primary">
+                          {outcome.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      {/* Primary Pills + More Dropdown */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {[
+                          { value: 'CONNECTED', label: 'Connected', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' },
+                          { value: 'BUSY', label: 'Client Busy', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
+                          { value: 'NO_ANSWER', label: 'No Answer', color: 'border-rose-500/40 text-rose-400 bg-rose-500/10' },
+                          { value: 'CALLBACK_REQUESTED', label: 'Callback', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
+                          { value: 'MEETING_SCHEDULED', label: 'Meeting Set', color: 'border-indigo-500/40 text-indigo-400 bg-indigo-500/10' }
+                        ].map((item) => (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => {
+                              setOutcome(item.value);
+                              if (['BUSY', 'NO_ANSWER'].includes(item.value)) {
+                                setActivityStatus('ATTEMPTED');
+                              } else if (['CONNECTED', 'CALLBACK_REQUESTED'].includes(item.value)) {
+                                setActivityStatus('IN_PROGRESS');
+                              } else if (item.value === 'MEETING_SCHEDULED') {
+                                setActivityStatus('COMPLETED');
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all text-center ${
+                              outcome === item.value
+                                ? `${item.color} ring-1 ring-current shadow-xs`
+                                : 'bg-theme-card/80 border-theme-border/70 text-theme-text-muted hover:text-theme-text hover:bg-theme-card'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+
+                        {/* More Outcomes Dropdown Pill */}
+                        <div className={`relative flex items-center rounded-xl border text-xs font-bold transition-all ${
+                          ['INTERESTED', 'PROPOSAL_REQUESTED', 'NOT_INTERESTED', 'LOST'].includes(outcome)
+                            ? 'border-theme-primary bg-theme-primary/10 text-theme-primary ring-1 ring-theme-primary/30 shadow-xs'
+                            : 'bg-theme-card/80 border-theme-border/70 text-theme-text-muted hover:text-theme-text hover:bg-theme-card'
+                        }`}>
+                          <select
+                            value={['INTERESTED', 'PROPOSAL_REQUESTED', 'NOT_INTERESTED', 'LOST'].includes(outcome) ? outcome : ''}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                setOutcome(e.target.value);
+                                if (e.target.value === 'LOST' || e.target.value === 'NOT_INTERESTED') {
+                                  setActivityStatus('COMPLETED');
+                                } else {
+                                  setActivityStatus('IN_PROGRESS');
+                                }
+                              }
+                            }}
+                            className="py-1.5 pl-2.5 pr-6 bg-transparent text-xs font-bold text-inherit outline-none cursor-pointer appearance-none"
+                          >
+                            <option value="" disabled>
+                              {(() => {
+                                const map: Record<string, string> = {
+                                  INTERESTED: 'Interested',
+                                  PROPOSAL_REQUESTED: 'Proposal Req',
+                                  NOT_INTERESTED: 'Not Interested',
+                                  LOST: 'Deal Lost'
+                                };
+                                return map[outcome] || 'More...';
+                              })()}
+                            </option>
+                            <option value="INTERESTED" className="bg-theme-card text-theme-text">Interested</option>
+                            <option value="PROPOSAL_REQUESTED" className="bg-theme-card text-theme-text">Proposal Req</option>
+                            <option value="NOT_INTERESTED" className="bg-theme-card text-theme-text">Not Interested</option>
+                            <option value="LOST" className="bg-theme-card text-theme-text">Deal Lost</option>
+                          </select>
+                          <ChevronDown size={12} className="absolute right-2 pointer-events-none opacity-60" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Integrated Metadata Toolbar (Channel + Duration + Status) */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-theme-border/40 flex-wrap">
+                      {/* Channel Chip */}
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-theme-card border border-theme-border/80 text-xs font-bold text-theme-text hover:border-theme-primary/40 transition-all">
+                        <Phone size={12} className="text-theme-primary shrink-0" />
+                        <span className="text-theme-text-muted text-[10px] uppercase tracking-wide font-extrabold">Ch:</span>
+                        <select
+                          value={communicationType}
+                          onChange={(e) => setCommunicationType(e.target.value)}
+                          className="bg-transparent text-xs font-bold text-theme-text focus:outline-none cursor-pointer"
                         >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                          <option value="PHONE_CALL" className="bg-theme-card text-theme-text">Phone Call</option>
+                          <option value="WHATSAPP" className="bg-theme-card text-theme-text">WhatsApp</option>
+                          <option value="EMAIL" className="bg-theme-card text-theme-text">Email</option>
+                          <option value="MEETING" className="bg-theme-card text-theme-text">Meeting / Demo</option>
+                        </select>
+                      </div>
 
-                  {/* Section 2: Channel, Status & Duration in 3-Column Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Communication Channel */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">
-                        Channel
-                      </label>
-                      <select
-                        value={communicationType}
-                        onChange={(e) => setCommunicationType(e.target.value)}
-                        className="w-full bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary cursor-pointer"
+                      {/* Duration Display (Auto-populated from Start Call timer) */}
+                      <div 
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border ${
+                          activityDuration && activityDuration !== '--' && activityDuration !== '0s'
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-xs'
+                            : 'bg-theme-card border-theme-border/80 text-theme-text-muted'
+                        }`}
+                        title="Call duration is automatically recorded from the Start Call timer"
                       >
-                        <option value="PHONE_CALL">Phone Call</option>
-                        <option value="WHATSAPP">WhatsApp</option>
-                        <option value="EMAIL">Email</option>
-                        <option value="MEETING">Meeting / Demo</option>
-                      </select>
-                    </div>
+                        <Clock size={12} className={activityDuration && activityDuration !== '--' && activityDuration !== '0s' ? 'text-amber-400' : 'text-theme-text-muted'} />
+                        <span className="text-theme-text-muted text-[10px] uppercase tracking-wide font-extrabold">Dur:</span>
+                        <span className="font-bold text-xs">{activityDuration || '--'}</span>
+                      </div>
 
-                    {/* Attempt Status */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">
-                        Attempt Status
-                      </label>
-                      <select
-                        value={activityStatus}
-                        onChange={(e) => setActivityStatus(e.target.value)}
-                        className="w-full bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary cursor-pointer"
-                      >
-                        <option value="ATTEMPTED">Attempted</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="COMPLETED">Completed</option>
-                      </select>
-                    </div>
-
-                    {/* Duration */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">
-                        Call Duration
-                      </label>
-                      <select
-                        value={activityDuration}
-                        onChange={(e) => setActivityDuration(e.target.value)}
-                        className="w-full bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary cursor-pointer"
-                      >
-                        <option value="1 min">1 min</option>
-                        <option value="2 mins">2 mins</option>
-                        <option value="5 mins">5 mins</option>
-                        <option value="10 mins">10 mins</option>
-                        <option value="15 mins">15 mins</option>
-                        <option value="30 mins">30 mins</option>
-                        <option value="45 mins">45 mins</option>
-                        <option value="60 mins">60 mins</option>
-                      </select>
+                      {/* Attempt Status Chip */}
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-theme-card border border-theme-border/80 text-xs font-bold text-theme-text hover:border-theme-primary/40 transition-all">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${
+                          activityStatus === 'COMPLETED' ? 'bg-emerald-400' : activityStatus === 'IN_PROGRESS' ? 'bg-amber-400' : 'bg-blue-400'
+                        }`} />
+                        <span className="text-theme-text-muted text-[10px] uppercase tracking-wide font-extrabold">Status:</span>
+                        <select
+                          value={activityStatus}
+                          onChange={(e) => setActivityStatus(e.target.value)}
+                          className="bg-transparent text-xs font-bold text-theme-text focus:outline-none cursor-pointer"
+                        >
+                          <option value="ATTEMPTED" className="bg-theme-card text-theme-text">Attempted</option>
+                          <option value="IN_PROGRESS" className="bg-theme-card text-theme-text">In Progress</option>
+                          <option value="COMPLETED" className="bg-theme-card text-theme-text">Completed</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
