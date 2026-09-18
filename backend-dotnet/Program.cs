@@ -29,6 +29,17 @@ builder.Services.AddHttpClient("MetaGraphApi", client =>
     client.DefaultRequestHeaders.Add("User-Agent", "LeadGrowth-MetaIntegration/1.0");
 });
 
+builder.Services.Configure<GoogleAdsOptions>(builder.Configuration.GetSection(GoogleAdsOptions.SectionName));
+builder.Services.AddHttpClient("GoogleAdsApi", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
+    client.DefaultRequestHeaders.Add("User-Agent", "LeadGrowth-GoogleAdsIntegration/1.0");
+});
+builder.Services.AddHttpClient("GoogleOAuth", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IWebSocketManagerService, WebSocketManagerService>();
@@ -46,6 +57,7 @@ builder.Services.AddScoped<IFollowupService, FollowupService>();
 builder.Services.AddScoped<ICallService, CallService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IMetaAdsService, MetaAdsService>();
+builder.Services.AddScoped<IGoogleAdsService, GoogleAdsService>();
 builder.Services.AddScoped<ISyncService, SyncService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IExportService, ExportService>();
@@ -276,6 +288,8 @@ try
     EnsureColumn("leads", "adset_name", "VARCHAR(100) NULL");
     EnsureColumn("leads", "is_organic", "TINYINT(1) NOT NULL DEFAULT 0");
     EnsureColumn("leads", "raw_form_data", "TEXT NULL");
+    EnsureColumn("leads", "google_customer_id", "VARCHAR(64) NULL");
+    EnsureColumn("leads", "gclid", "VARCHAR(100) NULL");
 
     // 1.2 Add missing columns to campaigns table safely
     EnsureColumn("campaigns", "external_campaign_id", "VARCHAR(64) NULL");

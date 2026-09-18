@@ -8,7 +8,6 @@ import {
   Flame,
   Clock,
   IndianRupee,
-  Zap,
   ChevronRight,
   Briefcase,
   Bell,
@@ -32,10 +31,9 @@ import {
   Tooltip,
   Cell,
   LabelList,
-  AreaChart,
-  Area,
   PieChart,
-  Pie
+  Pie,
+  CartesianGrid
 } from 'recharts';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
@@ -122,6 +120,48 @@ export default function UserDashboard() {
     }
   };
 
+  const getMonthlyData = () => {
+    const months = [];
+    const now = new Date();
+    // Past 6 months up to current month (e.g. Apr, May, Jun, Jul, Aug, Sep)
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mStr = d.toLocaleString('default', { month: 'short' });
+      const fullMonthStr = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+      const mYear = d.getFullYear();
+      const mMonth = d.getMonth();
+
+      const leadsInMonth = (myLeads || []).filter((l: any) => {
+        if (!l.createdAt) return false;
+        const cDate = new Date(l.createdAt);
+        return cDate.getFullYear() === mYear && cDate.getMonth() === mMonth;
+      });
+
+      const convertedInMonth = leadsInMonth.filter((l: any) => {
+        const s = (l.status || '').toLowerCase();
+        return s.includes('converted') || s.includes('won') || s.includes('payment');
+      });
+
+      const lostInMonth = leadsInMonth.filter((l: any) => {
+        const s = (l.status || '').toLowerCase();
+        return s.includes('lost') || s.includes('reject');
+      });
+
+      const revenueInMonth = convertedInMonth.reduce((acc: number, l: any) => acc + (l.proposalAmount || 0), 0);
+
+      months.push({
+        month: `${mStr} ${mYear}`,
+        shortMonth: mStr,
+        fullMonth: fullMonthStr,
+        leads: leadsInMonth.length,
+        converted: convertedInMonth.length,
+        lost: lostInMonth.length,
+        revenue: revenueInMonth
+      });
+    }
+    return months;
+  };
+
   const toggleSelectAll = () => {
     if (selectedLeadIds.length === pendingLeads.length) {
       setSelectedLeadIds([]);
@@ -179,29 +219,6 @@ export default function UserDashboard() {
     }
   };
 
-  const handleIdleSweep = async () => {
-    try {
-      const res = await api.post('/api/leads/queue/idle-sweep');
-      if (res.data && res.data.id) {
-        // Only show if not already in myLeads
-        const isAlreadyPresent = myLeads.some((l: any) => l.id === res.data.id);
-        if (!isAlreadyPresent) {
-          setIdleMessage(`New lead auto-assigned: ${res.data.name}! Click 'Add To Pipelines' to accept.`);
-          toast.success(`New lead auto-assigned: ${res.data.name}!`, 'Lead Received');
-          fetchUserData();
-        }
-      } else {
-        setIdleMessage('Queue empty. You are fully caught up!');
-        toast.info('Queue empty. You are fully caught up!', 'All Caught Up');
-      }
-      setTimeout(() => setIdleMessage(''), 4000);
-    } catch (e) {
-      setIdleMessage('Sweep active. All queue items currently assigned.');
-      toast.info('Sweep active. All queue items currently assigned.');
-      setTimeout(() => setIdleMessage(''), 4000);
-    }
-  };
-
   if (loading) {
     return (
       <HoosshBeeLoader 
@@ -226,7 +243,7 @@ export default function UserDashboard() {
         return false;
       }
       if (targetStage === 'Interaction') {
-        return stLower === 'interaction' || stLower === 'contacted' || stLower === 'first call' || stLower === 'first_call' || stLower === 'follow-up' || stLower === 'followup' || stLower === 'requirement collection' || stLower === 'requirement_collection' || stLower === 'interested';
+        return stLower === 'interaction' || stLower === 'contacted' || stLower === 'first call' || stLower === 'first_call' || stLower === 'follow-up' || stLower === 'followup' || stLower === 'requirement collection' || stLower === 'requirement_collection' || stLower === 'interested' || stLower === 'in progress' || stLower === 'in_progress';
       }
       if (targetStage === 'Proposal Sent') {
         return stLower === 'proposal sent' || stLower === 'proposal_sent' || stLower === 'proposal' || stLower === 'demo scheduled' || stLower === 'demo_scheduled' || stLower === 'qualified';
@@ -235,10 +252,10 @@ export default function UserDashboard() {
         return stLower === 'negotiation' || stLower === 'negotiation_started' || stLower === 'closing';
       }
       if (targetStage === 'Converted') {
-        return stLower === 'converted' || stLower === 'payment completed' || stLower === 'payment_completed' || stLower === 'payment' || stLower === 'closed won' || stLower === 'closed_won';
+        return stLower === 'converted' || stLower === 'payment completed' || stLower === 'payment_completed' || stLower === 'payment' || stLower === 'closed won' || stLower === 'closed_won' || stLower === 'won';
       }
       if (targetStage === 'Lost') {
-        return stLower === 'lost' || stLower === 'rejected';
+        return stLower === 'lost' || stLower === 'rejected' || stLower === 'closed lost' || stLower === 'closed_lost' || stLower === 'dropped' || stLower === 'junk' || stLower === 'unqualified' || stLower === 'disqualified' || stLower === 'cancelled';
       }
       return stLower === targetStage.toLowerCase();
     }).length;
@@ -248,12 +265,6 @@ export default function UserDashboard() {
   const pendingFollowupsCount = kpis?.myPendingFollowups ?? followups.length;
   const conversionsCount = kpis?.myConversions ?? getStageCount('Converted');
   const personalRevenue = kpis?.myRevenueContribution ?? 0;
-
-
-  const isManagementOrAdmin = (user?.roles || []).some((r: any) => {
-    const roleName = typeof r === 'string' ? r : r?.name || '';
-    return ['ROLE_ADMIN', 'ADMIN', 'ROLE_SUPERADMIN', 'SUPERADMIN', 'ROLE_MANAGER', 'MANAGER'].includes(roleName.toUpperCase());
-  });
 
   return (
     <div className="space-y-6">
@@ -274,14 +285,6 @@ export default function UserDashboard() {
           >
             <Briefcase size={14} className="text-theme-primary" /> Open Pipelines
           </Link>
-          {!isManagementOrAdmin && (
-            <button
-              onClick={handleIdleSweep}
-              className="flex items-center gap-2 rounded-xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-all"
-            >
-              <Zap size={14} /> Ready For Next Lead
-            </button>
-          )}
         </div>
       </div>
 
@@ -708,7 +711,7 @@ export default function UserDashboard() {
                 }`}
               >
                 <Activity size={13} />
-                <span>Weekly Trend</span>
+                <span>Monthly & Work Trend</span>
               </button>
 
               <button
@@ -746,7 +749,8 @@ export default function UserDashboard() {
                         { stage: 'Interaction', label: 'Interaction', count: getStageCount('Interaction'), color: '#a855f7', targetUrl: '/my-work?stage=Interaction' },
                         { stage: 'Proposal Sent', label: 'Proposal Sent', count: getStageCount('Proposal Sent'), color: '#06b6d4', targetUrl: '/my-work?stage=Proposal%20Sent' },
                         { stage: 'Negotiation', label: 'Negotiation', count: getStageCount('Negotiation'), color: '#f59e0b', targetUrl: '/my-work?stage=Negotiation' },
-                        { stage: 'Converted', label: 'Closed Won', count: getStageCount('Converted'), color: '#10b981', targetUrl: '/my-work?stage=Converted' }
+                        { stage: 'Converted', label: 'Closed Won', count: getStageCount('Converted'), color: '#10b981', targetUrl: '/my-work?stage=Converted' },
+                        { stage: 'Lost', label: 'Closed Lost', count: getStageCount('Lost'), color: '#f43f5e', targetUrl: '/my-work?stage=Lost' }
                       ]}
                       margin={{ top: 20, right: 10, left: -20, bottom: 20 }}
                       onClick={(state: any) => {
@@ -795,7 +799,8 @@ export default function UserDashboard() {
                           { color: '#a855f7' },
                           { color: '#06b6d4' },
                           { color: '#f59e0b' },
-                          { color: '#10b981' }
+                          { color: '#10b981' },
+                          { color: '#f43f5e' }
                         ].map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
@@ -805,13 +810,14 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Quick Stage Filter Pills */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-theme-border/40">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-3 border-t border-theme-border/40">
                   {[
                     { label: 'New Leads', count: getStageCount('New'), dot: 'bg-blue-500', targetStage: 'New' },
                     { label: 'Interaction', count: getStageCount('Interaction'), dot: 'bg-purple-500', targetStage: 'Interaction' },
                     { label: 'Proposal Sent', count: getStageCount('Proposal Sent'), dot: 'bg-cyan-500', targetStage: 'Proposal Sent' },
                     { label: 'Negotiation', count: getStageCount('Negotiation'), dot: 'bg-amber-500', targetStage: 'Negotiation' },
-                    { label: 'Converted', count: getStageCount('Converted'), dot: 'bg-emerald-500', targetStage: 'Converted' }
+                    { label: 'Converted', count: getStageCount('Converted'), dot: 'bg-emerald-500', targetStage: 'Converted' },
+                    { label: 'Closed Lost', count: getStageCount('Lost'), dot: 'bg-rose-500', targetStage: 'Lost' }
                   ].map((item, i) => (
                     <button
                       key={i}
@@ -837,54 +843,62 @@ export default function UserDashboard() {
             {chartTab === 'trend' && (
               <div className="h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-xs font-semibold text-theme-text">
-                    Weekly Activity & Conversion Momentum
-                  </span>
-                  <span className="text-[10px] text-theme-text-muted font-medium">
-                    Daily engagement and deals velocity
-                  </span>
+                  <div>
+                    <span className="text-xs font-semibold text-theme-text block">
+                      Monthly Lead Work & Conversion Trajectory
+                    </span>
+                    <span className="text-[10px] text-theme-text-muted font-medium">
+                      Month-wise leads worked, conversions won & activity volume
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px] font-bold">
+                    <span className="flex items-center gap-1 text-indigo-500">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500" /> Leads Worked
+                    </span>
+                    <span className="flex items-center gap-1 text-emerald-500">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" /> Deals Won
+                    </span>
+                  </div>
                 </div>
-                <div className="flex-1 w-full min-h-[200px]">
+
+                <div className="flex-1 w-full min-h-[190px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={[
-                        { name: 'Mon', leads: Math.max(1, Math.round(myLeads.length * 0.15)), won: Math.max(0, Math.round(conversionsCount * 0.1)) },
-                        { name: 'Tue', leads: Math.max(2, Math.round(myLeads.length * 0.2)), won: Math.max(0, Math.round(conversionsCount * 0.2)) },
-                        { name: 'Wed', leads: Math.max(1, Math.round(myLeads.length * 0.18)), won: Math.max(0, Math.round(conversionsCount * 0.15)) },
-                        { name: 'Thu', leads: Math.max(3, Math.round(myLeads.length * 0.22)), won: Math.max(1, Math.round(conversionsCount * 0.25)) },
-                        { name: 'Fri', leads: Math.max(2, Math.round(myLeads.length * 0.15)), won: Math.max(0, Math.round(conversionsCount * 0.3)) },
-                        { name: 'Sat', leads: Math.max(0, Math.round(myLeads.length * 0.05)), won: 0 },
-                        { name: 'Sun', leads: Math.max(0, Math.round(myLeads.length * 0.05)), won: 0 }
-                      ]}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
+                    <BarChart
+                      data={getMonthlyData()}
+                      margin={{ top: 12, right: 10, left: -20, bottom: 5 }}
                     >
-                      <defs>
-                        <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorWon" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" stroke="var(--color-theme-text-muted, #94a3b8)" fontSize={11} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis dataKey="shortMonth" stroke="var(--color-theme-text-muted, #94a3b8)" fontSize={11} fontWeight={600} tickLine={false} />
                       <YAxis stroke="var(--color-theme-text-muted, #94a3b8)" fontSize={11} allowDecimals={false} tickLine={false} />
                       <Tooltip
-                        content={({ active, payload, label }) => {
+                        cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 8 }}
+                        content={({ active, payload }) => {
                           if (active && payload && payload.length) {
+                            const d = payload[0].payload;
+                            const rate = d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0;
                             return (
-                              <div className="p-3 rounded-2xl bg-theme-card/95 border border-theme-border shadow-xl backdrop-blur-md space-y-1.5 text-xs">
-                                <span className="font-semibold text-theme-text block">{label} Performance</span>
+                              <div className="p-3 rounded-2xl bg-theme-card/95 border border-theme-border shadow-xl backdrop-blur-md space-y-2 text-xs min-w-44">
+                                <div className="font-bold text-theme-text border-b border-theme-border/40 pb-1 flex items-center justify-between">
+                                  <span>{d.fullMonth || d.month}</span>
+                                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500">
+                                    {rate}% Won
+                                  </span>
+                                </div>
                                 <div className="space-y-1 text-[11px]">
                                   <div className="flex items-center justify-between gap-3 text-indigo-500 font-bold">
-                                    <span>Active Leads:</span>
-                                    <span>{payload[0]?.value}</span>
+                                    <span>Leads Worked:</span>
+                                    <span>{d.leads}</span>
                                   </div>
                                   <div className="flex items-center justify-between gap-3 text-emerald-500 font-bold">
-                                    <span>Conversions:</span>
-                                    <span>{payload[1]?.value}</span>
+                                    <span>Deals Won:</span>
+                                    <span>{d.converted}</span>
                                   </div>
+                                  {d.revenue > 0 && (
+                                    <div className="flex items-center justify-between gap-3 text-theme-text font-bold pt-1 border-t border-theme-border/30">
+                                      <span>Won Value:</span>
+                                      <span className="text-emerald-500">{formatCurrency(d.revenue)}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -892,10 +906,24 @@ export default function UserDashboard() {
                           return null;
                         }}
                       />
-                      <Area type="monotone" dataKey="leads" stroke="#6366f1" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLeads)" />
-                      <Area type="monotone" dataKey="won" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorWon)" />
-                    </AreaChart>
+                      <Bar dataKey="leads" name="Leads Worked" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={32} />
+                      <Bar dataKey="converted" name="Deals Won" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={32} />
+                    </BarChart>
                   </ResponsiveContainer>
+                </div>
+
+                {/* Monthly Summary Quick Pills */}
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2 border-t border-theme-border/40">
+                  {getMonthlyData().map((mItem: any, idx: number) => {
+                    const winRate = mItem.leads > 0 ? Math.round((mItem.converted / mItem.leads) * 100) : 0;
+                    return (
+                      <div key={idx} className="p-2 rounded-xl bg-theme-bg-alt/40 border border-theme-border/40 text-center space-y-0.5">
+                        <span className="text-[10px] font-bold text-theme-text-muted block uppercase">{mItem.shortMonth}</span>
+                        <div className="text-xs font-black text-theme-text">{mItem.leads} <span className="text-[9px] font-normal text-theme-text-muted">leads</span></div>
+                        <span className="text-[9px] font-bold text-emerald-500 block">{mItem.converted} won ({winRate}%)</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -4,17 +4,22 @@ import {
   FileText, 
   Download, 
   TrendingUp, 
-  ShieldCheck,
-  Loader2,
-  Calendar,
-  PhoneCall,
-  CheckCircle2,
-  Clock,
-  Zap,
-  BarChart3,
-  Users
+  ShieldCheck, 
+  Loader2, 
+  Calendar, 
+  PhoneCall, 
+  CheckCircle2, 
+  Clock, 
+  Zap, 
+  BarChart3, 
+  Users,
+  UserCheck,
+  Search,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
-import { downloadReport } from '../services/reportService';
+import { Link } from 'react-router-dom';
+import { downloadReport, downloadSingleLeadPdf } from '../services/reportService';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import TimeFilterDropdown, { type TimeFilterState } from '../components/TimeFilterDropdown';
@@ -59,15 +64,56 @@ export default function Reports() {
   const [dailyData, setDailyData] = useState<DailyBreakdownItem[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
+  // Individual Specific Lead Report State
+  const [leadsList, setLeadsList] = useState<any[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(false);
+  const [selectedLeadIdForReport, setSelectedLeadIdForReport] = useState<number | ''>('');
+  const [leadSearchQuery, setLeadSearchQuery] = useState('');
+  const [isDownloadingLeadPdf, setIsDownloadingLeadPdf] = useState(false);
+
   useEffect(() => {
     if (isManagerOrAdmin) {
       fetchMembers();
     }
+    fetchLeads();
   }, [isManagerOrAdmin]);
 
   useEffect(() => {
     fetchAutoDailyActivity();
   }, [timeFilter, selectedUserId]);
+
+  const fetchLeads = async () => {
+    setLoadingLeads(true);
+    try {
+      const res = await api.get('/api/leads');
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setLeadsList(list);
+      if (list.length > 0 && !selectedLeadIdForReport) {
+        setSelectedLeadIdForReport(list[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load leads list for individual report generation', err);
+    } finally {
+      setLoadingLeads(false);
+    }
+  };
+
+  const handleDownloadSingleLeadPdf = async (leadId?: number) => {
+    const targetId = leadId || (typeof selectedLeadIdForReport === 'number' ? selectedLeadIdForReport : null);
+    if (!targetId) {
+      alert('Please select a valid lead to generate report.');
+      return;
+    }
+    try {
+      setIsDownloadingLeadPdf(true);
+      await downloadSingleLeadPdf(targetId);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to generate PDF report for the selected lead.');
+    } finally {
+      setIsDownloadingLeadPdf(false);
+    }
+  };
 
   const fetchMembers = async () => {
     try {
@@ -229,6 +275,19 @@ export default function Reports() {
     }
   };
 
+  const filteredLeads = leadsList.filter((l: any) => {
+    if (!leadSearchQuery.trim()) return true;
+    const q = leadSearchQuery.toLowerCase();
+    return (
+      (l.name || '').toLowerCase().includes(q) ||
+      (l.email || '').toLowerCase().includes(q) ||
+      (l.phone && String(l.phone).includes(q)) ||
+      (l.company || '').toLowerCase().includes(q) ||
+      String(l.id).includes(q)
+    );
+  });
+
+  const selectedLead = leadsList.find((l: any) => l.id === Number(selectedLeadIdForReport));
 
   return (
     <div className="space-y-6">
@@ -309,6 +368,148 @@ export default function Reports() {
       {activeTab === 'exports' && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           
+          {/* Card 0: Specific Lead Dossier / Individual Report (Visible to BOTH User and Admin) */}
+          <div className="glass-card rounded-3xl border border-theme-primary/40 bg-theme-card p-6 shadow-sm flex flex-col justify-between col-span-1 lg:col-span-2">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme-border/60 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-primary/10 text-theme-primary shadow-xs flex-shrink-0">
+                    <UserCheck size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-theme-text flex items-center gap-2 flex-wrap">
+                      <span>Specific Lead Dossier & Detailed Report</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
+                        Individual Lead Export
+                      </span>
+                    </h3>
+                    <p className="text-xs text-theme-text-muted mt-0.5">
+                      Generate and download a comprehensive, professional PDF dossier for any specific lead containing contact info, proposal details, sales steps, and call logs.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Search Input */}
+                <div className="relative min-w-[240px]">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Search lead by name, phone or email..."
+                    value={leadSearchQuery}
+                    onChange={(e) => setLeadSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-theme-bg-alt border border-theme-border text-xs text-theme-text placeholder-theme-text-muted outline-none focus:border-theme-primary transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Lead Selector & Selected Preview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Selector Dropdown */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-theme-text">Select Lead to Generate Report:</label>
+                    <span className="text-[10px] text-theme-text-muted font-medium">
+                      {loadingLeads ? 'Loading leads...' : `${filteredLeads.length} lead${filteredLeads.length === 1 ? '' : 's'} available`}
+                    </span>
+                  </div>
+                  
+                  <div className="relative">
+                    <select
+                      value={selectedLeadIdForReport}
+                      onChange={(e) => setSelectedLeadIdForReport(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full p-3 rounded-xl bg-theme-bg-alt border border-theme-border text-xs font-semibold text-theme-text outline-none focus:border-theme-primary cursor-pointer transition-all"
+                    >
+                      <option value="">-- Choose a Lead to Export --</option>
+                      {filteredLeads.map((l: any) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name} • {l.phone || l.email || 'No contact'} [{l.status || 'New'}]
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {filteredLeads.length === 0 && (
+                    <p className="text-[11px] text-amber-500 font-medium pt-1">
+                      No leads match your search query. Try typing another name, phone or email.
+                    </p>
+                  )}
+                </div>
+
+                {/* Selected Lead Info Preview Box */}
+                {selectedLead ? (
+                  <div className="p-3.5 rounded-2xl bg-theme-bg-alt/70 border border-theme-border/80 flex flex-col justify-between space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-theme-text">{selectedLead.name}</h4>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                            (selectedLead.status || '').toLowerCase().includes('convert') || (selectedLead.status || '').toLowerCase().includes('won')
+                              ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                              : (selectedLead.status || '').toLowerCase().includes('lost')
+                              ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          }`}>
+                            {selectedLead.status || 'New'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-theme-text-muted mt-1 space-x-2">
+                          {selectedLead.email && <span>📧 {selectedLead.email}</span>}
+                          {selectedLead.phone && <span>📞 {selectedLead.phone}</span>}
+                          {selectedLead.sourcePlatform && <span>🌐 {selectedLead.sourcePlatform}</span>}
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 flex-shrink-0">
+                        {selectedLead.qualityTier || 'WARM'} ({selectedLead.qualityScore || 75} pts)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-theme-border/40 text-[10px]">
+                      <span className="text-theme-text-muted">
+                        Lead ID: <strong className="font-mono text-theme-text">#{selectedLead.id}</strong>
+                      </span>
+                      <Link
+                        to={`/my-work?period=all`}
+                        className="font-semibold text-theme-primary hover:underline flex items-center gap-1"
+                      >
+                        <span>Open in Pipelines</span>
+                        <ExternalLink size={10} />
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-2xl bg-theme-bg-alt/40 border border-dashed border-theme-border flex items-center justify-center text-xs text-theme-text-muted text-center">
+                    <span>Select a lead from the dropdown to preview details and generate report.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="mt-5 pt-4 border-t border-theme-border/60 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs text-theme-text-muted flex items-center gap-1.5">
+                <Sparkles size={14} className="text-theme-primary" />
+                Multi-page dossier export includes complete customer profile, sales activities, and call timeline.
+              </span>
+              <button
+                type="button"
+                onClick={() => handleDownloadSingleLeadPdf()}
+                disabled={!selectedLeadIdForReport || isDownloadingLeadPdf}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white font-semibold text-xs px-5 py-2.5 shadow-md shadow-theme-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isDownloadingLeadPdf ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Generating Dossier PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText size={14} />
+                    <span>Generate & Download Lead Dossier (PDF)</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
           {/* Card 1: Leads Tracking Database (Visible to BOTH User and Admin, scoped to selected user if chosen) */}
           <div className="glass-card rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm flex flex-col justify-between">
             <div>

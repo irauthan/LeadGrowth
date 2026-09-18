@@ -49,6 +49,21 @@ public class NotificationController : ControllerBase
         return Ok();
     }
 
+    [HttpDelete("clear")]
+    public async Task<IActionResult> ClearAllNotifications()
+    {
+        var email = GetUserEmail();
+        try
+        {
+            await _notificationService.ClearAllNotificationsAsync(email);
+            return Ok(new { message = "All notifications cleared" });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     private string GetUserEmail()
     {
         return User.FindFirstValue(ClaimTypes.Name) ?? User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;

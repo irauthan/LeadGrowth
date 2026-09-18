@@ -8,12 +8,22 @@ import {
   Menu
 } from 'lucide-react';
 import { useLayoutStore } from '../store/layoutStore';
+import { useAuthStore } from '../store/authStore';
 
 export default function MobileBottomNav() {
   const location = useLocation();
   const { isMobileOpen, toggleMobileOpen, setMobileOpen } = useLayoutStore();
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.roles.includes('ROLE_ADMIN');
+  const isManager = user?.roles.includes('ROLE_MANAGER');
+  const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
 
-  const navItems = [
+  const navItems = isUserOnly ? [
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { name: 'Pipelines', icon: UserCheck, path: '/my-work' },
+    { name: 'Workspace', icon: UserCheck, path: '/leads' },
+    { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
+  ] : [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Workspace', icon: UserCheck, path: '/leads' },

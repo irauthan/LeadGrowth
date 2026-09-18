@@ -344,6 +344,7 @@ export interface DashboardKpis {
   platformLeadsShare: PlatformShare[];
   platformRevenueShare: PlatformShare[];
   trends: TrendDataPoint[];
+  monthlyTrends?: any[];
   funnel: Record<string, number>;
   teamActivities: TeamActivity[];
   workspaceStats: WorkspaceStat[];

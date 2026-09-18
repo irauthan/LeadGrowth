@@ -46,8 +46,12 @@ export default function Analytics() {
       if (timeFilter.endDate) params.endDate = timeFilter.endDate;
 
       if (isUserOnly) {
-        const res = await api.get('/api/users/me/analytics', { params });
-        setUserAnalytics(res.data);
+        const [analyticsRes, leadsRes] = await Promise.all([
+          api.get('/api/users/me/analytics', { params }).catch(() => ({ data: null })),
+          api.get('/api/leads', { params }).catch(() => api.get('/api/leads/pipeline', { params }))
+        ]);
+        setUserAnalytics(analyticsRes.data);
+        setLeads(Array.isArray(leadsRes.data) ? leadsRes.data : []);
       } else {
         const [dashRes, membersRes, leadsRes] = await Promise.allSettled([
           api.get('/api/dashboard', { params }),
@@ -72,6 +76,42 @@ export default function Analytics() {
     }
   };
 
+  const getRealMonthlyData = (leadsList: any[]) => {
+    const months = [];
+    const now = new Date();
+    // Past 6 months up to current month (e.g. Apr, May, Jun, Jul, Aug, Sep)
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mStr = d.toLocaleString('default', { month: 'short' });
+      const fullMonthStr = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+      const mYear = d.getFullYear();
+      const mMonth = d.getMonth();
+
+      const mLeads = (leadsList || []).filter((l: any) => {
+        if (!l.createdAt) return false;
+        const cDate = new Date(l.createdAt);
+        return cDate.getFullYear() === mYear && cDate.getMonth() === mMonth;
+      });
+
+      const mConverted = mLeads.filter((l: any) => {
+        const s = (l.status || '').toLowerCase();
+        return s.includes('converted') || s.includes('won') || s.includes('payment');
+      });
+
+      const mRevenue = mConverted.reduce((acc: number, l: any) => acc + (l.proposalAmount || 0), 0);
+
+      months.push({
+        shortMonth: mStr,
+        month: `${mStr} ${mYear}`,
+        fullMonth: fullMonthStr,
+        leads: mLeads.length,
+        converted: mConverted.length,
+        revenue: mRevenue
+      });
+    }
+    return months;
+  };
+
   if (loading) {
     return <HoosshBeeLoader text="Loading Analytics Dashboard..." subtext="Crunching conversion rates, revenue trends and channel ROI" />;
   }
@@ -90,15 +130,8 @@ export default function Analytics() {
       name: f.stage || f.name || 'Stage',
       value: f.count !== undefined ? f.count : (f.value || 0)
     }));
-    const taskData = Object.entries(userAnalytics.taskAnalytics || {}).map(([name, value]) => ({ name, value }));
 
-    const productivityTrend = [
-      { day: 'Mon', score: 88, tasks: 4 },
-      { day: 'Tue', score: 92, tasks: 6 },
-      { day: 'Wed', score: 95, tasks: 5 },
-      { day: 'Thu', score: 90, tasks: 7 },
-      { day: 'Fri', score: 94, tasks: 6 },
-    ];
+    const userMonthlyTrends = getRealMonthlyData(leads);
 
     return (
       <div className="space-y-6">
@@ -190,34 +223,54 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* 3. Task Fulfillment Breakdown */}
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">3. Task Analytics</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={taskData}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                  <XAxis dataKey="name" stroke="var(--theme-text-muted)" fontSize={11} />
-                  <YAxis stroke="var(--theme-text-muted)" fontSize={11} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#10b981" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          {/* 3. Monthly Lead Work & Conversions Trend */}
+          <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4 col-span-1 lg:col-span-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">3. Monthly Lead Work & Conversion Trend</h3>
+                <p className="text-[10px] text-theme-text-muted mt-0.5">Real month-by-month lead volume and deals converted won</p>
+              </div>
+              <div className="flex items-center gap-3 text-[10px] font-bold">
+                <span className="flex items-center gap-1 text-indigo-500">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" /> Leads Assigned / Worked
+                </span>
+                <span className="flex items-center gap-1 text-emerald-500">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Deals Won
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* 4. Weekly Productivity Trend */}
-          <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">4. Productivity Benchmark Trend</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={productivityTrend}>
+                <BarChart data={userMonthlyTrends} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                  <XAxis dataKey="day" stroke="var(--theme-text-muted)" fontSize={11} />
-                  <YAxis stroke="var(--theme-text-muted)" fontSize={11} domain={[70, 100]} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.2} />
-                </AreaChart>
+                  <XAxis dataKey="shortMonth" stroke="var(--theme-text-muted)" fontSize={11} fontWeight={600} />
+                  <YAxis stroke="var(--theme-text-muted)" fontSize={11} allowDecimals={false} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const d = payload[0].payload;
+                        const winRate = d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0;
+                        return (
+                          <div className="p-3 rounded-2xl bg-theme-card/95 border border-theme-border shadow-xl backdrop-blur-md space-y-1.5 text-xs min-w-40">
+                            <span className="font-bold text-theme-text block border-b border-theme-border/30 pb-1">{d.fullMonth || d.month}</span>
+                            <div className="flex items-center justify-between gap-3 text-indigo-500 font-bold">
+                              <span>Leads Worked:</span>
+                              <span>{d.leads}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-emerald-500 font-bold">
+                              <span>Deals Won:</span>
+                              <span>{d.converted} ({winRate}%)</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="leads" name="Leads Worked" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={32} />
+                  <Bar dataKey="converted" name="Deals Won" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={32} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -296,6 +349,8 @@ export default function Analytics() {
       conversionRate: rate
     };
   }).filter(m => m.assignedLeads > 0 || teamMembers.length <= 8);
+
+  const adminMonthlyTrends = getRealMonthlyData(leads);
 
   return (
     <div className="space-y-6">
@@ -451,6 +506,88 @@ export default function Analytics() {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* 5. Monthly Workspace Lead Work & Conversion Trajectory */}
+        <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-xl space-y-4 col-span-1 lg:col-span-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
+                <TrendingUp size={16} className="text-theme-primary" /> Monthly Workspace Lead Work & Conversion Momentum
+              </h3>
+              <p className="text-[10px] text-theme-text-muted mt-0.5">Month-by-month lead volume intake, closed deals won and revenue generated</p>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-bold">
+              <span className="flex items-center gap-1 text-indigo-500">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" /> Leads Inflow / Worked
+              </span>
+              <span className="flex items-center gap-1 text-emerald-500">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Converted Deals
+              </span>
+            </div>
+          </div>
+
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={adminMonthlyTrends} margin={{ top: 15, right: 15, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                <XAxis dataKey="shortMonth" stroke="var(--theme-text-muted)" fontSize={11} fontWeight={600} />
+                <YAxis stroke="var(--theme-text-muted)" fontSize={11} allowDecimals={false} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 8 }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const d = payload[0].payload;
+                      const winRate = d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0;
+                      return (
+                        <div className="p-3.5 rounded-2xl bg-theme-card/95 border border-theme-border shadow-2xl backdrop-blur-md space-y-2 text-xs min-w-48">
+                          <div className="font-bold text-theme-text border-b border-theme-border/30 pb-1 flex items-center justify-between">
+                            <span>{d.fullMonth || d.month}</span>
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500">
+                              {winRate}% Won
+                            </span>
+                          </div>
+                          <div className="space-y-1 text-[11px]">
+                            <div className="flex items-center justify-between gap-3 text-indigo-500 font-bold">
+                              <span>Total Leads:</span>
+                              <span>{d.leads}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-emerald-500 font-bold">
+                              <span>Converted Deals:</span>
+                              <span>{d.converted}</span>
+                            </div>
+                            {d.revenue > 0 && (
+                              <div className="flex items-center justify-between gap-3 text-emerald-400 font-bold pt-1 border-t border-theme-border/30">
+                                <span>Total Revenue:</span>
+                                <span>{formatCurrency(d.revenue)}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="leads" name="Total Leads" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                <Bar dataKey="converted" name="Converted Deals" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={36} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Month cards strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 border-t border-theme-border/40">
+            {adminMonthlyTrends.map((mItem: any, idx: number) => {
+              const winRate = mItem.leads > 0 ? Math.round((mItem.converted / mItem.leads) * 100) : 0;
+              return (
+                <div key={idx} className="p-2.5 rounded-xl bg-theme-bg-alt/40 border border-theme-border/40 text-center space-y-0.5">
+                  <span className="text-[10px] font-bold text-theme-text-muted block uppercase">{mItem.shortMonth}</span>
+                  <div className="text-xs font-black text-theme-text">{mItem.leads} <span className="text-[9px] font-normal text-theme-text-muted">leads</span></div>
+                  <span className="text-[9px] font-bold text-emerald-500 block">{mItem.converted} won ({winRate}%)</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 

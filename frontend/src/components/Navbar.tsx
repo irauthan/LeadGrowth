@@ -23,9 +23,11 @@ import {
   Clock,
   Calendar as CalendarIcon,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  CheckCheck
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useLayoutStore } from '../store/layoutStore';
 import { getProfileImageUrl } from '../utils/imageUrl';
@@ -34,7 +36,6 @@ export default function Navbar() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const { theme, setTheme } = useThemeStore();
-  const location = useLocation();
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -257,6 +258,38 @@ export default function Navbar() {
     };
   }, [user?.id, user?.workspaceId]);
 
+  const formatNotificationDateTime = (dateVal?: string | Date) => {
+    if (!dateVal) return 'Just now';
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return 'Recently';
+
+    const now = new Date();
+    const isSameDay = d.toDateString() === now.toDateString();
+    
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    if (isSameDay) {
+      const diffMs = now.getTime() - d.getTime();
+      const diffMin = Math.floor(diffMs / 60000);
+      if (diffMin < 1) return `Just now (${timeStr})`;
+      if (diffMin < 60) return `${diffMin}m ago • Today, ${timeStr}`;
+      return `Today • ${timeStr}`;
+    }
+    if (isYesterday) {
+      return `Yesterday • ${timeStr}`;
+    }
+    const dateStr = d.toLocaleDateString([], { 
+      day: 'numeric', 
+      month: 'short', 
+      year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
+    });
+    return `${dateStr} • ${timeStr}`;
+  };
+
   const fetchNavbarNotifications = async () => {
     try {
       const res = await api.get('/api/notifications');
@@ -264,7 +297,8 @@ export default function Navbar() {
         id: n.id,
         title: n.title,
         message: n.message || n.desc || '',
-        time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (n.time || 'Recent'),
+        time: formatNotificationDateTime(n.createdAt),
+        rawCreatedAt: n.createdAt,
         read: n.isRead ?? n.read ?? false,
         type: n.type
       }));
@@ -281,6 +315,13 @@ export default function Navbar() {
       await api.patch('/api/notifications/read-all').catch(() => {});
     } catch (e) {}
     setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      await api.delete('/api/notifications/clear').catch(() => {});
+    } catch (e) {}
+    setNotifications([]);
   };
 
   const getNotificationTargetUrl = (title?: string, message?: string) => {
@@ -306,7 +347,7 @@ export default function Navbar() {
     if (t.includes('campaign') || m.includes('campaign')) {
       return '/campaigns';
     }
-    if (t.includes('follow') || m.includes('follow')) {
+    if (t.includes('follow') || m.includes('follow') || t.includes('meeting') || m.includes('meeting')) {
       return '/followups';
     }
     if (t.includes('report') || m.includes('report')) {
@@ -318,6 +359,26 @@ export default function Navbar() {
     return '/dashboard';
   };
 
+  const getNotificationIcon = (title?: string, message?: string) => {
+    const text = ((title || '') + ' ' + (message || '')).toLowerCase();
+    if (text.includes('lead') || text.includes('pipeline')) {
+      return <UserCheck size={14} className="text-emerald-500" />;
+    }
+    if (text.includes('task')) {
+      return <CheckSquare size={14} className="text-amber-500" />;
+    }
+    if (text.includes('campaign') || text.includes('ad')) {
+      return <Megaphone size={14} className="text-blue-400" />;
+    }
+    if (text.includes('follow') || text.includes('meeting') || text.includes('calendar')) {
+      return <Clock size={14} className="text-indigo-400" />;
+    }
+    if (text.includes('report')) {
+      return <Compass size={14} className="text-cyan-400" />;
+    }
+    return <Bell size={14} className="text-theme-primary" />;
+  };
+
   const handleNotificationClick = async (item: any) => {
     setShowNotifications(false);
     if (!item.read) {
@@ -326,40 +387,14 @@ export default function Navbar() {
       } catch (e) {}
       setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, read: true } : n));
     }
+    const targetUrl = getNotificationTargetUrl(item.title, item.message);
+    if (targetUrl) {
+      navigate(targetUrl);
+    }
   };
 
   const getInitials = (name: string) => {
     return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
-  };
-
-  // Build Breadcrumbs
-  const getBreadcrumbs = () => {
-    const segments = location.pathname.split('/').filter(Boolean);
-    if (segments.length === 0) return [{ label: 'Dashboard', path: '/dashboard' }];
-    
-    return segments.map((seg, idx) => {
-      const path = '/' + segments.slice(0, idx + 1).join('/');
-      let label = seg.charAt(0).toUpperCase() + seg.slice(1);
-      if (seg === 'dashboard') label = 'Dashboard';
-      else if (seg === 'my-work') label = 'Pipelines';
-      else if (seg === 'campaigns') label = 'Campaigns';
-      else if (seg === 'leads') label = 'Workspace';
-      else if (seg === 'followups') label = 'Follow-ups';
-      else if (seg === 'analytics') label = 'Analytics';
-      else if (seg === 'reports') label = 'Reports';
-      else if (seg === 'users') label = 'Team Management';
-      else if (seg === 'activity-logs') label = 'Activity Logs';
-      else if (seg === 'notifications-page') label = 'Notifications';
-      else if (seg === 'settings') label = 'Settings';
-      else if (seg === 'admin') label = 'Admin';
-      
-      return { label, path };
-    });
-  };
-
-  const getPageTitle = () => {
-    const breadcrumbs = getBreadcrumbs();
-    return breadcrumbs[breadcrumbs.length - 1]?.label || 'Dashboard';
   };
 
   const themesList: { id: AppTheme; name: string; color: string }[] = [
@@ -730,50 +765,105 @@ export default function Navbar() {
             {showNotifications && (
               <>
                 <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs sm:hidden" onClick={() => setShowNotifications(false)} />
-                <div className="max-sm:fixed max-sm:inset-x-3 max-sm:top-16 max-sm:bottom-auto sm:absolute sm:right-0 sm:mt-3 w-auto sm:w-80 rounded-2xl border border-theme-border bg-theme-card p-2 shadow-2xl z-50">
-                  <div className="flex items-center justify-between border-b border-theme-border/20 px-3 py-2">
-                    <span className="text-xs font-bold">Workspace Alerts</span>
+                <div className="max-sm:fixed max-sm:inset-x-3 max-sm:top-16 max-sm:bottom-auto sm:absolute sm:right-0 sm:mt-3 w-auto sm:w-88 rounded-2xl border border-theme-border bg-theme-card p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  {/* Notification Stack Header */}
+                  <div className="flex items-center justify-between border-b border-theme-border/30 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-theme-text">Notifications</span>
+                      {notifications.length > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
+                          {notifications.length}
+                        </span>
+                      )}
+                    </div>
+                    
                     <div className="flex items-center gap-2">
                       {unreadCount > 0 && (
-                        <button onClick={markAllRead} className="text-[10px] font-bold text-theme-primary hover:underline">
-                          Mark read
+                        <button 
+                          onClick={markAllRead} 
+                          className="text-[10px] font-bold text-theme-primary hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Mark all as read"
+                        >
+                          <CheckCheck size={12} />
+                          <span>Mark read</span>
                         </button>
                       )}
-                      <button onClick={() => setShowNotifications(false)} className="sm:hidden text-theme-text-muted">
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={clearAllNotifications}
+                          className="text-[10px] font-bold text-rose-500 hover:text-rose-600 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Clear all notifications"
+                        >
+                          <Trash2 size={11} />
+                          <span>Clear all</span>
+                        </button>
+                      )}
+                      <button onClick={() => setShowNotifications(false)} className="sm:hidden text-theme-text-muted hover:text-theme-text">
                         <X size={14} />
                       </button>
                     </div>
                   </div>
-                  <div className="max-h-60 overflow-y-auto py-1">
+
+                  {/* Notification Stack List */}
+                  <div className="max-h-80 overflow-y-auto p-1.5 space-y-1.5 custom-scrollbar">
                     {notifications.length > 0 ? (
                       notifications.map((item) => (
-                        <Link
+                        <div
                           key={item.id}
-                          to={getNotificationTargetUrl(item.title, item.message)}
+                          role="button"
                           onClick={() => handleNotificationClick(item)}
-                          className={`flex flex-col gap-0.5 rounded-xl px-3 py-2.5 transition-colors cursor-pointer block hover:bg-theme-bg-alt/60 ${
-                            !item.read ? 'bg-theme-bg-alt/40 font-semibold' : 'opacity-80'
+                          className={`w-full text-left flex items-start gap-2.5 rounded-xl p-2.5 transition-all cursor-pointer group border ${
+                            !item.read 
+                              ? 'bg-theme-bg-alt/90 border-theme-primary/40 hover:border-theme-primary/70 shadow-xs' 
+                              : 'bg-theme-bg-alt/30 border-theme-border/40 hover:bg-theme-bg-alt/60 hover:border-theme-border/80 opacity-80'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-theme-text">{item.title}</span>
-                            <span className="text-[9px] text-theme-text-muted">{item.time}</span>
+                          <div className={`p-1.5 rounded-lg flex-shrink-0 mt-0.5 ${
+                            !item.read ? 'bg-theme-primary/15' : 'bg-theme-bg-alt'
+                          }`}>
+                            {getNotificationIcon(item.title, item.message)}
                           </div>
-                          <p className="text-[11px] text-theme-text-muted mt-0.5 line-clamp-2">{item.message}</p>
-                        </Link>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`text-xs truncate transition-colors ${
+                                  !item.read ? 'font-bold text-theme-text group-hover:text-theme-primary' : 'font-semibold text-theme-text/80'
+                                }`}>
+                                  {item.title}
+                                </span>
+                                {!item.read && (
+                                  <span className="px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-wider bg-rose-500 text-white shadow-2xs flex-shrink-0 animate-pulse">
+                                    NEW
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-theme-text-muted mt-0.5 line-clamp-2 leading-relaxed">
+                              {item.message}
+                            </p>
+                            <div className="mt-1 flex items-center justify-between gap-1 text-[9px] text-theme-text-muted/80 font-medium">
+                              <span className="flex items-center gap-1 truncate">
+                                <Clock size={10} className="opacity-70 flex-shrink-0" />
+                                {item.time}
+                              </span>
+                            </div>
+                          </div>
+
+                          {!item.read && (
+                            <span className="w-2 h-2 rounded-full bg-theme-primary flex-shrink-0 self-center" />
+                          )}
+                        </div>
                       ))
                     ) : (
-                      <div className="py-6 px-4 text-center">
-                        <Bell size={22} className="mx-auto text-theme-text-muted/40 mb-1.5" />
-                        <p className="text-xs font-bold text-theme-text">No New Alerts</p>
+                      <div className="py-8 px-4 text-center">
+                        <div className="w-10 h-10 rounded-2xl bg-theme-bg-alt flex items-center justify-center mx-auto mb-2 text-theme-text-muted">
+                          <Bell size={20} className="opacity-40" />
+                        </div>
+                        <p className="text-xs font-bold text-theme-text">No Alerts</p>
                         <p className="text-[10px] text-theme-text-muted mt-0.5">You are caught up on everything!</p>
                       </div>
                     )}
-                  </div>
-                  <div className="border-t border-theme-border/20 p-2 text-center">
-                    <Link to="/notifications-page" onClick={() => setShowNotifications(false)} className="text-[10px] font-bold text-theme-primary hover:underline">
-                      View Notifications Center
-                    </Link>
                   </div>
                 </div>
               </>

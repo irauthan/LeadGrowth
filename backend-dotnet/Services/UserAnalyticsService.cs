@@ -58,7 +58,8 @@ public class UserAnalyticsService : IUserAnalyticsService
         long conversionsCount = myLeads.Count(l =>
             string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) ||
             string.Equals("Payment Completed", l.Status, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase)
+            string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals("Won", l.Status, StringComparison.OrdinalIgnoreCase)
         );
 
         var followupsQuery = _context.FollowupReminders
@@ -73,15 +74,17 @@ public class UserAnalyticsService : IUserAnalyticsService
 
         var pendingFollowupsCount = await followupsQuery.CountAsync();
 
-        // Calculate personal revenue from lead proposals/negotiations
-        double personalRevenue = myLeads
+        var myConvertedLeads = myLeads.Where(l =>
+            string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals("Payment Completed", l.Status, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals("Won", l.Status, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+
+        // Calculate personal revenue strictly from converted leads with proposal amounts
+        double personalRevenue = myConvertedLeads
             .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
             .Sum(l => l.ProposalAmount ?? 0);
-
-        if (personalRevenue <= 0.0 && conversionsCount > 0)
-        {
-            personalRevenue = conversionsCount * 2500.0;
-        }
 
         double conversionRate = assignedLeadsCount > 0 ? (conversionsCount * 100.0 / assignedLeadsCount) : 0.0;
         double taskCompletionRate = myTasks.Count > 0 ? (completedTasksCount * 100.0 / myTasks.Count) : 100.0;
@@ -143,8 +146,8 @@ public class UserAnalyticsService : IUserAnalyticsService
             { "Qualified", myLeads.Count(l => string.Equals("Qualified", l.Status, StringComparison.OrdinalIgnoreCase)) },
             { "Proposal Sent", myLeads.Count(l => string.Equals("Proposal Sent", l.Status, StringComparison.OrdinalIgnoreCase)) },
             { "Negotiation", myLeads.Count(l => string.Equals("Negotiation", l.Status, StringComparison.OrdinalIgnoreCase)) },
-            { "Converted", myLeads.Count(l => string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Payment Completed", l.Status, StringComparison.OrdinalIgnoreCase)) },
-            { "Lost", myLeads.Count(l => string.Equals("Lost", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Rejected", l.Status, StringComparison.OrdinalIgnoreCase)) }
+            { "Converted", myLeads.Count(l => string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Payment Completed", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Won", l.Status, StringComparison.OrdinalIgnoreCase)) },
+            { "Lost", myLeads.Count(l => string.Equals("Lost", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Rejected", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Closed Lost", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Dropped", l.Status, StringComparison.OrdinalIgnoreCase) || string.Equals("Junk", l.Status, StringComparison.OrdinalIgnoreCase)) }
         };
 
         long assignedCount = myLeads.Count;
@@ -154,10 +157,12 @@ public class UserAnalyticsService : IUserAnalyticsService
 
         var funnel = new List<Dictionary<string, object>>
         {
-            new() { { "stage", "Assigned Leads" }, { "count", assignedCount } },
-            new() { { "stage", "Interaction" }, { "count", contactedCount } },
-            new() { { "stage", "Qualified" }, { "count", qualifiedCount } },
-            new() { { "stage", "Converted" }, { "count", convertedCount } }
+            new() { { "stage", "New Leads" }, { "count", statusDistribution["New"] } },
+            new() { { "stage", "Interaction" }, { "count", statusDistribution["Interaction"] + statusDistribution["Interested"] + statusDistribution["Follow-Up"] } },
+            new() { { "stage", "Proposal Sent" }, { "count", statusDistribution["Proposal Sent"] + statusDistribution["Qualified"] } },
+            new() { { "stage", "Negotiation" }, { "count", statusDistribution["Negotiation"] } },
+            new() { { "stage", "Converted" }, { "count", statusDistribution["Converted"] } },
+            new() { { "stage", "Lost" }, { "count", statusDistribution["Lost"] } }
         };
 
         long completedTasks = myTasks.Count(t =>
@@ -176,12 +181,56 @@ public class UserAnalyticsService : IUserAnalyticsService
 
         var kpis = await GetUserDashboardKpisAsync(email, period, startDate, endDate);
 
+        // Calculate Month-by-Month Personal Trends (Past 6 Months)
+        var monthlyTrends = new List<Dictionary<string, object>>();
+        var nowUtc = DateTime.UtcNow;
+        for (int m = 5; m >= 0; m--)
+        {
+            var mTarget = nowUtc.AddMonths(-m);
+            var mStart = new DateTime(mTarget.Year, mTarget.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var mEnd = mStart.AddMonths(1).AddTicks(-1);
+
+            var mLeads = myLeadsRaw.Where(l => l.CreatedAt >= mStart && l.CreatedAt <= mEnd).ToList();
+            var mConverted = mLeads.Where(l =>
+                string.Equals("Converted", l.Status, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals("Payment Completed", l.Status, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals("Closed Won", l.Status, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals("Won", l.Status, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+            var mLost = mLeads.Count(l =>
+                string.Equals("Lost", l.Status, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals("Rejected", l.Status, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals("Closed Lost", l.Status, StringComparison.OrdinalIgnoreCase)
+            );
+            var mTasks = myTasksRaw.Count(t => t.CreatedAt >= mStart && t.CreatedAt <= mEnd &&
+                (string.Equals("Completed", t.Status, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals("APPROVED", t.Status, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals("PENDING_REVIEW", t.Status, StringComparison.OrdinalIgnoreCase)));
+
+            double mRevenue = mConverted
+                .Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0)
+                .Sum(l => l.ProposalAmount ?? 0);
+
+            monthlyTrends.Add(new Dictionary<string, object>
+            {
+                { "month", mStart.ToString("MMM yyyy") },
+                { "shortMonth", mStart.ToString("MMM") },
+                { "fullMonth", mStart.ToString("MMMM yyyy") },
+                { "leads", mLeads.Count },
+                { "converted", mConverted.Count },
+                { "lost", mLost },
+                { "tasks", mTasks },
+                { "revenue", Math.Round(mRevenue, 2) }
+            });
+        }
+
         return new Dictionary<string, object>
         {
             { "kpis", kpis },
             { "statusDistribution", statusDistribution },
             { "funnel", funnel },
-            { "taskAnalytics", taskAnalytics }
+            { "taskAnalytics", taskAnalytics },
+            { "monthlyTrends", monthlyTrends }
         };
     }
 }

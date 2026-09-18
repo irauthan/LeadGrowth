@@ -69,6 +69,25 @@ public class NotificationService : INotificationService
         await _context.SaveChangesAsync();
     }
 
+    public async Task ClearAllNotificationsAsync(string email)
+    {
+        var user = await ResolveUserAsync(email);
+        if (user == null)
+        {
+            throw new KeyNotFoundException("User not found");
+        }
+
+        var allUserNotifications = await _context.Notifications
+            .Where(n => n.UserId == user.Id)
+            .ToListAsync();
+
+        if (allUserNotifications.Any())
+        {
+            _context.Notifications.RemoveRange(allUserNotifications);
+            await _context.SaveChangesAsync();
+        }
+    }
+
     private async Task<User?> ResolveUserAsync(string identifier)
     {
         if (string.IsNullOrWhiteSpace(identifier)) return null;

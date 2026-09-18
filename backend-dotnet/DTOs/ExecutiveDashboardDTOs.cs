@@ -17,6 +17,7 @@ public class DashboardKpis
     public List<LeadDto> RecentLeads { get; set; } = new();
     public Dictionary<string, int> Funnel { get; set; } = new();
     public List<Dictionary<string, object>> Trends { get; set; } = new();
+    public List<Dictionary<string, object>> MonthlyTrends { get; set; } = new();
 }
 
 public class SearchResultDto

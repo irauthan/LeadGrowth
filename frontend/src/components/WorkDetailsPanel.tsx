@@ -5,21 +5,15 @@ import {
   ChevronLeft,
   Phone, 
   Mail, 
-  CheckCircle2, 
   Clock, 
   FileText, 
   History, 
   IndianRupee, 
-  Plus, 
   Calendar, 
   Download,
-  ChevronDown,
   ChevronRight,
   MessageSquare,
-  Video,
   Building2,
-  Activity,
-  ArrowUpDown,
   AlertCircle,
   Eye,
   Copy,
@@ -29,57 +23,26 @@ import {
   UserCheck,
   Loader2,
   Zap,
-  Lightbulb,
   Timer,
   AlertTriangle,
   RefreshCw,
-  Ban,
-  Sparkles
+  Sparkles,
+  Search,
+  CornerDownRight,
+  Video,
+  Activity,
+  Save
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { downloadSingleLeadPdf } from '../services/reportService';
-import { followUpService, type FollowUp, type ConflictCheckResult } from '../services/followUpService';
-import { isLeadAssigned, isLeadFresh } from '../utils';
+import { followUpService, type FollowUp } from '../services/followUpService';
+import { isLeadFresh } from '../utils';
 import FollowUpModal from './FollowUpModal';
+import InteractionStudioModal from './InteractionStudioModal';
 import type { SalesActivity, SalesActivityLog } from '../types';
 import CallTimerWidget from './CallTimerWidget';
-import CallHistoryLog from './CallHistoryLog';
-import SchedulePreviewSidePanel from './SchedulePreviewSidePanel';
 import { toast } from '../store/toastStore';
-
-const formatLocalDateOnly = (val?: string | Date): string => {
-  if (!val) {
-    const d = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }
-  if (typeof val === 'string') {
-    const match = val.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (match) return match[1];
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return '';
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${val.getFullYear()}-${pad(val.getMonth() + 1)}-${pad(val.getDate())}`;
-};
-
-const formatTimeDisplay = (timeStr?: string): string => {
-  if (!timeStr) return '10:00 AM';
-  let t = timeStr;
-  if (t.includes('T')) {
-    t = t.split('T')[1];
-  }
-  const parts = t.split(':');
-  const h = parseInt(parts[0], 10);
-  if (isNaN(h)) return '10:00 AM';
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  const m = parts[1] ? parts[1].slice(0, 2) : '00';
-  return `${h12}:${m} ${ampm}`;
-};
 
 interface WorkDetailsPanelProps {
   leadId: number | null;
@@ -197,8 +160,7 @@ export default function WorkDetailsPanel({
   const [lead, setLead] = useState<any>(null);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [activityLogsHistory, setActivityLogsHistory] = useState<SalesActivityLog[]>([]);
-  const [activeTab, setActiveTab] = useState<'activities' | 'notes' | 'timeline' | 'followup'>('activities');
-  const [historySubTab, setHistorySubTab] = useState<'all' | 'attempts'>('all');
+  const [activeTab, setActiveTab] = useState<'activities' | 'timeline'>('activities');
 
   // Management Assignee State
   const [members, setMembers] = useState<any[]>([]);
@@ -208,17 +170,15 @@ export default function WorkDetailsPanel({
 
   const [loading, setLoading] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const [savingNotes, setSavingNotes] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('');
-  const [clientNotes, setClientNotes] = useState('');
   const [proposalAmount, setProposalAmount] = useState<number | string>('');
 
-  // Expandable Step Accordions State
-  const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
-  // Sort order per step (true = Newest First, false = Oldest First)
-  const [newestFirstSort, setNewestFirstSort] = useState<Record<string, boolean>>({});
+  // Studio Workflow & History State
+  const [activeStudioStepKey, setActiveStudioStepKey] = useState<string>('FIRST_CALL');
+  const [historySearchTerm, setHistorySearchTerm] = useState<string>('');
+  const [studioHistoryScope, setStudioHistoryScope] = useState<'all' | 'step'>('all');
 
-  // Add Activity Modal State
+  // Add Activity State
   const [addModalStepKey, setAddModalStepKey] = useState<string | null>(null);
   const [communicationType, setCommunicationType] = useState('PHONE_CALL');
   const [outcome, setOutcome] = useState('BUSY');
@@ -228,11 +188,6 @@ export default function WorkDetailsPanel({
   const [nextFollowupDate, setNextFollowupDate] = useState('');
   const [submittingActivity, setSubmittingActivity] = useState(false);
 
-  // Complete Step Modal State
-  const [completeModalStepKey, setCompleteModalStepKey] = useState<string | null>(null);
-  const [completionRemarks, setCompletionRemarks] = useState('');
-  const [submittingCompletion, setSubmittingCompletion] = useState(false);
-
   // Clickable Interaction Detail Modal State
   const [selectedInteractionDetail, setSelectedInteractionDetail] = useState<any | null>(null);
   const [copiedRemarks, setCopiedRemarks] = useState(false);
@@ -240,12 +195,6 @@ export default function WorkDetailsPanel({
   // Followup state
   const [leadActiveFollowup, setLeadActiveFollowup] = useState<FollowUp | null>(null);
   const [showRescheduleModal, setShowRescheduleModal] = useState<boolean>(false);
-  const [followupType, setFollowupType] = useState('CALL');
-  const [followupDate, setFollowupDate] = useState('');
-  const [followupNotes, setFollowupNotes] = useState('');
-  const [schedulingFollowup, setSchedulingFollowup] = useState(false);
-  const [followupConflict, setFollowupConflict] = useState<ConflictCheckResult | null>(null);
-  const [checkingConflict, setCheckingConflict] = useState(false);
   const [completingFollowup, setCompletingFollowup] = useState(false);
 
   // Safe Lead Shift Navigation State
@@ -260,8 +209,7 @@ export default function WorkDetailsPanel({
     if (direction === 'prev' && !hasPrevLead) return;
 
     // Check unsaved modal forms inside panel
-    const hasUnsavedModal = (addModalStepKey !== null && activityRemarks.trim().length > 0) ||
-                            (completeModalStepKey !== null && completionRemarks.trim().length > 0);
+    const hasUnsavedModal = (addModalStepKey !== null && activityRemarks.trim().length > 0) || (activityRemarks.trim().length > 0);
 
     // Check active call session on the current lead
     let hasActiveCall = false;
@@ -291,7 +239,6 @@ export default function WorkDetailsPanel({
 
     // Reset inner temporary modal states safely
     setAddModalStepKey(null);
-    setCompleteModalStepKey(null);
 
     if (direction === 'next' && onNextLead) {
       onNextLead();
@@ -325,7 +272,7 @@ export default function WorkDetailsPanel({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasNextLead, hasPrevLead, onNextLead, onPrevLead, isNavigatingLead, addModalStepKey, activityRemarks, completeModalStepKey, completionRemarks, leadId]);
+  }, [hasNextLead, hasPrevLead, onNextLead, onPrevLead, isNavigatingLead, addModalStepKey, activityRemarks, leadId]);
 
   useEffect(() => {
     if (leadId && isOpen) {
@@ -395,7 +342,6 @@ export default function WorkDetailsPanel({
         followUpService.getFollowups().catch(() => [])
       ]);
       setLead(leadRes.data);
-      setClientNotes(leadRes.data?.clientNotes || '');
       setProposalAmount(leadRes.data?.proposalAmount || '');
       setTimeline(Array.isArray(timelineRes.data) ? timelineRes.data : []);
       setActivityLogsHistory(Array.isArray(logsRes.data) ? logsRes.data : []);
@@ -406,20 +352,10 @@ export default function WorkDetailsPanel({
       );
       setLeadActiveFollowup(activeF || null);
 
-      // Auto-expand first non-completed step or first step
+      // Set activeStudioStepKey to first non-completed step or first step
       if (leadRes.data && Array.isArray(leadRes.data.activities) && leadRes.data.activities.length > 0) {
-        const initialExpand: Record<string, boolean> = {};
-        let expandedOne = false;
-        leadRes.data.activities.forEach((act: SalesActivity) => {
-          if (!expandedOne && act.status !== 'COMPLETED') {
-            initialExpand[act.activityKey] = true;
-            expandedOne = true;
-          }
-        });
-        if (!expandedOne) {
-          initialExpand[leadRes.data.activities[0].activityKey] = true;
-        }
-        setExpandedSteps((prev) => ({ ...initialExpand, ...prev }));
+        const firstPending = leadRes.data.activities.find((act: SalesActivity) => act.status !== 'COMPLETED');
+        setActiveStudioStepKey(firstPending?.activityKey || leadRes.data.activities[0].activityKey || 'FIRST_CALL');
       }
     } catch (err) {
       console.error('Failed to load lead details', err);
@@ -428,25 +364,7 @@ export default function WorkDetailsPanel({
     }
   };
 
-  const toggleStepExpanded = (activityKey: string) => {
-    setExpandedSteps((prev) => ({ ...prev, [activityKey]: !prev[activityKey] }));
-  };
-
-  const toggleStepSort = (activityKey: string) => {
-    setNewestFirstSort((prev) => ({ ...prev, [activityKey]: !(prev[activityKey] ?? true) }));
-  };
-
-  const handleOpenAddModal = (activityKey: string) => {
-    setAddModalStepKey(activityKey);
-    setCommunicationType('PHONE_CALL');
-    setOutcome('BUSY');
-    setActivityRemarks('');
-    setActivityDuration('5 mins');
-    setActivityStatus('ATTEMPTED');
-    setNextFollowupDate('');
-  };
-
-  const handleAddActivitySubmit = async (e: React.FormEvent) => {
+  const handleAddActivitySubmit = async (e: React.FormEvent, openNext: boolean = false, completeStage: boolean = false) => {
     e.preventDefault();
     if (!leadId || !addModalStepKey) return;
     setSubmittingActivity(true);
@@ -460,10 +378,30 @@ export default function WorkDetailsPanel({
         nextFollowupDate: nextFollowupDate ? (nextFollowupDate.length === 16 ? `${nextFollowupDate}:00` : nextFollowupDate) : null
       };
       await api.post(`/api/leads/${leadId}/workflow-steps/${addModalStepKey}/activities`, payload);
+
+      if (completeStage) {
+        await api.post(`/api/leads/${leadId}/workflow-steps/${addModalStepKey}/complete`, {
+          completionRemarks: activityRemarks || 'Workflow stage auto-completed along with interaction log.'
+        }).catch((err) => console.error('Stage completion notice:', err));
+      }
+
+      toast.success(
+        openNext && hasNextLead 
+          ? 'Activity saved! Opening next lead...' 
+          : 'Interaction activity recorded successfully!', 
+        'Activity Saved'
+      );
+      
       setAddModalStepKey(null);
-      fetchLeadDetails();
+      setActivityRemarks('');
+      setNextFollowupDate('');
       triggerUpdate();
-      toast.success('Interaction activity recorded successfully!', 'Activity Saved');
+
+      if (openNext && hasNextLead && onNextLead) {
+        handleSafeLeadNavigation('next');
+      } else {
+        fetchLeadDetails();
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to record activity log');
     } finally {
@@ -471,120 +409,84 @@ export default function WorkDetailsPanel({
     }
   };
 
-  const handleOpenCompleteModal = (activityKey: string) => {
-    setCompleteModalStepKey(activityKey);
-    setCompletionRemarks('');
-  };
-
-  const handleCompleteStepSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!leadId || !completeModalStepKey) return;
-    setSubmittingCompletion(true);
-    try {
-      const payload: any = {
-        completionRemarks
-      };
-      if (proposalAmount !== '' && proposalAmount !== undefined && proposalAmount !== null) {
-        payload.proposalAmount = Number(proposalAmount);
-      }
-      await api.post(`/api/leads/${leadId}/workflow-steps/${completeModalStepKey}/complete`, payload);
-      setCompleteModalStepKey(null);
-      fetchLeadDetails();
-      triggerUpdate();
-      toast.success('Workflow stage completed successfully!', 'Stage Completed');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to complete workflow step');
-    } finally {
-      setSubmittingCompletion(false);
-    }
-  };
-
-  const handleAutoSaveNotes = async (newNotes: string) => {
-    setClientNotes(newNotes);
-    setAutoSaveStatus('Auto-saving...');
-    try {
-      await api.patch(`/api/leads/${leadId}/auto-save`, {
-        clientNotes: newNotes
-      });
-      setAutoSaveStatus('Saved Successfully');
-      setTimeout(() => setAutoSaveStatus(''), 3000);
-    } catch (e) {
-      setAutoSaveStatus('Failed to save');
-    }
-  };
-
-  const handleProposalSave = async () => {
+  const handleStudioSave = async (e?: React.FormEvent, openNext: boolean = false, completeStage: boolean = false) => {
+    if (e) e.preventDefault();
     if (!leadId) return;
-    setSavingNotes(true);
+    const targetStepKey = activeStudioStepKey || lead?.activities?.find((a: any) => a.status !== 'COMPLETED')?.activityKey || lead?.activities?.[0]?.activityKey || 'FIRST_CALL';
+
+    setSubmittingActivity(true);
+    setAutoSaveStatus('Saving activity...');
     try {
-      await api.patch(`/api/leads/${leadId}/auto-save`, {
-        proposalAmount: Number(proposalAmount),
-        proposalStatus: 'SENT'
-      });
-      setAutoSaveStatus('Proposal Details Saved');
-      toast.success('Proposal details saved successfully!', 'Proposal Updated');
-      fetchLeadDetails();
+      // 1. Save Activity Log
+      if (activityRemarks.trim()) {
+        const payload = {
+          communicationType,
+          outcome,
+          remarks: activityRemarks,
+          duration: activityDuration,
+          status: activityStatus,
+          nextFollowupDate: nextFollowupDate ? (nextFollowupDate.length === 16 ? `${nextFollowupDate}:00` : nextFollowupDate) : null
+        };
+        await api.post(`/api/leads/${leadId}/workflow-steps/${targetStepKey}/activities`, payload);
+      }
+
+      // 2. Schedule Follow-up if date is set
+      if (nextFollowupDate) {
+        await followUpService.createFollowup({
+          leadId,
+          scheduledAt: nextFollowupDate,
+          type: communicationType === 'PHONE_CALL' ? 'CALL' : communicationType === 'WHATSAPP' ? 'WHATSAPP' : 'MEETING',
+          notes: activityRemarks ? `Follow-up (${targetStepKey.replace(/_/g, ' ')}): ${activityRemarks}` : 'Scheduled client follow-up reminder.',
+          autoScheduleIfConflict: false
+        }).catch((err) => console.error('Followup sync note:', err));
+      }
+
+      // 3. Save Proposal Deal Value if provided
+      if (proposalAmount !== '' && proposalAmount !== undefined && proposalAmount !== null) {
+        await api.patch(`/api/leads/${leadId}/auto-save`, {
+          proposalAmount: Number(proposalAmount),
+          proposalStatus: 'SENT'
+        }).catch((err) => console.error('Proposal sync note:', err));
+      }
+
+      // 4. Complete stage if requested
+      if (completeStage) {
+        await api.post(`/api/leads/${leadId}/workflow-steps/${targetStepKey}/complete`, {
+          completionRemarks: activityRemarks || 'Workflow stage marked completed.',
+          proposalAmount: proposalAmount ? Number(proposalAmount) : undefined
+        }).catch((err) => console.error('Stage complete error:', err));
+      }
+
+      toast.success(
+        openNext && hasNextLead 
+          ? 'Saved successfully! Opening next lead...' 
+          : completeStage 
+          ? 'Workflow stage completed and advanced!'
+          : 'Interaction activity recorded successfully!',
+        'Activity Saved'
+      );
+
+      setActivityRemarks('');
+      setNextFollowupDate('');
       triggerUpdate();
-    } catch (e) {
-      toast.error('Failed to save proposal');
+
+      if (openNext && hasNextLead && onNextLead) {
+        handleSafeLeadNavigation('next');
+      } else {
+        await fetchLeadDetails();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to record activity log');
     } finally {
-      setSavingNotes(false);
+      setSubmittingActivity(false);
     }
   };
 
-  // Conflict check for Tab 3 followup scheduling
-  useEffect(() => {
-    if (!followupDate || !isOpen || activeTab !== 'followup') {
-      setFollowupConflict(null);
-      return;
-    }
-    const dt = new Date(followupDate);
-    if (isNaN(dt.getTime())) return;
-
-    setCheckingConflict(true);
-    const timer = setTimeout(async () => {
-      try {
-        const res = await followUpService.checkConflict(
-          lead?.assignedToId || currentUser?.id || 0,
-          followupDate
-        );
-        setFollowupConflict(res);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setCheckingConflict(false);
-      }
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [followupDate, isOpen, activeTab, lead, currentUser]);
-
-  const handleScheduleFollowup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!leadId || !followupDate) return;
-    if (followupConflict?.hasConflict) {
-      toast.warning('This slot is already booked for another lead. Please choose a free slot.', 'Schedule Conflict');
-      return;
-    }
-
-    setSchedulingFollowup(true);
-    try {
-      await followUpService.createFollowup({
-        leadId,
-        scheduledAt: followupDate,
-        type: followupType,
-        notes: followupNotes,
-        autoScheduleIfConflict: false
-      });
-      toast.success('Follow-up scheduled successfully!', 'Follow-up Booked');
-      setFollowupDate('');
-      setFollowupNotes('');
-      fetchLeadDetails();
-      triggerUpdate();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to schedule follow-up');
-    } finally {
-      setSchedulingFollowup(false);
-    }
+  const handleCopyRemarks = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedRemarks(true);
+    setTimeout(() => setCopiedRemarks(false), 2500);
   };
 
   const handleCompleteActiveFollowup = async () => {
@@ -601,27 +503,6 @@ export default function WorkDetailsPanel({
     } finally {
       setCompletingFollowup(false);
     }
-  };
-
-  const handleCancelActiveFollowup = async () => {
-    if (!leadActiveFollowup) return;
-    if (!confirm('Are you sure you want to cancel this scheduled follow-up?')) return;
-    try {
-      await followUpService.cancel(leadActiveFollowup.id);
-      setLeadActiveFollowup(null);
-      toast.info('Follow-up reminder cancelled.', 'Cancelled');
-      fetchLeadDetails();
-      triggerUpdate();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to cancel follow-up');
-    }
-  };
-
-  const handleCopyRemarks = (text: string) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    setCopiedRemarks(true);
-    setTimeout(() => setCopiedRemarks(false), 2500);
   };
 
   const getCommIcon = (type: string) => {
@@ -660,7 +541,7 @@ export default function WorkDetailsPanel({
 
   const containerClass = inline
     ? 'rounded-2xl shadow-xs h-full flex flex-col overflow-hidden'
-    : `border-l ${maximized ? 'max-w-6xl w-[94vw]' : 'max-w-2xl w-full'} h-full flex flex-col shadow-xl`;
+    : `border-l ${maximized ? 'max-w-7xl w-[96vw]' : 'max-w-5xl lg:max-w-6xl w-full'} h-full flex flex-col shadow-2xl`;
 
   const panelInner = (
     <div className={`bg-theme-card border border-theme-border flex flex-col relative w-full ${containerClass}`}>
@@ -929,7 +810,7 @@ export default function WorkDetailsPanel({
                 </div>
               </div>
               <button
-                onClick={() => setActiveTab('followup')}
+                onClick={() => setShowRescheduleModal(true)}
                 className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] shadow shrink-0 self-start sm:self-auto transition-all"
               >
                 Reschedule Slot
@@ -937,731 +818,206 @@ export default function WorkDetailsPanel({
             </div>
           )}
 
-          {/* Navigation Tabs */}
-          <div className={`grid ${isManagementUser ? 'grid-cols-2' : 'grid-cols-4'} gap-1 sm:gap-1.5 p-1 bg-theme-bg-alt/60 border border-theme-border rounded-xl flex-shrink-0`}>
-            {(isManagementUser
-              ? [
-                  { id: 'activities', label: 'Lead Assignment', shortLabel: 'Assignment', icon: UserCheck },
-                  { id: 'timeline', label: 'Activity Audit', shortLabel: 'Audit', icon: MessageSquare }
-                ]
-              : [
-                  { id: 'activities', label: 'Activities & Stages', shortLabel: 'Stages', icon: CheckCircle2 },
-                  { id: 'notes', label: 'Proposal & Notes', shortLabel: 'Notes', icon: FileText },
-                  { 
-                    id: 'followup', 
-                    label: 'Schedule Follow-up', 
-                    shortLabel: 'Follow-up',
-                    icon: Calendar,
-                    hasAlert: Boolean(lead && lead.nextFollowupDate && new Date(lead.nextFollowupDate).getTime() < Date.now() && lead.status !== 'Converted' && lead.status !== 'Lost' && lead.status !== 'Rejected' && lead.followupStatus !== 'COMPLETED')
-                  },
-                  { id: 'timeline', label: 'History', shortLabel: 'History', icon: History }
-                ]
-            ).map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
+          {/* MANAGEMENT VIEW: LEAD ASSIGNMENT & ACTIVITY AUDIT TABS */}
+          {isManagementUser ? (
+            <div className="space-y-4">
+              {/* Management Tabs */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-theme-bg-alt/60 border border-theme-border rounded-xl flex-shrink-0">
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-3 rounded-lg text-xs font-extrabold transition-all relative ${
-                    isActive
+                  onClick={() => setActiveTab('activities')}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-extrabold transition-all ${
+                    activeTab === 'activities'
                       ? 'bg-theme-primary text-white shadow-xs'
-                      : (tab as any).hasAlert
-                      ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40'
                       : 'bg-theme-card/60 text-theme-text-muted hover:text-theme-text'
                   }`}
                 >
-                  <Icon size={14} className="flex-shrink-0" /> 
-                  <span className="hidden sm:inline text-xs">{tab.label}</span>
-                  <span className="sm:hidden text-[10px] font-bold truncate">{tab.shortLabel}</span>
-                  {(tab as any).hasAlert && (
-                    <span className="text-[8px] font-extrabold bg-rose-500 text-white px-1 py-0.2 rounded-full animate-pulse">
-                      !
-                    </span>
-                  )}
+                  <UserCheck size={14} />
+                  <span>Lead Assignment</span>
                 </button>
-              );
-            })}
-          </div>
+                <button
+                  onClick={() => setActiveTab('timeline')}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-extrabold transition-all ${
+                    activeTab === 'timeline'
+                      ? 'bg-theme-primary text-white shadow-xs'
+                      : 'bg-theme-card/60 text-theme-text-muted hover:text-theme-text'
+                  }`}
+                >
+                  <MessageSquare size={14} />
+                  <span>Activity Audit</span>
+                </button>
+              </div>
 
-          {/* TAB 1: LEAD ASSIGNMENT (ADMIN/MANAGER) OR WORKFLOW STAGES (SALES REPS) */}
-              {activeTab === 'activities' && (
-                <div className="space-y-4">
-                  {isManagementUser ? (
-                    <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-6">
-                      {/* Unified Section 1: Lead Assignment Controls */}
-                      <div className="space-y-4">
-                        <div className="border-b border-theme-border pb-3">
-                          <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
-                            <UserCheck size={18} className="text-theme-primary" />
-                            <span>Lead Assignment</span>
-                          </h3>
-                          <p className="text-xs text-theme-text-muted mt-0.5">
-                            Assign or re-allocate this lead to an active sales executive.
-                          </p>
-                        </div>
-
-                        {assignSuccessMsg && (
-                          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-                            <Check size={16} />
-                            <span>{assignSuccessMsg}</span>
-                          </div>
-                        )}
-
-                        <form onSubmit={handleAssignSubmit} className="space-y-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
-                                CURRENT OWNER
-                              </label>
-                              <div className="h-14 px-3.5 rounded-2xl border border-theme-border bg-theme-bg-alt/50 flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-theme-primary/20 text-theme-primary font-extrabold text-xs flex items-center justify-center flex-shrink-0">
-                                  {lead?.assignedToName ? lead.assignedToName.charAt(0).toUpperCase() : 'U'}
-                                </div>
-                                <div className="min-w-0">
-                                  <span className="font-bold text-xs text-theme-text block truncate">
-                                    {lead?.assignedToName || 'Unassigned Lead'}
-                                  </span>
-                                  <span className="text-[10px] text-theme-text-muted block truncate">
-                                    {lead?.assignedToName ? 'Active Owner' : 'Needs Assignment'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
-                                ASSIGN TO
-                              </label>
-                              <select
-                                value={selectedAssigneeId}
-                                onChange={(e) => setSelectedAssigneeId(e.target.value)}
-                                className="w-full h-14 px-3.5 rounded-2xl border border-theme-border bg-theme-bg-alt text-xs outline-none focus:border-theme-primary text-theme-text font-bold cursor-pointer"
-                              >
-                                <option value="">-- Select Sales Executive --</option>
-                                <option value="-1">⚡ Auto-Assign (Smart Engine)</option>
-                                {members
-                                  .filter((m: any) => {
-                                    const roles = Array.isArray(m.roles)
-                                      ? m.roles.map((r: any) => (typeof r === 'string' ? r : r.name || ''))
-                                      : [];
-                                    const roleStr = (m.role || m.designation || '').toUpperCase();
-                                    const isAdminUser = roles.some((r: string) => r.toUpperCase().includes('ADMIN')) || roleStr.includes('ADMIN');
-                                    return !isAdminUser;
-                                  })
-                                  .map((m: any) => (
-                                    <option key={m.id} value={m.id}>
-                                      {m.fullName || m.name} ({m.email})
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-end pt-1">
-                            <button
-                              type="submit"
-                              disabled={assigningLead || !selectedAssigneeId}
-                              className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-theme-primary/20 disabled:opacity-50 transition-all cursor-pointer"
-                            >
-                              {assigningLead ? (
-                                <Loader2 size={14} className="animate-spin" />
-                              ) : selectedAssigneeId === '-1' ? (
-                                <Zap size={14} />
-                              ) : (
-                                <UserCheck size={14} />
-                              )}
-                              <span>
-                                {selectedAssigneeId === '-1' ? 'Auto-Assign Lead' : 'Assign Lead'}
-                              </span>
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-
-                      {/* Unified Section 2: Pipeline Status */}
-                      <div className="border-t border-theme-border pt-4 space-y-3">
-                        <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted">
-                          Pipeline Status & Attributes
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div>
-                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Pipeline Stage</label>
-                            {isManagementUser ? (
-                              <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-primary uppercase">
-                                {lead?.status || 'New'}
-                              </div>
-                            ) : (
-                              <select
-                                value={lead?.status || 'New'}
-                                onChange={async (e) => {
-                                  const newStatus = e.target.value;
-                                  try {
-                                    await api.patch(`/api/leads/${lead.id}/status`, null, { params: { status: newStatus } });
-                                    fetchLeadDetails();
-                                    triggerUpdate();
-                                  } catch (err) {
-                                    console.error(err);
-                                  }
-                                }}
-                                className="w-full rounded-xl border border-theme-border bg-theme-bg-alt p-2.5 text-xs font-bold text-theme-text outline-none focus:border-theme-primary cursor-pointer"
-                              >
-                                <option value="New">New</option>
-                                <option value="Interaction">Interaction</option>
-                                <option value="Qualified">Qualified</option>
-                                <option value="Converted">Converted</option>
-                                <option value="Rejected">Rejected</option>
-                                <option value="Lost">Lost</option>
-                              </select>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Quality Tier</label>
-                            <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-extrabold text-amber-400">
-                              {lead?.qualityTier || 'WARM'}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Source Platform</label>
-                            <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-text">
-                              {lead?.sourcePlatform || 'Direct'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Unified Section 3: Commercials & Discussion Summary */}
-                      <div className="border-t border-theme-border pt-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                            <FileText size={14} className="text-theme-primary" />
-                            <span>Commercials & Discussion Summary</span>
-                          </h4>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('timeline')}
-                            className="text-xs font-bold text-theme-primary hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>View Timeline</span>
-                            <ChevronRight size={14} />
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/50 space-y-1.5">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block">
-                              Proposal Amount
-                            </span>
-                            <div className="text-lg font-black text-theme-text">
-                              {lead?.proposalAmount ? `₹${Number(lead.proposalAmount).toLocaleString('en-IN')}` : 'No Proposal Logged'}
-                            </div>
-                            <span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-theme-primary/10 text-theme-primary uppercase">
-                              Status: {lead?.proposalStatus || 'NOT_SENT'}
-                            </span>
-                          </div>
-
-                          <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/50 space-y-1.5">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block">
-                              Executive Notes
-                            </span>
-                            <p className="text-xs text-theme-text-muted italic line-clamp-3">
-                              {lead?.clientNotes ? `"${lead.clientNotes}"` : 'No notes recorded yet.'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted">
-                            Stage Activities & Logs
-                          </h3>
-                        </div>
-                        {autoSaveStatus && (
-                          <span className="text-[10px] font-bold text-emerald-400 animate-pulse">
-                            {autoSaveStatus}
-                          </span>
-                        )}
-                      </div>
-
-                  <div className="space-y-3">
-                    {lead?.activities?.map((act: SalesActivity) => {
-                      const isCompleted = act.status === 'COMPLETED';
-                      const isExpanded = expandedSteps[act.activityKey] ?? false;
-                      const isNewestFirst = newestFirstSort[act.activityKey] ?? true;
-                      const isLostStep = act.activityKey === 'LEAD_LOST' || 
-                                         act.activityKey === 'DROP_LEAD' || 
-                                         act.title?.toLowerCase().includes('lost') || 
-                                         act.title?.toLowerCase().includes('drop');
-
-                      const logs = act.logs || [];
-                      const sortedLogs = [...logs].sort((a, b) => 
-                        isNewestFirst 
-                          ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                          : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                      );
-
-                      return (
-                        <div
-                          key={act.id}
-                          className={`rounded-2xl border transition-all overflow-hidden ${
-                            isLostStep
-                              ? isCompleted
-                                ? 'bg-rose-500/15 border-rose-500/50 ring-1 ring-rose-500/30 shadow-md shadow-rose-500/5'
-                                : 'bg-rose-500/5 border-rose-500/30 hover:border-rose-500/60'
-                              : isCompleted 
-                              ? 'bg-emerald-500/5 border-emerald-500/30' 
-                              : 'bg-theme-card border-theme-border hover:border-theme-primary/40'
-                          }`}
-                        >
-                          {/* Step Header */}
-                          <div className={`p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 ${isLostStep ? 'bg-rose-500/5' : 'bg-theme-card/80'}`}>
-                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                              <button
-                                onClick={() => toggleStepExpanded(act.activityKey)}
-                                className="p-1 rounded-lg hover:bg-theme-bg-alt text-theme-text-muted hover:text-theme-text transition-all flex-shrink-0"
-                              >
-                                {isExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
-                              </button>
-
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                  <h4 className={`text-xs font-extrabold flex items-center gap-1.5 ${
-                                    isLostStep 
-                                      ? 'text-rose-400' 
-                                      : isCompleted 
-                                      ? 'text-emerald-400' 
-                                      : 'text-theme-text'
-                                  }`}>
-                                    {isLostStep && <AlertCircle size={13} className="text-rose-400 flex-shrink-0 animate-pulse" />}
-                                    <span className="truncate">{act.title}</span>
-                                  </h4>
-                                  <span className={`text-[9px] font-extrabold uppercase px-1.5 sm:px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
-                                    isLostStep
-                                      ? isCompleted
-                                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                                        : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                                      : isCompleted 
-                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                                      : act.status === 'IN_PROGRESS'
-                                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                      : 'bg-theme-bg-alt text-theme-text-muted border-theme-border'
-                                  }`}>
-                                    {isLostStep ? (isCompleted ? 'LOST' : 'DROP') : isCompleted ? 'DONE' : act.status}
-                                  </span>
-                                  <span className="text-[9px] font-bold text-theme-text-muted px-1.5 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border/40">
-                                    {logs.length} {logs.length === 1 ? 'Log' : 'Logs'}
-                                  </span>
-                                </div>
-
-                                {isCompleted ? (
-                                  <p className={`text-[10px] font-medium mt-1 flex items-center gap-1 flex-wrap ${isLostStep ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
-                                    <span>Completed by</span>
-                                    <strong className="font-bold">{act.completedByName || 'Sales Rep'}</strong>
-                                    {act.completionRemarks && ` — "${act.completionRemarks}"`}
-                                  </p>
-                                ) : (
-                                  <p className="text-[10px] text-theme-text-muted mt-0.5 truncate">
-                                    {logs.length > 0 ? `Last activity: ${new Date(logs[logs.length - 1].createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'No activities recorded yet.'}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Header Action Buttons */}
-                            {!isCompleted && (
-                              <div className="flex items-center gap-1.5 justify-end pt-1 sm:pt-0">
-                                <button
-                                  onClick={() => handleOpenAddModal(act.activityKey)}
-                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-theme-primary hover:bg-theme-primary-hover text-white text-[11px] font-bold shadow-xs transition-all active:scale-95"
-                                >
-                                  <Plus size={12} /> <span>Activity</span>
-                                </button>
-
-                                <button
-                                  onClick={() => handleOpenCompleteModal(act.activityKey)}
-                                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-white text-[11px] font-bold shadow-xs transition-all active:scale-95 ${
-                                    isLostStep
-                                      ? 'bg-rose-600 hover:bg-rose-500'
-                                      : 'bg-emerald-600 hover:bg-emerald-500'
-                                  }`}
-                                >
-                                  {isLostStep ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
-                                  <span>{isLostStep ? 'Drop' : 'Complete'}</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Expandable Activity Timeline Section */}
-                          {isExpanded && (
-                            <div className="p-3 sm:p-4 border-t border-theme-border/40 bg-theme-bg/60 space-y-3">
-                              {(act.activityKey === 'NEGOTIATION' || act.activityKey === 'PROPOSAL_SENT') && (
-                                <div className="p-3 rounded-2xl bg-theme-card border border-theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
-                                  <div className="space-y-0.5">
-                                    <span className="text-[11px] font-extrabold uppercase text-theme-primary flex items-center gap-1">
-                                      <IndianRupee size={12} className="text-emerald-500" /> Negotiated Deal Revenue (₹)
-                                    </span>
-                                    <p className="text-[10px] text-theme-text-muted">
-                                      Enter agreed deal value during negotiation.
-                                    </p>
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-emerald-500">₹</span>
-                                      <input
-                                        type="number"
-                                        placeholder="e.g. 50000"
-                                        value={proposalAmount}
-                                        onChange={(e) => setProposalAmount(e.target.value)}
-                                        className="w-32 bg-theme-bg-alt border border-theme-border rounded-xl pl-6 pr-2 py-1 text-xs font-extrabold text-theme-text focus:outline-none focus:border-theme-primary"
-                                      />
-                                    </div>
-                                    <button
-                                      onClick={handleProposalSave}
-                                      disabled={savingNotes}
-                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all flex items-center gap-1"
-                                    >
-                                      {savingNotes ? 'Saving...' : 'Save'}
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="flex items-center justify-between text-[11px] font-bold text-theme-text-muted border-b border-theme-border/30 pb-1.5">
-                                <span>Recorded Interaction Logs ({logs.length})</span>
-                                {logs.length > 1 && (
-                                  <button
-                                    onClick={() => toggleStepSort(act.activityKey)}
-                                    className="flex items-center gap-1 text-[10px] text-theme-primary hover:underline font-semibold"
-                                  >
-                                    <ArrowUpDown size={11} /> {isNewestFirst ? 'Newest' : 'Oldest'}
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* Log Timeline Items */}
-                              {sortedLogs.length > 0 ? (
-                                <div className="space-y-2">
-                                  {sortedLogs.map((log: SalesActivityLog) => (
-                                    <div
-                                      key={log.id}
-                                      onClick={() => setSelectedInteractionDetail({ ...log, stepTitle: act.title, typeName: 'Activity Attempt' })}
-                                      className="p-2.5 sm:p-3 rounded-xl bg-theme-card border border-theme-border/60 hover:border-theme-primary hover:shadow-xs transition-all cursor-pointer space-y-1.5 group"
-                                    >
-                                      <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="w-5 h-5 rounded-md bg-theme-bg-alt border border-theme-border flex items-center justify-center flex-shrink-0">
-                                            {getCommIcon(log.communicationType)}
-                                          </span>
-                                          <span className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors">
-                                            Attempt #{log.activityNumber}
-                                          </span>
-                                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
-                                            {log.outcome?.replace('_', ' ')}
-                                          </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1.5 text-[10px] text-theme-text-muted">
-                                          {log.duration && (
-                                            <span className="flex items-center gap-1 bg-theme-bg-alt px-1.5 py-0.5 rounded-md border border-theme-border">
-                                              <Clock size={9} /> {log.duration}
-                                            </span>
-                                          )}
-                                          <span>{new Date(log.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                      </div>
-
-                                      {/* Remarks */}
-                                      <p className="text-[11px] text-theme-text/90 bg-theme-bg-alt/40 p-2 rounded-lg border border-theme-border/30 italic line-clamp-2">
-                                        "{log.remarks || 'No detailed remark provided.'}"
-                                      </p>
-
-                                      <div className="flex items-center justify-between text-[10px] text-theme-text-muted">
-                                        <span>By: <strong className="text-theme-text font-bold">{log.loggedByName?.split(' ')[0] || 'Executive'}</strong></span>
-                                        {log.nextFollowupDate && (
-                                          <span className="text-amber-400 font-bold flex items-center gap-1">
-                                            <Calendar size={10} /> Next: {new Date(log.nextFollowupDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-center py-5 bg-theme-card/30 rounded-xl border border-dashed border-theme-border/60 space-y-1.5">
-                                  <AlertCircle size={20} className="mx-auto text-theme-text-muted opacity-50" />
-                                  <p className="text-xs text-theme-text-muted">
-                                    No activities recorded for this step yet.
-                                  </p>
-                                  <button
-                                    onClick={() => handleOpenAddModal(act.activityKey)}
-                                    className="px-3 py-1 rounded-lg bg-theme-primary/10 border border-theme-primary/30 text-theme-primary text-xs font-bold hover:bg-theme-primary hover:text-white transition-all"
-                                  >
-                                    + Add First Interaction Attempt
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-              {/* TAB 2: PROPOSAL & NOTES */}
-              {activeTab === 'notes' && (
-                <div className="space-y-6">
-                  {/* Commercial Proposal Section */}
-                  <div className="p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                      <IndianRupee size={16} className="text-emerald-400" /> Commercial Proposal Details
-                    </h3>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Proposal Amount (₹)</label>
-                        <input
-                          type="number"
-                          placeholder="e.g. 5000"
-                          value={proposalAmount}
-                          onChange={(e) => setProposalAmount(e.target.value)}
-                          className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-4 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-                        />
-                      </div>
-
-                      <div className="flex items-end">
-                        <button
-                          onClick={handleProposalSave}
-                          disabled={savingNotes}
-                          className="w-full py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-2"
-                        >
-                          <IndianRupee size={14} /> Update Commercial Proposal
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* General Executive Notes */}
-                  <div className="p-5 rounded-3xl bg-theme-card border border-theme-border space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                        <FileText size={16} className="text-theme-primary" /> Executive Workspace Client Notes
+              {activeTab === 'activities' ? (
+                <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-6">
+                  {/* Lead Assignment Controls */}
+                  <div className="space-y-4">
+                    <div className="border-b border-theme-border pb-3">
+                      <h3 className="text-sm font-extrabold text-theme-text flex items-center gap-2">
+                        <UserCheck size={18} className="text-theme-primary" />
+                        <span>Lead Assignment</span>
                       </h3>
-                      {autoSaveStatus && (
-                        <span className="text-[10px] font-bold text-emerald-400 animate-pulse">
-                          {autoSaveStatus}
-                        </span>
-                      )}
+                      <p className="text-xs text-theme-text-muted mt-0.5">
+                        Assign or re-allocate this lead to an active sales executive.
+                      </p>
                     </div>
 
-                    <textarea
-                      rows={6}
-                      placeholder="Add key notes, business details, tech stack, budget limits..."
-                      value={clientNotes}
-                      onChange={(e) => handleAutoSaveNotes(e.target.value)}
-                      className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl p-4 text-xs text-theme-text focus:outline-none focus:border-theme-primary leading-relaxed"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: SCHEDULE FOLLOW-UP */}
-              {activeTab === 'followup' && (
-                <div className="space-y-4">
-                  {leadActiveFollowup ? (
-                    <div className="p-6 rounded-3xl bg-blue-500/10 border border-blue-500/30 space-y-4 shadow-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-3 w-3 rounded-full bg-blue-500 animate-ping" />
-                          <h3 className="text-sm font-black uppercase tracking-wider text-theme-text flex items-center gap-2">
-                            <Calendar size={18} className="text-theme-primary" /> Active Follow-up In Progress
-                          </h3>
-                        </div>
-                        <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30">
-                          {leadActiveFollowup.type || 'CALL'}
-                        </span>
+                    {assignSuccessMsg && (
+                      <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                        <Check size={16} />
+                        <span>{assignSuccessMsg}</span>
                       </div>
+                    )}
 
-                      <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/60 space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-black text-theme-text">
-                          <Clock size={16} className="text-blue-500" />
-                          <span>
-                            Scheduled Time: {leadActiveFollowup.scheduledAt ? new Date(leadActiveFollowup.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                          </span>
-                        </div>
-                        {leadActiveFollowup.notes && (
-                          <p className="text-xs text-theme-text-muted italic bg-theme-bg-alt/50 p-3 rounded-xl border border-theme-border/30">
-                            "{leadActiveFollowup.notes}"
-                          </p>
-                        )}
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5 pt-1">
-                          <AlertCircle size={14} /> Only one active follow-up is allowed at a time. To set a new date, reschedule below or complete this follow-up.
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3 pt-1 flex-wrap">
-                        <button
-                          onClick={handleCompleteActiveFollowup}
-                          disabled={completingFollowup}
-                          className="flex-1 min-w-[140px] py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-1.5 transition-all"
-                        >
-                          <CheckCircle2 size={16} /> Mark Completed
-                        </button>
-
-                        <button
-                          onClick={() => setShowRescheduleModal(true)}
-                          className="flex-1 min-w-[140px] py-2.5 rounded-2xl bg-theme-bg-alt hover:bg-theme-card border border-theme-border text-theme-text font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all"
-                        >
-                          <RefreshCw size={14} /> Reschedule
-                        </button>
-
-                        <button
-                          onClick={handleCancelActiveFollowup}
-                          className="px-4 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs border border-rose-500/20 flex items-center justify-center gap-1 transition-all"
-                        >
-                          <Ban size={14} /> Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                      <form onSubmit={handleScheduleFollowup} className="lg:col-span-7 p-5 rounded-3xl bg-theme-card border border-theme-border space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
-                          <Calendar size={16} className="text-theme-primary" /> Schedule Direct Follow-up Task
-                        </h3>
-
-                        {/* Slot Conflict Banner */}
-                        {checkingConflict && (
-                          <div className="p-2.5 rounded-xl bg-theme-primary/10 border border-theme-primary/20 text-theme-primary text-xs flex items-center gap-2">
-                            <RefreshCw size={12} className="animate-spin" />
-                            <span>Checking slot availability...</span>
-                          </div>
-                        )}
-                        {followupConflict?.hasConflict && (
-                          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs space-y-1">
-                            <div className="flex items-center gap-1.5 font-extrabold">
-                              <AlertTriangle size={15} className="text-rose-500 shrink-0" />
-                              <span>Slot Booked: Already occupied {followupConflict.conflictingLeadName ? `by "${followupConflict.conflictingLeadName}"` : 'by another lead'}.</span>
+                    <form onSubmit={handleAssignSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
+                            CURRENT OWNER
+                          </label>
+                          <div className="h-14 px-3.5 rounded-2xl border border-theme-border bg-theme-bg-alt/50 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-theme-primary/20 text-theme-primary font-extrabold text-xs flex items-center justify-center flex-shrink-0">
+                              {lead?.assignedToName ? lead.assignedToName.charAt(0).toUpperCase() : 'U'}
                             </div>
-                            <p className="text-[11px] text-theme-text-muted">
-                              You cannot give this time to this lead. Please select a free available slot.
-                            </p>
+                            <div className="min-w-0">
+                              <span className="font-bold text-xs text-theme-text block truncate">
+                                {lead?.assignedToName || 'Unassigned Lead'}
+                              </span>
+                              <span className="text-[10px] text-theme-text-muted block truncate">
+                                {lead?.assignedToName ? 'Active Owner' : 'Needs Assignment'}
+                              </span>
+                            </div>
                           </div>
-                        )}
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div>
-                            <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Type</label>
-                            <select
-                              value={followupType}
-                              onChange={(e) => setFollowupType(e.target.value)}
-                              className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-                            >
-                              <option value="CALL">Phone Call</option>
-                              <option value="WHATSAPP">WhatsApp</option>
-                              <option value="EMAIL">Email</option>
-                              <option value="MEETING">Meeting / Demo</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Date *</label>
-                            <input
-                              type="date"
-                              required
-                              value={formatLocalDateOnly(followupDate || new Date())}
-                              min={formatLocalDateOnly(new Date())}
-                              onChange={(e) => {
-                                const dateVal = e.target.value;
-                                if (!dateVal) return;
-                                const timePart = followupDate && followupDate.includes('T') ? followupDate.split('T')[1].slice(0, 5) : '10:00';
-                                setFollowupDate(`${dateVal}T${timePart}`);
-                              }}
-                              className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Scheduled Time *</label>
-                            <input
-                              type="time"
-                              step="900"
-                              required
-                              value={followupDate && followupDate.includes('T') ? followupDate.split('T')[1].slice(0, 5) : '10:00'}
-                              onChange={(e) => {
-                                const timeVal = e.target.value;
-                                if (!timeVal) return;
-                                const datePart = followupDate ? formatLocalDateOnly(followupDate) : formatLocalDateOnly(new Date());
-                                setFollowupDate(`${datePart}T${timeVal}`);
-                              }}
-                              className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Selected Time Badge & Working Hours */}
-                        <div className="pt-1 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-600/10 border border-blue-500/20 px-2.5 py-1 rounded-xl">
-                            <Clock size={13} />
-                            <span>Selected Time: {formatTimeDisplay(followupDate)}</span>
-                          </div>
-                          <span className="text-[9px] text-theme-text-muted font-bold">Working Hours: 9:00 AM – 7:00 PM</span>
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Follow-up Objectives / Remarks</label>
-                          <textarea
-                            rows={3}
-                            placeholder="Key topics to discuss in the upcoming call..."
-                            value={followupNotes}
-                            onChange={(e) => setFollowupNotes(e.target.value)}
-                            className="w-full bg-theme-bg-alt border border-theme-border rounded-2xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
-                          />
+                          <label className="block text-xs font-bold text-theme-text-muted mb-1.5">
+                            ASSIGN TO
+                          </label>
+                          <select
+                            value={selectedAssigneeId}
+                            onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                            className="w-full h-14 px-3.5 rounded-2xl border border-theme-border bg-theme-bg-alt text-xs outline-none focus:border-theme-primary text-theme-text font-bold cursor-pointer"
+                          >
+                            <option value="">-- Select Sales Executive --</option>
+                            <option value="-1">Auto-Assign (Smart Engine)</option>
+                            {members
+                              .filter((m: any) => {
+                                const roles = Array.isArray(m.roles)
+                                  ? m.roles.map((r: any) => (typeof r === 'string' ? r : r.name || ''))
+                                  : [];
+                                const roleStr = (m.role || m.designation || '').toUpperCase();
+                                const isAdminUser = roles.some((r: string) => r.toUpperCase().includes('ADMIN')) || roleStr.includes('ADMIN');
+                                return !isAdminUser;
+                              })
+                              .map((m: any) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.fullName || m.name} ({m.email})
+                                </option>
+                              ))}
+                          </select>
                         </div>
+                      </div>
 
+                      <div className="flex justify-end pt-1">
                         <button
                           type="submit"
-                          disabled={schedulingFollowup || Boolean(followupConflict?.hasConflict)}
-                          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition-all disabled:opacity-50"
+                          disabled={assigningLead || !selectedAssigneeId}
+                          className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-theme-primary/20 disabled:opacity-50 transition-all cursor-pointer"
                         >
-                          <Plus size={16} /> Schedule Reminder
+                          {assigningLead ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : selectedAssigneeId === '-1' ? (
+                            <Zap size={14} />
+                          ) : (
+                            <UserCheck size={14} />
+                          )}
+                          <span>
+                            {selectedAssigneeId === '-1' ? 'Auto-Assign Lead' : 'Assign Lead'}
+                          </span>
                         </button>
-                      </form>
+                      </div>
+                    </form>
+                  </div>
 
-                      <div className="lg:col-span-5 w-full">
-                        <SchedulePreviewSidePanel
-                          selectedDate={followupDate || formatLocalDateOnly(new Date())}
-                          onSelectSlot={(slotTime) => setFollowupDate(slotTime)}
-                          title="Day's Schedule & Free Slots"
-                          compact={true}
-                        />
+                  {/* Pipeline Status */}
+                  <div className="border-t border-theme-border pt-4 space-y-3">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted">
+                      Pipeline Status & Attributes
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Pipeline Stage</label>
+                        <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-primary uppercase">
+                          {lead?.status || 'New'}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Quality Tier</label>
+                        <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-extrabold text-amber-400">
+                          {lead?.qualityTier || 'WARM'}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-theme-text-muted uppercase mb-1">Source Platform</label>
+                        <div className="p-2.5 rounded-xl border border-theme-border bg-theme-bg-alt text-xs font-bold text-theme-text">
+                          {lead?.sourcePlatform || 'Direct'}
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
 
-              {/* TAB 4: CLICKABLE CLIENT INTERACTION HISTORY TIMELINE */}
-              {activeTab === 'timeline' && (
+                  {/* Commercials & Discussion Summary */}
+                  <div className="border-t border-theme-border pt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
+                        <FileText size={14} className="text-theme-primary" />
+                        <span>Commercials & Discussion Summary</span>
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('timeline')}
+                        className="text-xs font-bold text-theme-primary hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>View Timeline</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/50 space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block">
+                          Proposal Amount
+                        </span>
+                        <div className="text-lg font-black text-theme-text">
+                          {lead?.proposalAmount ? `₹${Number(lead.proposalAmount).toLocaleString('en-IN')}` : 'No Proposal Logged'}
+                        </div>
+                        <span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-theme-primary/10 text-theme-primary uppercase">
+                          Status: {lead?.proposalStatus || 'NOT_SENT'}
+                        </span>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-theme-bg-alt/40 border border-theme-border/50 space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted block">
+                          Executive Notes
+                        </span>
+                        <p className="text-xs text-theme-text-muted italic line-clamp-3">
+                          {lead?.clientNotes ? `"${lead.clientNotes}"` : 'No notes recorded yet.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Activity Audit for Managers */
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-theme-text-muted flex items-center gap-2">
                       <History size={16} className="text-theme-primary" /> Complete Audit Trail & Interactions
                     </h3>
 
-                    {/* Date filter & Sub-tab controls */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      {/* Date Filter Tabs */}
                       <div className="flex items-center gap-1 p-1 bg-theme-bg-alt rounded-xl border border-theme-border text-[10px] font-bold">
                         {(
                           [
@@ -1684,431 +1040,709 @@ export default function WorkDetailsPanel({
                           </button>
                         ))}
                       </div>
-
-                      {/* Sub-tab toggle */}
-                      <div className="flex items-center gap-1 p-1 bg-theme-card border border-theme-border rounded-xl text-[10px]">
-                        <button
-                          onClick={() => setHistorySubTab('all')}
-                          className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                            historySubTab === 'all'
-                              ? 'bg-theme-primary text-white'
-                              : 'text-theme-text-muted hover:text-theme-text'
-                          }`}
-                        >
-                          All History ({timeline.filter((item: any) => isWithinDateFilter(item.timestamp || item.createdAt || item.date)).length})
-                        </button>
-                        <button
-                          onClick={() => setHistorySubTab('attempts')}
-                          className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                            historySubTab === 'attempts'
-                              ? 'bg-theme-primary text-white'
-                              : 'text-theme-text-muted hover:text-theme-text'
-                          }`}
-                        >
-                          Call Attempts ({activityLogsHistory.filter((log: SalesActivityLog) => isWithinDateFilter(log.createdAt)).length})
-                        </button>
-                      </div>
                     </div>
                   </div>
 
-                  {historyDateFilter !== 'ALL' && (
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-theme-primary/10 border border-theme-primary/20 text-xs text-theme-primary font-bold">
-                      <span>
-                        Filtering interaction history for: <strong className="uppercase">{historyDateFilter === 'TODAY' ? "Today" : historyDateFilter === 'WEEK' ? "This Week" : "This Month"}</strong>
-                      </span>
-                      <button
-                        onClick={() => setHistoryDateFilter('ALL')}
-                        className="text-[11px] underline hover:text-theme-primary-hover cursor-pointer"
-                      >
-                        Show All History
-                      </button>
-                    </div>
-                  )}
-
-                  <p className="text-[10px] text-theme-text-muted flex items-center gap-1.5">
-                    <Lightbulb size={13} className="text-amber-400 flex-shrink-0" />
-                    <span>Click on any interaction record below to open and inspect full discussion notes, duration, and follow-up details.</span>
-                  </p>
-
-                  {/* Call History Duration Logs */}
-                  {lead && <CallHistoryLog leadId={lead.id} />}
-
-                  {/* Sub-tab 1: All System Audit & Multi-Activity Timeline */}
-                  {historySubTab === 'all' && (() => {
-                    const filteredTimeline = timeline.filter((item: any) => isWithinDateFilter(item.timestamp || item.createdAt || item.date));
-                    return (
-                      <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-theme-border">
-                        {filteredTimeline.map((item: any) => (
-                          <div
-                            key={item.id}
-                            onClick={() => setSelectedInteractionDetail({ ...item, typeName: item.activityType || 'Activity Event' })}
-                            className="relative group cursor-pointer"
-                          >
-                            <div className="absolute -left-[22px] top-1.5 w-3.5 h-3.5 rounded-full bg-theme-primary border-2 border-theme-bg group-hover:scale-125 transition-transform" />
-                            <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all space-y-2">
-                              <div className="flex items-center justify-between text-xs font-bold text-theme-text flex-wrap gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="px-2 py-0.5 rounded-md bg-theme-primary/10 border border-theme-primary/20 text-theme-primary text-[10px] font-extrabold uppercase">
-                                    {item.activityType || 'EVENT'}
-                                  </span>
-                                  <span className="text-theme-primary font-extrabold group-hover:underline flex items-center gap-1">
-                                    {item.action} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-[10px] text-theme-text-muted">
-                                  {item.duration && (
-                                    <span className="px-2 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border font-bold text-amber-400 flex items-center gap-1">
-                                      <Timer size={11} className="text-amber-400" />
-                                      <span>{item.duration}</span>
-                                    </span>
-                                  )}
-                                  <span className="font-semibold">{item.date || new Date(item.timestamp).toLocaleDateString()} at {item.time || new Date(item.timestamp).toLocaleTimeString()}</span>
-                                </div>
-                              </div>
-
-                              {/* Remarks / Description */}
-                              <p className="text-xs text-theme-text-muted leading-relaxed line-clamp-2 italic bg-theme-bg-alt/40 p-2.5 rounded-xl border border-theme-border/30">
-                                "{item.remarks || item.description || 'No detailed remark provided.'}"
-                              </p>
-
-                              <div className="flex items-center justify-between text-[10px] text-theme-text-muted pt-1 border-t border-theme-border/20">
-                                <span>User: <strong className="text-theme-text font-bold">{item.performedByName || 'System'}</strong></span>
-                                <span className="font-bold text-emerald-400">Stage: {item.leadStage || lead?.status || 'New Lead'}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        {filteredTimeline.length === 0 && (
-                          <div className="text-center py-6 text-xs text-theme-text-muted space-y-1">
-                            <p>No activity records logged for this period.</p>
-                            {historyDateFilter !== 'ALL' && (
-                              <button
-                                onClick={() => setHistoryDateFilter('ALL')}
-                                className="text-theme-primary font-bold underline"
-                              >
-                                View All-Time Activity
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Sub-tab 2: Activity Logs & Call Attempts */}
-                  {historySubTab === 'attempts' && (() => {
-                    const filteredAttempts = activityLogsHistory.filter((log: SalesActivityLog) => isWithinDateFilter(log.createdAt));
-                    return (
-                      <div className="space-y-3">
-                        {filteredAttempts.map((log: SalesActivityLog) => (
-                          <div
-                            key={log.id}
-                            onClick={() => setSelectedInteractionDetail({ ...log, typeName: 'Activity Call Log' })}
-                            className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer space-y-2.5 group"
-                          >
-                            <div className="flex items-center justify-between gap-2">
+                  <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-theme-border">
+                    {timeline
+                      .filter((item: any) => isWithinDateFilter(item.timestamp || item.createdAt || item.date))
+                      .map((item: any) => (
+                        <div
+                          key={item.id}
+                          onClick={() => setSelectedInteractionDetail({ ...item, typeName: item.activityType || 'Activity Event' })}
+                          className="relative group cursor-pointer"
+                        >
+                          <div className="absolute -left-[22px] top-1.5 w-3.5 h-3.5 rounded-full bg-theme-primary border-2 border-theme-bg group-hover:scale-125 transition-transform" />
+                          <div className="p-4 rounded-2xl bg-theme-card border border-theme-border/70 hover:border-theme-primary/60 hover:shadow-md transition-all space-y-2">
+                            <div className="flex items-center justify-between text-xs font-bold text-theme-text flex-wrap gap-2">
                               <div className="flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-lg bg-theme-bg-alt border border-theme-border flex items-center justify-center">
-                                  {getCommIcon(log.communicationType)}
+                                <span className="px-2 py-0.5 rounded-md bg-theme-primary/10 border border-theme-primary/20 text-theme-primary text-[10px] font-extrabold uppercase">
+                                  {item.activityType || 'EVENT'}
                                 </span>
-                                <span className="text-xs font-extrabold text-theme-text group-hover:text-theme-primary transition-colors flex items-center gap-1">
-                                  Attempt #{log.activityNumber} <Eye size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </span>
-                                <span className="text-[10px] text-theme-text-muted font-medium">
-                                  ({log.communicationType?.replace('_', ' ')})
-                                </span>
-                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
-                                  {log.outcome?.replace('_', ' ')}
+                                <span className="text-theme-primary font-extrabold flex items-center gap-1">
+                                  {item.action} <Eye size={12} />
                                 </span>
                               </div>
 
-                              <span className="text-[10px] text-theme-text-muted">{new Date(log.createdAt).toLocaleString()}</span>
+                              <div className="flex items-center gap-2 text-[10px] text-theme-text-muted">
+                                {item.duration && (
+                                  <span className="px-2 py-0.5 rounded-md bg-theme-bg-alt border border-theme-border font-bold text-amber-400 flex items-center gap-1">
+                                    <Timer size={11} className="text-amber-400" />
+                                    <span>{item.duration}</span>
+                                  </span>
+                                )}
+                                <span className="font-semibold">{item.date || new Date(item.timestamp).toLocaleDateString()} at {item.time || new Date(item.timestamp).toLocaleTimeString()}</span>
+                              </div>
                             </div>
 
-                            <p className="text-xs text-theme-text/90 bg-theme-bg-alt/40 p-3 rounded-xl border border-theme-border/30 italic">
-                              "{log.remarks || 'No detailed remark provided.'}"
+                            <p className="text-xs text-theme-text-muted leading-relaxed line-clamp-2 italic bg-theme-bg-alt/40 p-2.5 rounded-xl border border-theme-border/30">
+                              "{item.remarks || item.description || 'No detailed remark provided.'}"
                             </p>
 
-                            <div className="flex items-center justify-between text-[10px] text-theme-text-muted">
-                              <span>Logged by: <strong className="text-theme-text font-bold">{log.loggedByName || 'Sales Rep'}</strong></span>
-                              <span className="text-theme-primary font-bold">Click to inspect →</span>
+                            <div className="flex items-center justify-between text-[10px] text-theme-text-muted pt-1 border-t border-theme-border/20">
+                              <span>User: <strong className="text-theme-text font-bold">{item.performedByName || 'System'}</strong></span>
+                              <span className="font-bold text-emerald-400">Stage: {item.leadStage || lead?.status || 'New Lead'}</span>
                             </div>
                           </div>
-                        ))}
-
-                        {filteredAttempts.length === 0 && (
-                          <div className="text-center py-6 text-xs text-theme-text-muted space-y-1">
-                            <p>No call attempts or interaction logs recorded for this period.</p>
-                            {historyDateFilter !== 'ALL' && (
-                              <button
-                                onClick={() => setHistoryDateFilter('ALL')}
-                                className="text-theme-primary font-bold underline"
-                              >
-                                View All-Time Attempts
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                        </div>
+                      ))}
+                  </div>
                 </div>
               )}
             </div>
-          )}
-
-          {/* MODAL 1: ADD ACTIVITY LOG MODAL (Enlarged & Fully Managed) */}
-          {addModalStepKey && (
-            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 12 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 12 }}
-                className="bg-theme-card border border-theme-border rounded-3xl p-7 sm:p-8 w-full max-w-2xl sm:max-w-3xl shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto custom-scrollbar"
-              >
-                {/* Modal Header */}
-                <div className="flex items-start justify-between border-b border-theme-border/60 pb-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-theme-primary/20 to-indigo-600/10 text-theme-primary border border-theme-primary/30 flex items-center justify-center flex-shrink-0 shadow-xs">
-                      <Activity size={22} />
-                    </div>
-                    <div>
-                      <h3 className="text-base sm:text-lg font-extrabold text-theme-text flex items-center gap-2">
-                        Log Interaction Attempt
-                      </h3>
-                      <p className="text-xs text-theme-text-muted mt-0.5">
-                        Stage: <span className="font-bold text-theme-primary uppercase">{addModalStepKey.replace(/_/g, ' ')}</span>
-                        {lead?.name && (
-                          <span> • Client: <strong className="text-theme-text font-bold">{lead.name}</strong></span>
-                        )}
-                      </p>
-                    </div>
+          ) : (
+            /* SALES REP VIEW: UNIFIED DUAL-PANE SALES WORKFLOW STUDIO */
+            <div className="space-y-4 sm:space-y-5">
+              {/* TOP PIPELINE STAGE STEPPER */}
+              <div className="p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-theme-card border border-theme-border shadow-xs">
+                <div className="flex items-center justify-between mb-2.5 px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-theme-text-muted">
+                      Pipeline Workflow Stages
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
+                      Step {(() => {
+                        const stages = ['FIRST_CALL', 'REQUIREMENT_COLLECTION', 'DEMO_SCHEDULED', 'PROPOSAL_SENT', 'NEGOTIATION', 'CLOSING'];
+                        const idx = stages.indexOf(activeStudioStepKey);
+                        return idx >= 0 ? idx + 1 : 1;
+                      })()} of 6
+                    </span>
                   </div>
-                  <button 
-                    type="button"
-                    onClick={() => setAddModalStepKey(null)} 
-                    className="p-2 rounded-xl text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-colors"
-                    title="Close"
-                  >
-                    <X size={20} />
-                  </button>
+
+                  {autoSaveStatus && (
+                    <span className="text-[10px] font-bold text-emerald-400 animate-pulse">
+                      {autoSaveStatus}
+                    </span>
+                  )}
                 </div>
 
-                <form onSubmit={handleAddActivitySubmit} className="space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-theme-text block mb-1.5">Communication Channel</label>
+                {/* 6 Stage Chips Stepper */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                  {[
+                    { key: 'FIRST_CALL', number: 1, title: 'First Call', shortTitle: '1. First Call' },
+                    { key: 'REQUIREMENT_COLLECTION', number: 2, title: 'Requirement Gathering', shortTitle: '2. Requirements' },
+                    { key: 'DEMO_SCHEDULED', number: 3, title: 'Product Demo', shortTitle: '3. Demo' },
+                    { key: 'PROPOSAL_SENT', number: 4, title: 'Commercial Proposal', shortTitle: '4. Proposal' },
+                    { key: 'NEGOTIATION', number: 5, title: 'Negotiation', shortTitle: '5. Negotiation' },
+                    { key: 'CLOSING', number: 6, title: 'Final Deal Closure', shortTitle: '6. Close' }
+                  ].map((stage) => {
+                    const act = lead?.activities?.find((a: any) => a.activityKey === stage.key);
+                    const isCompleted = act?.status === 'COMPLETED';
+                    const isInProgress = act?.status === 'IN_PROGRESS';
+                    const isActiveInStudio = activeStudioStepKey === stage.key;
+                    const logCount = act?.logs?.length || 0;
+
+                    return (
+                      <button
+                        key={stage.key}
+                        type="button"
+                        onClick={() => setActiveStudioStepKey(stage.key)}
+                        className={`p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between group ${
+                          isActiveInStudio
+                            ? 'bg-theme-primary/10 border-theme-primary ring-1 ring-theme-primary/30 shadow-xs'
+                            : isCompleted
+                            ? 'bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/60'
+                            : isInProgress
+                            ? 'bg-amber-500/5 border-amber-500/30 hover:border-amber-500/60'
+                            : 'bg-theme-bg-alt/40 border-theme-border hover:border-theme-primary/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                            isCompleted
+                              ? 'bg-emerald-500 text-white'
+                              : isActiveInStudio
+                              ? 'bg-theme-primary text-white'
+                              : 'bg-theme-bg-alt border border-theme-border text-theme-text-muted'
+                          }`}>
+                            {isCompleted ? <Check size={11} /> : stage.number}
+                          </div>
+
+                          <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-md border ${
+                            isCompleted
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                              : isInProgress
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                              : 'bg-theme-bg-alt text-theme-text-muted border-theme-border'
+                          }`}>
+                            {isCompleted ? 'Done' : isInProgress ? 'In Progress' : 'Pending'}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0">
+                          <span className={`text-xs font-extrabold block truncate ${
+                            isActiveInStudio ? 'text-theme-primary' : isCompleted ? 'text-emerald-400' : 'text-theme-text'
+                          }`}>
+                            {stage.title}
+                          </span>
+                          <span className="text-[10px] text-theme-text-muted block mt-0.5">
+                            {logCount} {logCount === 1 ? 'Log' : 'Logs'}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* DUAL-PANE WORKSPACE: LEFT FORM + RIGHT LIVE HISTORY */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
+                
+                {/* LEFT COLUMN (LG:COL-SPAN-7): CURRENT INTERACTION FORM */}
+                <div className="lg:col-span-7 bg-theme-card border border-theme-border rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
+                  {/* Current Stage Context Banner */}
+                  <div className="flex items-center justify-between pb-3 border-b border-theme-border/70 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-bold text-xs">
+                        <Zap size={16} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-extrabold text-theme-text">
+                            {activeStudioStepKey.replace(/_/g, ' ')}
+                          </h3>
+                          <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
+                            Active Step
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-theme-text-muted mt-0.5">
+                          Record interaction outcome, discussion notes, commercials & follow-up.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="px-2.5 py-1 rounded-xl bg-theme-bg-alt border border-theme-border font-bold text-theme-text-muted text-[11px]">
+                        Attempt #{(() => {
+                          const currentAct = lead?.activities?.find((a: any) => a.activityKey === activeStudioStepKey);
+                          return (currentAct?.logs?.length || 0) + 1;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Section 1: Call Outcome Selector (Clean, NO Emojis) */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center justify-between">
+                      <span>Call Outcome *</span>
+                      <span className="text-[10px] font-semibold text-theme-primary">Selected: {outcome.replace(/_/g, ' ')}</span>
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-2">
+                      {[
+                        { value: 'CONNECTED', label: 'Connected', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' },
+                        { value: 'INTERESTED', label: 'Interested', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' },
+                        { value: 'BUSY', label: 'Client Busy', color: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
+                        { value: 'NO_ANSWER', label: 'No Answer', color: 'border-rose-500/40 text-rose-400 bg-rose-500/10' },
+                        { value: 'CALLBACK_REQUESTED', label: 'Callback Req', color: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
+                        { value: 'MEETING_SCHEDULED', label: 'Meeting Set', color: 'border-indigo-500/40 text-indigo-400 bg-indigo-500/10' },
+                        { value: 'PROPOSAL_REQUESTED', label: 'Proposal Req', color: 'border-purple-500/40 text-purple-400 bg-purple-500/10' },
+                        { value: 'NOT_INTERESTED', label: 'Not Interested', color: 'border-zinc-500/40 text-zinc-400 bg-zinc-500/10' },
+                        { value: 'LOST', label: 'Deal Lost', color: 'border-rose-600/40 text-rose-400 bg-rose-600/10' }
+                      ].map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => setOutcome(item.value)}
+                          className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
+                            outcome === item.value
+                              ? `${item.color} ring-1 ring-current shadow-xs`
+                              : 'bg-theme-bg-alt/50 border-theme-border text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section 2: Channel, Status & Duration in 3-Column Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Communication Channel */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">
+                        Channel
+                      </label>
                       <select
                         value={communicationType}
                         onChange={(e) => setCommunicationType(e.target.value)}
-                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all"
+                        className="w-full bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary cursor-pointer"
                       >
-                        <option value="PHONE_CALL">📞 Phone Call</option>
-                        <option value="WHATSAPP">💬 WhatsApp</option>
-                        <option value="EMAIL">✉️ Email</option>
-                        <option value="GOOGLE_MEET">🎥 Google Meet</option>
-                        <option value="ZOOM">📹 Zoom</option>
-                        <option value="OFFICE_VISIT">🏢 Office Visit</option>
-                        <option value="VIDEO_CALL">📱 Video Call</option>
-                        <option value="OTHER">📋 Other Channel</option>
+                        <option value="PHONE_CALL">Phone Call</option>
+                        <option value="WHATSAPP">WhatsApp</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="MEETING">Meeting / Demo</option>
                       </select>
                     </div>
 
-                    <div>
-                      <label className="text-xs font-bold text-theme-text block mb-1.5">Interaction Outcome</label>
-                      <select
-                        value={outcome}
-                        onChange={(e) => setOutcome(e.target.value)}
-                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all"
-                      >
-                        <option value="BUSY">Client Busy</option>
-                        <option value="NOT_ANSWERED">No Answer / Ringing</option>
-                        <option value="REJECTED_CALL">Declined / Cut Call</option>
-                        <option value="WRONG_NUMBER">Wrong Number</option>
-                        <option value="CONNECTED">Connected & Discussed</option>
-                        <option value="INTERESTED">Interested & Positive</option>
-                        <option value="NOT_INTERESTED">Not Interested</option>
-                        <option value="CALL_BACK_LATER">Requested Call Back</option>
-                        <option value="MEETING_SCHEDULED">Meeting Scheduled</option>
-                        <option value="DEMO_SCHEDULED">Demo Scheduled</option>
-                        <option value="PROPOSAL_REQUESTED">Proposal Requested</option>
-                        <option value="NEGOTIATION_STARTED">Negotiation Started</option>
-                        <option value="CONVERTED">Closed / Converted</option>
-                        <option value="LOST">Deal Lost</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-bold text-theme-text">Interaction Duration</label>
-                        <span className="text-[10px] text-theme-text-muted">Quick presets:</span>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="e.g. 5 mins, 15 mins"
-                        value={activityDuration}
-                        onChange={(e) => setActivityDuration(e.target.value)}
-                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all"
-                      />
-                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                        {['2 mins', '5 mins', '10 mins', '15 mins', '30 mins'].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setActivityDuration(preset)}
-                            className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-all ${
-                              activityDuration === preset
-                                ? 'bg-theme-primary/15 border-theme-primary/50 text-theme-primary font-bold'
-                                : 'bg-theme-bg border-theme-border/60 text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt'
-                            }`}
-                          >
-                            {preset}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-theme-text block mb-1.5">Attempt Status</label>
+                    {/* Attempt Status */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">
+                        Attempt Status
+                      </label>
                       <select
                         value={activityStatus}
                         onChange={(e) => setActivityStatus(e.target.value)}
-                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all"
+                        className="w-full bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary cursor-pointer"
                       >
-                        <option value="ATTEMPTED">Attempted (Unreached)</option>
-                        <option value="IN_PROGRESS">In Progress (Active Discussions)</option>
-                        <option value="WAITING">Waiting (Client to reply)</option>
-                        <option value="SCHEDULED">Scheduled (Next Step Fixed)</option>
-                        <option value="SUCCESSFUL">Successful (Discussion Done)</option>
+                        <option value="ATTEMPTED">Attempted</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="COMPLETED">Completed</option>
                       </select>
-                      <p className="text-[10px] text-theme-text-muted mt-2">
-                        Mark as Attempted if client didn't respond, or Successful if dialogue occurred.
-                      </p>
+                    </div>
+
+                    {/* Duration */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-theme-text-muted">
+                        Call Duration
+                      </label>
+                      <select
+                        value={activityDuration}
+                        onChange={(e) => setActivityDuration(e.target.value)}
+                        className="w-full bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary cursor-pointer"
+                      >
+                        <option value="1 min">1 min</option>
+                        <option value="2 mins">2 mins</option>
+                        <option value="5 mins">5 mins</option>
+                        <option value="10 mins">10 mins</option>
+                        <option value="15 mins">15 mins</option>
+                        <option value="30 mins">30 mins</option>
+                        <option value="45 mins">45 mins</option>
+                        <option value="60 mins">60 mins</option>
+                      </select>
                     </div>
                   </div>
 
-                  {/* Discussion Notes / Remarks */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-bold text-theme-text">Detailed Discussion Summary & Notes</label>
-                      <span className="text-[10px] font-semibold text-rose-500">Required</span>
+                  {/* Section 3: Commercial Proposal Amount (₹) */}
+                  <div className="p-3 rounded-2xl bg-theme-bg-alt/40 border border-theme-border flex items-center justify-between gap-3">
+                    <label className="text-xs font-bold text-theme-text flex items-center gap-2 cursor-pointer">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <IndianRupee size={13} />
+                      </div>
+                      <span>Commercial Proposal Value (₹)</span>
+                    </label>
+
+                    <div className="relative w-40 sm:w-48 flex-shrink-0">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500">₹</span>
+                      <input
+                        type="number"
+                        placeholder="e.g. 25000"
+                        value={proposalAmount}
+                        onChange={(e) => setProposalAmount(e.target.value)}
+                        className="w-full bg-theme-card border border-theme-border rounded-xl pl-7 pr-3 py-1.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary transition-all"
+                      />
                     </div>
+                  </div>
+
+                  {/* Section 4: Discussion Notes & Quick Templates */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                        <FileText size={13} className="text-theme-primary" />
+                        <span>Discussion Notes & Takeaways *</span>
+                      </label>
+                      <span className="text-[10px] text-theme-text-muted font-medium">
+                        {activityRemarks.length} chars
+                      </span>
+                    </div>
+
+                    {/* 1-Click Quick Note Templates */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        'Client requested pricing quote & deck',
+                        'Call rescheduled - client busy in meeting',
+                        'Product demo completed successfully',
+                        'Commercial negotiation in progress',
+                        'Shared brochure via WhatsApp'
+                      ].map((tpl) => (
+                        <button
+                          key={tpl}
+                          type="button"
+                          onClick={() => setActivityRemarks(tpl)}
+                          className="px-2.5 py-1 rounded-lg bg-theme-bg-alt hover:bg-theme-primary/10 hover:text-theme-primary hover:border-theme-primary/40 border border-theme-border text-[10px] font-medium text-theme-text-muted transition-all truncate max-w-full"
+                        >
+                          + {tpl}
+                        </button>
+                      ))}
+                    </div>
+
                     <textarea
-                      required
-                      rows={5}
-                      placeholder="e.g. Client outside office, confirmed budget and requested pricing proposal over email. Agreed to connect tomorrow afternoon at 3 PM..."
+                      rows={3}
+                      placeholder="Type detailed discussion notes, client pain points, objections, deliverables..."
                       value={activityRemarks}
                       onChange={(e) => setActivityRemarks(e.target.value)}
-                      className="w-full bg-theme-bg border border-theme-border rounded-2xl p-4 text-xs text-theme-text leading-relaxed focus:outline-none focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/20 transition-all placeholder:text-theme-text-muted/60"
+                      className="w-full bg-theme-card border border-theme-border rounded-xl p-3 text-xs text-theme-text focus:outline-none focus:border-theme-primary leading-relaxed resize-none transition-all placeholder:text-theme-text-muted/60"
                     />
                   </div>
 
-                  {/* Modal Footer Buttons */}
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-theme-border/60">
+                  {/* Section 5: Schedule Next Follow-Up */}
+                  <div className="p-3 rounded-2xl bg-theme-bg-alt/40 border border-theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center justify-between sm:justify-start gap-2">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-theme-text-muted flex items-center gap-1.5">
+                        <Calendar size={13} className="text-blue-500" />
+                        <span>Next Follow-Up Reminder</span>
+                      </label>
+
+                      {nextFollowupDate && (
+                        <button
+                          type="button"
+                          onClick={() => setNextFollowupDate('')}
+                          className="text-[10px] font-bold text-rose-400 hover:underline ml-1"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="w-full sm:w-60 flex-shrink-0">
+                      <input
+                        type="datetime-local"
+                        value={nextFollowupDate}
+                        onChange={(e) => setNextFollowupDate(e.target.value)}
+                        className="w-full bg-theme-card border border-theme-border rounded-xl px-3 py-1.5 text-xs font-semibold text-theme-text focus:outline-none focus:border-theme-primary transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 6: Unified Action Footer */}
+                  <div className="pt-2 border-t border-theme-border/60">
                     <button
                       type="button"
-                      onClick={() => setAddModalStepKey(null)}
-                      className="px-5 py-2.5 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
                       disabled={submittingActivity}
-                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-theme-primary to-indigo-600 hover:from-theme-primary-hover hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-theme-primary/25 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                      onClick={() => handleStudioSave(undefined, false, false)}
+                      className="w-full py-2.5 px-4 rounded-xl bg-theme-primary hover:opacity-90 text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
                     >
                       {submittingActivity ? (
-                        <>
-                          <Loader2 size={14} className="animate-spin" />
-                          <span>Saving Activity...</span>
-                        </>
+                        <Loader2 size={14} className="animate-spin" />
                       ) : (
-                        <>
-                          <CheckCircle2 size={15} />
-                          <span>Save Activity Log</span>
-                        </>
+                        <Save size={13} />
                       )}
+                      <span>Save Activity Log</span>
                     </button>
                   </div>
-                </form>
-              </motion.div>
-            </div>
-          )}
-
-          {/* MODAL 2: EXPLICITLY COMPLETE STEP MODAL */}
-          {completeModalStepKey && (
-            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-theme-card border border-theme-border rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4"
-              >
-                <div className="flex items-center justify-between border-b border-theme-border pb-3">
-                  <h3 className="text-sm font-extrabold text-emerald-400 flex items-center gap-2">
-                    <CheckCircle2 size={18} /> Mark Workflow Step Completed
-                  </h3>
-                  <button onClick={() => setCompleteModalStepKey(null)} className="text-theme-text-muted hover:text-theme-text">
-                    <X size={18} />
-                  </button>
                 </div>
 
-                <p className="text-xs text-theme-text-muted">
-                  Are you sure you want to complete this stage? This will mark the step completed and advance the lead pipeline stage.
-                </p>
+                {/* RIGHT COLUMN (LG:COL-SPAN-5): LIVE INTERACTION HISTORY & INSIGHTS */}
+                <div className="lg:col-span-5 space-y-4">
+                  {/* Upcoming Follow-Up Card (if active) */}
+                  {leadActiveFollowup && (
+                    <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30 space-y-2.5 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+                          <span className="text-xs font-extrabold uppercase text-blue-400">
+                            Upcoming Follow-Up
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
+                          {leadActiveFollowup.type || 'CALL'}
+                        </span>
+                      </div>
 
-                <form onSubmit={handleCompleteStepSubmit} className="space-y-4">
-                  {(completeModalStepKey === 'PROPOSAL_SENT' || completeModalStepKey === 'NEGOTIATION' || completeModalStepKey === 'CLOSING') && (
-                    <div>
-                      <label className="text-[10px] font-bold text-theme-text-muted block mb-1">
-                        {completeModalStepKey === 'PROPOSAL_SENT' ? 'Proposal Amount (₹)' : 'Negotiated / Agreed Deal Value (₹)'}
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-emerald-500">₹</span>
-                        <input
-                          type="number"
-                          placeholder="e.g. 50000"
-                          value={proposalAmount}
-                          onChange={(e) => setProposalAmount(e.target.value)}
-                          className="w-full bg-theme-bg border border-theme-border rounded-xl pl-7 pr-3 py-2 text-xs font-extrabold text-theme-text focus:outline-none focus:border-emerald-500"
-                        />
+                      <div className="flex items-center gap-2 text-xs font-bold text-theme-text">
+                        <Clock size={13} className="text-blue-400 flex-shrink-0" />
+                        <span>
+                          {leadActiveFollowup.scheduledAt ? new Date(leadActiveFollowup.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
+                        </span>
+                      </div>
+
+                      {leadActiveFollowup.notes && (
+                        <p className="text-[11px] text-theme-text-muted italic bg-theme-card/60 p-2 rounded-lg border border-theme-border/40 line-clamp-2">
+                          "{leadActiveFollowup.notes}"
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleCompleteActiveFollowup}
+                          disabled={completingFollowup}
+                          className="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition-all flex items-center justify-center gap-1"
+                        >
+                          <Check size={12} /> Done
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowRescheduleModal(true)}
+                          className="flex-1 py-1.5 rounded-lg bg-theme-bg-alt border border-theme-border hover:bg-theme-card text-theme-text text-[11px] font-bold transition-all flex items-center justify-center gap-1"
+                        >
+                          <RefreshCw size={11} /> Reschedule
+                        </button>
                       </div>
                     </div>
                   )}
 
-                  <div>
-                    <label className="text-[10px] font-bold text-theme-text-muted block mb-1">Final Completion Remark</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Summary of outcome / requirements gathered during this step..."
-                      value={completionRemarks}
-                      onChange={(e) => setCompletionRemarks(e.target.value)}
-                      className="w-full bg-theme-bg border border-theme-border rounded-xl p-3 text-xs text-theme-text focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  {/* Commercial Deal Card (if proposal amount exists) */}
+                  {lead?.proposalAmount && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/30 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                          <IndianRupee size={14} />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-theme-text-muted block uppercase">
+                            {['converted', 'won', 'closed won', 'payment completed'].includes((lead.status || '').toLowerCase())
+                              ? 'Realized Revenue'
+                              : 'Expected Deal Value'}
+                          </span>
+                          <span className="text-xs font-black text-emerald-400">₹{Number(lead.proposalAmount).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase border ${
+                        ['converted', 'won', 'closed won', 'payment completed'].includes((lead.status || '').toLowerCase())
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      }`}>
+                        {['converted', 'won', 'closed won', 'payment completed'].includes((lead.status || '').toLowerCase())
+                          ? 'CONVERTED'
+                          : 'PIPELINE (UNREALIZED)'}
+                      </span>
+                    </div>
+                  )}
 
-                  <div className="flex items-center justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setCompleteModalStepKey(null)}
-                      className="px-4 py-2 rounded-xl bg-theme-bg border border-theme-border text-xs font-bold text-theme-text-muted hover:text-theme-text"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submittingCompletion}
-                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md"
-                    >
-                      Complete Step
-                    </button>
+                  {/* History Header, Search & Scope Toggle */}
+                  <div className="bg-theme-card border border-theme-border rounded-2xl sm:rounded-3xl p-4 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-theme-text flex items-center gap-1.5">
+                        <History size={14} className="text-theme-primary" />
+                        <span>Interaction History</span>
+                      </h4>
+
+                      {/* Scope Toggle: All vs This Stage */}
+                      <div className="flex items-center gap-1 p-0.5 bg-theme-bg-alt rounded-lg border border-theme-border text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setStudioHistoryScope('all')}
+                          className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                            studioHistoryScope === 'all'
+                              ? 'bg-theme-primary text-white shadow-xs'
+                              : 'text-theme-text-muted hover:text-theme-text'
+                          }`}
+                        >
+                          All ({activityLogsHistory.length || (lead?.activities || []).flatMap((a: any) => a.logs || []).length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStudioHistoryScope('step')}
+                          className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                            studioHistoryScope === 'step'
+                              ? 'bg-theme-primary text-white shadow-xs'
+                              : 'text-theme-text-muted hover:text-theme-text'
+                          }`}
+                        >
+                          This Stage
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Search Filter */}
+                    <div className="relative">
+                      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Search past notes, outcomes..."
+                        value={historySearchTerm}
+                        onChange={(e) => setHistorySearchTerm(e.target.value)}
+                        className="w-full bg-theme-bg-alt border border-theme-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-theme-text focus:outline-none focus:border-theme-primary"
+                      />
+                      {historySearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setHistorySearchTerm('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-theme-text-muted hover:text-theme-text"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Chronological Timeline Grouped by Relative Date */}
+                    {(() => {
+                      const allLogs = activityLogsHistory && activityLogsHistory.length > 0
+                        ? activityLogsHistory
+                        : (lead?.activities || []).flatMap((act: any) => 
+                            (act.logs || []).map((l: any) => ({ ...l, stepTitle: act.title, stepKey: act.activityKey }))
+                          );
+
+                      const filteredLogs = allLogs.filter((log: any) => {
+                        if (studioHistoryScope === 'step') {
+                          const matchStep = log.stepKey === activeStudioStepKey || 
+                            (lead?.activities?.find((a: any) => a.activityKey === activeStudioStepKey)?.logs || []).some((sl: any) => sl.id === log.id);
+                          if (!matchStep) return false;
+                        }
+                        if (!historySearchTerm.trim()) return true;
+                        const q = historySearchTerm.toLowerCase();
+                        return (
+                          (log.remarks || '').toLowerCase().includes(q) ||
+                          (log.outcome || '').toLowerCase().includes(q) ||
+                          (log.communicationType || '').toLowerCase().includes(q) ||
+                          (log.loggedByName || '').toLowerCase().includes(q)
+                        );
+                      });
+
+                      // Group logs by relative date
+                      const groups: Record<string, typeof filteredLogs> = {};
+                      filteredLogs.forEach((log: any) => {
+                        const d = new Date(log.createdAt);
+                        const now = new Date();
+                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const logDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+                        let grp = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                        if (logDate.getTime() === today.getTime()) grp = 'Today';
+                        else if (logDate.getTime() === yesterday.getTime()) grp = 'Yesterday';
+
+                        if (!groups[grp]) groups[grp] = [];
+                        groups[grp].push(log);
+                      });
+
+                      if (filteredLogs.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-xs text-theme-text-muted space-y-1.5 bg-theme-bg-alt/30 rounded-2xl border border-dashed border-theme-border/60">
+                            <Clock size={20} className="mx-auto text-theme-text-muted opacity-40" />
+                            <p className="font-semibold">No interaction logs found.</p>
+                            <p className="text-[10px]">Use the left form to log your first client attempt.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                          {Object.entries(groups).map(([dateLabel, logsInGroup]) => (
+                            <div key={dateLabel} className="space-y-2">
+                              {/* Date Group Header */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase text-theme-text-muted bg-theme-bg-alt px-2 py-0.5 rounded-md border border-theme-border/50">
+                                  {dateLabel}
+                                </span>
+                                <div className="flex-1 h-px bg-theme-border/40" />
+                              </div>
+
+                              {/* Group Log Cards */}
+                              {logsInGroup.map((log: any) => (
+                                <div
+                                  key={log.id}
+                                  className="p-3 rounded-2xl bg-theme-bg-alt/50 border border-theme-border/60 hover:border-theme-primary/50 transition-all space-y-2 group relative"
+                                >
+                                  {/* Log Top Row */}
+                                  <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-5 h-5 rounded-md bg-theme-card border border-theme-border flex items-center justify-center text-theme-text-muted">
+                                        {getCommIcon(log.communicationType)}
+                                      </span>
+                                      <span className="text-xs font-black text-theme-text">
+                                        Attempt #{log.activityNumber || 1}
+                                      </span>
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${getOutcomeBadgeClass(log.outcome)}`}>
+                                        {log.outcome?.replace(/_/g, ' ')}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 text-[10px] text-theme-text-muted">
+                                      {log.duration && (
+                                        <span className="px-1.5 py-0.5 rounded bg-theme-card border border-theme-border/50">
+                                          {log.duration}
+                                        </span>
+                                      )}
+                                      <span>{new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Remarks Box */}
+                                  <p className="text-xs text-theme-text/90 italic bg-theme-card/70 p-2.5 rounded-xl border border-theme-border/40 leading-relaxed">
+                                    "{log.remarks || 'No remarks recorded.'}"
+                                  </p>
+
+                                  {/* Log Footer */}
+                                  <div className="flex items-center justify-between text-[10px] text-theme-text-muted pt-0.5">
+                                    <span>By: <strong className="text-theme-text">{log.loggedByName?.split(' ')[0] || 'Executive'}</strong></span>
+                                    
+                                    <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                                      {/* Copy Note */}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigator.clipboard.writeText(log.remarks || '');
+                                          toast.success('Note copied to clipboard!');
+                                        }}
+                                        className="p-1 rounded-md hover:bg-theme-card text-theme-text-muted hover:text-theme-text transition-all"
+                                        title="Copy Note"
+                                      >
+                                        <Copy size={11} />
+                                      </button>
+
+                                      {/* Quote in Reply */}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActivityRemarks((prev) => prev ? `${prev}\n> "${log.remarks}"` : `> "${log.remarks}"`);
+                                          toast.info('Quoted in discussion notes');
+                                        }}
+                                        className="p-1 rounded-md hover:bg-theme-card text-theme-text-muted hover:text-theme-primary transition-all"
+                                        title="Quote in Note"
+                                      >
+                                        <CornerDownRight size={11} />
+                                      </button>
+
+                                      {/* Detail Modal */}
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedInteractionDetail({ ...log, typeName: 'Activity Attempt' })}
+                                        className="text-theme-primary font-bold hover:underline ml-1"
+                                      >
+                                        Details →
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
-                </form>
-              </motion.div>
+                </div>
+              </div>
             </div>
           )}
+
+          {/* MODAL 1: DUAL-PANE INTERACTION & HISTORY STUDIO */}
+          <InteractionStudioModal
+            isOpen={!!addModalStepKey}
+            onClose={() => setAddModalStepKey(null)}
+            lead={lead}
+            stepKey={addModalStepKey}
+            onStepKeyChange={(newKey) => setAddModalStepKey(newKey)}
+            communicationType={communicationType}
+            setCommunicationType={setCommunicationType}
+            outcome={outcome}
+            setOutcome={setOutcome}
+            activityRemarks={activityRemarks}
+            setActivityRemarks={setActivityRemarks}
+            activityDuration={activityDuration}
+            setActivityDuration={setActivityDuration}
+            activityStatus={activityStatus}
+            setActivityStatus={setActivityStatus}
+            nextFollowupDate={nextFollowupDate}
+            setNextFollowupDate={setNextFollowupDate}
+            submittingActivity={submittingActivity}
+            onSubmit={handleAddActivitySubmit}
+            activityLogsHistory={activityLogsHistory}
+            leadActiveFollowup={leadActiveFollowup}
+            hasNextLead={hasNextLead}
+            hasPrevLead={hasPrevLead}
+            onNextLead={() => handleSafeLeadNavigation('next')}
+            onPrevLead={() => handleSafeLeadNavigation('prev')}
+            nextLeadName={nextLeadName}
+            prevLeadName={prevLeadName}
+            leadPositionInfo={leadPositionInfo}
+            getCommIcon={getCommIcon}
+            getOutcomeBadgeClass={getOutcomeBadgeClass}
+          />
 
           {/* MODAL 3: CLICKABLE INTERACTION DETAIL INSPECTOR MODAL */}
           {selectedInteractionDetail && (
@@ -2294,7 +1928,9 @@ export default function WorkDetailsPanel({
             </div>
           )}
         </div>
-      );
+      )}
+    </div>
+  );
 
   if (inline) {
     return panelInner;

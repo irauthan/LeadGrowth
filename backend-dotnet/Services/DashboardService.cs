@@ -115,6 +115,32 @@ public class DashboardService : IDashboardService
             });
         }
 
+        // 4b. Monthly Trends (Past 6 Months breakdown for executive & team insights)
+        var monthlyTrends = new List<Dictionary<string, object>>();
+        for (int m = 5; m >= 0; m--)
+        {
+            var mTarget = now.AddMonths(-m);
+            var mStart = new DateTime(mTarget.Year, mTarget.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var mEnd = mStart.AddMonths(1).AddTicks(-1);
+
+            var mLeads = allLeadsData.Where(l => l.CreatedAt >= mStart && l.CreatedAt <= mEnd).ToList();
+            var mConvertedLeads = mLeads.Where(l => IsConvertedStatus(l.Status)).ToList();
+            var mRevenue = mConvertedLeads.Where(l => l.ProposalAmount.HasValue && l.ProposalAmount.Value > 0).Sum(l => (double)(l.ProposalAmount ?? 0));
+            var mCampaigns = allCampaigns.Where(c => c.CreatedAt >= mStart && c.CreatedAt <= mEnd).ToList();
+            var mSpend = mCampaigns.Sum(c => (double)c.Spend);
+
+            monthlyTrends.Add(new Dictionary<string, object>
+            {
+                { "month", mStart.ToString("MMM yyyy") },
+                { "shortMonth", mStart.ToString("MMM") },
+                { "fullMonth", mStart.ToString("MMMM yyyy") },
+                { "leads", mLeads.Count },
+                { "converted", mConvertedLeads.Count },
+                { "revenue", Math.Round(mRevenue, 2) },
+                { "spend", Math.Round(mSpend, 2) }
+            });
+        }
+
         // 5. Active Users count (fast count)
         var activeUsersCount = await _context.Users.AsNoTracking()
             .Where(u => u.WorkspaceId == user.WorkspaceId && u.Status != "SUSPENDED")
@@ -203,7 +229,8 @@ public class DashboardService : IDashboardService
             ActiveUsers = activeUsersCount,
             RecentLeads = recentLeadDtos,
             Funnel = funnel,
-            Trends = trends
+            Trends = trends,
+            MonthlyTrends = monthlyTrends
         };
     }
 

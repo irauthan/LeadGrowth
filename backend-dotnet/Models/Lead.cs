@@ -141,6 +141,14 @@ public class Lead
     [Column("raw_form_data", TypeName = "TEXT")]
     public string? RawFormData { get; set; }
 
+    [Column("google_customer_id")]
+    [MaxLength(64)]
+    public string? GoogleCustomerId { get; set; }
+
+    [Column("gclid")]
+    [MaxLength(100)]
+    public string? Gclid { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
