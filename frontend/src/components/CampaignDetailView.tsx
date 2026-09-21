@@ -12,7 +12,8 @@ import {
   Loader2, 
   Calendar,
   Search,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { campaignService } from '../services/campaignService';
 import type { CampaignDetails, CampaignLead } from '../types';
@@ -710,8 +711,9 @@ export default function CampaignDetailView({
               </div>
 
               <div className="sm:col-span-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs space-y-1">
-                <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  ✨ Automatic Revenue Calculation
+                <div className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Sparkles size={14} />
+                  <span>Automatic Revenue Calculation</span>
                 </div>
                 <p className="text-[11px] text-theme-text-muted leading-relaxed">
                   Campaign <strong>Revenue</strong> and <strong>Conversions</strong> are automatically synced in real-time from converted leads that have approved proposal amounts.

@@ -53,15 +53,6 @@ const KANBAN_STAGES = [
   { key: 'Lost', title: 'Lost', color: 'border-rose-500/40 text-rose-400 bg-rose-500/10', headerColor: 'from-rose-500/20 to-rose-500/5 text-rose-400', icon: XCircle }
 ];
 
-const STAGES_TABLE_LIST = [
-  'New',
-  'Interaction',
-  'Proposal Sent',
-  'Negotiation',
-  'Converted',
-  'Lost'
-];
-
 export default function MyWork() {
   const currentUser = useAuthStore((state) => state.user);
   const isManagementOrAdmin = (currentUser?.roles || []).some((r: any) => {
@@ -107,10 +98,6 @@ export default function MyWork() {
   const toggleMaximizeStage = (stageKey: string) => {
     setMaximizedStage((prev) => (prev === stageKey ? null : stageKey));
   };
-
-  // Drag and drop state
-  const [draggedLeadId, setDraggedLeadId] = useState<number | null>(null);
-  const [dragOverStageKey, setDragOverStageKey] = useState<string | null>(null);
 
   const [searchParams] = useSearchParams();
   const [selectedPeriod, setSelectedPeriod] = useState<string>(searchParams.get('period') || 'all');
@@ -228,16 +215,6 @@ export default function MyWork() {
     }
   };
 
-  const handleStageChange = async (leadId: number, newStage: string) => {
-    try {
-      await api.patch(`/api/leads/${leadId}/status?status=${encodeURIComponent(newStage)}`);
-      toast.success(`Lead moved to ${newStage}!`, 'Stage Updated');
-      fetchMyWorkLeads();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Failed to update stage');
-    }
-  };
-
   const toggleCollapseColumn = (stageKey: string) => {
     setCollapsedColumns((prev) => ({ ...prev, [stageKey]: !prev[stageKey] }));
   };
@@ -247,42 +224,7 @@ export default function MyWork() {
     setIsPanelOpen(true);
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, leadId: number) => {
-    e.dataTransfer.setData('text/plain', String(leadId));
-    setDraggedLeadId(leadId);
-  };
 
-  const handleDragOver = (e: React.DragEvent, stageKey: string) => {
-    e.preventDefault();
-    if (dragOverStageKey !== stageKey) {
-      setDragOverStageKey(stageKey);
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent, stageKey: string) => {
-    e.preventDefault();
-    if (dragOverStageKey === stageKey) {
-      setDragOverStageKey(null);
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent, targetStageKey: string) => {
-    e.preventDefault();
-    setDragOverStageKey(null);
-    const leadIdStr = e.dataTransfer.getData('text/plain') || String(draggedLeadId);
-    const targetLeadId = parseInt(leadIdStr);
-    if (isNaN(targetLeadId)) return;
-
-    // Optimistic UI update
-    setLeads((prev) =>
-      prev.map((l) => (l.id === targetLeadId ? { ...l, status: targetStageKey } : l))
-    );
-
-    // Send API update
-    await handleStageChange(targetLeadId, targetStageKey);
-    setDraggedLeadId(null);
-  };
 
   const isUserAdminRole = (userObj: any) => {
     const rList = userObj?.roles || [];
@@ -382,10 +324,13 @@ export default function MyWork() {
   const activeExecutive = isManagementOrAdmin 
     ? (selectedExecutiveId === -1 
         ? { id: -1, fullName: 'Unassigned Leads Pool', email: 'Unassigned Queue', designation: 'Queue' } 
-        : (rawMembers.find(m => m && Number(m.id) === Number(selectedExecutiveId)) || { fullName: 'Sales Executive', email: '', designation: '' }))
+        : (selectedExecutiveId === -2
+            ? { id: -2, fullName: 'All Team Leads Combined', email: 'Full Organization Pipeline', designation: 'All Executives' }
+            : (rawMembers.find(m => m && Number(m.id) === Number(selectedExecutiveId)) || { fullName: 'Sales Executive', email: '', designation: '' })))
     : currentUser;
 
   const activeExecutiveFollowups = safeFollowups.filter((f) => {
+    if (isManagementOrAdmin && selectedExecutiveId === -2) return true;
     const targetId = isManagementOrAdmin && selectedExecutiveId !== null ? selectedExecutiveId : (currentUser?.id || null);
     const targetName = isManagementOrAdmin && selectedExecutiveId !== null ? activeExecutive?.fullName : currentUser?.fullName;
     return doesFollowupBelongToExecutive(f, targetId, targetName);
@@ -424,7 +369,11 @@ export default function MyWork() {
 
   // Filter Leads based on selected executive
   const targetScopeLeads = isManagementOrAdmin && selectedExecutiveId !== null
-    ? (selectedExecutiveId === -1 ? unassignedLeads : safeLeads.filter(l => l && l.assignedToId === selectedExecutiveId))
+    ? (selectedExecutiveId === -1 
+        ? unassignedLeads 
+        : (selectedExecutiveId === -2 
+            ? safeLeads 
+            : safeLeads.filter(l => l && l.assignedToId === selectedExecutiveId)))
     : safeLeads;
 
   // Filter & Search Logic
@@ -503,12 +452,15 @@ export default function MyWork() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl border border-theme-border bg-theme-card shadow-sm">
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
-                <Users size={22} className="text-theme-primary" /> Team Pipelines
+                <Briefcase size={22} className="text-theme-primary" /> Team Pipelines & Work Monitor
               </h1>
+              <p className="text-xs text-theme-text-muted mt-1 font-medium">
+                Monitor team performance, track stage pipelines, and inspect work logs across your sales organization.
+              </p>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative min-w-[220px]">
+              <div className="relative min-w-[200px]">
                 <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-text-muted" />
                 <input
                   type="text"
@@ -520,13 +472,22 @@ export default function MyWork() {
               </div>
 
               <button
+                onClick={() => setSelectedExecutiveId(-2)}
+                className="flex items-center gap-2 rounded-2xl bg-theme-primary hover:bg-theme-primary-hover px-4 py-2 text-xs font-bold text-white shadow-md shadow-theme-primary/20 transition-all cursor-pointer"
+                title="View all leads combined across the entire sales team in Kanban/Table view"
+              >
+                <LayoutGrid size={14} />
+                <span>All Leads Pipeline</span>
+              </button>
+
+              <button
                 onClick={handleExportPipelinePdf}
                 disabled={isExportingPdf}
                 title="Download overall stage-wise pipeline report as PDF"
-                className="flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-600/20 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 rounded-2xl bg-theme-bg-alt hover:bg-theme-card border border-theme-border px-4 py-2 text-xs font-bold text-theme-text transition-all disabled:opacity-50 cursor-pointer"
               >
                 <Download size={14} />
-                <span>{isExportingPdf ? 'Generating PDF...' : 'Download Pipeline PDF'}</span>
+                <span>{isExportingPdf ? 'Exporting...' : 'Pipeline PDF'}</span>
               </button>
             </div>
           </div>
@@ -600,9 +561,19 @@ export default function MyWork() {
                     Win Rate: <strong className="text-theme-text">{member.winRate}%</strong>
                   </span>
 
-                  <span className="text-xs font-extrabold text-theme-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
-                    View Pipeline <ArrowRight size={14} />
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      to={`/admin/work-monitor?userId=${member.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs font-bold text-theme-text-muted hover:text-theme-primary transition-colors flex items-center gap-1"
+                    >
+                      <span>Work Monitor</span>
+                    </Link>
+                    <span className="text-xs font-extrabold text-theme-primary flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      <span>Pipeline</span>
+                      <ArrowRight size={13} />
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -669,11 +640,11 @@ export default function MyWork() {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-primary/10 border border-theme-border hover:border-theme-primary/40 text-xs font-bold text-theme-text hover:text-theme-primary transition-all group cursor-pointer"
                 >
                   <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" /> 
-                  Back to Team Pipelines
+                  Back to Team Directory
                 </button>
               )}
               <div className="flex items-center gap-3">
-                {isManagementOrAdmin && selectedExecutiveId !== -1 && (
+                {isManagementOrAdmin && selectedExecutiveId !== -1 && selectedExecutiveId !== -2 && (
                   <div className="w-11 h-11 rounded-2xl bg-theme-primary/10 border border-theme-primary/20 flex items-center justify-center text-theme-primary font-black text-sm overflow-hidden flex-shrink-0 relative">
                     {activeExecutive?.profileImage ? (
                       <img
@@ -699,10 +670,37 @@ export default function MyWork() {
                   <h1 className="text-2xl font-extrabold tracking-tight text-theme-text flex items-center gap-2">
                     <Briefcase size={22} className="text-theme-primary" /> 
                     {isManagementOrAdmin 
-                      ? `${activeExecutive?.fullName || 'Executive'}'s Pipeline`
+                      ? (selectedExecutiveId === -2 
+                          ? 'All Team Leads Pipeline' 
+                          : `${activeExecutive?.fullName || 'Executive'}'s Pipeline`)
                       : 'My Work Pipeline'}
                   </h1>
                 </div>
+
+                {isManagementOrAdmin && (
+                  <div className="relative ml-2">
+                    <select
+                      value={selectedExecutiveId ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'all') setSelectedExecutiveId(-2);
+                        else if (val === 'unassigned') setSelectedExecutiveId(-1);
+                        else if (val === 'team') setSelectedExecutiveId(null);
+                        else setSelectedExecutiveId(Number(val));
+                      }}
+                      className="bg-theme-bg-alt border border-theme-border rounded-xl px-3 py-1.5 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary cursor-pointer"
+                    >
+                      <option value="team">Switch Executive...</option>
+                      <option value="all">All Team Leads Combined</option>
+                      <option value="unassigned">Unassigned Leads Pool</option>
+                      {rawMembers.map((m: any) => (
+                        <option key={m.id} value={m.id}>
+                          {m.fullName} ({m.totalLeads || 0} Leads)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -871,7 +869,6 @@ export default function MyWork() {
                 const Icon = col.icon;
                 const isMax = maximizedStage === col.key;
                 const isCollapsed = !isMax && (collapsedColumns[col.key] ?? false);
-                const isOver = dragOverStageKey === col.key;
 
                 if (isCollapsed) {
                   return (
@@ -903,18 +900,11 @@ export default function MyWork() {
                 return (
                   <div
                     key={col.key}
-                    onDragOver={(e) => handleDragOver(e, col.key)}
-                    onDragLeave={(e) => handleDragLeave(e, col.key)}
-                    onDrop={(e) => handleDrop(e, col.key)}
                     className={`transition-all duration-300 flex-shrink-0 snap-start flex flex-col rounded-3xl border shadow-lg relative ${
                       isMax
                         ? 'w-full min-w-full'
                         : 'w-[310px] min-w-[310px] max-w-[310px]'
-                    } ${
-                      isOver 
-                        ? 'border-2 border-dashed border-theme-primary bg-theme-primary/10 shadow-2xl scale-[1.01]' 
-                        : 'border-theme-border/80 bg-theme-card/80 backdrop-blur-md'
-                    }`}
+                    } border-theme-border/80 bg-theme-card/80 backdrop-blur-md`}
                   >
                     {/* Column Header */}
                     <div className={`p-4 rounded-t-3xl border-b border-theme-border/60 bg-gradient-to-b ${col.headerColor} flex items-center justify-between`}>
@@ -953,10 +943,9 @@ export default function MyWork() {
                       {stageLeads.map((lead) => (
                         <div
                           key={lead.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, lead.id)}
                           onClick={() => openDetails(lead.id)}
-                          className="group p-4 rounded-2xl border border-theme-border/80 bg-theme-card/90 hover:border-theme-primary/80 shadow-xs hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-grab active:cursor-grabbing space-y-3 backdrop-blur-xs relative overflow-hidden"
+                          className="group p-4 rounded-2xl border border-theme-border/80 bg-theme-card/90 hover:border-theme-primary/80 shadow-xs hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer space-y-3 backdrop-blur-xs relative overflow-hidden"
+                          title="Click to open Work Details & log activity"
                         >
                           {/* Priority, Fresh and Tier Top Badges */}
                           <div className="flex items-center justify-between gap-1.5 flex-wrap">
@@ -1320,16 +1309,17 @@ export default function MyWork() {
                           </div>
                         </td>
 
-                        <td className="p-4 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={lead.status || 'New'}
-                            onChange={(e) => handleStageChange(lead.id, e.target.value)}
-                            className="bg-theme-bg-alt border border-theme-border/50 rounded-xl px-2.5 py-1 text-xs font-bold text-theme-text focus:outline-none focus:border-theme-primary block"
-                          >
-                            {STAGES_TABLE_LIST.map((st) => (
-                              <option key={st} value={st}>{st}</option>
-                            ))}
-                          </select>
+                        <td className="p-4 space-y-1.5" onClick={() => openDetails(lead.id)}>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-extrabold border ${
+                            lead.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                            lead.status === 'Lost' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                            lead.status === 'Proposal Sent' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
+                            lead.status === 'Negotiation' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                            lead.status === 'Interaction' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                            'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                          }`}>
+                            {lead.status || 'New'}
+                          </span>
                           <div className="flex items-center gap-1 flex-wrap">
                             {isLeadFresh(lead) && (
                               <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 inline-flex items-center gap-0.5">

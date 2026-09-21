@@ -793,8 +793,9 @@ export default function CampaignDetailsModal({
                     </div>
 
                     <div className="sm:col-span-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs space-y-1">
-                      <div className="font-bold text-emerald-400">
-                        ✨ Real-Time Revenue Attribution
+                      <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                        <Sparkles size={14} />
+                        <span>Real-Time Revenue Attribution</span>
                       </div>
                       <p className="text-[11px] text-theme-text-muted leading-relaxed">
                         Campaign <strong>Revenue</strong> and <strong>Conversions</strong> are automatically synced in real-time as leads belonging to this campaign are converted with approved proposal amounts.

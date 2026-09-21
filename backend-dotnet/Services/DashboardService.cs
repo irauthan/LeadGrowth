@@ -111,7 +111,8 @@ public class DashboardService : IDashboardService
                 { "date", targetDay.ToString("MMM dd") },
                 { "revenue", Math.Round(dayRevenue, 2) },
                 { "spend", Math.Round(daySpend, 2) },
-                { "leads", dayLeads.Count }
+                { "leads", dayLeads.Count },
+                { "conversions", dayConvertedLeads.Count }
             });
         }
 

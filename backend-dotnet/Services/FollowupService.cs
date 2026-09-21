@@ -19,7 +19,9 @@ public class FollowupService : IFollowupService
     public async Task<List<Dictionary<string, object>>> GetFollowupsAsync(string userEmail, string? period = null, string? startDate = null, string? endDate = null)
     {
         var email = userEmail.Trim().ToLower();
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        var user = await _context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Email == email);
         if (user == null || user.WorkspaceId == null)
         {
             throw new KeyNotFoundException("User not found");
@@ -28,10 +30,20 @@ public class FollowupService : IFollowupService
         var (rangeStart, rangeEnd) = DateRangeHelper.ParsePeriodRange(period, startDate, endDate);
         var isFiltered = !string.IsNullOrWhiteSpace(period) && !"all".Equals(period, StringComparison.OrdinalIgnoreCase);
 
+        bool isUserOnly = user.Roles.All(r => 
+            !r.Name.Contains("ADMIN", StringComparison.OrdinalIgnoreCase) && 
+            !r.Name.Contains("MANAGER", StringComparison.OrdinalIgnoreCase) && 
+            !r.Name.Contains("SUPERADMIN", StringComparison.OrdinalIgnoreCase));
+
         var query = _context.FollowupReminders
             .Include(f => f.Lead)
             .Include(f => f.AssignedTo)
             .Where(f => f.WorkspaceId == user.WorkspaceId);
+
+        if (isUserOnly)
+        {
+            query = query.Where(f => f.AssignedToId == user.Id || (f.Lead != null && f.Lead.AssignedToId == user.Id));
+        }
 
         if (isFiltered)
         {

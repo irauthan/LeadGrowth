@@ -77,18 +77,38 @@ export default function Analytics() {
   };
 
   const getRealMonthlyData = (leadsList: any[]) => {
-    const months = [];
+    const validLeads = (leadsList || []).filter((l: any) => l && l.createdAt);
     const now = new Date();
-    // Past 6 months up to current month (e.g. Apr, May, Jun, Jul, Aug, Sep)
-    for (let i = 5; i >= 0; i--) {
+
+    // Determine the earliest lead creation month
+    let earliestDate = now;
+    if (validLeads.length > 0) {
+      for (const lead of validLeads) {
+        const d = new Date(lead.createdAt);
+        if (!isNaN(d.getTime()) && d < earliestDate) {
+          earliestDate = d;
+        }
+      }
+    }
+
+    const startYear = earliestDate.getFullYear();
+    const startMonth = earliestDate.getMonth();
+    const endYear = now.getFullYear();
+    const endMonth = now.getMonth();
+
+    // Total months elapsed from earliest lead to current month
+    const totalMonths = Math.max(1, (endYear - startYear) * 12 + (endMonth - startMonth) + 1);
+    const monthsToRender = Math.min(totalMonths, 12);
+
+    const months = [];
+    for (let i = monthsToRender - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const mStr = d.toLocaleString('default', { month: 'short' });
       const fullMonthStr = d.toLocaleString('default', { month: 'long', year: 'numeric' });
       const mYear = d.getFullYear();
       const mMonth = d.getMonth();
 
-      const mLeads = (leadsList || []).filter((l: any) => {
-        if (!l.createdAt) return false;
+      const mLeads = validLeads.filter((l: any) => {
         const cDate = new Date(l.createdAt);
         return cDate.getFullYear() === mYear && cDate.getMonth() === mMonth;
       });
@@ -577,11 +597,11 @@ export default function Analytics() {
           </div>
 
           {/* Month cards strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 border-t border-theme-border/40">
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-theme-border/40">
             {adminMonthlyTrends.map((mItem: any, idx: number) => {
               const winRate = mItem.leads > 0 ? Math.round((mItem.converted / mItem.leads) * 100) : 0;
               return (
-                <div key={idx} className="p-2.5 rounded-xl bg-theme-bg-alt/40 border border-theme-border/40 text-center space-y-0.5">
+                <div key={idx} className="flex-1 min-w-[120px] p-2.5 rounded-xl bg-theme-bg-alt/40 border border-theme-border/40 text-center space-y-0.5">
                   <span className="text-[10px] font-bold text-theme-text-muted block uppercase">{mItem.shortMonth}</span>
                   <div className="text-xs font-black text-theme-text">{mItem.leads} <span className="text-[9px] font-normal text-theme-text-muted">leads</span></div>
                   <span className="text-[9px] font-bold text-emerald-500 block">{mItem.converted} won ({winRate}%)</span>

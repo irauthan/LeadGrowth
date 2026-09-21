@@ -689,9 +689,9 @@ export default function Leads() {
                       className="w-full rounded-xl border border-theme-border bg-theme-card px-3 py-2 text-xs font-bold text-theme-text outline-none focus:border-theme-primary shadow-xs cursor-pointer"
                     >
                       <option value="" disabled>
-                        {bulkAssigning ? 'Assigning selected leads...' : `⚡ Bulk Assign (${selectedLeadIds.length}) Leads To...`}
+                        {bulkAssigning ? 'Assigning selected leads...' : `Bulk Assign (${selectedLeadIds.length}) Leads To...`}
                       </option>
-                      <option value="-1">⚡ Auto-Assign (Smart Engine)</option>
+                      <option value="-1">Auto-Assign (Smart Engine)</option>
                       <optgroup label="Sales Executives">
                         {members
                           .filter((m: any) => {
@@ -703,7 +703,7 @@ export default function Leads() {
                           })
                           .map((m: any) => (
                             <option key={m.id} value={m.id}>
-                              👤 {m.fullName || m.name}
+                              {m.fullName || m.name}
                             </option>
                           ))}
                       </optgroup>

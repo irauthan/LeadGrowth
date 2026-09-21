@@ -308,7 +308,7 @@ public class LeadService : ILeadService
                     var convertedNotif = new Notification
                     {
                         UserId = rId,
-                        Title = "🎉 Lead Converted!",
+                        Title = "Lead Converted!",
                         Message = $"Lead '{lead.Name}' was successfully marked as CONVERTED by {user.FullName}.",
                         IsRead = false,
                         CreatedAt = DateTime.UtcNow
@@ -1668,7 +1668,7 @@ public class LeadService : ILeadService
                 var convertNotif = new Notification
                 {
                     UserId = notifUserId,
-                    Title = "🎉 Lead Converted!",
+                    Title = "Lead Converted!",
                     Message = $"Lead '{lead.Name}' was successfully marked as CONVERTED by {user.FullName}.",
                     IsRead = false,
                     CreatedAt = DateTime.UtcNow

@@ -16,7 +16,10 @@ import {
   UserCheck,
   Search,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Mail,
+  Phone,
+  Globe
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { downloadReport, downloadSingleLeadPdf } from '../services/reportService';
@@ -319,10 +322,10 @@ export default function Reports() {
                     onChange={(e) => setSelectedUserId(Number(e.target.value))}
                     className="bg-transparent text-theme-text text-xs font-semibold outline-none cursor-pointer pr-1"
                   >
-                    <option value={0} className="bg-theme-card text-theme-text">👥 All Team Members (Workspace)</option>
+                    <option value={0} className="bg-theme-card text-theme-text">All Team Members (Workspace)</option>
                     {members.map((m) => (
                       <option key={m.id} value={m.id} className="bg-theme-card text-theme-text">
-                        👤 {m.fullName || m.email}
+                        {m.fullName || m.email}
                       </option>
                     ))}
                   </select>
@@ -451,10 +454,10 @@ export default function Reports() {
                             {selectedLead.status || 'New'}
                           </span>
                         </div>
-                        <div className="text-[11px] text-theme-text-muted mt-1 space-x-2">
-                          {selectedLead.email && <span>📧 {selectedLead.email}</span>}
-                          {selectedLead.phone && <span>📞 {selectedLead.phone}</span>}
-                          {selectedLead.sourcePlatform && <span>🌐 {selectedLead.sourcePlatform}</span>}
+                        <div className="text-[11px] text-theme-text-muted mt-1 flex items-center gap-3 flex-wrap">
+                          {selectedLead.email && <span className="inline-flex items-center gap-1"><Mail size={12} className="text-theme-primary" /> {selectedLead.email}</span>}
+                          {selectedLead.phone && <span className="inline-flex items-center gap-1"><Phone size={12} className="text-theme-primary" /> {selectedLead.phone}</span>}
+                          {selectedLead.sourcePlatform && <span className="inline-flex items-center gap-1"><Globe size={12} className="text-theme-primary" /> {selectedLead.sourcePlatform}</span>}
                         </div>
                       </div>
                       <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 flex-shrink-0">

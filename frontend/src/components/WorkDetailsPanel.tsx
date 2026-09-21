@@ -1416,20 +1416,36 @@ export default function WorkDetailsPanel({
                     </div>
                   </div>
 
-                  {/* Section 6: Unified Action Footer */}
-                  <div className="pt-2 border-t border-theme-border/60">
+                  {/* Section 6: Action Footer (Save In Progress vs Mark Stage Done) */}
+                  <div className="pt-2 border-t border-theme-border/60 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    {/* Option 1: Save log and keep stage In Progress */}
                     <button
                       type="button"
                       disabled={submittingActivity}
                       onClick={() => handleStudioSave(undefined, false, false)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-theme-primary hover:opacity-90 text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                      className="flex-1 py-2.5 px-4 rounded-xl bg-theme-bg-alt hover:bg-theme-card border border-theme-border text-theme-text hover:border-theme-primary/50 text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
                     >
                       {submittingActivity ? (
-                        <Loader2 size={14} className="animate-spin" />
+                        <Loader2 size={13} className="animate-spin" />
                       ) : (
-                        <Save size={13} />
+                        <Save size={13} className="text-theme-primary" />
                       )}
-                      <span>Save Activity Log</span>
+                      <span>Save (In Progress)</span>
+                    </button>
+
+                    {/* Option 2: Save log and mark stage Done / Completed */}
+                    <button
+                      type="button"
+                      disabled={submittingActivity}
+                      onClick={() => handleStudioSave(undefined, false, true)}
+                      className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                    >
+                      {submittingActivity ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <Check size={14} />
+                      )}
+                      <span>Save & Mark Stage Done</span>
                     </button>
                   </div>
                 </div>

@@ -33,11 +33,11 @@ public class CalendarService : ICalendarService
 
         var result = new List<CalendarEventDto>();
 
-        // 1. Direct Calendar Events
+        // 1. Direct Calendar Events (Strictly user's own events)
         var calQuery = _context.CalendarEvents
             .Include(ce => ce.Lead)
             .Include(ce => ce.AssignedUser)
-            .Where(ce => ce.WorkspaceId == user.WorkspaceId);
+            .Where(ce => ce.WorkspaceId == user.WorkspaceId && ce.AssignedUserId == user.Id);
 
         if (startDate.HasValue) calQuery = calQuery.Where(ce => ce.StartTime >= startDate.Value);
         if (endDate.HasValue) calQuery = calQuery.Where(ce => ce.EndTime <= endDate.Value);
@@ -45,11 +45,11 @@ public class CalendarService : ICalendarService
         var events = await calQuery.ToListAsync();
         result.AddRange(events.Select(ConvertToDto));
 
-        // 2. Followup Reminders (Live client follow-ups across stages)
+        // 2. Followup Reminders (Strictly client follow-ups assigned to or created for this user)
         var followupQuery = _context.FollowupReminders
             .Include(f => f.Lead).ThenInclude(l => l.AssignedTo)
             .Include(f => f.AssignedTo)
-            .Where(f => f.WorkspaceId == user.WorkspaceId && f.Status != "CANCELLED");
+            .Where(f => f.WorkspaceId == user.WorkspaceId && f.Status != "CANCELLED" && (f.AssignedToId == user.Id || (f.Lead != null && f.Lead.AssignedToId == user.Id)));
 
         if (startDate.HasValue) followupQuery = followupQuery.Where(f => f.ScheduledAt >= startDate.Value);
         if (endDate.HasValue) followupQuery = followupQuery.Where(f => f.ScheduledAt <= endDate.Value);
@@ -86,11 +86,11 @@ public class CalendarService : ICalendarService
             });
         }
 
-        // 3. Client Interaction / Call History Logs (Recorded conversations & calls with clients)
+        // 3. Client Interaction / Call History Logs (Recorded by this user)
         var logsQuery = _context.SalesActivityLogs
             .Include(l => l.Lead)
             .Include(l => l.LoggedBy)
-            .Where(l => l.Lead != null && l.Lead.WorkspaceId == user.WorkspaceId);
+            .Where(l => l.Lead != null && l.Lead.WorkspaceId == user.WorkspaceId && l.LoggedById == user.Id);
 
         if (startDate.HasValue) logsQuery = logsQuery.Where(l => l.CreatedAt >= startDate.Value);
         if (endDate.HasValue) logsQuery = logsQuery.Where(l => l.CreatedAt <= endDate.Value);
@@ -120,10 +120,10 @@ public class CalendarService : ICalendarService
             });
         }
 
-        // 4. Tasks & Deadlines
+        // 4. Tasks & Deadlines (Assigned to this user)
         var taskQuery = _context.Tasks
             .Include(t => t.AssignedTo)
-            .Where(t => t.WorkspaceId == user.WorkspaceId);
+            .Where(t => t.WorkspaceId == user.WorkspaceId && t.AssignedToId == user.Id);
 
         var tasks = await taskQuery.ToListAsync();
         foreach (var t in tasks)

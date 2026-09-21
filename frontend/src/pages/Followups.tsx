@@ -18,7 +18,10 @@ import {
   Calendar,
   RefreshCw,
   Ban,
-  Filter
+  Filter,
+  Phone,
+  Mail,
+  X
 } from 'lucide-react';
 
 export default function Followups() {
@@ -340,16 +343,18 @@ export default function Followups() {
                       {f.leadPhone && (
                         <a 
                           href={`tel:${f.leadPhone}`} 
-                          className="flex items-center gap-1 text-emerald-500 hover:underline font-bold"
+                          className="flex items-center gap-1.5 text-emerald-500 hover:underline font-bold"
                           title="Call Lead"
                         >
-                          📞 {f.leadPhone}
+                          <Phone size={12} />
+                          <span>{f.leadPhone}</span>
                         </a>
                       )}
 
                       {f.leadEmail && (
-                        <span className="text-theme-text-muted">
-                          ✉️ {f.leadEmail}
+                        <span className="flex items-center gap-1.5 text-theme-text-muted">
+                          <Mail size={12} />
+                          <span>{f.leadEmail}</span>
                         </span>
                       )}
 
@@ -432,7 +437,7 @@ export default function Followups() {
                 onClick={() => setShowLeadSelectModal(false)}
                 className="p-1 rounded-xl text-theme-text-muted hover:text-theme-text hover:bg-theme-bg-alt"
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 

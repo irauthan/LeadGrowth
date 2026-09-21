@@ -81,7 +81,6 @@ export default function CallTimerWidget({
         callId: activeCall.id,
         notes: ''
       });
-      const finalDuration = formatHHMMSS(elapsedSeconds);
       const readable = getReadableDuration(elapsedSeconds);
       setActiveCall(null);
       toast.success(`Call ended (${readable}). Call duration recorded!`, 'Call Finished');

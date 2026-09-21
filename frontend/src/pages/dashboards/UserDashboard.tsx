@@ -785,7 +785,7 @@ export default function UserDashboard() {
                                   <span>{data.label}</span>
                                 </div>
                                 <div className="text-sm font-bold text-theme-primary">{data.count} Leads</div>
-                                <div className="text-[10px] text-emerald-500 font-medium">👉 Click to view leads in this stage</div>
+                                <div className="text-[10px] text-emerald-500 font-medium">Click to view leads in this stage</div>
                               </div>
                             );
                           }

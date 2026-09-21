@@ -8,11 +8,9 @@ import {
   UserCheck, 
   BarChart3, 
   FileSpreadsheet, 
-  Users, 
   Settings, 
   Building2,
   Key,
-  Activity,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -67,10 +65,8 @@ export default function Sidebar() {
     { name: 'Pipelines', icon: Briefcase, path: '/my-work' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
     { name: 'Scheduler', icon: Calendar, path: '/scheduler' },
-    { name: 'Work Monitor', icon: Activity, path: '/admin/work-monitor', adminOnly: false },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
-    { name: 'Team', icon: Users, path: '/admin/users', adminOnly: false },
     { name: 'Workspace', icon: Building2, path: '/admin/workspace', adminOnly: true },
     { name: 'API Keys', icon: Key, path: '/admin/api', adminOnly: true },
     { name: 'Security Center', icon: ShieldCheck, path: '/admin/security', adminOnly: true },
@@ -90,7 +86,7 @@ export default function Sidebar() {
       // Check adminOnly flag
       if (item.adminOnly && !isAdmin) return false;
       // Check if feature is enabled
-      const isAlwaysAllowed = item.path === '/settings' || item.path === '/admin/work-monitor';
+      const isAlwaysAllowed = item.path === '/settings';
       return isAlwaysAllowed || enabledNavItems.includes(item.path) || (item.path === '/scheduler' && enabledNavItems.includes('/calendar'));
     }).sort((a, b) => {
       const indexA = enabledNavItems.indexOf(a.path);
