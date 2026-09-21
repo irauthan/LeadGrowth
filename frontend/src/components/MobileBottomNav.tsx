@@ -4,7 +4,6 @@ import {
   LayoutDashboard, 
   Megaphone, 
   UserCheck, 
-  CheckSquare,
   Menu
 } from 'lucide-react';
 import { useLayoutStore } from '../store/layoutStore';
@@ -22,12 +21,10 @@ export default function MobileBottomNav() {
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Pipelines', icon: UserCheck, path: '/my-work' },
     { name: 'Workspace', icon: UserCheck, path: '/leads' },
-    { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
   ] : [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Workspace', icon: UserCheck, path: '/leads' },
-    { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
   ];
 
   return (

@@ -331,12 +331,11 @@ export default function InteractionStudioModal({
                     ))
                   ) : (
                     <>
-                      <option value="FIRST_CALL">1. First Introduction Call</option>
-                      <option value="FOLLOW_UP_CALL">2. Follow-up & Requirement Analysis</option>
-                      <option value="DEMO_MEETING">3. Product Demo / Meeting</option>
-                      <option value="PROPOSAL_SENT">4. Commercial Proposal</option>
-                      <option value="NEGOTIATION">5. Negotiation & Deal Finalization</option>
-                      <option value="CLOSING">6. Final Deal Closure</option>
+                      <option value="INTERACTION">1. Interaction</option>
+                      <option value="PROPOSAL_SENT">2. Proposal Sent</option>
+                      <option value="NEGOTIATION">3. Negotiation</option>
+                      <option value="CONVERTED">4. Converted</option>
+                      <option value="LOST">5. Lost</option>
                     </>
                   )}
                 </select>

@@ -175,7 +175,7 @@ export default function WorkDetailsPanel({
   const [proposalAmount, setProposalAmount] = useState<number | string>('');
 
   // Studio Workflow & History State
-  const [activeStudioStepKey, setActiveStudioStepKey] = useState<string>('FIRST_CALL');
+  const [activeStudioStepKey, setActiveStudioStepKey] = useState<string>('INTERACTION');
   const [historySearchTerm, setHistorySearchTerm] = useState<string>('');
   const [studioHistoryScope, setStudioHistoryScope] = useState<'all' | 'step'>('all');
 
@@ -356,7 +356,7 @@ export default function WorkDetailsPanel({
       // Set activeStudioStepKey to first non-completed step or first step
       if (leadRes.data && Array.isArray(leadRes.data.activities) && leadRes.data.activities.length > 0) {
         const firstPending = leadRes.data.activities.find((act: SalesActivity) => act.status !== 'COMPLETED');
-        setActiveStudioStepKey(firstPending?.activityKey || leadRes.data.activities[0].activityKey || 'FIRST_CALL');
+        setActiveStudioStepKey(firstPending?.activityKey || leadRes.data.activities[0].activityKey || 'INTERACTION');
       }
     } catch (err) {
       console.error('Failed to load lead details', err);
@@ -413,7 +413,7 @@ export default function WorkDetailsPanel({
   const handleStudioSave = async (e?: React.FormEvent, openNext: boolean = false, completeStage: boolean = false) => {
     if (e) e.preventDefault();
     if (!leadId) return;
-    const targetStepKey = activeStudioStepKey || lead?.activities?.find((a: any) => a.status !== 'COMPLETED')?.activityKey || lead?.activities?.[0]?.activityKey || 'FIRST_CALL';
+    const targetStepKey = activeStudioStepKey || lead?.activities?.find((a: any) => a.status !== 'COMPLETED')?.activityKey || lead?.activities?.[0]?.activityKey || 'INTERACTION';
 
     setSubmittingActivity(true);
     setAutoSaveStatus('Saving activity...');
@@ -1105,21 +1105,26 @@ export default function WorkDetailsPanel({
                   )}
                 </div>
 
-                {/* 6 Stage Chips Stepper */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                {/* 5 Stage Chips Stepper (Pipeline Aligned) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                   {[
-                    { key: 'FIRST_CALL', number: 1, title: 'First Call', shortTitle: '1. First Call' },
-                    { key: 'REQUIREMENT_COLLECTION', number: 2, title: 'Requirement Gathering', shortTitle: '2. Requirements' },
-                    { key: 'DEMO_SCHEDULED', number: 3, title: 'Product Demo', shortTitle: '3. Demo' },
-                    { key: 'PROPOSAL_SENT', number: 4, title: 'Commercial Proposal', shortTitle: '4. Proposal' },
-                    { key: 'NEGOTIATION', number: 5, title: 'Negotiation', shortTitle: '5. Negotiation' },
-                    { key: 'CLOSING', number: 6, title: 'Final Deal Closure', shortTitle: '6. Close' }
+                    { key: 'INTERACTION', altKeys: ['FIRST_CALL', 'REQUIREMENT_COLLECTION', 'DEMO_SCHEDULED'], number: 1, title: 'Interaction', shortTitle: '1. Interaction' },
+                    { key: 'PROPOSAL_SENT', altKeys: ['PROPOSAL'], number: 2, title: 'Proposal Sent', shortTitle: '2. Proposal Sent' },
+                    { key: 'NEGOTIATION', altKeys: [], number: 3, title: 'Negotiation', shortTitle: '3. Negotiation' },
+                    { key: 'CONVERTED', altKeys: ['CLOSING'], number: 4, title: 'Converted', shortTitle: '4. Converted' },
+                    { key: 'LOST', altKeys: ['LEAD_LOST'], number: 5, title: 'Lost', shortTitle: '5. Lost' }
                   ].map((stage) => {
-                    const act = lead?.activities?.find((a: any) => a.activityKey === stage.key);
+                    const act = lead?.activities?.find((a: any) => a.activityKey === stage.key || stage.altKeys?.includes(a.activityKey));
                     const isCompleted = act?.status === 'COMPLETED';
                     const isInProgress = act?.status === 'IN_PROGRESS';
-                    const isActiveInStudio = activeStudioStepKey === stage.key;
-                    const logCount = act?.logs?.length || 0;
+                    const isActiveInStudio = activeStudioStepKey === stage.key || (stage.altKeys?.includes(activeStudioStepKey));
+                    
+                    const stageLogs = (activityLogsHistory || []).filter((l: any) => 
+                      l.activityKey === stage.key || 
+                      stage.altKeys?.includes(l.activityKey) ||
+                      (act?.id && l.salesActivityId === act.id)
+                    );
+                    const logCount = stageLogs.length || act?.logs?.length || 0;
 
                     return (
                       <button
@@ -1129,6 +1134,8 @@ export default function WorkDetailsPanel({
                         className={`p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between group ${
                           isActiveInStudio
                             ? 'bg-theme-primary/10 border-theme-primary ring-1 ring-theme-primary/30 shadow-xs'
+                            : stage.key === 'LOST' && isCompleted
+                            ? 'bg-rose-500/5 border-rose-500/30 hover:border-rose-500/60'
                             : isCompleted
                             ? 'bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/60'
                             : isInProgress
@@ -1138,19 +1145,27 @@ export default function WorkDetailsPanel({
                       >
                         <div className="flex items-center justify-end gap-1 mb-1">
                           <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-md border ${
-                            isCompleted
+                            stage.key === 'LOST' && isCompleted
+                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                              : isCompleted
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                               : isInProgress
                               ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                               : 'bg-theme-bg-alt text-theme-text-muted border-theme-border'
                           }`}>
-                            {isCompleted ? 'Done' : isInProgress ? 'In Progress' : 'Pending'}
+                            {isCompleted ? (stage.key === 'LOST' ? 'Lost' : 'Done') : isInProgress ? 'In Progress' : 'Pending'}
                           </span>
                         </div>
 
                         <div className="min-w-0">
                           <span className={`text-xs font-extrabold block truncate ${
-                            isActiveInStudio ? 'text-theme-primary' : isCompleted ? 'text-emerald-400' : 'text-theme-text'
+                            isActiveInStudio 
+                              ? 'text-theme-primary' 
+                              : stage.key === 'LOST' && isCompleted
+                              ? 'text-rose-400'
+                              : isCompleted 
+                              ? 'text-emerald-400' 
+                              : 'text-theme-text'
                           }`}>
                             {stage.title}
                           </span>
@@ -1177,8 +1192,22 @@ export default function WorkDetailsPanel({
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-extrabold text-theme-text">
-                            {activeStudioStepKey.replace(/_/g, ' ')}
+                          <h3 className="text-sm font-extrabold text-theme-text uppercase">
+                            {(() => {
+                              const titleMap: Record<string, string> = {
+                                INTERACTION: 'Interaction',
+                                FIRST_CALL: 'Interaction',
+                                REQUIREMENT_COLLECTION: 'Interaction',
+                                DEMO_SCHEDULED: 'Interaction',
+                                PROPOSAL_SENT: 'Proposal Sent',
+                                NEGOTIATION: 'Negotiation',
+                                CONVERTED: 'Converted',
+                                CLOSING: 'Converted',
+                                LOST: 'Lost',
+                                LEAD_LOST: 'Lost'
+                              };
+                              return titleMap[activeStudioStepKey] || activeStudioStepKey.replace(/_/g, ' ');
+                            })()}
                           </h3>
                         </div>
                         <p className="text-[11px] text-theme-text-muted mt-0.5">
@@ -1274,24 +1303,8 @@ export default function WorkDetailsPanel({
                       </div>
                     </div>
 
-                    {/* Integrated Metadata Toolbar (Channel + Duration + Status) */}
+                    {/* Integrated Metadata Toolbar (Duration + Status) */}
                     <div className="flex items-center gap-2 pt-2 border-t border-theme-border/40 flex-wrap">
-                      {/* Channel Chip */}
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-theme-card border border-theme-border/80 text-xs font-bold text-theme-text hover:border-theme-primary/40 transition-all">
-                        <Phone size={12} className="text-theme-primary shrink-0" />
-                        <span className="text-theme-text-muted text-[10px] uppercase tracking-wide font-extrabold">Ch:</span>
-                        <select
-                          value={communicationType}
-                          onChange={(e) => setCommunicationType(e.target.value)}
-                          className="bg-transparent text-xs font-bold text-theme-text focus:outline-none cursor-pointer"
-                        >
-                          <option value="PHONE_CALL" className="bg-theme-card text-theme-text">Phone Call</option>
-                          <option value="WHATSAPP" className="bg-theme-card text-theme-text">WhatsApp</option>
-                          <option value="EMAIL" className="bg-theme-card text-theme-text">Email</option>
-                          <option value="MEETING" className="bg-theme-card text-theme-text">Meeting / Demo</option>
-                        </select>
-                      </div>
-
                       {/* Duration Display (Auto-populated from Start Call timer) */}
                       <div 
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border ${

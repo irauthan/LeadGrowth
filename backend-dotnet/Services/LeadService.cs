@@ -1212,7 +1212,7 @@ public class LeadService : ILeadService
 
         var normalizedKey = NormalizeActivityKey(activityKey);
         var activity = await _context.SalesActivities
-            .FirstOrDefaultAsync(a => a.LeadId == leadId && a.ActivityName == normalizedKey);
+            .FirstOrDefaultAsync(a => a.LeadId == leadId && (a.ActivityName == normalizedKey || a.ActivityName == activityKey));
 
         if (activity == null)
         {
@@ -1235,23 +1235,23 @@ public class LeadService : ILeadService
         await _context.SaveChangesAsync();
         await RecalculateLeadProgressAsync(lead);
 
-        if ("FIRST_CALL".Equals(activityKey) && "COMPLETED".Equals(status) && ("New".Equals(lead.Status, StringComparison.OrdinalIgnoreCase) || "Contacted".Equals(lead.Status, StringComparison.OrdinalIgnoreCase)))
+        if (("INTERACTION".Equals(normalizedKey) || "FIRST_CALL".Equals(normalizedKey)) && "COMPLETED".Equals(status, StringComparison.OrdinalIgnoreCase) && ("New".Equals(lead.Status, StringComparison.OrdinalIgnoreCase) || "Contacted".Equals(lead.Status, StringComparison.OrdinalIgnoreCase)))
         {
             lead.Status = "Interaction";
         }
-        else if ("PROPOSAL_SENT".Equals(activityKey) && "COMPLETED".Equals(status))
+        else if ("PROPOSAL_SENT".Equals(normalizedKey) && "COMPLETED".Equals(status, StringComparison.OrdinalIgnoreCase))
         {
             lead.Status = "Proposal Sent";
         }
-        else if ("NEGOTIATION".Equals(activityKey) && "COMPLETED".Equals(status))
+        else if ("NEGOTIATION".Equals(normalizedKey) && "COMPLETED".Equals(status, StringComparison.OrdinalIgnoreCase))
         {
             lead.Status = "Negotiation";
         }
-        else if ("CLOSING".Equals(activityKey) && "COMPLETED".Equals(status))
+        else if (("CONVERTED".Equals(normalizedKey) || "CLOSING".Equals(normalizedKey)) && "COMPLETED".Equals(status, StringComparison.OrdinalIgnoreCase))
         {
             lead.Status = "Converted";
         }
-        else if (("LEAD_LOST".Equals(activityKey) || "LOST".Equals(activityKey)) && "COMPLETED".Equals(status))
+        else if (("LOST".Equals(normalizedKey, StringComparison.OrdinalIgnoreCase) || "LEAD_LOST".Equals(normalizedKey, StringComparison.OrdinalIgnoreCase)) && "COMPLETED".Equals(status, StringComparison.OrdinalIgnoreCase))
         {
             lead.Status = "Lost";
         }
@@ -1438,7 +1438,7 @@ public class LeadService : ILeadService
 
         var normalizedKey = NormalizeActivityKey(activityKey);
         var activity = await _context.SalesActivities
-            .FirstOrDefaultAsync(a => a.LeadId == leadId && a.ActivityName == normalizedKey);
+            .FirstOrDefaultAsync(a => a.LeadId == leadId && (a.ActivityName == normalizedKey || a.ActivityName == activityKey));
 
         if (activity == null)
         {
@@ -1471,44 +1471,36 @@ public class LeadService : ILeadService
             {
                 lead.ProposalStatus = request.ProposalStatus;
             }
-            else if ("PROPOSAL_SENT".Equals(activityKey))
+            else if ("PROPOSAL_SENT".Equals(normalizedKey))
             {
                 lead.ProposalStatus = "SENT";
             }
-            else if ("NEGOTIATION".Equals(activityKey))
+            else if ("NEGOTIATION".Equals(normalizedKey))
             {
                 lead.ProposalStatus = "NEGOTIATING";
             }
         }
 
-        if ("FIRST_CALL".Equals(activityKey) && ("New".Equals(lead.Status, StringComparison.OrdinalIgnoreCase) || "Contacted".Equals(lead.Status, StringComparison.OrdinalIgnoreCase)))
+        if (("INTERACTION".Equals(normalizedKey) || "FIRST_CALL".Equals(normalizedKey)) && ("New".Equals(lead.Status, StringComparison.OrdinalIgnoreCase) || "Contacted".Equals(lead.Status, StringComparison.OrdinalIgnoreCase)))
         {
             lead.Status = "Interaction";
         }
-        else if ("REQUIREMENT_COLLECTION".Equals(activityKey))
-        {
-            lead.Status = "Interested";
-        }
-        else if ("DEMO_SCHEDULED".Equals(activityKey))
-        {
-            lead.Status = "Qualified";
-        }
-        else if ("PROPOSAL_SENT".Equals(activityKey))
+        else if ("PROPOSAL_SENT".Equals(normalizedKey))
         {
             lead.Status = "Proposal Sent";
             if (string.IsNullOrEmpty(lead.ProposalStatus)) lead.ProposalStatus = "SENT";
         }
-        else if ("NEGOTIATION".Equals(activityKey))
+        else if ("NEGOTIATION".Equals(normalizedKey))
         {
             lead.Status = "Negotiation";
             if (string.IsNullOrEmpty(lead.ProposalStatus)) lead.ProposalStatus = "NEGOTIATING";
         }
-        else if ("CLOSING".Equals(activityKey) || "PAYMENT_FOLLOWUP".Equals(activityKey))
+        else if ("CONVERTED".Equals(normalizedKey) || "CLOSING".Equals(normalizedKey) || "PAYMENT_FOLLOWUP".Equals(normalizedKey))
         {
             lead.Status = "Converted";
             lead.ProposalStatus = "ACCEPTED";
         }
-        else if ("LEAD_LOST".Equals(activityKey, StringComparison.OrdinalIgnoreCase) || "LOST".Equals(activityKey, StringComparison.OrdinalIgnoreCase))
+        else if ("LOST".Equals(normalizedKey, StringComparison.OrdinalIgnoreCase) || "LEAD_LOST".Equals(normalizedKey, StringComparison.OrdinalIgnoreCase))
         {
             lead.Status = "Lost";
             lead.ProposalStatus = "REJECTED";
@@ -1549,7 +1541,7 @@ public class LeadService : ILeadService
             SalesActivityId = l.SalesActivityId,
             LeadId = l.LeadId,
             ActivityNumber = l.ActivityNumber,
-            ActivityKey = l.SalesActivity?.ActivityName ?? "FIRST_CALL",
+            ActivityKey = l.SalesActivity != null ? NormalizeActivityKey(l.SalesActivity.ActivityName) : "INTERACTION",
             Action = l.Outcome,
             CommunicationType = l.CommunicationType,
             Outcome = l.Outcome,
@@ -1826,13 +1818,11 @@ public class LeadService : ILeadService
         {
             var defaults = new List<SalesActivity>
             {
-                new SalesActivity { LeadId = lead.Id, ActivityName = "FIRST_CALL", Title = "First Call", Status = "PENDING" },
-                new SalesActivity { LeadId = lead.Id, ActivityName = "REQUIREMENT_COLLECTION", Title = "Requirement Collection", Status = "PENDING" },
-                new SalesActivity { LeadId = lead.Id, ActivityName = "DEMO_SCHEDULED", Title = "Demo Scheduled", Status = "PENDING" },
+                new SalesActivity { LeadId = lead.Id, ActivityName = "INTERACTION", Title = "Interaction", Status = "PENDING" },
                 new SalesActivity { LeadId = lead.Id, ActivityName = "PROPOSAL_SENT", Title = "Proposal Sent", Status = "PENDING" },
                 new SalesActivity { LeadId = lead.Id, ActivityName = "NEGOTIATION", Title = "Negotiation", Status = "PENDING" },
-                new SalesActivity { LeadId = lead.Id, ActivityName = "CLOSING", Title = "Closing", Status = "PENDING" },
-                new SalesActivity { LeadId = lead.Id, ActivityName = "LEAD_LOST", Title = "Lead Lost / Dropped", Status = "PENDING" }
+                new SalesActivity { LeadId = lead.Id, ActivityName = "CONVERTED", Title = "Converted", Status = "PENDING" },
+                new SalesActivity { LeadId = lead.Id, ActivityName = "LOST", Title = "Lost", Status = "PENDING" }
             };
             _context.SalesActivities.AddRange(defaults);
             await _context.SaveChangesAsync();
@@ -1842,7 +1832,10 @@ public class LeadService : ILeadService
     private async Task RecalculateLeadProgressAsync(Lead lead)
     {
         var activities = await _context.SalesActivities.Where(a => a.LeadId == lead.Id).ToListAsync();
-        var activeActivities = activities.Where(a => !string.Equals("LEAD_LOST", a.ActivityName, StringComparison.OrdinalIgnoreCase)).ToList();
+        var activeActivities = activities.Where(a => 
+            !string.Equals("LOST", a.ActivityName, StringComparison.OrdinalIgnoreCase) && 
+            !string.Equals("LEAD_LOST", a.ActivityName, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
 
         var completedActiveCount = activeActivities.Count(a => string.Equals("COMPLETED", a.Status, StringComparison.OrdinalIgnoreCase));
         int progress = 20;
@@ -1996,27 +1989,23 @@ public class LeadService : ILeadService
 
     private static string NormalizeActivityKey(string? key)
     {
-        if (string.IsNullOrEmpty(key)) return "FIRST_CALL";
+        if (string.IsNullOrEmpty(key)) return "INTERACTION";
         var normalized = key.ToUpper().Trim().Replace(" ", "_");
-        if (normalized is "INTERACTION" or "CONTACTED" or "FIRSTCALL" or "FIRST_CALL") return "FIRST_CALL";
-        if (normalized is "REQUIREMENT" or "REQUIREMENTS" or "REQUIREMENT_COLLECTION" or "FOLLOW_UP" or "FOLLOWUP") return "REQUIREMENT_COLLECTION";
-        if (normalized is "DEMO" or "DEMOSCHEDULED" or "DEMO_SCHEDULED") return "DEMO_SCHEDULED";
+        if (normalized is "INTERACTION" or "CONTACTED" or "FIRSTCALL" or "FIRST_CALL" or "REQUIREMENT" or "REQUIREMENTS" or "REQUIREMENT_COLLECTION" or "DEMO" or "DEMOSCHEDULED" or "DEMO_SCHEDULED" or "FOLLOW_UP" or "FOLLOWUP") return "INTERACTION";
         if (normalized is "PROPOSAL" or "PROPOSALSENT" or "PROPOSAL_SENT") return "PROPOSAL_SENT";
         if (normalized is "NEGOTIATION") return "NEGOTIATION";
-        if (normalized is "CLOSING" or "CONVERTED" or "PAYMENT" or "PAYMENT_COMPLETED" or "PAYMENT_FOLLOWUP") return "CLOSING";
-        if (normalized is "LEAD_LOST" or "LOST" or "DROP" or "DROPPED") return "LEAD_LOST";
+        if (normalized is "CLOSING" or "CONVERTED" or "PAYMENT" or "PAYMENT_COMPLETED" or "PAYMENT_FOLLOWUP") return "CONVERTED";
+        if (normalized is "LEAD_LOST" or "LOST" or "DROP" or "DROPPED") return "LOST";
         return normalized;
     }
 
     private static readonly (string Key, string Title)[] StandardWorkflowStages = new[]
     {
-        ("FIRST_CALL", "First Call"),
-        ("REQUIREMENT_COLLECTION", "Requirement Collection"),
-        ("DEMO_SCHEDULED", "Demo Scheduled"),
+        ("INTERACTION", "Interaction"),
         ("PROPOSAL_SENT", "Proposal Sent"),
         ("NEGOTIATION", "Negotiation"),
-        ("CLOSING", "Closing"),
-        ("LEAD_LOST", "Lead Lost / Dropped")
+        ("CONVERTED", "Converted"),
+        ("LOST", "Lost")
     };
 
     private async Task<List<LeadDto>> ConvertToDtosAsync(List<Lead> leads)
@@ -2082,7 +2071,12 @@ public class LeadService : ILeadService
             foreach (var (key, title) in StandardWorkflowStages)
             {
                 activityMap.TryGetValue(key, out var act);
-                var stageLogs = leadLogs.Where(l => (act != null && l.SalesActivityId == act.Id) || string.Equals(NormalizeActivityKey(l.CommunicationType), key, StringComparison.OrdinalIgnoreCase)).ToList();
+                var stageActivityIds = leadActivities
+                    .Where(a => string.Equals(NormalizeActivityKey(a.ActivityName), key, StringComparison.OrdinalIgnoreCase))
+                    .Select(a => a.Id)
+                    .ToHashSet();
+
+                var stageLogs = leadLogs.Where(l => (l.SalesActivityId != null && stageActivityIds.Contains(l.SalesActivityId.Value)) || (act != null && l.SalesActivityId == act.Id) || string.Equals(NormalizeActivityKey(l.CommunicationType), key, StringComparison.OrdinalIgnoreCase)).ToList();
 
                 var logDtos = stageLogs.Select((l, idx) => new SalesActivityLogDto
                 {

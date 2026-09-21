@@ -67,6 +67,7 @@ export default function Navbar() {
 
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
   const isAdmin = userRoles.some(r => typeof r === 'string' ? r.toUpperCase().includes('ADMIN') : (r as any)?.name?.toUpperCase().includes('ADMIN'));
+  const isManager = userRoles.some(r => typeof r === 'string' ? r.toUpperCase().includes('MANAGER') : (r as any)?.name?.toUpperCase().includes('MANAGER'));
 
   const handleSelectStatus = (newStatus: string) => {
     setShowProfileMenu(false);
@@ -666,14 +667,16 @@ export default function Navbar() {
                     </button>
                   </div>
                   <div className="py-1">
-                    <Link
-                      to="/campaigns"
-                      onClick={() => setShowQuickActions(false)}
-                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-theme-text/80 hover:bg-theme-bg-alt"
-                    >
-                      <Megaphone size={16} className="text-theme-primary" />
-                      <span>New Campaign</span>
-                    </Link>
+                    {(isAdmin || isManager) && (
+                      <Link
+                        to="/campaigns"
+                        onClick={() => setShowQuickActions(false)}
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-theme-text/80 hover:bg-theme-bg-alt"
+                      >
+                        <Megaphone size={16} className="text-theme-primary" />
+                        <span>New Campaign</span>
+                      </Link>
+                    )}
                     <Link
                       to="/leads"
                       onClick={() => setShowQuickActions(false)}

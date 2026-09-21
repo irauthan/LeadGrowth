@@ -360,23 +360,12 @@ export default function AdminDashboard() {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-theme-text">Business Overview</h1>
-            <p className="text-xs text-theme-text-muted mt-0.5">
-              Live executive intelligence across lead velocity, marketing ROI, and operational bottlenecks.
-            </p>
           </div>
         </div>
 
         {/* Quick Actions & Date Filter */}
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
           <TimeFilterDropdown value={timeFilter} onChange={setTimeFilter} />
-
-          <button
-            onClick={() => navigate('/leads?action=new')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-theme-primary hover:bg-theme-primary/90 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
-          >
-            <UserPlus size={14} />
-            <span>Add Lead</span>
-          </button>
 
           <button
             onClick={() => navigate('/leads?action=import')}
@@ -418,12 +407,6 @@ export default function AdminDashboard() {
               <span className="font-semibold text-theme-primary">{leads.length} in Workspace</span>
             </div>
           </div>
-          <div className="pt-2 border-t border-theme-border/40 text-[11px] text-theme-text-muted flex items-center justify-between">
-            <span>Period Volume</span>
-            <span className="font-medium text-emerald-500 flex items-center gap-0.5">
-              <TrendingUp size={12} /> Active Inflow
-            </span>
-          </div>
         </div>
 
         {/* Card 2: Converted Leads */}
@@ -442,10 +425,6 @@ export default function AdminDashboard() {
               <span>Conversion Rate</span>
               <span className="font-bold text-emerald-500">{conversionRate.toFixed(1)}%</span>
             </div>
-          </div>
-          <div className="pt-2 border-t border-theme-border/40 text-[11px] text-theme-text-muted flex items-center justify-between">
-            <span>Deals Won</span>
-            <span className="font-medium text-theme-text">Closed Successfully</span>
           </div>
         </div>
 
@@ -470,12 +449,6 @@ export default function AdminDashboard() {
               <span className="font-bold text-theme-text font-mono">{formatCurrency(costPerLead)}</span>
             </div>
           </div>
-          <div className="pt-2 border-t border-theme-border/40 text-[11px] text-theme-text-muted flex items-center justify-between">
-            <span>Paid Acquisition</span>
-            <span className="font-medium text-theme-primary group-hover:underline flex items-center gap-0.5">
-              Campaigns <ArrowRight size={11} />
-            </span>
-          </div>
         </Link>
 
         {/* Card 4: Qualified Leads / Revenue */}
@@ -493,12 +466,6 @@ export default function AdminDashboard() {
               <span className="font-bold text-amber-500">{qualificationRate.toFixed(1)}%</span>
             </div>
           </div>
-          <div className="pt-2 border-t border-theme-border/40 text-[11px] text-theme-text-muted flex items-center justify-between">
-            <span>Recorded Revenue</span>
-            <span className="font-bold text-emerald-500 font-mono">
-              {data.totalRevenue > 0 ? formatCurrency(data.totalRevenue) : 'In Progress'}
-            </span>
-          </div>
         </div>
 
       </div>
@@ -512,19 +479,10 @@ export default function AdminDashboard() {
         <div className="lg:col-span-6 rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
-              <div className="space-y-0.5">
-                <h3 className="text-sm font-bold text-theme-text flex items-center gap-2">
-                  <Layers size={16} className="text-theme-primary" />
-                  <span>Lead Pipeline Funnel</span>
-                </h3>
-                <p className="text-xs text-theme-text-muted">
-                  Click any stage to instantly inspect leads and identify drop-off bottlenecks.
-                </p>
-              </div>
-
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20">
-                {pipelineStages.totalActive} Active Leads
-              </span>
+              <h3 className="text-sm font-bold text-theme-text flex items-center gap-2">
+                <Layers size={16} className="text-theme-primary" />
+                <span>Lead Pipeline Funnel</span>
+              </h3>
             </div>
 
             {/* Stages Step-by-Step Flow */}
@@ -625,22 +583,15 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Bottom Summary: Rejected/Lost + Bottleneck Alert */}
-          <div className="pt-3 border-t border-theme-border/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          {/* Bottom Summary: Rejected/Lost Leads */}
+          <div className="pt-3 border-t border-theme-border/40 flex items-center justify-between text-xs">
             <button
               onClick={() => navigate('/leads?status=Lost')}
-              className="flex items-center gap-2 text-rose-500 hover:underline font-semibold"
+              className="flex items-center gap-2 text-rose-500 hover:underline font-semibold cursor-pointer"
             >
               <XCircle size={14} />
               <span>{pipelineStages.lost} Lost / Rejected Leads ({leads.length > 0 ? Math.round((pipelineStages.lost / leads.length) * 100) : 0}%)</span>
             </button>
-
-            {bottleneck && (
-              <span className="text-[11px] text-amber-500 font-medium flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20">
-                <AlertTriangle size={12} />
-                <span>Bottleneck: {bottleneck.count} in {bottleneck.name}</span>
-              </span>
-            )}
           </div>
         </div>
 
@@ -648,182 +599,119 @@ export default function AdminDashboard() {
         <div className="lg:col-span-6 rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
-              <div className="space-y-0.5">
-                <h3 className="text-sm font-bold text-theme-text flex items-center gap-2">
-                  <AlertTriangle size={16} className="text-amber-500" />
-                  <span>Needs Immediate Attention</span>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                  </span>
-                </h3>
-                <p className="text-xs text-theme-text-muted">
-                  High priority items requiring administrative delegation or executive follow-up.
-                </p>
-              </div>
-
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                {unassignedLeads.length + (notContactedLeads.length > 0 ? 1 : 0) + overdueFollowups.length + qualifiedWithoutFollowup.length} Alerts
-              </span>
+              <h3 className="text-sm font-bold text-theme-text flex items-center gap-2">
+                <AlertTriangle size={16} className="text-amber-500" />
+                <span>Needs Immediate Attention</span>
+              </h3>
             </div>
 
-            {/* Actionable Alert Rows */}
+            {/* Actionable Alert Rows - only display active items */}
             <div className="space-y-2.5 mt-3.5">
               
-              {/* Alert 1: Unassigned Leads */}
-              <div className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                unassignedLeads.length > 0 
-                  ? 'bg-rose-500/[0.04] border-rose-500/30' 
-                  : 'bg-theme-bg-alt/30 border-theme-border/50'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    unassignedLeads.length > 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-500/10 text-slate-500'
-                  }`}>
-                    <UserPlus size={15} />
-                  </div>
-                  <div>
+              {/* Alert 1: Unassigned Leads (shown only if > 0) */}
+              {unassignedLeads.length > 0 && (
+                <div className="p-3 rounded-xl border transition-all flex items-center justify-between gap-3 bg-rose-500/[0.04] border-rose-500/30">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-rose-500/10 text-rose-500">
+                      <UserPlus size={15} />
+                    </div>
                     <div className="text-xs font-bold text-theme-text flex items-center gap-1.5">
                       <span>Unassigned Leads</span>
-                      <span className={`px-2 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-                        unassignedLeads.length > 0 ? 'bg-rose-500 text-white' : 'bg-theme-bg-alt text-theme-text-muted'
-                      }`}>
+                      <span className="px-2 py-0.2 rounded-full text-[10px] font-mono font-bold bg-rose-500 text-white">
                         {unassignedLeads.length}
                       </span>
                     </div>
-                    <p className="text-[11px] text-theme-text-muted mt-0.5">
-                      {unassignedLeads.length > 0 ? 'Leads waiting for sales executive delegation' : 'All leads currently delegated'}
-                    </p>
                   </div>
-                </div>
 
-                {unassignedLeads.length > 0 ? (
                   <button
                     onClick={() => navigate('/leads?filter=unassigned')}
                     className="px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition-colors shrink-0 cursor-pointer shadow-2xs"
                   >
                     Assign Now
                   </button>
-                ) : (
-                  <span className="text-[11px] text-emerald-500 font-semibold flex items-center gap-1">
-                    <CheckCircle2 size={12} /> Clear
-                  </span>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Alert 2: Not Contacted Yet Leads */}
-              <div className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                notContactedLeads.length > 0 
-                  ? 'bg-amber-500/[0.04] border-amber-500/30' 
-                  : 'bg-theme-bg-alt/30 border-theme-border/50'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    notContactedLeads.length > 0 ? 'bg-amber-500/10 text-amber-500' : 'bg-slate-500/10 text-slate-500'
-                  }`}>
-                    <Clock size={15} />
-                  </div>
-                  <div>
+              {/* Alert 2: Not Contacted Yet Leads (shown only if > 0) */}
+              {notContactedLeads.length > 0 && (
+                <div className="p-3 rounded-xl border transition-all flex items-center justify-between gap-3 bg-amber-500/[0.04] border-amber-500/30">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-amber-500/10 text-amber-500">
+                      <Clock size={15} />
+                    </div>
                     <div className="text-xs font-bold text-theme-text flex items-center gap-1.5">
                       <span>Pending First Contact</span>
                       <span className="px-2 py-0.2 rounded-full text-[10px] font-mono font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
                         {notContactedLeads.length} Leads
                       </span>
                     </div>
-                    <p className="text-[11px] text-theme-text-muted mt-0.5">
-                      {oldestNotContactedTime ? `Oldest pending: ${oldestNotContactedTime}` : 'All active leads contacted'}
-                    </p>
                   </div>
+
+                  <button
+                    onClick={() => navigate('/leads?status=New')}
+                    className="px-3 py-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-card text-theme-text border border-theme-border text-xs font-semibold transition-colors shrink-0 cursor-pointer"
+                  >
+                    View Leads
+                  </button>
                 </div>
+              )}
 
-                <button
-                  onClick={() => navigate('/leads?status=New')}
-                  className="px-3 py-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-card text-theme-text border border-theme-border text-xs font-semibold transition-colors shrink-0 cursor-pointer"
-                >
-                  View Leads
-                </button>
-              </div>
-
-              {/* Alert 3: Overdue Follow-ups */}
-              <div className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                overdueFollowups.length > 0 
-                  ? 'bg-rose-500/[0.04] border-rose-500/30' 
-                  : 'bg-theme-bg-alt/30 border-theme-border/50'
-              }`}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    overdueFollowups.length > 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-500/10 text-slate-500'
-                  }`}>
-                    <PhoneForwarded size={15} />
-                  </div>
-                  <div className="min-w-0">
+              {/* Alert 3: Overdue Follow-ups (shown only if > 0) */}
+              {overdueFollowups.length > 0 && (
+                <div className="p-3 rounded-xl border transition-all flex items-center justify-between gap-3 bg-rose-500/[0.04] border-rose-500/30">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-rose-500/10 text-rose-500">
+                      <PhoneForwarded size={15} />
+                    </div>
                     <div className="text-xs font-bold text-theme-text flex items-center gap-1.5">
                       <span>Overdue Follow-ups</span>
-                      <span className={`px-2 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-                        overdueFollowups.length > 0 ? 'bg-rose-500 text-white' : 'bg-theme-bg-alt text-theme-text-muted'
-                      }`}>
+                      <span className="px-2 py-0.2 rounded-full text-[10px] font-mono font-bold bg-rose-500 text-white">
                         {overdueFollowups.length}
                       </span>
                     </div>
-                    <div className="text-[11px] text-theme-text-muted mt-0.5 truncate">
-                      {overdueByExecutive.length > 0 ? (
-                        <span>
-                          Pending: {overdueByExecutive.slice(0, 2).map(e => `${e.name} (${e.count})`).join(', ')}
-                          {overdueByExecutive.length > 2 && ` +${overdueByExecutive.length - 2} more`}
-                        </span>
-                      ) : (
-                        'No overdue follow-up tasks'
-                      )}
-                    </div>
                   </div>
+
+                  <button
+                    onClick={() => navigate('/followups?tab=OVERDUE')}
+                    className="px-3 py-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-card text-theme-text border border-theme-border text-xs font-semibold transition-colors shrink-0 cursor-pointer"
+                  >
+                    Resolve
+                  </button>
                 </div>
+              )}
 
-                <button
-                  onClick={() => navigate('/followups?tab=OVERDUE')}
-                  className="px-3 py-1.5 rounded-xl bg-theme-bg-alt hover:bg-theme-card text-theme-text border border-theme-border text-xs font-semibold transition-colors shrink-0 cursor-pointer"
-                >
-                  Resolve
-                </button>
-              </div>
-
-              {/* Alert 4: Qualified Leads without next follow-up */}
-              <div className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                qualifiedWithoutFollowup.length > 0 
-                  ? 'bg-purple-500/[0.04] border-purple-500/30' 
-                  : 'bg-theme-bg-alt/30 border-theme-border/50'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    qualifiedWithoutFollowup.length > 0 ? 'bg-purple-500/10 text-purple-500' : 'bg-slate-500/10 text-slate-500'
-                  }`}>
-                    <Calendar size={15} />
-                  </div>
-                  <div>
+              {/* Alert 4: Qualified Leads without next follow-up (shown only if > 0) */}
+              {qualifiedWithoutFollowup.length > 0 && (
+                <div className="p-3 rounded-xl border transition-all flex items-center justify-between gap-3 bg-purple-500/[0.04] border-purple-500/30">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-purple-500/10 text-purple-500">
+                      <Calendar size={15} />
+                    </div>
                     <div className="text-xs font-bold text-theme-text flex items-center gap-1.5">
                       <span>Qualified Without Next Step</span>
                       <span className="px-2 py-0.2 rounded-full text-[10px] font-mono font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20">
                         {qualifiedWithoutFollowup.length} Leads
                       </span>
                     </div>
-                    <p className="text-[11px] text-theme-text-muted mt-0.5">
-                      {qualifiedWithoutFollowup.length > 0 ? 'High drop-off risk — schedule next touchpoint' : 'All qualified leads scheduled'}
-                    </p>
                   </div>
-                </div>
 
-                <button
-                  onClick={() => navigate('/followups')}
-                  className="px-3 py-1.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-xs font-bold transition-colors shrink-0 cursor-pointer shadow-2xs"
-                >
-                  Schedule
-                </button>
-              </div>
+                  <button
+                    onClick={() => navigate('/followups')}
+                    className="px-3 py-1.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-xs font-bold transition-colors shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    Schedule
+                  </button>
+                </div>
+              )}
+
+              {unassignedLeads.length === 0 && notContactedLeads.length === 0 && overdueFollowups.length === 0 && qualifiedWithoutFollowup.length === 0 && (
+                <div className="py-8 text-center text-xs text-theme-text-muted bg-theme-bg-alt/20 rounded-xl border border-theme-border/40">
+                  <CheckCircle2 size={20} className="mx-auto text-emerald-500 mb-1" />
+                  <span>All clear — No pending attention items.</span>
+                </div>
+              )}
 
             </div>
-          </div>
-
-          <div className="pt-2 border-t border-theme-border/40 text-[11px] text-theme-text-muted text-right">
-            <span>Updates automatically in real-time</span>
           </div>
         </div>
 
@@ -838,15 +726,10 @@ export default function AdminDashboard() {
         <div className="lg:col-span-6 rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs flex flex-col justify-between space-y-4">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme-border/40 pb-3">
-              <div className="space-y-0.5">
-                <h3 className="text-sm font-bold text-theme-text flex items-center gap-2">
-                  <TrendingUp size={16} className="text-theme-primary" />
-                  <span>Lead Inflow & Conversion Trend</span>
-                </h3>
-                <p className="text-xs text-theme-text-muted">
-                  Daily comparison of new lead acquisition vs closed won conversions.
-                </p>
-              </div>
+              <h3 className="text-sm font-bold text-theme-text flex items-center gap-2">
+                <TrendingUp size={16} className="text-theme-primary" />
+                <span>Lead Inflow & Conversion Trend</span>
+              </h3>
 
               {/* 7d vs 30d Toggle */}
               <div className="flex items-center gap-1 bg-theme-bg-alt p-1 rounded-xl border border-theme-border/60">
@@ -963,15 +846,10 @@ export default function AdminDashboard() {
         <div className="lg:col-span-6 rounded-2xl border border-theme-border/70 bg-theme-card p-5 shadow-xs flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center justify-between border-b border-theme-border/40 pb-3">
-              <div className="space-y-0.5">
-                <h3 className="text-sm font-bold text-theme-text flex items-center gap-2">
-                  <PieIcon size={16} className="text-theme-primary" />
-                  <span>Campaign & Source Performance</span>
-                </h3>
-                <p className="text-xs text-theme-text-muted">
-                  Top acquisition channels ranked by lead count, qualification rate, and spend efficiency.
-                </p>
-              </div>
+              <h3 className="text-sm font-bold text-theme-text flex items-center gap-2">
+                <PieIcon size={16} className="text-theme-primary" />
+                <span>Campaign & Source Performance</span>
+              </h3>
 
               <Link
                 to="/campaigns"
