@@ -559,6 +559,11 @@ public class GoogleAdsService : IGoogleAdsService
                         LeadsCount = 0,
                         Conversions = 0,
                         Revenue = 0,
+                        AdAccountId = effectiveCustomerId,
+                        PlatformStatus = gCamp.Status,
+                        IsLegacy = false,
+                        LastSyncedAt = DateTime.UtcNow,
+                        SyncStatus = "SYNCED",
                         CreatedAt = gCamp.CreatedAt ?? DateTime.UtcNow
                     };
                     _context.Campaigns.Add(existingCamp);
@@ -569,6 +574,11 @@ public class GoogleAdsService : IGoogleAdsService
                     existingCamp.Name = gCamp.Name;
                     existingCamp.Platform = "Google Ads";
                     existingCamp.Status = gCamp.Status;
+                    existingCamp.PlatformStatus = gCamp.Status;
+                    existingCamp.AdAccountId = effectiveCustomerId;
+                    existingCamp.IsLegacy = false;
+                    existingCamp.LastSyncedAt = DateTime.UtcNow;
+                    existingCamp.SyncStatus = "SYNCED";
                     if (gCamp.Budget > 0) existingCamp.Budget = gCamp.Budget;
                 }
 
@@ -804,6 +814,297 @@ public class GoogleAdsService : IGoogleAdsService
         };
 
         return Task.FromResult(tokenStatus);
+    }
+
+    #endregion
+
+    #region Campaign Mutate Operations & Creation
+
+    /// <summary>
+    /// Executes a mutate operation on a Google Ads API endpoint.
+    /// </summary>
+    private async Task<JsonElement> ExecuteMutateAsync(string customerId, string resourcePath, object payload, bool isRetry = false)
+    {
+        var cleanCustomerId = GoogleAdsOptions.FormatCustomerId(customerId);
+        if (string.IsNullOrWhiteSpace(cleanCustomerId))
+        {
+            cleanCustomerId = GoogleAdsOptions.FormatCustomerId(_options.CustomerId);
+        }
+
+        if (string.IsNullOrWhiteSpace(cleanCustomerId))
+        {
+            throw new InvalidOperationException("Google Ads Customer ID is required for mutate operation.");
+        }
+
+        var accessToken = await RefreshAccessTokenAsync(forceRefresh: isRetry);
+        var baseUrl = string.IsNullOrWhiteSpace(_options.BaseUrl) ? "https://googleads.googleapis.com" : _options.BaseUrl.TrimEnd('/');
+        var apiVersion = string.IsNullOrWhiteSpace(_options.ApiVersion) ? "v19" : _options.ApiVersion;
+        var requestUrl = $"{baseUrl}/{apiVersion}/customers/{cleanCustomerId}/{resourcePath}";
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUrl)
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var devToken = string.IsNullOrWhiteSpace(_options.DeveloperToken) ? "ignored" : _options.DeveloperToken;
+        request.Headers.Add("developer-token", devToken);
+
+        var loginCustomerId = GoogleAdsOptions.FormatCustomerId(_options.LoginCustomerId);
+        if (!string.IsNullOrWhiteSpace(loginCustomerId))
+        {
+            request.Headers.Add("login-customer-id", loginCustomerId);
+        }
+
+        var response = await _googleAdsHttpClient.SendAsync(request);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized && !isRetry)
+        {
+            _logger.LogWarning("Received 401 Unauthorized from Google Ads Mutate API. Forcing access token refresh and retrying once...");
+            return await ExecuteMutateAsync(cleanCustomerId, resourcePath, payload, isRetry: true);
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Google Ads Mutate API failed. HTTP {StatusCode} on {Resource}: {ErrorBody}", response.StatusCode, resourcePath, responseBody);
+            try
+            {
+                var errorObj = JsonSerializer.Deserialize<GoogleAdsErrorResponse>(responseBody, _jsonOptions);
+                if (errorObj?.Error != null)
+                {
+                    throw new HttpRequestException($"Google Ads API Error ({errorObj.Error.Code} {errorObj.Error.Status}): {errorObj.Error.Message}");
+                }
+            }
+            catch (JsonException) { }
+
+            throw new HttpRequestException($"Google Ads API error: HTTP {response.StatusCode} - {responseBody}");
+        }
+
+        using var doc = JsonDocument.Parse(responseBody);
+        return doc.RootElement.Clone();
+    }
+
+    public async Task<PlatformCampaignResultDto> CreateCampaignAsync(CreatePlatformCampaignDto dto, long workspaceId)
+    {
+        var cleanCustomerId = GoogleAdsOptions.FormatCustomerId(!string.IsNullOrWhiteSpace(dto.AdAccountId) ? dto.AdAccountId : _options.CustomerId);
+        if (string.IsNullOrWhiteSpace(cleanCustomerId))
+        {
+            throw new ArgumentException("Google Ads Customer ID is required to create a campaign.");
+        }
+
+        _logger.LogInformation("Creating Google Ads Campaign '{Name}' on Customer '{CustomerId}' for workspace {WorkspaceId}...", dto.Name, cleanCustomerId, workspaceId);
+
+        // 1. Create Campaign Budget
+        var budgetMicros = (long)Math.Round(dto.Budget * 1_000_000);
+        var budgetPayload = new
+        {
+            operations = new[]
+            {
+                new
+                {
+                    create = new
+                    {
+                        name = $"{dto.Name} Budget ({DateTime.UtcNow.Ticks})",
+                        amountMicros = budgetMicros.ToString(),
+                        deliveryMethod = "STANDARD",
+                        explicitlyShared = false
+                    }
+                }
+            }
+        };
+
+        var budgetResponse = await ExecuteMutateAsync(cleanCustomerId, "campaignBudgets:mutate", budgetPayload);
+        var budgetResults = budgetResponse.GetProperty("results");
+        var budgetResourceName = budgetResults[0].GetProperty("resourceName").GetString()!;
+
+        // 2. Determine channel type
+        var channelType = "SEARCH";
+        var objUpper = (dto.Objective ?? "").ToUpperInvariant();
+        if (objUpper.Contains("PERFORMANCE_MAX") || objUpper.Contains("PMAX")) channelType = "PERFORMANCE_MAX";
+        else if (objUpper.Contains("DISPLAY")) channelType = "DISPLAY";
+        else if (objUpper.Contains("VIDEO") || objUpper.Contains("YOUTUBE")) channelType = "VIDEO";
+
+        // 3. Create Campaign
+        var status = (dto.Status ?? "PAUSED").Equals("ACTIVE", StringComparison.OrdinalIgnoreCase) ? "ENABLED" : "PAUSED";
+        var campaignPayload = new
+        {
+            operations = new[]
+            {
+                new
+                {
+                    create = new
+                    {
+                        name = dto.Name,
+                        status = status,
+                        advertisingChannelType = channelType,
+                        campaignBudget = budgetResourceName,
+                        manualCpc = new { }
+                    }
+                }
+            }
+        };
+
+        var campaignResponse = await ExecuteMutateAsync(cleanCustomerId, "campaigns:mutate", campaignPayload);
+        var campaignResults = campaignResponse.GetProperty("results");
+        var campaignResourceName = campaignResults[0].GetProperty("resourceName").GetString()!;
+        var campaignId = ExtractResourceSuffix(campaignResourceName);
+
+        // 4. Upsert into LeadGrowth Campaigns database
+        var dbCampaign = await _context.Campaigns
+            .FirstOrDefaultAsync(c => c.WorkspaceId == workspaceId && c.ExternalCampaignId == campaignId);
+
+        if (dbCampaign == null)
+        {
+            dbCampaign = new Campaign
+            {
+                WorkspaceId = workspaceId,
+                Name = dto.Name,
+                Platform = "Google Ads",
+                Status = dto.Status ?? "PAUSED",
+                Budget = dto.Budget,
+                Spend = 0,
+                Clicks = 0,
+                Impressions = 0,
+                LeadsCount = 0,
+                Conversions = 0,
+                Revenue = 0,
+                ExternalCampaignId = campaignId,
+                AdAccountId = cleanCustomerId,
+                Objective = dto.Objective,
+                Placements = "Google Search & Partners",
+                PlatformStatus = dto.Status ?? "PAUSED",
+                IsLegacy = false,
+                LastSyncedAt = DateTime.UtcNow,
+                SyncStatus = "SYNCED",
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Campaigns.Add(dbCampaign);
+        }
+        else
+        {
+            dbCampaign.Name = dto.Name;
+            dbCampaign.Budget = dto.Budget;
+            dbCampaign.Status = dto.Status ?? dbCampaign.Status;
+            dbCampaign.PlatformStatus = dto.Status ?? dbCampaign.PlatformStatus;
+            dbCampaign.IsLegacy = false;
+            dbCampaign.LastSyncedAt = DateTime.UtcNow;
+            dbCampaign.SyncStatus = "SYNCED";
+        }
+
+        await _context.SaveChangesAsync();
+
+        return new PlatformCampaignResultDto
+        {
+            Success = true,
+            Message = $"Google Ads campaign '{dto.Name}' successfully created on {cleanCustomerId}.",
+            CampaignId = dbCampaign.Id,
+            ExternalCampaignId = campaignId,
+            AdAccountId = cleanCustomerId,
+            Platform = "Google Ads",
+            PlatformStatus = dbCampaign.PlatformStatus ?? "PAUSED",
+            Placements = "Google Search & Partners"
+        };
+    }
+
+    public async Task<bool> UpdateCampaignStatusAsync(string customerId, string campaignId, string status)
+    {
+        var cleanCustomerId = GoogleAdsOptions.FormatCustomerId(customerId);
+        if (string.IsNullOrWhiteSpace(cleanCustomerId)) cleanCustomerId = GoogleAdsOptions.FormatCustomerId(_options.CustomerId);
+        
+        var targetStatus = status.Equals("ACTIVE", StringComparison.OrdinalIgnoreCase) ? "ENABLED" : "PAUSED";
+        _logger.LogInformation("Updating Google Campaign {CampaignId} status to {Status} on customer {CustomerId}...", campaignId, targetStatus, cleanCustomerId);
+
+        var payload = new
+        {
+            operations = new[]
+            {
+                new
+                {
+                    update = new
+                    {
+                        resourceName = $"customers/{cleanCustomerId}/campaigns/{campaignId}",
+                        status = targetStatus
+                    },
+                    updateMask = "status"
+                }
+            }
+        };
+
+        await ExecuteMutateAsync(cleanCustomerId, "campaigns:mutate", payload);
+        return true;
+    }
+
+    public async Task<bool> UpdateCampaignBudgetAsync(string customerId, string campaignId, decimal dailyBudget)
+    {
+        var cleanCustomerId = GoogleAdsOptions.FormatCustomerId(customerId);
+        if (string.IsNullOrWhiteSpace(cleanCustomerId)) cleanCustomerId = GoogleAdsOptions.FormatCustomerId(_options.CustomerId);
+
+        _logger.LogInformation("Looking up campaign budget for Google Campaign {CampaignId} on customer {CustomerId}...", campaignId, cleanCustomerId);
+
+        var gaql = $"SELECT campaign.campaign_budget FROM campaign WHERE campaign.id = '{campaignId}'";
+        var searchRes = await ExecuteGaqlAsync(cleanCustomerId, gaql);
+
+        var budgetResource = searchRes.Results.FirstOrDefault()?.Campaign?.CampaignBudget;
+        if (string.IsNullOrWhiteSpace(budgetResource))
+        {
+            throw new InvalidOperationException($"Could not find budget resource for Google Campaign {campaignId}");
+        }
+
+        var amountMicros = (long)Math.Round(dailyBudget * 1_000_000);
+        var payload = new
+        {
+            operations = new[]
+            {
+                new
+                {
+                    update = new
+                    {
+                        resourceName = budgetResource,
+                        amountMicros = amountMicros.ToString()
+                    },
+                    updateMask = "amount_micros"
+                }
+            }
+        };
+
+        await ExecuteMutateAsync(cleanCustomerId, "campaignBudgets:mutate", payload);
+        return true;
+    }
+
+    public Task<List<AdAccountInfoDto>> ListConnectedAdAccountsAsync()
+    {
+        var result = new List<AdAccountInfoDto>();
+        var configuredCustomer = GoogleAdsOptions.FormatCustomerId(_options.CustomerId);
+
+        if (!string.IsNullOrWhiteSpace(configuredCustomer))
+        {
+            result.Add(new AdAccountInfoDto
+            {
+                Platform = "Google",
+                AccountId = configuredCustomer,
+                AccountName = "Connected Google Ads Account",
+                Currency = "USD",
+                Status = "ACTIVE",
+                IsDefault = true
+            });
+        }
+
+        var loginCustomer = GoogleAdsOptions.FormatCustomerId(_options.LoginCustomerId);
+        if (!string.IsNullOrWhiteSpace(loginCustomer) && !loginCustomer.Equals(configuredCustomer, StringComparison.OrdinalIgnoreCase))
+        {
+            result.Add(new AdAccountInfoDto
+            {
+                Platform = "Google",
+                AccountId = loginCustomer,
+                AccountName = "Google Ads Manager (MCC) Account",
+                Currency = "USD",
+                Status = "ACTIVE",
+                IsDefault = false
+            });
+        }
+
+        return Task.FromResult(result);
     }
 
     #endregion

@@ -91,6 +91,26 @@ public interface IMetaAdsService
     Task ClearTokensAsync();
 
     /// <summary>
+    /// Creates a complete campaign hierarchy (Campaign -> AdSet with FB/IG placements -> Creative -> Ad) and saves in local DB.
+    /// </summary>
+    Task<PlatformCampaignResultDto> CreateFullPlatformCampaignAsync(CreatePlatformCampaignDto dto, long workspaceId, string? userToken = null);
+
+    /// <summary>
+    /// Updates campaign status on Meta Graph API (ACTIVE / PAUSED).
+    /// </summary>
+    Task<bool> UpdatePlatformCampaignStatusAsync(string campaignId, string status, string? userToken = null);
+
+    /// <summary>
+    /// Updates campaign daily budget on Meta Graph API.
+    /// </summary>
+    Task<bool> UpdatePlatformCampaignBudgetAsync(string campaignId, decimal dailyBudget, string? userToken = null);
+
+    /// <summary>
+    /// Lists connected Meta Ad Accounts along with Facebook Pages and Instagram Accounts.
+    /// </summary>
+    Task<List<AdAccountInfoDto>> ListConnectedAdAccountsWithPagesAsync(string? userToken = null);
+
+    /// <summary>
     /// Clears existing DB tokens and re-seeds long-lived tokens from appsettings.json.
     /// </summary>
     Task<MetaTokenStatusDto> ReseedFromConfigAsync(bool force = true);

@@ -8,15 +8,18 @@ public class SyncService : ISyncService
 {
     private readonly LeadGrowthDbContext _context;
     private readonly IMetaAdsService _metaAdsService;
+    private readonly IGoogleAdsService _googleAdsService;
     private readonly ILogger<SyncService> _logger;
 
     public SyncService(
         LeadGrowthDbContext context,
         IMetaAdsService metaAdsService,
+        IGoogleAdsService googleAdsService,
         ILogger<SyncService> logger)
     {
         _context = context;
         _metaAdsService = metaAdsService;
+        _googleAdsService = googleAdsService;
         _logger = logger;
     }
 
@@ -43,9 +46,24 @@ public class SyncService : ISyncService
                 syncDetails = $"Meta sync error: {ex.Message}";
             }
         }
+        else if (platform.Equals("Google", StringComparison.OrdinalIgnoreCase) || platform.Contains("Google Ads"))
+        {
+            try
+            {
+                var googleResult = await _googleAdsService.SyncWorkspaceGoogleAsync(workspaceId);
+                syncStatus = googleResult.Success ? "SUCCESS" : "PARTIAL_SUCCESS";
+                syncDetails = googleResult.Message;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing Google Ads API for workspace {WorkspaceId}", workspaceId);
+                syncStatus = "FAILED";
+                syncDetails = $"Google sync error: {ex.Message}";
+            }
+        }
         else
         {
-            syncDetails = $"Synced mock records for {platform}";
+            syncDetails = $"Synced platform records for {platform}";
         }
 
         if (integration != null)

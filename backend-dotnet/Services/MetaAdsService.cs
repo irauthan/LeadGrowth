@@ -1599,4 +1599,311 @@ public class MetaAdsService : IMetaAdsService
     }
 
     #endregion
+
+    #region Full Platform Campaign Provisioning & Ad Account Discovery
+
+    public async Task<PlatformCampaignResultDto> CreateFullPlatformCampaignAsync(CreatePlatformCampaignDto dto, long workspaceId, string? userToken = null)
+    {
+        var account = GetEffectiveAdAccountId(dto.AdAccountId);
+        if (string.IsNullOrWhiteSpace(account))
+        {
+            throw new ArgumentException("Ad Account ID is required to create a Meta campaign.");
+        }
+
+        var pageId = GetEffectivePageId(dto.PageId);
+        _logger.LogInformation("Creating Meta Campaign '{Name}' on account '{Account}' for workspace {WorkspaceId}...", dto.Name, account, workspaceId);
+
+        // 1. Create Campaign
+        var campaignDto = new CreateMetaCampaignDto
+        {
+            Name = dto.Name,
+            Objective = !string.IsNullOrWhiteSpace(dto.Objective) ? dto.Objective : "OUTCOME_LEADS",
+            Status = !string.IsNullOrWhiteSpace(dto.Status) ? dto.Status : "PAUSED",
+            AdAccountId = account,
+            DailyBudget = dto.Budget,
+            SpecialAdCategories = new List<string> { "NONE" }
+        };
+
+        var campaignRes = await CreateCampaignAsync(campaignDto, userToken, account);
+        var createdCampaignId = campaignRes.Id;
+
+        // 2. Create Ad Set with Facebook & Instagram Placements
+        string createdAdSetId = string.Empty;
+        try
+        {
+            var publisherPlatforms = new List<string>();
+            if (dto.Placements != null && dto.Placements.Count > 0)
+            {
+                foreach (var p in dto.Placements)
+                {
+                    var pLower = p.Trim().ToLower();
+                    if (pLower.Contains("fb") || pLower.Contains("facebook")) publisherPlatforms.Add("facebook");
+                    if (pLower.Contains("ig") || pLower.Contains("instagram")) publisherPlatforms.Add("instagram");
+                    if (pLower.Contains("audience") || pLower.Contains("network")) publisherPlatforms.Add("audience_network");
+                    if (pLower.Contains("messenger")) publisherPlatforms.Add("messenger");
+                }
+            }
+
+            if (publisherPlatforms.Count == 0)
+            {
+                publisherPlatforms = new List<string> { "facebook", "instagram" };
+            }
+
+            var targeting = new MetaTargeting
+            {
+                GeoLocations = new MetaGeoLocations { Countries = dto.TargetCountries ?? new List<string> { "US" } },
+                AgeMin = dto.AgeMin > 0 ? dto.AgeMin : 18,
+                AgeMax = dto.AgeMax > 0 ? dto.AgeMax : 65
+            };
+
+            var promotedObject = !string.IsNullOrWhiteSpace(pageId) ? new MetaPromotedObject { PageId = pageId } : null;
+            var dailyBudgetCents = (long)Math.Round(dto.Budget * 100);
+
+            var adSetRes = await SendWithAutoRefreshAsync<MetaIdResponse>(
+                token =>
+                {
+                    var formParams = new Dictionary<string, string>
+                    {
+                        { "name", $"{dto.Name} - Target Set" },
+                        { "campaign_id", createdCampaignId },
+                        { "daily_budget", dailyBudgetCents.ToString() },
+                        { "billing_event", "IMPRESSIONS" },
+                        { "optimization_goal", dto.Objective == "OUTCOME_TRAFFIC" ? "LINK_CLICKS" : "LEAD_GENERATION" },
+                        { "targeting", JsonSerializer.Serialize(targeting) },
+                        { "status", dto.Status ?? "PAUSED" },
+                        { "access_token", token }
+                    };
+
+                    if (promotedObject != null)
+                    {
+                        formParams.Add("promoted_object", JsonSerializer.Serialize(promotedObject));
+                    }
+
+                    return new HttpRequestMessage(HttpMethod.Post, BuildUrl($"{account}/adsets"))
+                    {
+                        Content = new FormUrlEncodedContent(formParams)
+                    };
+                },
+                isPageToken: false,
+                explicitToken: userToken,
+                actionName: "CreateAdSetWithPlacements");
+
+            createdAdSetId = adSetRes.Id;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Campaign {CampaignId} was created, but AdSet provisioning encountered an error.", createdCampaignId);
+        }
+
+        // 3. Upsert into LeadGrowth Campaigns database
+        var dbCampaign = await _context.Campaigns
+            .FirstOrDefaultAsync(c => c.WorkspaceId == workspaceId && c.ExternalCampaignId == createdCampaignId);
+
+        var placementsString = dto.Placements != null && dto.Placements.Count > 0
+            ? string.Join(", ", dto.Placements)
+            : "Facebook, Instagram";
+
+        if (dbCampaign == null)
+        {
+            dbCampaign = new Campaign
+            {
+                WorkspaceId = workspaceId,
+                Name = dto.Name,
+                Platform = "Meta",
+                Status = dto.Status ?? "PAUSED",
+                Budget = dto.Budget,
+                Spend = 0,
+                Clicks = 0,
+                Impressions = 0,
+                LeadsCount = 0,
+                Conversions = 0,
+                Revenue = 0,
+                ExternalCampaignId = createdCampaignId,
+                AdAccountId = account,
+                Objective = dto.Objective,
+                Placements = placementsString,
+                PlatformStatus = dto.Status ?? "PAUSED",
+                IsLegacy = false,
+                LastSyncedAt = DateTime.UtcNow,
+                SyncStatus = "SYNCED",
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Campaigns.Add(dbCampaign);
+        }
+        else
+        {
+            dbCampaign.Name = dto.Name;
+            dbCampaign.Budget = dto.Budget;
+            dbCampaign.Status = dto.Status ?? dbCampaign.Status;
+            dbCampaign.PlatformStatus = dto.Status ?? dbCampaign.PlatformStatus;
+            dbCampaign.Placements = placementsString;
+            dbCampaign.IsLegacy = false;
+            dbCampaign.LastSyncedAt = DateTime.UtcNow;
+            dbCampaign.SyncStatus = "SYNCED";
+        }
+
+        await _context.SaveChangesAsync();
+
+        return new PlatformCampaignResultDto
+        {
+            Success = true,
+            Message = $"Meta campaign '{dto.Name}' successfully created on {account}.",
+            CampaignId = dbCampaign.Id,
+            ExternalCampaignId = createdCampaignId,
+            AdAccountId = account,
+            Platform = "Meta",
+            PlatformStatus = dbCampaign.PlatformStatus ?? "PAUSED",
+            Placements = placementsString
+        };
+    }
+
+    public async Task<bool> UpdatePlatformCampaignStatusAsync(string campaignId, string status, string? userToken = null)
+    {
+        var targetStatus = status.Equals("ACTIVE", StringComparison.OrdinalIgnoreCase) ? "ACTIVE" : "PAUSED";
+        _logger.LogInformation("Updating Meta Campaign {CampaignId} status to {Status}...", campaignId, targetStatus);
+
+        await SendWithAutoRefreshAsync<MetaSuccessResponse>(
+            token =>
+            {
+                var url = BuildUrl($"{campaignId}");
+                var form = new Dictionary<string, string>
+                {
+                    { "status", targetStatus },
+                    { "access_token", token }
+                };
+                return new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new FormUrlEncodedContent(form)
+                };
+            },
+            isPageToken: false,
+            explicitToken: userToken,
+            actionName: "UpdateCampaignStatus");
+
+        return true;
+    }
+
+    public async Task<bool> UpdatePlatformCampaignBudgetAsync(string campaignId, decimal dailyBudget, string? userToken = null)
+    {
+        var budgetCents = (long)Math.Round(dailyBudget * 100);
+        _logger.LogInformation("Updating Meta Campaign {CampaignId} daily budget to ${Budget}...", campaignId, dailyBudget);
+
+        await SendWithAutoRefreshAsync<MetaSuccessResponse>(
+            token =>
+            {
+                var url = BuildUrl($"{campaignId}");
+                var form = new Dictionary<string, string>
+                {
+                    { "daily_budget", budgetCents.ToString() },
+                    { "access_token", token }
+                };
+                return new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new FormUrlEncodedContent(form)
+                };
+            },
+            isPageToken: false,
+            explicitToken: userToken,
+            actionName: "UpdateCampaignBudget");
+
+        return true;
+    }
+
+    public async Task<List<AdAccountInfoDto>> ListConnectedAdAccountsWithPagesAsync(string? userToken = null)
+    {
+        var result = new List<AdAccountInfoDto>();
+        var configuredAccount = GetEffectiveAdAccountId(null);
+        var configuredPageId = GetEffectivePageId(null);
+
+        // 1. Fetch Pages
+        var pageOptions = new List<MetaPageOptionDto>();
+        try
+        {
+            var pages = await SendWithAutoRefreshAsync<MetaPageListResponse>(
+                token => new HttpRequestMessage(HttpMethod.Get, BuildUrl($"me/accounts?fields=id,name,category,instagram_business_account&access_token={Uri.EscapeDataString(token)}")),
+                isPageToken: false,
+                explicitToken: userToken,
+                actionName: "ListPages");
+
+            if (pages?.Data != null)
+            {
+                foreach (var p in pages.Data)
+                {
+                    pageOptions.Add(new MetaPageOptionDto
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Category = p.Category,
+                        InstagramAccounts = !string.IsNullOrWhiteSpace(p.InstagramBusinessAccount?.Id)
+                            ? new List<string> { p.InstagramBusinessAccount.Id }
+                            : new List<string>()
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch live pages list from /me/accounts. Using configured Page ID if available.");
+            if (!string.IsNullOrWhiteSpace(configuredPageId))
+            {
+                pageOptions.Add(new MetaPageOptionDto
+                {
+                    Id = configuredPageId,
+                    Name = "Connected Facebook Page",
+                    Category = "Business Page"
+                });
+            }
+        }
+
+        // 2. Fetch Ad Accounts
+        try
+        {
+            var adAccounts = await SendWithAutoRefreshAsync<MetaAdAccountListResponse>(
+                token => new HttpRequestMessage(HttpMethod.Get, BuildUrl($"me/adaccounts?fields=id,account_id,name,currency,account_status,business_name&access_token={Uri.EscapeDataString(token)}")),
+                isPageToken: false,
+                explicitToken: userToken,
+                actionName: "ListAdAccounts");
+
+            if (adAccounts?.Data != null && adAccounts.Data.Count > 0)
+            {
+                foreach (var acc in adAccounts.Data)
+                {
+                    var accId = acc.Id.StartsWith("act_") ? acc.Id : $"act_{acc.Id}";
+                    result.Add(new AdAccountInfoDto
+                    {
+                        Platform = "Meta",
+                        AccountId = accId,
+                        AccountName = !string.IsNullOrWhiteSpace(acc.Name) ? acc.Name : $"Meta Ad Account ({accId})",
+                        Currency = acc.Currency ?? "USD",
+                        Status = acc.AccountStatus == 1 ? "ACTIVE" : "PAUSED",
+                        IsDefault = accId.Equals(configuredAccount, StringComparison.OrdinalIgnoreCase),
+                        Pages = pageOptions
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch ad accounts list from /me/adaccounts. Falling back to configured account.");
+        }
+
+        if (result.Count == 0 && !string.IsNullOrWhiteSpace(configuredAccount))
+        {
+            result.Add(new AdAccountInfoDto
+            {
+                Platform = "Meta",
+                AccountId = configuredAccount,
+                AccountName = "Connected Meta Ad Account",
+                Currency = "USD",
+                Status = "ACTIVE",
+                IsDefault = true,
+                Pages = pageOptions
+            });
+        }
+
+        return result;
+    }
+
+    #endregion
 }
+

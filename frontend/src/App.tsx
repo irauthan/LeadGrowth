@@ -11,17 +11,13 @@ import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Integrations from './pages/Integrations';
 import Settings from './pages/Settings';
-import ActivityLogs from './pages/ActivityLogs';
 import NotificationsPage from './pages/NotificationsPage';
 import UserManagement from './pages/UserManagement';
 import WorkspaceManagement from './pages/WorkspaceManagement';
-import ApiManagement from './pages/ApiManagement';
 import SystemMonitoring from './pages/SystemMonitoring';
 import Followups from './pages/Followups';
-import AuditLogsView from './pages/AuditLogsView';
 import AcceptInvite from './pages/AcceptInvite';
 import Billing from './pages/Billing';
-import SecurityCenter from './pages/SecurityCenter';
 import MyWork from './pages/MyWork';
 import Calendar from './pages/Calendar';
 import ExecutiveWorkMonitor from './pages/ExecutiveWorkMonitor';
@@ -55,7 +51,7 @@ export default function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/tasks" element={<Navigate to="/my-work" replace />} />
           <Route path="/users" element={<Users />} />
-          <Route path="/activity-logs" element={<ActivityLogs />} />
+          <Route path="/activity-logs" element={<Navigate to="/dashboard" replace />} />
           <Route path="/notifications-page" element={<NotificationsPage />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/settings" element={<Settings />} />
@@ -66,10 +62,10 @@ export default function App() {
           <Route path="/admin/work-monitor" element={<ExecutiveWorkMonitor />} />
           <Route path="/admin/users" element={<UserManagement />} />
           <Route path="/admin/workspace" element={<WorkspaceManagement />} />
-          <Route path="/admin/api" element={<ApiManagement />} />
           <Route path="/admin/system" element={<SystemMonitoring />} />
-          <Route path="/admin/security" element={<SecurityCenter />} />
-          <Route path="/admin/audit-logs" element={<AuditLogsView />} />
+          <Route path="/admin/api" element={<Navigate to="/integrations" replace />} />
+          <Route path="/admin/security" element={<Navigate to="/settings" replace />} />
+          <Route path="/admin/audit-logs" element={<Navigate to="/dashboard" replace />} />
         </Route>
 
         {/* Fallback route */}

@@ -36,7 +36,8 @@ import {
   Layers,
   PhoneForwarded,
   ArrowUpRight,
-  XCircle
+  XCircle,
+  Megaphone
 } from 'lucide-react';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../../components/TimeFilterDropdown';
@@ -134,9 +135,9 @@ export default function AdminDashboard() {
   const paidLeadsCount = leads.filter(l => l.campaignId || (l.sourcePlatform && ['meta', 'facebook', 'instagram', 'google', 'ads'].some(s => (l.sourcePlatform || (l as any).source || '').toLowerCase().includes(s)))).length;
   const costPerLead = paidLeadsCount > 0 ? (totalAdSpend / paidLeadsCount) : (totalLeadsCount > 0 ? (totalAdSpend / totalLeadsCount) : data.cpc || 0);
 
-  // Qualified leads calculation: leads in 'Proposal Sent', 'Negotiation', or 'Qualified'
+  // Qualified leads calculation: leads in 'Proposal Sent', 'Negotiation', 'Qualified', 'Demo Scheduled'
   const qualifiedLeads = useMemo(() => {
-    return leads.filter(l => ['Proposal Sent', 'Negotiation', 'Qualified'].some(s => (l.status || '').toLowerCase() === s.toLowerCase()));
+    return leads.filter(l => ['Proposal Sent', 'Proposal', 'Negotiation', 'Qualified', 'Demo Scheduled', 'Closing'].some(s => (l.status || '').toLowerCase() === s.toLowerCase()));
   }, [leads]);
   const qualifiedCount = qualifiedLeads.length;
   const qualificationRate = totalLeadsCount > 0 ? (qualifiedCount / totalLeadsCount) * 100 : 0;
@@ -145,32 +146,32 @@ export default function AdminDashboard() {
   // 2. LEAD PIPELINE FUNNEL CALCULATIONS
   // ==========================================
   const pipelineStages = useMemo(() => {
-    const newCount = leads.filter(l => (l.status || 'New').toLowerCase() === 'new').length;
-    const contactedCount = leads.filter(l => (l.status || '').toLowerCase() === 'interaction' || (l.status || '').toLowerCase() === 'contacted').length;
-    const qCount = qualifiedCount;
-    const convCount = convertedCount;
-    const lostCount = leads.filter(l => (l.status || '').toLowerCase() === 'lost' || (l.status || '').toLowerCase() === 'rejected').length;
+    const isNew = (st: string) => !st || ['new', 'new lead', 'fresh'].includes(st.toLowerCase());
+    const isQualified = (st: string) => ['proposal sent', 'proposal', 'negotiation', 'qualified', 'demo scheduled', 'closing'].includes(st.toLowerCase());
+    const isConverted = (st: string) => ['converted', 'closed won', 'won', 'payment completed', 'completed'].includes(st.toLowerCase());
+    const isLost = (st: string) => ['lost', 'rejected', 'closed lost', 'dropped', 'junk', 'unqualified', 'not interested'].includes(st.toLowerCase());
+
+    const newCount = leads.filter(l => isNew(l.status || '')).length;
+    const qualifiedCount = leads.filter(l => isQualified(l.status || '')).length;
+    const convCount = leads.filter(l => isConverted(l.status || '')).length;
+    const lostCount = leads.filter(l => isLost(l.status || '')).length;
+    
+    // Contacted/In Discussion includes Interaction, Contacted, Interested, Follow-Up, In Progress, etc.
+    const contactedCount = leads.filter(l => {
+      const s = l.status || '';
+      if (isNew(s) || isQualified(s) || isConverted(s) || isLost(s)) return false;
+      return true;
+    }).length;
 
     return {
       new: newCount,
       contacted: contactedCount,
-      qualified: qCount,
+      qualified: qualifiedCount,
       converted: convCount,
       lost: lostCount,
-      totalActive: newCount + contactedCount + qCount + convCount
+      totalActive: newCount + contactedCount + qualifiedCount + convCount
     };
-  }, [leads, qualifiedCount, convertedCount]);
-
-  // Bottleneck detection
-  const bottleneck = useMemo(() => {
-    const stages = [
-      { name: 'New (Uncontacted)', count: pipelineStages.new, key: 'New', desc: 'Fresh leads waiting for initial outreach' },
-      { name: 'Contacted (Interaction)', count: pipelineStages.contacted, key: 'Interaction', desc: 'Leads currently in discussions without proposals' },
-      { name: 'Qualified (Proposals)', count: pipelineStages.qualified, key: 'Proposal Sent', desc: 'Proposals sent waiting for closing/negotiation' }
-    ];
-    stages.sort((a, b) => b.count - a.count);
-    return stages[0]?.count > 0 ? stages[0] : null;
-  }, [pipelineStages]);
+  }, [leads]);
 
   // ==========================================
   // 3. NEEDS ATTENTION CALCULATIONS
@@ -180,25 +181,12 @@ export default function AdminDashboard() {
     return leads.filter(l => !l.assignedToId || !l.assignedToName);
   }, [leads]);
 
-  // B. Not Contacted Yet (New Leads) & oldest pending
+  // B. Not Contacted Yet (New Leads)
   const notContactedLeads = useMemo(() => {
     return leads.filter(l => (l.status || 'New').toLowerCase() === 'new');
   }, [leads]);
 
-  const oldestNotContactedTime = useMemo(() => {
-    if (notContactedLeads.length === 0) return null;
-    const sorted = [...notContactedLeads].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    const oldest = sorted[0];
-    if (!oldest?.createdAt) return null;
-    const diffMs = Date.now() - new Date(oldest.createdAt).getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (diffHours < 1) return 'Less than 1 hour ago';
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  }, [notContactedLeads]);
-
-  // C. Overdue Follow-ups with Executive Breakdown
+  // C. Overdue Follow-ups
   const overdueFollowups = useMemo(() => {
     const now = new Date();
     return followups.filter(f => {
@@ -208,15 +196,6 @@ export default function AdminDashboard() {
       return false;
     });
   }, [followups]);
-
-  const overdueByExecutive = useMemo(() => {
-    const map: Record<string, number> = {};
-    overdueFollowups.forEach(f => {
-      const exec = f.assignedToName || 'Unassigned';
-      map[exec] = (map[exec] || 0) + 1;
-    });
-    return Object.entries(map).map(([name, count]) => ({ name, count }));
-  }, [overdueFollowups]);
 
   // D. Qualified Leads without next follow-up
   const qualifiedWithoutFollowup = useMemo(() => {
@@ -443,11 +422,28 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div>
-            <h3 className="text-2xl font-black tracking-tight text-theme-text">{formatCurrency(totalAdSpend)}</h3>
-            <div className="flex items-center justify-between text-xs text-theme-text-muted mt-1">
-              <span>Cost Per Lead (CPL)</span>
-              <span className="font-bold text-theme-text font-mono">{formatCurrency(costPerLead)}</span>
-            </div>
+            {totalAdSpend > 0 || campaigns.length > 0 ? (
+              <>
+                <h3 className="text-2xl font-black tracking-tight text-theme-text">{formatCurrency(totalAdSpend)}</h3>
+                <div className="flex items-center justify-between text-xs text-theme-text-muted mt-1">
+                  <span>Cost Per Lead (CPL)</span>
+                  <span className="font-bold text-theme-text font-mono">{formatCurrency(costPerLead)}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-black tracking-tight text-theme-text-muted">—</h3>
+                  <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                    No Campaigns Synced
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-theme-text-muted mt-1">
+                  <span>Add Ad Campaign</span>
+                  <span className="font-bold text-theme-primary group-hover:underline text-[11px]">Connect Ads &rarr;</span>
+                </div>
+              </>
+            )}
           </div>
         </Link>
 
@@ -910,18 +906,32 @@ export default function AdminDashboard() {
                         </td>
 
                         <td className="py-2.5 px-2.5 text-right font-mono text-theme-text">
-                          {formatCurrency(c.spend)}
+                          {c.spend > 0 ? formatCurrency(c.spend) : '—'}
                         </td>
 
                         <td className="py-2.5 px-2.5 text-right font-mono font-bold text-theme-primary">
-                          {formatCurrency(c.cpl)}
+                          {c.cpl > 0 ? formatCurrency(c.cpl) : '—'}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-xs text-theme-text-muted">
-                        No active campaigns or lead source records found.
+                      <td colSpan={6} className="py-8 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-2 max-w-sm mx-auto">
+                          <div className="w-9 h-9 rounded-2xl bg-theme-bg-alt flex items-center justify-center text-theme-text-muted border border-theme-border/60">
+                            <Megaphone size={16} />
+                          </div>
+                          <p className="text-xs font-bold text-theme-text">No Synced Ad Campaigns</p>
+                          <p className="text-[11px] text-theme-text-muted">
+                            Connect Meta Ads or Google Ads to automatically sync live spend, impressions, and Cost Per Lead.
+                          </p>
+                          <Link 
+                            to="/campaigns"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-theme-primary hover:underline pt-1"
+                          >
+                            Add / Connect Campaign First &rarr;
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   )}

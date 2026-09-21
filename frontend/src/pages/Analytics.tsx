@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import type { DashboardKpis, Lead, User } from '../types';
@@ -18,7 +19,7 @@ import {
   Legend, 
   CartesianGrid 
 } from 'recharts';
-import { TrendingUp, Target, ShieldCheck, Clock, Users, IndianRupee } from 'lucide-react';
+import { TrendingUp, Target, ShieldCheck, Clock, Users, IndianRupee, Megaphone, Info } from 'lucide-react';
 import HoosshBeeLoader from '../components/HoosshBeeLoader';
 
 import TimeFilterDropdown, { type TimeFilterState } from '../components/TimeFilterDropdown';
@@ -33,6 +34,18 @@ export default function Analytics() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilterState>({ period: 'monthly' });
+
+  const platformAttributionData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    leads.forEach(l => {
+      const raw = l.sourcePlatform || (l as any).source || (l.campaignName ? 'Ad Campaign' : '');
+      if (raw && raw.trim()) {
+        const clean = raw.trim();
+        counts[clean] = (counts[clean] || 0) + 1;
+      }
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [leads]);
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -183,7 +196,7 @@ export default function Analytics() {
 
               <div className="rounded-xl border border-theme-border/60 bg-theme-bg-alt/30 p-3.5 space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-theme-text-muted">Follow-up Success</span>
-                <h3 className="text-xl font-black text-theme-text">96%</h3>
+                <h3 className="text-xl font-black text-theme-text">{kpis.followupCompletionRate !== undefined ? `${kpis.followupCompletionRate}%` : (kpis.followupSuccessRate !== undefined ? `${kpis.followupSuccessRate}%` : '100%')}</h3>
                 <span className="text-[9px] font-bold text-cyan-400 block">On-Time Reminders</span>
               </div>
 
@@ -302,7 +315,7 @@ export default function Analytics() {
                 <TrendingUp size={18} className="text-emerald-500" /> Performance Summary & Efficiency Metrics
               </h3>
               <span className="text-[10px] font-extrabold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                Productivity Score: {kpis.productivityScore || 94}%
+                Productivity Score: {kpis.productivityScore !== undefined ? `${kpis.productivityScore}%` : '100%'}
               </span>
             </div>
 
@@ -310,7 +323,7 @@ export default function Analytics() {
               <div className="rounded-2xl border border-theme-border/50 bg-theme-bg-alt/50 p-4 space-y-1">
                 <span className="text-theme-text-muted font-semibold block">Lead Conversion Rate</span>
                 <div className="text-xl font-extrabold text-emerald-500 flex items-center justify-between">
-                  <span>{kpis.conversionRate || 22.4}%</span>
+                  <span>{kpis.conversionRate !== undefined ? `${kpis.conversionRate}%` : '0%'}</span>
                   <Target size={16} className="text-emerald-500/60" />
                 </div>
                 <p className="text-[10px] text-theme-text-muted">Personal lead-to-deal conversion efficiency</p>
@@ -319,7 +332,7 @@ export default function Analytics() {
               <div className="rounded-2xl border border-theme-border/50 bg-theme-bg-alt/50 p-4 space-y-1">
                 <span className="text-theme-text-muted font-semibold block">Workflow SLA Adherence</span>
                 <div className="text-xl font-extrabold text-theme-primary flex items-center justify-between">
-                  <span>{kpis.taskCompletionRate || 96.8}%</span>
+                  <span>{kpis.taskCompletionRate !== undefined ? `${kpis.taskCompletionRate}%` : '100%'}</span>
                   <ShieldCheck size={16} className="text-theme-primary/60" />
                 </div>
                 <p className="text-[10px] text-theme-text-muted">On-time SLA task & follow-up fulfillment</p>
@@ -328,7 +341,7 @@ export default function Analytics() {
               <div className="rounded-2xl border border-theme-border/50 bg-theme-bg-alt/50 p-4 space-y-1">
                 <span className="text-theme-text-muted font-semibold block">Avg. Contact Speed</span>
                 <div className="text-xl font-extrabold text-cyan-400 flex items-center justify-between">
-                  <span>{kpis.averageResponseTimeHours || 1.2} Hours</span>
+                  <span>{kpis.averageResponseTimeHours !== undefined ? `${kpis.averageResponseTimeHours} Hours` : '—'}</span>
                   <Clock size={16} className="text-cyan-400/60" />
                 </div>
                 <p className="text-[10px] text-theme-text-muted">Average speed to first lead outreach</p>
@@ -401,6 +414,18 @@ export default function Analytics() {
               </span>
             </div>
 
+            {(!data?.totalSpend || data.totalSpend === 0) && (
+              <div className="mb-3 flex items-center justify-between gap-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <Info size={13} className="flex-shrink-0" />
+                  <span className="text-[11px]">No active ad spend tracked yet.</span>
+                </div>
+                <Link to="/campaigns" className="text-[11px] font-bold underline hover:opacity-80 flex-shrink-0">
+                  Connect Ads &rarr;
+                </Link>
+              </div>
+            )}
+
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data?.trends || []}>
@@ -423,7 +448,9 @@ export default function Analytics() {
                     }} 
                   />
                   <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#10B981" strokeWidth={2.2} fill="url(#analyticsRevGrad)" />
-                  <Area type="monotone" dataKey="spend" name="Ad Spend" stroke="#EF4444" strokeWidth={1.8} fillOpacity={0.08} />
+                  {data?.totalSpend && data.totalSpend > 0 ? (
+                    <Area type="monotone" dataKey="spend" name="Ad Spend" stroke="#EF4444" strokeWidth={1.8} fillOpacity={0.08} />
+                  ) : null}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -431,7 +458,13 @@ export default function Analytics() {
 
           <div className="flex items-center justify-between text-xs text-theme-text-muted pt-3 border-t border-theme-border/30">
             <span>Total Revenue: <strong className="text-emerald-500 font-mono font-bold">{formatCurrency(data?.totalRevenue || 0)}</strong></span>
-            <span>Total Spend: <strong className="text-rose-500 font-mono font-bold">{formatCurrency(data?.totalSpend || 0)}</strong></span>
+            <span>
+              Total Spend: {data?.totalSpend && data.totalSpend > 0 ? (
+                <strong className="text-rose-500 font-mono font-bold">{formatCurrency(data.totalSpend)}</strong>
+              ) : (
+                <span className="text-theme-text-muted font-bold">— (No ad spend)</span>
+              )}
+            </span>
           </div>
         </div>
 
@@ -501,32 +534,64 @@ export default function Analytics() {
 
         {/* 4. Campaign Platform Distribution */}
         <div className="rounded-3xl border border-theme-border bg-theme-card p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">4. Platform Attribution Share</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Meta Ads', value: 45 },
-                    { name: 'Google Ads', value: 35 },
-                    { name: 'Landing Pages', value: 20 },
-                  ]}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label
-                >
-                  {PIE_COLORS.map((color, index) => (
-                    <Cell key={`cell-${index}`} fill={color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text-muted">4. Platform Attribution Share</h3>
+            {platformAttributionData.length > 0 && (
+              <span className="text-[10px] font-bold text-theme-primary bg-theme-primary/10 border border-theme-primary/20 px-2 py-0.5 rounded-full">
+                {platformAttributionData.length} Channels
+              </span>
+            )}
           </div>
+
+          {platformAttributionData.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={platformAttributionData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label={({ name, percent }: any) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {platformAttributionData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'var(--theme-card, #1e293b)', 
+                      borderColor: 'var(--theme-border, #334155)', 
+                      color: 'var(--theme-text, #ffffff)',
+                      borderRadius: '12px',
+                      fontSize: '11px'
+                    }} 
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex flex-col items-center justify-center text-center p-6 space-y-3 rounded-2xl border border-dashed border-theme-border/80 bg-theme-bg-alt/20">
+              <div className="w-10 h-10 rounded-2xl bg-theme-bg-alt flex items-center justify-center text-theme-text-muted border border-theme-border/50">
+                <Megaphone size={18} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-theme-text">No Campaign Attribution Data</p>
+                <p className="text-[11px] text-theme-text-muted max-w-xs leading-relaxed">
+                  Connect Meta Ads or Google Ads to sync ad campaigns and automatically attribute incoming lead sources.
+                </p>
+              </div>
+              <Link 
+                to="/campaigns" 
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-theme-primary text-white text-xs font-bold shadow-xs hover:bg-theme-primary/90 transition-all"
+              >
+                Connect Ad Platform &rarr;
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* 5. Monthly Workspace Lead Work & Conversion Trajectory */}

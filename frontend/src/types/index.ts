@@ -44,6 +44,15 @@ export interface Campaign {
   conversions: number;
   revenue: number;
   personalRevenue?: number;
+  isLegacy?: boolean;
+  lastSyncedAt?: string;
+  syncStatus?: string;
+  syncError?: string;
+  platformStatus?: string;
+  externalCampaignId?: string;
+  adAccountId?: string;
+  objective?: string;
+  placements?: string;
   createdAt: string;
 }
 
@@ -74,6 +83,68 @@ export interface CampaignDetails {
   campaign: Campaign;
   metrics: CampaignMetrics;
   leads: CampaignLead[];
+}
+
+export interface CreatePlatformCampaignRequest {
+  platform: 'Meta' | 'Google';
+  adAccountId: string;
+  name: string;
+  objective: string;
+  budget: number;
+  status: 'PAUSED' | 'ACTIVE';
+  placements: string[];
+  pageId?: string;
+  instagramActorId?: string;
+  targetCountries?: string[];
+  ageMin?: number;
+  ageMax?: number;
+  adHeadline?: string;
+  adPrimaryText?: string;
+  adDestinationUrl?: string;
+  callToAction?: string;
+  leadFormId?: string;
+  biddingStrategy?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface MetaPageOption {
+  id: string;
+  name: string;
+  category?: string;
+  instagramAccounts?: string[];
+}
+
+export interface AdAccountInfo {
+  platform: string;
+  accountId: string;
+  accountName: string;
+  currency: string;
+  status: string;
+  isDefault: boolean;
+  pages?: MetaPageOption[];
+}
+
+export interface CampaignSyncStatus {
+  lastSyncedAt?: string;
+  isMetaConnected: boolean;
+  isGoogleConnected: boolean;
+  metaAccountName?: string;
+  googleAccountName?: string;
+  lastMetaError?: string;
+  lastGoogleError?: string;
+  totalCampaignsSynced: number;
+}
+
+export interface PlatformCampaignResult {
+  success: boolean;
+  message: string;
+  campaignId: number;
+  externalCampaignId?: string;
+  adAccountId?: string;
+  platform: string;
+  platformStatus: string;
+  placements?: string;
 }
 
 export type CommunicationType = 'PHONE_CALL' | 'WHATSAPP' | 'EMAIL' | 'GOOGLE_MEET' | 'ZOOM' | 'OFFICE_VISIT' | 'VIDEO_CALL' | 'OTHER';

@@ -61,6 +61,28 @@ public class Campaign
     [MaxLength(50)]
     public string? Objective { get; set; }
 
+    [Column("is_legacy")]
+    public bool IsLegacy { get; set; } = false;
+
+    [Column("last_synced_at")]
+    public DateTime? LastSyncedAt { get; set; }
+
+    [Column("sync_status")]
+    [MaxLength(30)]
+    public string? SyncStatus { get; set; } = "SYNCED";
+
+    [Column("sync_error")]
+    public string? SyncError { get; set; }
+
+    [Column("platform_status")]
+    [MaxLength(50)]
+    public string? PlatformStatus { get; set; }
+
+    [Column("placements")]
+    [MaxLength(255)]
+    public string? Placements { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+

@@ -189,15 +189,13 @@ export default function Settings() {
     { id: '/campaigns', label: 'Campaigns', category: 'General' },
     { id: '/reports', label: 'Reports', category: 'General' },
     { id: '/notifications-page', label: 'Notifications', category: 'General' },
-    { id: '/settings', label: 'Settings', category: 'General' },
     { id: '/followups', label: 'Follow-ups', category: 'General' },
     { id: '/users', label: 'Team Management', category: 'General' },
-    { id: '/activity-logs', label: 'Activity Logs', category: 'General' },
     { id: '/billing', label: 'SaaS Billing', category: 'General' },
     { id: '/admin/users', label: 'User Management', category: 'Admin' },
     { id: '/admin/workspace', label: 'Workspace Control', category: 'Admin' },
-    { id: '/admin/api', label: 'API Management', category: 'Admin' },
     { id: '/admin/system', label: 'System Monitoring', category: 'Admin' },
+    { id: '/settings', label: 'Settings', category: 'General' },
   ];
 
   // Security Form State

@@ -140,9 +140,61 @@ public class AuthService : IAuthService
             .Include(u => u.Roles)
             .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
-        if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.Password))
+        if (user != null && user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
         {
+            var minutesRemaining = Math.Max(1, Math.Ceiling((user.LockoutEnd.Value - DateTime.UtcNow).TotalMinutes));
+            throw new ArgumentException($"Account is temporarily locked due to repeated failed login attempts. Please try again in {minutesRemaining} minute(s) or contact your administrator.");
+        }
+
+        if (user == null)
+        {
+            var failedLog = new AuditLog
+            {
+                WorkspaceId = 1,
+                UserId = 0,
+                Action = "LOGIN_FAILED",
+                TargetType = "AUTH",
+                TargetId = 0,
+                Description = $"Failed login attempt for non-existent email '{normalizedEmail}' from IP {ipAddress} on {userAgent}.",
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.AuditLogs.Add(failedLog);
+            await _context.SaveChangesAsync();
             throw new UnauthorizedAccessException("Invalid credentials");
+        }
+
+        if (!_passwordHasher.VerifyPassword(request.Password, user.Password))
+        {
+            user.FailedLoginAttempts = (user.FailedLoginAttempts ?? 0) + 1;
+            string actionName = "LOGIN_FAILED";
+            string desc = $"Failed login attempt (#{user.FailedLoginAttempts}) for user {user.FullName} ({user.Email}) from IP {ipAddress} on {userAgent}.";
+
+            if (user.FailedLoginAttempts >= 5)
+            {
+                user.LockoutEnd = DateTime.UtcNow.AddMinutes(15);
+                actionName = "ACCOUNT_LOCKED";
+                desc = $"Account for {user.FullName} ({user.Email}) was automatically locked out for 15 minutes after 5 consecutive failed login attempts from IP {ipAddress}.";
+            }
+
+            var audit = new AuditLog
+            {
+                WorkspaceId = user.WorkspaceId ?? 1,
+                UserId = user.Id,
+                Action = actionName,
+                TargetType = "AUTH",
+                TargetId = user.Id,
+                Description = desc,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.AuditLogs.Add(audit);
+            await _context.SaveChangesAsync();
+
+            if (user.FailedLoginAttempts >= 5)
+            {
+                throw new ArgumentException("Account has been locked out for 15 minutes due to 5 consecutive failed login attempts. Please contact your workspace administrator to unlock immediately.");
+            }
+
+            throw new UnauthorizedAccessException($"Invalid credentials. Attempt {user.FailedLoginAttempts} of 5 before account lockout.");
         }
 
         if (string.Equals("SUSPENDED", user.Status, StringComparison.OrdinalIgnoreCase))
@@ -150,7 +202,22 @@ public class AuthService : IAuthService
             throw new ArgumentException("Your account has been suspended. Please contact your workspace administrator.");
         }
 
+        // Reset failed login counters upon successful authentication
+        user.FailedLoginAttempts = 0;
+        user.LockoutEnd = null;
         user.LastActiveAt = DateTime.UtcNow;
+
+        var successLog = new AuditLog
+        {
+            WorkspaceId = user.WorkspaceId ?? 1,
+            UserId = user.Id,
+            Action = "USER_LOGIN_SUCCESS",
+            TargetType = "AUTH",
+            TargetId = user.Id,
+            Description = $"User {user.FullName} ({user.Email}) signed in successfully from IP {ipAddress} on {userAgent}.",
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.AuditLogs.Add(successLog);
         await _context.SaveChangesAsync();
 
         var session = new UserSession

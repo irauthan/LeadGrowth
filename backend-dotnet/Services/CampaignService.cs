@@ -1,4 +1,5 @@
 using LeadGrowth.Data;
+using LeadGrowth.DTOs;
 using LeadGrowth.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,10 +8,20 @@ namespace LeadGrowth.Services;
 public class CampaignService : ICampaignService
 {
     private readonly LeadGrowthDbContext _context;
+    private readonly IMetaAdsService _metaAdsService;
+    private readonly IGoogleAdsService _googleAdsService;
+    private readonly ILogger<CampaignService> _logger;
 
-    public CampaignService(LeadGrowthDbContext context)
+    public CampaignService(
+        LeadGrowthDbContext context,
+        IMetaAdsService metaAdsService,
+        IGoogleAdsService googleAdsService,
+        ILogger<CampaignService> logger)
     {
         _context = context;
+        _metaAdsService = metaAdsService;
+        _googleAdsService = googleAdsService;
+        _logger = logger;
     }
 
     public async Task<List<Campaign>> GetCampaignsAsync(string email, string? period = null, string? startDate = null, string? endDate = null)
@@ -48,8 +59,16 @@ public class CampaignService : ICampaignService
             })
             .ToListAsync();
 
+        bool hasLegacyUpdates = false;
         foreach (var c in campaigns)
         {
+            // Identify legacy manual campaigns if no external ID exists
+            if (string.IsNullOrWhiteSpace(c.ExternalCampaignId) && !c.IsLegacy)
+            {
+                c.IsLegacy = true;
+                hasLegacyUpdates = true;
+            }
+
             var campLeads = leads.Where(l => 
                 l.CampaignId == c.Id || 
                 (!string.IsNullOrEmpty(l.CampaignName) && l.CampaignName.Equals(c.Name, StringComparison.OrdinalIgnoreCase))
@@ -63,6 +82,11 @@ public class CampaignService : ICampaignService
             c.LeadsCount = Math.Max(c.LeadsCount, campLeads.Count);
             c.Conversions = Math.Max(c.Conversions, convertedLeads.Count);
             c.Revenue = convertedRevenue;
+        }
+
+        if (hasLegacyUpdates)
+        {
+            await _context.SaveChangesAsync();
         }
 
         return campaigns;
@@ -101,11 +125,18 @@ public class CampaignService : ICampaignService
                 { "leadsCount", c.LeadsCount },
                 { "conversions", c.Conversions },
                 { "revenue", c.Revenue },
+                { "externalCampaignId", c.ExternalCampaignId ?? "" },
+                { "adAccountId", c.AdAccountId ?? "" },
+                { "isLegacy", c.IsLegacy },
+                { "lastSyncedAt", c.LastSyncedAt?.ToString("o") ?? "" },
+                { "syncStatus", c.SyncStatus ?? "SYNCED" },
+                { "platformStatus", c.PlatformStatus ?? c.Status ?? "ACTIVE" },
+                { "placements", c.Placements ?? "" },
                 { "createdAt", c.CreatedAt.ToString("o") }
             }).ToList();
         }
 
-        // For regular user: Calculate personal revenue & conversions from user's assigned leads
+        // For regular user: personal lead attribution
         var userLeads = await _context.Leads
             .Where(l => l.WorkspaceId == user.WorkspaceId && l.AssignedToId == user.Id)
             .ToListAsync();
@@ -138,12 +169,18 @@ public class CampaignService : ICampaignService
                 { "leadsCount", myLeadsCount },
                 { "conversions", myConversions },
                 { "revenue", myRevenue },
+                { "externalCampaignId", c.ExternalCampaignId ?? "" },
+                { "isLegacy", c.IsLegacy },
+                { "lastSyncedAt", c.LastSyncedAt?.ToString("o") ?? "" },
+                { "syncStatus", c.SyncStatus ?? "SYNCED" },
+                { "platformStatus", c.PlatformStatus ?? c.Status ?? "ACTIVE" },
+                { "placements", c.Placements ?? "" },
                 { "createdAt", c.CreatedAt.ToString("o") }
             };
         }).ToList();
     }
 
-    public async Task<Campaign> CreateCampaignAsync(Campaign campaign, string email)
+    public async Task<PlatformCampaignResultDto> CreatePlatformCampaignAsync(CreatePlatformCampaignDto dto, string email)
     {
         var userEmail = email.Trim().ToLower();
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
@@ -152,14 +189,23 @@ public class CampaignService : ICampaignService
             throw new KeyNotFoundException("User workspace not found");
         }
 
-        campaign.WorkspaceId = user.WorkspaceId.Value;
-        campaign.CreatedAt = DateTime.UtcNow;
-        if (campaign.Status == null) campaign.Status = "ACTIVE";
+        var workspaceId = user.WorkspaceId.Value;
+        var platform = (dto.Platform ?? "Meta").Trim();
 
-        _context.Campaigns.Add(campaign);
-        await _context.SaveChangesAsync();
+        _logger.LogInformation("Creating campaign on platform '{Platform}' for workspace {WorkspaceId} by user {Email}...", platform, workspaceId, email);
 
-        return campaign;
+        if (platform.Equals("Meta", StringComparison.OrdinalIgnoreCase) || platform.Contains("Facebook") || platform.Contains("Instagram"))
+        {
+            return await _metaAdsService.CreateFullPlatformCampaignAsync(dto, workspaceId);
+        }
+        else if (platform.Equals("Google", StringComparison.OrdinalIgnoreCase) || platform.Contains("Google Ads"))
+        {
+            return await _googleAdsService.CreateCampaignAsync(dto, workspaceId);
+        }
+        else
+        {
+            throw new NotSupportedException($"Platform '{dto.Platform}' is not supported for automated API campaign creation. Please use Meta Ads or Google Ads.");
+        }
     }
 
     public async Task<object?> GetCampaignDetailsAsync(long id, string email)
@@ -187,7 +233,7 @@ public class CampaignService : ICampaignService
             r.Name.ToUpper().Contains("MANAGER")
         );
 
-        // Fetch leads tied to this campaign (by CampaignId or matching CampaignName)
+        // Fetch leads tied to this campaign
         var leadsQuery = _context.Leads
             .Include(l => l.AssignedTo)
             .Where(l => l.WorkspaceId == user.WorkspaceId && (l.CampaignId == id || (l.CampaignName != null && l.CampaignName == campaign.Name)));
@@ -247,6 +293,15 @@ public class CampaignService : ICampaignService
                 leadsCount = dynamicLeadsCount,
                 conversions = dynamicConversions,
                 revenue = dynamicRevenue,
+                externalCampaignId = campaign.ExternalCampaignId,
+                adAccountId = campaign.AdAccountId,
+                objective = campaign.Objective,
+                placements = campaign.Placements,
+                isLegacy = campaign.IsLegacy,
+                lastSyncedAt = campaign.LastSyncedAt?.ToString("o"),
+                syncStatus = campaign.SyncStatus,
+                syncError = campaign.SyncError,
+                platformStatus = campaign.PlatformStatus,
                 createdAt = campaign.CreatedAt.ToString("o")
             },
             metrics = new
@@ -293,16 +348,18 @@ public class CampaignService : ICampaignService
             throw new KeyNotFoundException("Campaign not found");
         }
 
+        // Only update allowable settings - Never allow manual override of platform ad metrics
         campaign.Name = updated.Name ?? campaign.Name;
-        campaign.Platform = updated.Platform ?? campaign.Platform;
-        campaign.Status = updated.Status ?? campaign.Status;
-        campaign.Budget = updated.Budget;
-        campaign.Spend = updated.Spend;
-        campaign.Clicks = updated.Clicks;
-        campaign.Impressions = updated.Impressions;
-        campaign.LeadsCount = updated.LeadsCount;
-        campaign.Conversions = updated.Conversions;
-        campaign.Revenue = updated.Revenue;
+        
+        if (updated.Budget != campaign.Budget && updated.Budget >= 0)
+        {
+            await UpdateCampaignBudgetAsync(id, updated.Budget, email);
+        }
+
+        if (!string.IsNullOrWhiteSpace(updated.Status) && !updated.Status.Equals(campaign.Status, StringComparison.OrdinalIgnoreCase))
+        {
+            await UpdateCampaignStatusAsync(id, updated.Status, email);
+        }
 
         await _context.SaveChangesAsync();
         return campaign;
@@ -325,7 +382,76 @@ public class CampaignService : ICampaignService
             throw new KeyNotFoundException("Campaign not found");
         }
 
-        campaign.Status = status;
+        var targetStatus = status.ToUpperInvariant();
+
+        // If connected to a live platform, mutate on platform first
+        if (!string.IsNullOrWhiteSpace(campaign.ExternalCampaignId))
+        {
+            try
+            {
+                if (campaign.Platform.ToLower().Contains("meta") || campaign.Platform.ToLower().Contains("facebook"))
+                {
+                    await _metaAdsService.UpdatePlatformCampaignStatusAsync(campaign.ExternalCampaignId, targetStatus);
+                }
+                else if (campaign.Platform.ToLower().Contains("google"))
+                {
+                    var accountId = campaign.AdAccountId ?? "";
+                    await _googleAdsService.UpdateCampaignStatusAsync(accountId, campaign.ExternalCampaignId, targetStatus);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update status on {Platform} API for campaign {CampaignId}", campaign.Platform, campaign.ExternalCampaignId);
+                throw new HttpRequestException($"Failed to update status on {campaign.Platform}: {ex.Message}");
+            }
+        }
+
+        campaign.Status = targetStatus;
+        campaign.PlatformStatus = targetStatus;
+        await _context.SaveChangesAsync();
+        return campaign;
+    }
+
+    public async Task<Campaign> UpdateCampaignBudgetAsync(long id, decimal budget, string email)
+    {
+        var userEmail = email.Trim().ToLower();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        if (user == null || user.WorkspaceId == null)
+        {
+            throw new KeyNotFoundException("User workspace not found");
+        }
+
+        var campaign = await _context.Campaigns
+            .FirstOrDefaultAsync(c => c.Id == id && c.WorkspaceId == user.WorkspaceId);
+
+        if (campaign == null)
+        {
+            throw new KeyNotFoundException("Campaign not found");
+        }
+
+        // If connected to a live platform, mutate budget on platform
+        if (!string.IsNullOrWhiteSpace(campaign.ExternalCampaignId))
+        {
+            try
+            {
+                if (campaign.Platform.ToLower().Contains("meta") || campaign.Platform.ToLower().Contains("facebook"))
+                {
+                    await _metaAdsService.UpdatePlatformCampaignBudgetAsync(campaign.ExternalCampaignId, budget);
+                }
+                else if (campaign.Platform.ToLower().Contains("google"))
+                {
+                    var accountId = campaign.AdAccountId ?? "";
+                    await _googleAdsService.UpdateCampaignBudgetAsync(accountId, campaign.ExternalCampaignId, budget);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update budget on {Platform} API for campaign {CampaignId}", campaign.Platform, campaign.ExternalCampaignId);
+                throw new HttpRequestException($"Failed to update budget on {campaign.Platform}: {ex.Message}");
+            }
+        }
+
+        campaign.Budget = budget;
         await _context.SaveChangesAsync();
         return campaign;
     }
@@ -358,4 +484,144 @@ public class CampaignService : ICampaignService
         await _context.SaveChangesAsync();
         return true;
     }
+
+    public async Task<CampaignSyncStatusDto> GetSyncStatusAsync(string email)
+    {
+        var userEmail = email.Trim().ToLower();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        if (user == null || user.WorkspaceId == null)
+        {
+            throw new KeyNotFoundException("User workspace not found");
+        }
+
+        var workspaceId = user.WorkspaceId.Value;
+
+        // Meta status
+        bool isMetaConnected = false;
+        string? metaAccountName = null;
+        string? lastMetaError = null;
+
+        try
+        {
+            var metaStatus = await _metaAdsService.GetStatusAsync();
+            isMetaConnected = metaStatus.IsConfigured && metaStatus.IsUserTokenValid;
+            metaAccountName = metaStatus.AdAccountId;
+            lastMetaError = metaStatus.TokenValidationMessage;
+        }
+        catch (Exception ex)
+        {
+            lastMetaError = ex.Message;
+        }
+
+        // Google status
+        bool isGoogleConnected = false;
+        string? googleAccountName = null;
+        string? lastGoogleError = null;
+
+        try
+        {
+            var googleStatus = await _googleAdsService.GetStatusAsync();
+            isGoogleConnected = googleStatus.IsConfigured && googleStatus.IsAccessTokenValid;
+            googleAccountName = googleStatus.CustomerId;
+            lastGoogleError = googleStatus.ValidationMessage;
+        }
+        catch (Exception ex)
+        {
+            lastGoogleError = ex.Message;
+        }
+
+        var latestSync = await _context.Campaigns
+            .Where(c => c.WorkspaceId == workspaceId && c.LastSyncedAt != null)
+            .OrderByDescending(c => c.LastSyncedAt)
+            .Select(c => c.LastSyncedAt)
+            .FirstOrDefaultAsync();
+
+        var totalSynced = await _context.Campaigns
+            .CountAsync(c => c.WorkspaceId == workspaceId && !c.IsLegacy);
+
+        return new CampaignSyncStatusDto
+        {
+            LastSyncedAt = latestSync,
+            IsMetaConnected = isMetaConnected,
+            IsGoogleConnected = isGoogleConnected,
+            MetaAccountName = metaAccountName,
+            GoogleAccountName = googleAccountName,
+            LastMetaError = lastMetaError,
+            LastGoogleError = lastGoogleError,
+            TotalCampaignsSynced = totalSynced
+        };
+    }
+
+    public async Task<List<AdAccountInfoDto>> GetConnectedAdAccountsAsync(string email, string? platform = null)
+    {
+        var result = new List<AdAccountInfoDto>();
+
+        if (string.IsNullOrWhiteSpace(platform) || platform.Equals("Meta", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var metaAccounts = await _metaAdsService.ListConnectedAdAccountsWithPagesAsync();
+                result.AddRange(metaAccounts);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load Meta ad accounts");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(platform) || platform.Equals("Google", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var googleAccounts = await _googleAdsService.ListConnectedAdAccountsAsync();
+                result.AddRange(googleAccounts);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load Google ad accounts");
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<CampaignSyncStatusDto> SyncWorkspaceCampaignsAsync(string email, string? platform = null)
+    {
+        var userEmail = email.Trim().ToLower();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        if (user == null || user.WorkspaceId == null)
+        {
+            throw new KeyNotFoundException("User workspace not found");
+        }
+
+        var workspaceId = user.WorkspaceId.Value;
+        _logger.LogInformation("Orchestrating campaign sync for workspace {WorkspaceId} (Platform: {Platform})...", workspaceId, platform ?? "All");
+
+        if (string.IsNullOrWhiteSpace(platform) || platform.Equals("Meta", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await _metaAdsService.SyncWorkspaceMetaAsync(workspaceId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during manual Meta sync for workspace {WorkspaceId}", workspaceId);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(platform) || platform.Equals("Google", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await _googleAdsService.SyncWorkspaceGoogleAsync(workspaceId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during manual Google sync for workspace {WorkspaceId}", workspaceId);
+            }
+        }
+
+        return await GetSyncStatusAsync(email);
+    }
 }
+

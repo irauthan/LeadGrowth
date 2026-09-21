@@ -90,6 +90,12 @@ public class User
     [Column("max_capacity")]
     public int? MaxCapacity { get; set; } = 30;
 
+    [Column("failed_login_attempts")]
+    public int? FailedLoginAttempts { get; set; } = 0;
+
+    [Column("lockout_end")]
+    public DateTime? LockoutEnd { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

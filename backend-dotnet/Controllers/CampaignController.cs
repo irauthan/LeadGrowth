@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using LeadGrowth.DTOs;
 using LeadGrowth.Models;
 using LeadGrowth.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -37,6 +38,86 @@ public class CampaignController : ControllerBase
         return Ok(campaigns);
     }
 
+    [HttpGet("sync-status")]
+    public async Task<ActionResult<CampaignSyncStatusDto>> GetSyncStatus()
+    {
+        var email = GetUserEmail();
+        try
+        {
+            var status = await _campaignService.GetSyncStatusAsync(email);
+            return Ok(status);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("ad-accounts")]
+    public async Task<ActionResult<List<AdAccountInfoDto>>> GetAdAccounts([FromQuery] string? platform = null)
+    {
+        var email = GetUserEmail();
+        try
+        {
+            var accounts = await _campaignService.GetConnectedAdAccountsAsync(email, platform);
+            return Ok(accounts);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("sync")]
+    [Authorize(Policy = "RequireManagerOrAdmin")]
+    public async Task<ActionResult<CampaignSyncStatusDto>> SyncCampaigns([FromQuery] string? platform = null)
+    {
+        var email = GetUserEmail();
+        try
+        {
+            var result = await _campaignService.SyncWorkspaceCampaignsAsync(email, platform);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("platform-create")]
+    [Authorize(Policy = "RequireManagerOrAdmin")]
+    public async Task<ActionResult<PlatformCampaignResultDto>> CreatePlatformCampaign([FromBody] CreatePlatformCampaignDto dto)
+    {
+        var email = GetUserEmail();
+        try
+        {
+            var result = await _campaignService.CreatePlatformCampaignAsync(dto, email);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    [Authorize(Policy = "RequireManagerOrAdmin")]
+    public ActionResult CreateLegacyCampaign([FromBody] Campaign campaign)
+    {
+        return BadRequest(new 
+        { 
+            message = "Standalone manual campaign creation is disabled. Please create campaigns through connected Meta Ads or Google Ads accounts via the 'Create Campaign' wizard." 
+        });
+    }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<object>> GetCampaignDetails(long id)
     {
@@ -46,22 +127,6 @@ public class CampaignController : ControllerBase
             var details = await _campaignService.GetCampaignDetailsAsync(id, email);
             if (details == null) return NotFound(new { message = "Campaign not found" });
             return Ok(details);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    [HttpPost]
-    [Authorize(Policy = "RequireManagerOrAdmin")]
-    public async Task<ActionResult<Campaign>> CreateCampaign([FromBody] Campaign campaign)
-    {
-        var email = GetUserEmail();
-        try
-        {
-            var created = await _campaignService.CreateCampaignAsync(campaign, email);
-            return Ok(created);
         }
         catch (KeyNotFoundException ex)
         {
@@ -83,6 +148,14 @@ public class CampaignController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+        }
     }
 
     [HttpPatch("{id}/status")]
@@ -97,6 +170,38 @@ public class CampaignController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+        }
+    }
+
+    [HttpPatch("{id}/budget")]
+    [Authorize(Policy = "RequireManagerOrAdmin")]
+    public async Task<ActionResult<Campaign>> UpdateCampaignBudget(long id, [FromBody] BudgetUpdateDto dto)
+    {
+        var email = GetUserEmail();
+        try
+        {
+            var updated = await _campaignService.UpdateCampaignBudgetAsync(id, dto.Budget, email);
+            return Ok(updated);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
         }
     }
 
@@ -122,8 +227,14 @@ public class CampaignController : ControllerBase
         public string Status { get; set; } = string.Empty;
     }
 
+    public class BudgetUpdateDto
+    {
+        public decimal Budget { get; set; }
+    }
+
     private string GetUserEmail()
     {
         return User.FindFirstValue(ClaimTypes.Name) ?? User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
     }
 }
+

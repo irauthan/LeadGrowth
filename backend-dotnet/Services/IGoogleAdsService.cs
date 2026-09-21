@@ -31,6 +31,26 @@ public interface IGoogleAdsService
     Task<GoogleSyncResultDto> SyncWorkspaceGoogleAsync(long workspaceId, string? customerId = null);
 
     /// <summary>
+    /// Creates a Campaign and CampaignBudget on Google Ads API and persists the record into LeadGrowth DB.
+    /// </summary>
+    Task<PlatformCampaignResultDto> CreateCampaignAsync(CreatePlatformCampaignDto dto, long workspaceId);
+
+    /// <summary>
+    /// Mutates campaign status on Google Ads API (ENABLED / PAUSED).
+    /// </summary>
+    Task<bool> UpdateCampaignStatusAsync(string customerId, string campaignId, string status);
+
+    /// <summary>
+    /// Mutates campaign budget on Google Ads API.
+    /// </summary>
+    Task<bool> UpdateCampaignBudgetAsync(string customerId, string campaignId, decimal dailyBudget);
+
+    /// <summary>
+    /// Lists accessible Google Ads Customer Accounts / Ad Accounts.
+    /// </summary>
+    Task<List<AdAccountInfoDto>> ListConnectedAdAccountsAsync();
+
+    /// <summary>
     /// Checks configuration status and tests token / API connectivity.
     /// </summary>
     Task<GoogleIntegrationStatusDto> GetStatusAsync(string? customerId = null);

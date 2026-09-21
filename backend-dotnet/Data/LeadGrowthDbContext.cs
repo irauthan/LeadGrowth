@@ -47,6 +47,7 @@ public class LeadGrowthDbContext : DbContext
     public DbSet<BulkAssignmentJob> BulkAssignmentJobs { get; set; } = null!;
     public DbSet<UserStatusLog> UserStatusLogs { get; set; } = null!;
     public DbSet<MetaToken> MetaTokens { get; set; } = null!;
+    public DbSet<ApiKey> ApiKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -137,6 +138,10 @@ public class LeadGrowthDbContext : DbContext
         modelBuilder.Entity<Campaign>()
             .HasIndex(c => new { c.WorkspaceId, c.ExternalCampaignId })
             .HasDatabaseName("idx_ext_campaign");
+
+        modelBuilder.Entity<Campaign>()
+            .HasIndex(c => new { c.WorkspaceId, c.Platform, c.AdAccountId, c.ExternalCampaignId })
+            .HasDatabaseName("idx_camp_provider_ext");
 
         // 10.5 AdMetrics indexes
         modelBuilder.Entity<AdMetrics>()

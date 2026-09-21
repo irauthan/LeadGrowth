@@ -10,13 +10,10 @@ import {
   FileSpreadsheet, 
   Settings, 
   Building2,
-  Key,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Building,
-  ShieldAlert,
-  ShieldCheck,
   Briefcase,
   Calendar,
   X
@@ -68,15 +65,12 @@ export default function Sidebar() {
     { name: 'Campaigns', icon: Megaphone, path: '/campaigns' },
     { name: 'Reports', icon: FileSpreadsheet, path: '/reports' },
     { name: 'Workspace', icon: Building2, path: '/admin/workspace', adminOnly: true },
-    { name: 'API Keys', icon: Key, path: '/admin/api', adminOnly: true },
-    { name: 'Security Center', icon: ShieldCheck, path: '/admin/security', adminOnly: true },
-    { name: 'Audit Logs', icon: ShieldAlert, path: '/admin/audit-logs', adminOnly: true },
     { name: 'Settings', icon: Settings, path: '/settings', adminOnly: false },
   ];
 
   const isUserOnly = user?.roles.includes('ROLE_USER') && !isAdmin && !isManager;
   const restrictedPaths = isUserOnly 
-    ? ['/billing', '/users', '/admin/users', '/activity-logs', '/campaigns', '/notifications-page'] 
+    ? ['/billing', '/users', '/admin/users', '/campaigns', '/notifications-page'] 
     : (isAdmin || isManager ? ['/followups', '/notifications-page', ...(!isAdmin ? ['/billing'] : [])] : ['/notifications-page', !isAdmin ? '/billing' : '']);
   
   const filterMenuItems = (menu: any[]) => {
@@ -89,6 +83,9 @@ export default function Sidebar() {
       const isAlwaysAllowed = item.path === '/settings';
       return isAlwaysAllowed || enabledNavItems.includes(item.path) || (item.path === '/scheduler' && enabledNavItems.includes('/calendar'));
     }).sort((a, b) => {
+      // Always guarantee Settings is at the last position for both Admin and User
+      if (a.path === '/settings') return 1;
+      if (b.path === '/settings') return -1;
       const indexA = enabledNavItems.indexOf(a.path);
       const indexB = enabledNavItems.indexOf(b.path);
       if (indexA !== -1 && indexB !== -1) return indexA - indexB;

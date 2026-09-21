@@ -10,6 +10,69 @@ public class MetaIdResponse
     public string Id { get; set; } = string.Empty;
 }
 
+public class MetaSuccessResponse
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+}
+
+public class MetaPageListResponse
+{
+    [JsonPropertyName("data")]
+    public List<MetaPageListItem> Data { get; set; } = new();
+}
+
+public class MetaPageListItem
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("category")]
+    public string? Category { get; set; }
+
+    [JsonPropertyName("instagram_business_account")]
+    public MetaInstagramAccount? InstagramBusinessAccount { get; set; }
+}
+
+public class MetaInstagramAccount
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("username")]
+    public string? Username { get; set; }
+}
+
+public class MetaAdAccountListResponse
+{
+    [JsonPropertyName("data")]
+    public List<MetaAdAccountListItem> Data { get; set; } = new();
+}
+
+public class MetaAdAccountListItem
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("account_id")]
+    public string? AccountId { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("currency")]
+    public string? Currency { get; set; }
+
+    [JsonPropertyName("account_status")]
+    public int AccountStatus { get; set; }
+
+    [JsonPropertyName("business_name")]
+    public string? BusinessName { get; set; }
+}
+
 public class MetaPaging
 {
     [JsonPropertyName("cursors")]

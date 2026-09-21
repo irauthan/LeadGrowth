@@ -21,8 +21,7 @@ export const DEFAULT_DASHBOARD_CARDS: DashboardCardConfig[] = [
   { id: 'pipeline_health', label: 'Pipeline Intake & Conversion Funnel', category: 'Manager', description: 'Stage distribution & lead intake breakdown', enabled: true },
   { id: 'unassigned_queue', label: 'Unassigned Queue & Auto-Sweep', category: 'Manager', description: 'Queue monitoring & automated lead distribution', enabled: true },
   { id: 'revenue_trends', label: 'Revenue & Campaign Growth Trends', category: 'Admin', description: 'Revenue chart & platform marketing trends', enabled: true },
-  { id: 'system_metrics', label: 'System Health & Infrastructure Telemetry', category: 'Admin', description: 'CPU, RAM, DB connection & API latency stats', enabled: true },
-  { id: 'audit_logs', label: 'Security & Real-time Audit Trail', category: 'Admin', description: 'Security alerts, login attempts & audit event stream', enabled: true }
+  { id: 'system_metrics', label: 'System Health & Infrastructure Telemetry', category: 'Admin', description: 'CPU, RAM, DB connection & API latency stats', enabled: true }
 ];
 
 const DEFAULT_NAV_ITEMS = [
@@ -35,18 +34,14 @@ const DEFAULT_NAV_ITEMS = [
   '/campaigns',
   '/reports',
   '/notifications-page',
-  '/settings',
   '/followups',
   '/users',
-  '/activity-logs',
   '/billing',
   '/admin/work-monitor',
   '/admin/users',
   '/admin/workspace',
-  '/admin/api',
   '/admin/system',
-  '/admin/security',
-  '/admin/audit-logs'
+  '/settings'
 ];
 
 interface LayoutState {

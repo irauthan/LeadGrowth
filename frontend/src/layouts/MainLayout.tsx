@@ -23,10 +23,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/work-monitor': 'Hoossh Lead Growth | Executive Monitor',
   '/admin/users': 'Hoossh Lead Growth | User Management',
   '/admin/workspace': 'Hoossh Lead Growth | Workspace Management',
-  '/admin/api': 'Hoossh Lead Growth | API Management',
-  '/admin/system': 'Hoossh Lead Growth | System Monitoring',
-  '/admin/security': 'Hoossh Lead Growth | Security Center',
-  '/admin/audit-logs': 'Hoossh Lead Growth | Audit Logs'
+  '/admin/system': 'Hoossh Lead Growth | System Monitoring'
 };
 
 import ErrorBoundary from '../components/ErrorBoundary';

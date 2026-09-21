@@ -1,24 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, 
-  Users, 
-  CheckCircle, 
-  PauseCircle, 
-  PlayCircle, 
-  AlertCircle, 
-  Edit3, 
-  Trash2, 
-  Save, 
-  Loader2, 
+import React, { useState, useEffect } from "react";
+import {
+  ArrowLeft,
+  Users,
+  CheckCircle,
+  PauseCircle,
+  PlayCircle,
+  AlertCircle,
+  Edit3,
+  Trash2,
+  Save,
+  Loader2,
   Calendar,
   Search,
   RefreshCw,
-  Sparkles
-} from 'lucide-react';
-import { campaignService } from '../services/campaignService';
-import type { CampaignDetails, CampaignLead } from '../types';
-import { formatCurrency, formatNumber } from '../utils';
-import { useAuthStore } from '../store/authStore';
+  Sparkles,
+  Link2,
+  Tag,
+  Clock,
+  ShieldCheck
+} from "lucide-react";
+import { campaignService } from "../services/campaignService";
+import type { CampaignDetails, CampaignLead } from "../types";
+import { formatCurrency, formatNumber } from "../utils";
+import { useAuthStore } from "../store/authStore";
 
 interface Props {
   campaignId: number;
@@ -26,36 +30,29 @@ interface Props {
   onUpdated?: () => void;
 }
 
-export default function CampaignDetailView({
-  campaignId,
-  onBack,
-  onUpdated
-}: Props) {
+export default function CampaignDetailView({ campaignId, onBack, onUpdated }: Props) {
   const user = useAuthStore((state) => state.user);
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
-  const isAdmin = userRoles.includes('ROLE_ADMIN');
-  const isManager = userRoles.includes('ROLE_MANAGER');
+  const isAdmin = userRoles.some((r) => r.toUpperCase().includes("ADMIN"));
+  const isManager = userRoles.some((r) => r.toUpperCase().includes("MANAGER"));
   const canEdit = isAdmin || isManager;
 
   const [loading, setLoading] = useState(true);
   const [details, setDetails] = useState<CampaignDetails | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'leads' | 'edit'>('overview');
-  const [leadSearch, setLeadSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<"overview" | "leads" | "edit">("overview");
+  const [leadSearch, setLeadSearch] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
-  // Edit form state
+  // Edit form state (Locked ad metrics removed)
   const [editForm, setEditForm] = useState({
-    name: '',
-    platform: 'Meta',
-    status: 'ACTIVE',
+    name: "",
+    status: "ACTIVE",
     budget: 0,
-    spend: 0,
-    clicks: 0,
-    impressions: 0,
-    conversions: 0,
   });
 
   useEffect(() => {
@@ -71,18 +68,13 @@ export default function CampaignDetailView({
       setDetails(data);
       if (data?.campaign) {
         setEditForm({
-          name: data.campaign.name || '',
-          platform: data.campaign.platform || 'Meta',
-          status: data.campaign.status || 'ACTIVE',
+          name: data.campaign.name || "",
+          status: data.campaign.status || "ACTIVE",
           budget: data.campaign.budget || 0,
-          spend: data.campaign.spend || 0,
-          clicks: data.campaign.clicks || 0,
-          impressions: data.campaign.impressions || 0,
-          conversions: data.campaign.conversions || 0,
         });
       }
     } catch (err) {
-      console.error('Failed to load campaign details', err);
+      console.error("Failed to load campaign details", err);
     } finally {
       setLoading(false);
     }
@@ -96,16 +88,33 @@ export default function CampaignDetailView({
       if (details) {
         setDetails({
           ...details,
-          campaign: { ...details.campaign, status: newStatus }
+          campaign: { ...details.campaign, status: newStatus },
         });
-        setEditForm(prev => ({ ...prev, status: newStatus }));
+        setEditForm((prev) => ({ ...prev, status: newStatus }));
       }
       if (onUpdated) onUpdated();
     } catch (err) {
-      console.error('Failed to update status', err);
-      alert('Failed to update campaign status');
+      console.error("Failed to update status", err);
+      alert("Failed to update campaign status on ad platform");
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleSyncThis = async () => {
+    setIsSyncing(true);
+    setSyncFeedback(null);
+    try {
+      await campaignService.syncCampaigns();
+      await loadCampaignDetails(campaignId);
+      if (onUpdated) onUpdated();
+      setSyncFeedback("Campaign refreshed with latest platform metrics.");
+    } catch (err) {
+      console.error("Sync failed", err);
+      setSyncFeedback("Sync failed. Check platform credentials.");
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncFeedback(null), 5000);
     }
   };
 
@@ -114,17 +123,28 @@ export default function CampaignDetailView({
     if (!campaignId) return;
     setIsSavingEdit(true);
     try {
-      await campaignService.updateCampaign(campaignId, editForm);
+      // If budget was edited, sync budget via budget API endpoint
+      if (editForm.budget !== details?.campaign?.budget) {
+        await campaignService.updateCampaignBudget(campaignId, editForm.budget);
+      }
+
+      // If status or name was updated, call updateCampaign
+      await campaignService.updateCampaign(campaignId, {
+        name: editForm.name,
+        status: editForm.status,
+        budget: editForm.budget,
+      });
+
       setSaveSuccess(true);
       await loadCampaignDetails(campaignId);
       if (onUpdated) onUpdated();
       setTimeout(() => {
         setSaveSuccess(false);
-        setActiveTab('overview');
+        setActiveTab("overview");
       }, 1000);
     } catch (err) {
-      console.error('Failed to update campaign', err);
-      alert('Failed to update campaign.');
+      console.error("Failed to update campaign", err);
+      alert("Failed to update campaign.");
     } finally {
       setIsSavingEdit(false);
     }
@@ -141,8 +161,8 @@ export default function CampaignDetailView({
       if (onUpdated) onUpdated();
       onBack();
     } catch (err) {
-      console.error('Failed to delete campaign', err);
-      alert('Failed to delete campaign');
+      console.error("Failed to delete campaign", err);
+      alert("Failed to delete campaign");
     } finally {
       setIsDeleting(false);
     }
@@ -176,15 +196,17 @@ export default function CampaignDetailView({
   const metrics = details.metrics;
   const leads = details.leads || [];
 
-  const filteredLeads = leads.filter((l: CampaignLead) => 
-    (l.name || '').toLowerCase().includes(leadSearch.toLowerCase()) ||
-    (l.email || '').toLowerCase().includes(leadSearch.toLowerCase()) ||
-    (l.phone && l.phone.includes(leadSearch)) ||
-    (l.status && l.status.toLowerCase().includes(leadSearch.toLowerCase()))
+  const filteredLeads = leads.filter(
+    (l: CampaignLead) =>
+      (l.name || "").toLowerCase().includes(leadSearch.toLowerCase()) ||
+      (l.email || "").toLowerCase().includes(leadSearch.toLowerCase()) ||
+      (l.phone && l.phone.includes(leadSearch)) ||
+      (l.status && l.status.toLowerCase().includes(leadSearch.toLowerCase()))
   );
 
-  const isActive = (campaign.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
-  const isPaused = (campaign.status || '').toUpperCase() === 'PAUSED';
+  const isActive = (campaign.status || "ACTIVE").toUpperCase() === "ACTIVE";
+  const isPaused = (campaign.status || "").toUpperCase() === "PAUSED";
+  const isLegacy = campaign.isLegacy || !campaign.externalCampaignId;
 
   return (
     <div className="space-y-6 animate-fadeIn w-full pb-10">
@@ -207,27 +229,45 @@ export default function CampaignDetailView({
           </div>
 
           {/* Title & Status Badges */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-theme-text">
               {campaign.name}
             </h1>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-theme-bg-alt border border-theme-border text-theme-text">
                 {campaign.platform}
               </span>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                isActive
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                  : isPaused
-                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
-                  : 'bg-slate-500/10 border-slate-500/30 text-slate-500'
-              }`}>
-                {campaign.status || 'ACTIVE'}
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                  isActive
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                    : isPaused
+                    ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                    : "bg-slate-500/10 border-slate-500/30 text-slate-500"
+                }`}
+              >
+                {campaign.status || "ACTIVE"}
               </span>
+
+              {isLegacy ? (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                  Legacy Record
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  API Synced
+                </span>
+              )}
+
               {campaign.createdAt && (
                 <span className="text-xs text-theme-text-muted hidden md:inline-flex items-center gap-1 ml-2">
                   <Calendar size={12} />
-                  {new Date(campaign.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {new Date(campaign.createdAt).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
                 </span>
               )}
             </div>
@@ -241,11 +281,11 @@ export default function CampaignDetailView({
               <button
                 type="button"
                 disabled={isUpdatingStatus}
-                onClick={() => handleStatusToggle(isActive ? 'PAUSED' : 'ACTIVE')}
+                onClick={() => handleStatusToggle(isActive ? "PAUSED" : "ACTIVE")}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
                   isActive
-                    ? 'border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
-                    : 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
+                    ? "border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                    : "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
                 }`}
               >
                 {isUpdatingStatus ? (
@@ -264,15 +304,15 @@ export default function CampaignDetailView({
               </button>
 
               <button
-                onClick={() => setActiveTab(activeTab === 'edit' ? 'overview' : 'edit')}
+                onClick={() => setActiveTab(activeTab === "edit" ? "overview" : "edit")}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                  activeTab === 'edit'
-                    ? 'bg-theme-primary text-white border-theme-primary'
-                    : 'border-theme-border text-theme-text hover:bg-theme-bg-alt'
+                  activeTab === "edit"
+                    ? "bg-theme-primary text-white border-theme-primary"
+                    : "border-theme-border text-theme-text hover:bg-theme-bg-alt"
                 }`}
               >
                 <Edit3 size={14} />
-                <span>{activeTab === 'edit' ? 'Close Edit' : 'Edit'}</span>
+                <span>{activeTab === "edit" ? "Close Edit" : "Edit"}</span>
               </button>
 
               {isAdmin && (
@@ -290,34 +330,42 @@ export default function CampaignDetailView({
           )}
 
           <button
-            onClick={() => loadCampaignDetails(campaignId)}
+            disabled={isSyncing}
+            onClick={handleSyncThis}
             className="p-2 text-theme-text-muted hover:text-theme-text border border-theme-border rounded-xl hover:bg-theme-bg-alt transition-colors"
-            title="Refresh Data"
+            title="Sync metrics now"
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={14} className={isSyncing ? "animate-spin text-theme-primary" : ""} />
           </button>
         </div>
       </div>
 
+      {syncFeedback && (
+        <div className="p-3 rounded-xl bg-theme-bg-alt border border-theme-border text-xs text-theme-text flex items-center gap-2">
+          <CheckCircle size={14} className="text-emerald-500" />
+          <span>{syncFeedback}</span>
+        </div>
+      )}
+
       {/* Modern Clean Tabs */}
       <div className="flex items-center gap-2 border-b border-theme-border/60">
         <button
-          onClick={() => setActiveTab('overview')}
+          onClick={() => setActiveTab("overview")}
           className={`pb-3 text-sm font-semibold border-b-2 transition-all px-2 ${
-            activeTab === 'overview'
-              ? 'border-theme-primary text-theme-primary'
-              : 'border-transparent text-theme-text-muted hover:text-theme-text'
+            activeTab === "overview"
+              ? "border-theme-primary text-theme-primary"
+              : "border-transparent text-theme-text-muted hover:text-theme-text"
           }`}
         >
-          Overview & Metrics
+          Overview & Performance
         </button>
 
         <button
-          onClick={() => setActiveTab('leads')}
+          onClick={() => setActiveTab("leads")}
           className={`pb-3 text-sm font-semibold border-b-2 transition-all px-2 ${
-            activeTab === 'leads'
-              ? 'border-theme-primary text-theme-primary'
-              : 'border-transparent text-theme-text-muted hover:text-theme-text'
+            activeTab === "leads"
+              ? "border-theme-primary text-theme-primary"
+              : "border-transparent text-theme-text-muted hover:text-theme-text"
           }`}
         >
           Connected Leads ({leads.length})
@@ -325,11 +373,11 @@ export default function CampaignDetailView({
 
         {canEdit && (
           <button
-            onClick={() => setActiveTab('edit')}
+            onClick={() => setActiveTab("edit")}
             className={`pb-3 text-sm font-semibold border-b-2 transition-all px-2 ${
-              activeTab === 'edit'
-                ? 'border-theme-primary text-theme-primary'
-                : 'border-transparent text-theme-text-muted hover:text-theme-text'
+              activeTab === "edit"
+                ? "border-theme-primary text-theme-primary"
+                : "border-transparent text-theme-text-muted hover:text-theme-text"
             }`}
           >
             Edit Settings
@@ -338,9 +386,58 @@ export default function CampaignDetailView({
       </div>
 
       {/* TAB 1: OVERVIEW & PERFORMANCE */}
-      {activeTab === 'overview' && (
+      {activeTab === "overview" && (
         <div className="space-y-6">
-          {/* Clean 6-Card KPI Grid (Minimalist & Professional) */}
+          {/* Platform Integration Info Banner */}
+          <div className="rounded-2xl border border-theme-border bg-theme-card p-4 sm:p-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-theme-text">
+                  <Link2 size={14} className="text-theme-primary" />
+                  <span>Platform Integration Details</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-theme-text-muted">
+                  {campaign.externalCampaignId && (
+                    <span>
+                      External ID: <strong className="text-theme-text font-mono">{campaign.externalCampaignId}</strong>
+                    </span>
+                  )}
+                  {campaign.adAccountId && (
+                    <span>
+                      Ad Account: <strong className="text-theme-text font-mono">{campaign.adAccountId}</strong>
+                    </span>
+                  )}
+                  {campaign.placements && (
+                    <span className="flex items-center gap-1">
+                      <Tag size={12} />
+                      Placements: <strong className="text-theme-text">{campaign.placements}</strong>
+                    </span>
+                  )}
+                  {campaign.lastSyncedAt && (
+                    <span className="flex items-center gap-1">
+                      <Clock size={12} />
+                      Synced: <strong className="text-theme-text">{new Date(campaign.lastSyncedAt).toLocaleString()}</strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {isLegacy ? (
+                  <div className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20 font-medium">
+                    Manual Legacy Record (Read-Only Metrics)
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 font-medium flex items-center gap-1.5">
+                    <ShieldCheck size={14} />
+                    Platform Source of Truth
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Clean 6-Card KPI Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {/* Card 1: Total Spend */}
             <div className="rounded-2xl border border-theme-border bg-theme-card p-4 space-y-1">
@@ -352,7 +449,9 @@ export default function CampaignDetailView({
               </div>
               <div className="text-[11px] text-theme-text-muted pt-1">
                 {campaign.budget && campaign.budget > 0 ? (
-                  <span>Budget: {formatCurrency(campaign.budget)} ({metrics?.budgetUsedPercent || 0}%)</span>
+                  <span>
+                    Budget: {formatCurrency(campaign.budget)} ({metrics?.budgetUsedPercent || 0}%)
+                  </span>
                 ) : (
                   <span>Ad budget</span>
                 )}
@@ -393,9 +492,7 @@ export default function CampaignDetailView({
               <div className="text-xl font-bold text-theme-primary">
                 {formatNumber(campaign.leadsCount || leads.length)}
               </div>
-              <div className="text-[11px] text-theme-text-muted pt-1">
-                From Ad form / sync
-              </div>
+              <div className="text-[11px] text-theme-text-muted pt-1">From Ad form / sync</div>
             </div>
 
             {/* Card 5: Conversions */}
@@ -429,15 +526,16 @@ export default function CampaignDetailView({
           <div className="rounded-2xl border border-theme-border bg-theme-card p-5 sm:p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-bold text-theme-text">
-                  Conversion Funnel Pipeline
-                </h3>
+                <h3 className="text-sm font-bold text-theme-text">Conversion Funnel Pipeline</h3>
                 <p className="text-xs text-theme-text-muted">
-                  Flow from ad views to captured leads and closed won deals.
+                  Flow from ad platform views to captured CRM leads and closed revenue.
                 </p>
               </div>
               <div className="text-xs font-semibold text-theme-text bg-theme-bg-alt px-3 py-1.5 rounded-xl border border-theme-border w-fit">
-                Net Profit: <strong className="text-emerald-600 dark:text-emerald-400">{formatCurrency((campaign.revenue || 0) - (campaign.spend || 0))}</strong>
+                Net Profit:{" "}
+                <strong className="text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency((campaign.revenue || 0) - (campaign.spend || 0))}
+                </strong>
               </div>
             </div>
 
@@ -445,7 +543,7 @@ export default function CampaignDetailView({
               {/* Step 1: Impressions */}
               <div className="rounded-xl border border-theme-border bg-theme-bg-alt/40 p-4 space-y-2">
                 <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider">
-                  1. Impressions
+                  1. Platform Impressions
                 </span>
                 <div className="text-lg font-bold text-theme-text">
                   {formatNumber(campaign.impressions || 0)}
@@ -458,14 +556,18 @@ export default function CampaignDetailView({
               {/* Step 2: Clicks */}
               <div className="rounded-xl border border-theme-border bg-theme-bg-alt/40 p-4 space-y-2">
                 <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider">
-                  2. Clicks
+                  2. Platform Clicks
                 </span>
                 <div className="text-lg font-bold text-theme-text">
                   {formatNumber(campaign.clicks || 0)}
                 </div>
                 <div className="text-xs text-theme-text-muted">
-                  Click to Lead: <span className="font-semibold text-theme-text">
-                    {campaign.clicks > 0 ? (((campaign.leadsCount || leads.length) / campaign.clicks) * 100).toFixed(1) : 0}%
+                  Click to Lead:{" "}
+                  <span className="font-semibold text-theme-text">
+                    {campaign.clicks > 0
+                      ? (((campaign.leadsCount || leads.length) / campaign.clicks) * 100).toFixed(1)
+                      : 0}
+                    %
                   </span>
                 </div>
               </div>
@@ -479,8 +581,12 @@ export default function CampaignDetailView({
                   {formatNumber(campaign.leadsCount || leads.length)}
                 </div>
                 <div className="text-xs text-theme-text-muted">
-                  Lead to Won: <span className="font-semibold text-theme-text">
-                    {(campaign.leadsCount || leads.length) > 0 ? ((campaign.conversions / (campaign.leadsCount || leads.length)) * 100).toFixed(1) : 0}%
+                  Lead to Won:{" "}
+                  <span className="font-semibold text-theme-text">
+                    {(campaign.leadsCount || leads.length) > 0
+                      ? ((campaign.conversions / (campaign.leadsCount || leads.length)) * 100).toFixed(1)
+                      : 0}
+                    %
                   </span>
                 </div>
               </div>
@@ -494,7 +600,10 @@ export default function CampaignDetailView({
                   {formatNumber(campaign.conversions || 0)}
                 </div>
                 <div className="text-xs text-theme-text-muted">
-                  Revenue: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(campaign.revenue || 0)}</span>
+                  Revenue:{" "}
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(campaign.revenue || 0)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -503,14 +612,12 @@ export default function CampaignDetailView({
       )}
 
       {/* TAB 2: CONNECTED LEADS */}
-      {activeTab === 'leads' && (
+      {activeTab === "leads" && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-theme-text">Campaign Leads</h3>
-              <p className="text-xs text-theme-text-muted">
-                Leads received through {campaign.name}.
-              </p>
+              <p className="text-xs text-theme-text-muted">Leads received through {campaign.name}.</p>
             </div>
 
             <div className="relative w-full sm:w-72">
@@ -550,24 +657,20 @@ export default function CampaignDetailView({
                   <tbody className="divide-y divide-theme-border/50">
                     {filteredLeads.map((lead: CampaignLead) => (
                       <tr key={lead.id} className="hover:bg-theme-bg-alt/50 transition-colors">
-                        <td className="py-3 pl-4 font-semibold text-theme-text">
-                          {lead.name}
-                        </td>
+                        <td className="py-3 pl-4 font-semibold text-theme-text">{lead.name}</td>
                         <td className="py-3 px-3 text-theme-text-muted">
                           <div>{lead.email}</div>
                           {lead.phone && <div className="text-[11px] text-theme-text-muted">{lead.phone}</div>}
                         </td>
                         <td className="py-3 px-3">
                           <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-theme-bg-alt border border-theme-border text-theme-text">
-                            {lead.status || 'New'}
+                            {lead.status || "New"}
                           </span>
                         </td>
                         <td className="py-3 px-3 font-medium text-theme-text">
-                          {lead.dealValue ? formatCurrency(lead.dealValue) : '—'}
+                          {lead.dealValue ? formatCurrency(lead.dealValue) : "—"}
                         </td>
-                        <td className="py-3 px-3 text-theme-text-muted">
-                          {lead.assignedToName || 'Unassigned'}
-                        </td>
+                        <td className="py-3 px-3 text-theme-text-muted">{lead.assignedToName || "Unassigned"}</td>
                         <td className="py-3 pr-4 text-theme-text-muted whitespace-nowrap">
                           {new Date(lead.createdAt).toLocaleDateString()}
                         </td>
@@ -581,12 +684,14 @@ export default function CampaignDetailView({
         </div>
       )}
 
-      {/* TAB 3: EDIT SETTINGS */}
-      {activeTab === 'edit' && canEdit && (
+      {/* TAB 3: EDIT SETTINGS (LOCKED AD METRICS, CONTROL BUDGET & STATUS) */}
+      {activeTab === "edit" && canEdit && (
         <div className="max-w-2xl rounded-2xl border border-theme-border bg-theme-card p-5 sm:p-6 space-y-4">
           <div>
-            <h3 className="text-sm font-bold text-theme-text">Edit Campaign Settings</h3>
-            <p className="text-xs text-theme-text-muted">Update budget, ad performance metrics, and status.</p>
+            <h3 className="text-sm font-bold text-theme-text">Campaign Settings & Platform Controls</h3>
+            <p className="text-xs text-theme-text-muted">
+              Update campaign name, target budget, and platform status.
+            </p>
           </div>
 
           {saveSuccess && (
@@ -597,7 +702,7 @@ export default function CampaignDetailView({
           )}
 
           <form onSubmit={handleSaveEdit} className="space-y-4 pt-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
                   Campaign Name
@@ -611,112 +716,58 @@ export default function CampaignDetailView({
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                  Platform
-                </label>
-                <select
-                  value={editForm.platform}
-                  onChange={(e) => setEditForm({ ...editForm, platform: e.target.value })}
-                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
-                >
-                  <option value="Meta">Meta (Facebook & Instagram)</option>
-                  <option value="Google">Google Search & Display</option>
-                  <option value="LinkedIn">LinkedIn Ads</option>
-                  <option value="TikTok">TikTok Ads</option>
-                  <option value="Organic">Organic / Direct</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
+                    Platform Status
+                  </label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
+                  >
+                    <option value="ACTIVE">ACTIVE (Running on Ad Platform)</option>
+                    <option value="PAUSED">PAUSED (Paused on Ad Platform)</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
+                    Campaign Budget ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editForm.budget}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, budget: parseFloat(e.target.value) || 0 })
+                    }
+                    className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                  Status
-                </label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="PAUSED">PAUSED</option>
-                  <option value="COMPLETED">COMPLETED</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                  Budget ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editForm.budget}
-                  onChange={(e) => setEditForm({ ...editForm, budget: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                  Ad Spend ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editForm.spend}
-                  onChange={(e) => setEditForm({ ...editForm, spend: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                  Impressions
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editForm.impressions}
-                  onChange={(e) => setEditForm({ ...editForm, impressions: parseInt(e.target.value) || 0 })}
-                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                  Clicks
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editForm.clicks}
-                  onChange={(e) => setEditForm({ ...editForm, clicks: parseInt(e.target.value) || 0 })}
-                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-theme-text-muted">
-                  Conversions
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editForm.conversions}
-                  onChange={(e) => setEditForm({ ...editForm, conversions: parseInt(e.target.value) || 0 })}
-                  className="w-full rounded-xl border border-theme-border bg-theme-bg-alt px-3.5 py-2 text-xs outline-none text-theme-text focus:border-theme-primary"
-                />
-              </div>
-
-              <div className="sm:col-span-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs space-y-1">
-                <div className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                  <Sparkles size={14} />
-                  <span>Automatic Revenue Calculation</span>
+              {/* Source of truth notice */}
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-3.5 text-xs space-y-1">
+                <div className="font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                  <ShieldCheck size={14} />
+                  <span>Platform Ad Metrics are Read-Only</span>
                 </div>
                 <p className="text-[11px] text-theme-text-muted leading-relaxed">
-                  Campaign <strong>Revenue</strong> and <strong>Conversions</strong> are automatically synced in real-time from converted leads that have approved proposal amounts.
+                  Ad spend, impressions, clicks, CTR, and CPC are fetched directly from the connected advertising platform API (Meta / Google Ads). Status and budget changes will be transmitted to the platform.
+                </p>
+              </div>
+
+              {/* Dynamic Revenue notice */}
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs space-y-1">
+                <div className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Sparkles size={14} />
+                  <span>Attributed CRM Deals & Revenue</span>
+                </div>
+                <p className="text-[11px] text-theme-text-muted leading-relaxed">
+                  Campaign <strong>Revenue</strong> (${formatCurrency(campaign.revenue || 0)}) and <strong>Conversions</strong> ({campaign.conversions || 0}) reflect live CRM deals converted from attributed leads.
                 </p>
               </div>
             </div>
@@ -724,7 +775,7 @@ export default function CampaignDetailView({
             <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-theme-border/60">
               <button
                 type="button"
-                onClick={() => setActiveTab('overview')}
+                onClick={() => setActiveTab("overview")}
                 className="px-4 py-2 rounded-xl border border-theme-border text-xs font-semibold text-theme-text hover:bg-theme-bg-alt"
               >
                 Cancel
