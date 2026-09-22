@@ -95,6 +95,33 @@ CREATE TABLE `assignment_logs` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `api_keys`
+--
+
+DROP TABLE IF EXISTS `api_keys`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `api_keys` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `workspace_id` bigint NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `key_prefix` varchar(20) NOT NULL,
+  `key_hash` varchar(255) NOT NULL,
+  `scope` varchar(50) NOT NULL DEFAULT 'Full-Access',
+  `created_by_id` bigint DEFAULT NULL,
+  `created_by_name` varchar(100) DEFAULT NULL,
+  `last_used_at` datetime(6) DEFAULT NULL,
+  `expires_at` datetime(6) DEFAULT NULL,
+  `is_revoked` bit(1) NOT NULL DEFAULT b'0',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `idx_api_keys_workspace` (`workspace_id`),
+  KEY `idx_api_keys_prefix` (`key_prefix`),
+  CONSTRAINT `FK_api_keys_workspaces` FOREIGN KEY (`workspace_id`) REFERENCES `workspaces` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `audit_logs`
 --
 
@@ -209,9 +236,16 @@ CREATE TABLE `campaigns` (
   `external_campaign_id` varchar(64) DEFAULT NULL,
   `ad_account_id` varchar(64) DEFAULT NULL,
   `objective` varchar(50) DEFAULT NULL,
+  `is_legacy` bit(1) NOT NULL DEFAULT b'0',
+  `last_synced_at` datetime(6) DEFAULT NULL,
+  `sync_status` varchar(30) DEFAULT 'SYNCED',
+  `sync_error` text,
+  `platform_status` varchar(50) DEFAULT NULL,
+  `placements` varchar(255) DEFAULT NULL,
   `workspace_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_ext_campaign` (`workspace_id`, `external_campaign_id`),
+  KEY `idx_camp_provider_ext` (`workspace_id`, `platform`, `ad_account_id`, `external_campaign_id`),
   KEY `FKfmhjh7bwtmw86owmjheg67ok8` (`workspace_id`),
   CONSTRAINT `FKfmhjh7bwtmw86owmjheg67ok8` FOREIGN KEY (`workspace_id`) REFERENCES `workspaces` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -849,6 +883,15 @@ CREATE TABLE `users` (
   `phone` varchar(20) DEFAULT NULL,
   `profile_image` longtext,
   `status` varchar(20) NOT NULL,
+  `can_receive_leads` bit(1) NOT NULL DEFAULT b'1',
+  `last_heartbeat_at` datetime(6) DEFAULT NULL,
+  `manual_status` varchar(20) DEFAULT NULL,
+  `manual_status_source` varchar(20) DEFAULT NULL,
+  `manual_status_reason` varchar(255) DEFAULT NULL,
+  `manual_status_expires_at` datetime(6) DEFAULT NULL,
+  `max_capacity` int DEFAULT 30,
+  `failed_login_attempts` int DEFAULT 0,
+  `lockout_end` datetime(6) DEFAULT NULL,
   `workspace_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UK6dotkott2kjsp8vw4d0m25fb7` (`email`),

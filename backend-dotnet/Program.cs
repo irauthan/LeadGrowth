@@ -77,7 +77,7 @@ builder.Services.Configure<HostOptions>(options =>
     options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
 });
 
-builder.Services.AddHostedService<SyncBackgroundService>();
+// builder.Services.AddHostedService<SyncBackgroundService>(); // PAUSED: Meta & Google Ads sync paused while leads are imported via Excel
 builder.Services.AddHostedService<CalendarReminderBackgroundService>();
 builder.Services.AddHostedService<AutoReassignmentBackgroundService>();
 
@@ -263,6 +263,8 @@ try
     EnsureColumn("users", "manual_status_reason", "VARCHAR(255) NULL");
     EnsureColumn("users", "manual_status_expires_at", "DATETIME NULL");
     EnsureColumn("users", "max_capacity", "INT NULL DEFAULT 30");
+    EnsureColumn("users", "failed_login_attempts", "INT NOT NULL DEFAULT 0");
+    EnsureColumn("users", "lockout_end", "DATETIME NULL");
 
     // 1.1 Add missing columns to leads table safely
     EnsureColumn("leads", "quality_score", "INT NULL");
@@ -296,6 +298,12 @@ try
     EnsureColumn("campaigns", "ad_account_id", "VARCHAR(64) NULL");
     EnsureColumn("campaigns", "objective", "VARCHAR(50) NULL");
     EnsureColumn("campaigns", "leads_count", "INT NOT NULL DEFAULT 0");
+    EnsureColumn("campaigns", "is_legacy", "TINYINT(1) NOT NULL DEFAULT 0");
+    EnsureColumn("campaigns", "last_synced_at", "DATETIME NULL");
+    EnsureColumn("campaigns", "sync_status", "VARCHAR(30) NULL DEFAULT 'SYNCED'");
+    EnsureColumn("campaigns", "sync_error", "TEXT NULL");
+    EnsureColumn("campaigns", "platform_status", "VARCHAR(50) NULL");
+    EnsureColumn("campaigns", "placements", "VARCHAR(255) NULL");
 
     // 1.3 Add missing columns to followup_reminders table safely
     EnsureColumn("followup_reminders", "outcome", "VARCHAR(50) NULL");
@@ -383,6 +391,24 @@ try
             INDEX idx_meta_tokens_type (token_type)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
+    EnsureTable("api_keys", @"
+        CREATE TABLE api_keys (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            workspace_id BIGINT NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            key_prefix VARCHAR(20) NOT NULL,
+            key_hash VARCHAR(255) NOT NULL,
+            scope VARCHAR(50) NOT NULL DEFAULT 'Full-Access',
+            created_by_id BIGINT NULL,
+            created_by_name VARCHAR(100) NULL,
+            last_used_at DATETIME NULL,
+            expires_at DATETIME NULL,
+            is_revoked TINYINT(1) NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_api_keys_workspace (workspace_id),
+            INDEX idx_api_keys_prefix (key_prefix)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
     // Ensure columns on bulk_assignment_jobs if table already existed previously
     EnsureColumn("bulk_assignment_jobs", "total_lead_count", "INT NOT NULL DEFAULT 0");
     EnsureColumn("bulk_assignment_jobs", "assigned_count", "INT NOT NULL DEFAULT 0");
@@ -401,6 +427,7 @@ try
 
     EnsureIndex("campaigns", "idx_campaigns_ws_status", "`workspace_id`, `Status`");
     EnsureIndex("campaigns", "idx_campaigns_ws_created", "`workspace_id`, `created_at`");
+    EnsureIndex("campaigns", "idx_camp_provider_ext", "`workspace_id`, `platform`, `ad_account_id`, `external_campaign_id`");
 
     EnsureIndex("sales_activities", "idx_sales_act_lead", "`lead_id`");
     EnsureIndex("sales_activities", "idx_sales_act_lead_key", "`lead_id`, `activity_key`");

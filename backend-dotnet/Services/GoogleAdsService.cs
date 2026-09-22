@@ -530,6 +530,15 @@ public class GoogleAdsService : IGoogleAdsService
             return result;
         }
 
+        // Guard: If Google Ads OAuth credentials are not configured, skip gracefully
+        if (string.IsNullOrWhiteSpace(_options.ClientId) || string.IsNullOrWhiteSpace(_options.ClientSecret) || string.IsNullOrWhiteSpace(_options.RefreshToken))
+        {
+            _logger.LogInformation("Google Ads OAuth credentials not configured in appsettings.json. Skipping Google Ads sync for workspace {WorkspaceId}.", workspaceId);
+            result.Success = true;
+            result.Message = "Google Ads credentials not configured in appsettings.json. Sync skipped.";
+            return result;
+        }
+
         // 1. Sync Campaigns
         var campaignMap = new Dictionary<string, Campaign>(StringComparer.OrdinalIgnoreCase);
         try
